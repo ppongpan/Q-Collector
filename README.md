@@ -1,6 +1,6 @@
 # 📋 Q-Collector
 
-> **Smart data collection platform with premium iOS 26 glass morphism design, 60fps animations, and comprehensive field types**
+> **ระบบสร้างฟอร์มบันทึกข้อมูล Q-CON พร้อม iOS 26 glass morphism design, 60fps animations และระบบฟิลด์ครบครัน**
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/your-username/Q-Collector)
 [![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://reactjs.org/)
