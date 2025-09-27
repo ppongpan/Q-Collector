@@ -1,0 +1,489 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Using Google Fonts - Mitr, Noto Sans Thai, and Oswald */
+
+@layer base {
+  :root {
+    /* Light theme colors */
+    --background: 0 0% 100%;
+    --foreground: 210 3% 6%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 3% 6%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 3% 6%;
+    --primary: 20.5 90.2% 48.2%;  /* Orange #f97316 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 210 3% 6%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 210 3% 6%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 20.5 90.2% 48.2%;  /* Orange ring */
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 47.9 95.8% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --error: 0 84.2% 60.2%;
+    --error-foreground: 210 40% 98%;
+    --radius: 0.5rem;
+
+    /* Font family and scale variables for dynamic font switching */
+    --font-family: 'Mitr', 'Noto Sans Thai', sans-serif;
+    --font-scale: 0.9; /* Default: medium (90% of original size) */
+
+    /* Additional theme-specific variables */
+    --theme-transition-duration: 300ms;
+    --shadow-color: 210 40% 6%;
+    --shadow-elevation-low: 0 1px 2px 0 rgba(hsl(var(--shadow-color)), 0.05);
+    --shadow-elevation-medium: 0 4px 6px -1px rgba(hsl(var(--shadow-color)), 0.1), 0 2px 4px -1px rgba(hsl(var(--shadow-color)), 0.06);
+    --shadow-elevation-high: 0 20px 25px -5px rgba(hsl(var(--shadow-color)), 0.1), 0 10px 10px -5px rgba(hsl(var(--shadow-color)), 0.04);
+
+    /* Status and state colors */
+    --info: 213 94% 68%;
+    --info-foreground: 210 40% 98%;
+    --success-muted: 142 76% 96%;
+    --success-muted-foreground: 142 76% 26%;
+    --warning-muted: 48 96% 89%;
+    --warning-muted-foreground: 48 96% 29%;
+    --destructive-muted: 0 93% 94%;
+    --destructive-muted-foreground: 0 93% 34%;
+  }
+
+  .dark {
+    /* Dark theme colors (default) */
+    --background: 0 0% 3.9%;  /* Near black #0a0a0a */
+    --foreground: 0 0% 98%;
+    --card: 0 0% 6%;  /* Slightly lighter than background for contrast */
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 20.5 90.2% 48.2%;  /* Orange #f97316 */
+    --primary-foreground: 0 0% 9%;  /* Black text on orange */
+    --secondary: 215 27.9% 16.9%;  /* Dark gray */
+    --secondary-foreground: 0 0% 98%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+    --accent: 215 27.9% 16.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 20.5 90.2% 48.2%;  /* Orange ring */
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+    --warning: 47.9 95.8% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --error: 0 72.2% 50.6%;
+    --error-foreground: 0 0% 98%;
+
+    /* Font family and scale variables (inherited from light theme) */
+    --font-family: 'Mitr', 'Noto Sans Thai', sans-serif;
+    --font-scale: 0.9; /* Default: medium (90% of original size) */
+
+    /* Dark theme shadows */
+    --shadow-color: 0 0% 0%;
+    --shadow-elevation-low: 0 1px 2px 0 rgba(0, 0, 0, 0.15);
+    --shadow-elevation-medium: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.12);
+    --shadow-elevation-high: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.15);
+
+    /* Dark theme status colors */
+    --info: 213 94% 68%;
+    --info-foreground: 0 0% 3.9%;
+    --success-muted: 142 70% 16%;
+    --success-muted-foreground: 142 70% 86%;
+    --warning-muted: 48 96% 16%;
+    --warning-muted-foreground: 48 96% 86%;
+    --destructive-muted: 0 62% 16%;
+    --destructive-muted-foreground: 0 62% 86%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    /* Set dark theme as default */
+    @apply dark;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-family, 'Mitr', 'Noto Sans Thai', sans-serif);
+    font-size: calc(1rem * var(--font-scale, 0.9));
+    transition: background-color var(--theme-transition-duration) ease,
+                color var(--theme-transition-duration) ease,
+                border-color var(--theme-transition-duration) ease,
+                font-family var(--theme-transition-duration) ease,
+                font-size var(--theme-transition-duration) ease;
+  }
+
+  /* Enhanced theme transitions for all elements */
+  *, *::before, *::after {
+    transition:
+      background-color var(--theme-transition-duration) ease,
+      border-color var(--theme-transition-duration) ease,
+      color var(--theme-transition-duration) ease,
+      box-shadow var(--theme-transition-duration) ease,
+      fill var(--theme-transition-duration) ease,
+      stroke var(--theme-transition-duration) ease,
+      opacity var(--theme-transition-duration) ease,
+      font-size var(--theme-transition-duration) ease;
+  }
+
+  /* Font scaling system - apply to all text elements */
+  h1, h2, h3, h4, h5, h6 {
+    font-size: calc(var(--tw-prose-headings, 1em) * var(--font-scale, 0.9));
+  }
+
+  p, span, div, label, input, textarea, select, button {
+    font-size: calc(1em * var(--font-scale, 0.9));
+  }
+
+  /* Override for specific sizes */
+  .text-xs { font-size: calc(0.875rem * var(--font-scale, 1.0)) !important; }
+  .text-sm { font-size: calc(1rem * var(--font-scale, 0.95)) !important; } /* คำอธิบาย - เล็กลง */
+  .text-base { font-size: calc(1rem * var(--font-scale, 1.1)) !important; }
+  .text-lg { font-size: calc(1.125rem * var(--font-scale, 1.1)) !important; }
+  .text-xl { font-size: calc(1.25rem * var(--font-scale, 1.15)) !important; } /* ชื่อฟอร์ม - ใหญ่ขึ้น */
+  .text-2xl { font-size: calc(1.5rem * var(--font-scale, 1.15)) !important; } /* ชื่อฟอร์ม - ใหญ่ขึ้น */
+
+  /* Form card override - remove glass container border */
+  .form-card-borderless {
+    border: none !important;
+    border-width: 0 !important;
+  }
+  .text-3xl { font-size: calc(1.875rem * var(--font-scale, 0.9)) !important; }
+  .text-4xl { font-size: calc(2.25rem * var(--font-scale, 0.9)) !important; }
+
+  /* Responsive text classes with font scaling */
+  .text-responsive-xs {
+    font-size: calc(0.75rem * var(--font-scale, 0.9)) !important;
+    line-height: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .text-responsive-xs {
+      font-size: calc(0.875rem * var(--font-scale, 0.9)) !important;
+      line-height: 1.25rem;
+    }
+  }
+
+  .text-responsive-sm {
+    font-size: calc(0.875rem * var(--font-scale, 0.9)) !important;
+    line-height: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .text-responsive-sm {
+      font-size: calc(1rem * var(--font-scale, 0.9)) !important;
+      line-height: 1.5rem;
+    }
+  }
+
+  .text-responsive-base {
+    font-size: calc(1rem * var(--font-scale, 0.9)) !important;
+    line-height: 1.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .text-responsive-base {
+      font-size: calc(1.125rem * var(--font-scale, 0.9)) !important;
+      line-height: 1.75rem;
+    }
+  }
+
+  .text-responsive-lg {
+    font-size: calc(1.125rem * var(--font-scale, 0.9)) !important;
+    line-height: 1.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .text-responsive-lg {
+      font-size: calc(1.25rem * var(--font-scale, 0.9)) !important;
+      line-height: 1.75rem;
+    }
+  }
+
+  .text-responsive-xl {
+    font-size: calc(1.25rem * var(--font-scale, 0.9)) !important;
+    line-height: 1.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .text-responsive-xl {
+      font-size: calc(1.5rem * var(--font-scale, 0.9)) !important;
+      line-height: 2rem;
+    }
+  }
+
+  .text-responsive-2xl {
+    font-size: calc(1.5rem * var(--font-scale, 0.9)) !important;
+    line-height: 2rem;
+  }
+
+  @media (min-width: 768px) {
+    .text-responsive-2xl {
+      font-size: calc(1.875rem * var(--font-scale, 0.9)) !important;
+      line-height: 2.25rem;
+    }
+  }
+
+  /* Improve focus states with theme awareness */
+  :focus-visible {
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background outline-none;
+  }
+
+  /* Better scrollbar theming */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/20;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-md;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/40;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/60;
+  }
+}
+
+.App {
+  text-align: center;
+  @apply transition-colors-opacity duration-300;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+/* Enhanced theme-specific component styling */
+@layer components {
+  .form-card {
+    @apply bg-card text-card-foreground border border-border rounded-lg;
+    box-shadow: var(--shadow-elevation-low);
+    transition: all var(--theme-transition-duration) ease;
+  }
+
+  .form-card:hover {
+    box-shadow: var(--shadow-elevation-medium);
+  }
+
+  .form-input {
+    @apply bg-background border-input text-foreground placeholder:text-muted-foreground rounded-md px-3 py-2;
+    transition: all var(--theme-transition-duration) ease;
+  }
+
+  .form-input:focus {
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background border-primary;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2;
+    transition: all var(--theme-transition-duration) ease;
+    box-shadow: var(--shadow-elevation-low);
+  }
+
+  .btn-primary:hover {
+    box-shadow: var(--shadow-elevation-medium);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-elevation-low);
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md px-4 py-2 border border-border;
+    transition: all var(--theme-transition-duration) ease;
+  }
+
+  .btn-secondary:hover {
+    @apply border-primary/50;
+    transform: translateY(-1px);
+  }
+
+  .theme-toggle-button {
+    @apply relative p-2 rounded-lg border border-border bg-card hover:bg-accent hover:text-accent-foreground;
+    transition: all var(--theme-transition-duration) ease;
+    box-shadow: var(--shadow-elevation-low);
+  }
+
+  .theme-toggle-button:hover {
+    box-shadow: var(--shadow-elevation-medium);
+    transform: translateY(-1px);
+    @apply border-primary/50;
+  }
+
+  .theme-toggle-button:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-elevation-low);
+  }
+
+  .theme-toggle-button svg {
+    transition: all var(--theme-transition-duration) ease;
+  }
+
+  .theme-toggle-button:hover svg {
+    @apply text-primary;
+    transform: scale(1.1);
+  }
+
+  /* Enhanced orange accent theming */
+  .orange-accent {
+    @apply text-primary;
+  }
+
+  .orange-bg {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .orange-border {
+    @apply border-primary;
+  }
+
+  .orange-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
+  }
+
+  /* Professional dark theme enhancement */
+  .dark .professional-card {
+    @apply bg-card/50 backdrop-blur-sm;
+    border: 1px solid hsl(var(--border));
+  }
+
+  .dark .glass-effect {
+    @apply bg-card/30 backdrop-blur-md border border-border/50;
+  }
+
+  /* Modern status badge styles */
+  .status-badge-success {
+    @apply bg-success-muted text-success-muted-foreground border border-success/20;
+  }
+
+  .status-badge-warning {
+    @apply bg-warning-muted text-warning-muted-foreground border border-warning/20;
+  }
+
+  .status-badge-error {
+    @apply bg-destructive-muted text-destructive-muted-foreground border border-destructive/20;
+  }
+
+  .status-badge-info {
+    @apply bg-info/10 text-info border border-info/20;
+  }
+
+  /* Modern button variants */
+  .btn-success {
+    @apply bg-success text-success-foreground hover:bg-success/90 border border-success/20;
+    transition: all var(--theme-transition-duration) ease;
+  }
+
+  .btn-success:hover {
+    box-shadow: var(--shadow-elevation-medium);
+    transform: translateY(-1px);
+  }
+
+  .btn-success-muted {
+    @apply bg-success-muted text-success-muted-foreground hover:bg-success-muted/80 border border-success/20;
+    transition: all var(--theme-transition-duration) ease;
+  }
+
+  .btn-success-muted:hover {
+    @apply border-success/40;
+    transform: translateY(-1px);
+  }
+
+  .btn-warning-muted {
+    @apply bg-warning-muted text-warning-muted-foreground hover:bg-warning-muted/80 border border-warning/20;
+    transition: all var(--theme-transition-duration) ease;
+  }
+
+  .btn-warning-muted:hover {
+    @apply border-warning/40;
+    transform: translateY(-1px);
+  }
+
+  .btn-destructive-muted {
+    @apply bg-destructive-muted text-destructive-muted-foreground hover:bg-destructive-muted/80 border border-destructive/20;
+    transition: all var(--theme-transition-duration) ease;
+  }
+
+  .btn-destructive-muted:hover {
+    @apply border-destructive/40;
+    transform: translateY(-1px);
+  }
+
+  .btn-destructive {
+    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90 border border-destructive/20;
+    transition: all var(--theme-transition-duration) ease;
+  }
+
+  .btn-destructive:hover {
+    box-shadow: var(--shadow-elevation-medium);
+    transform: translateY(-1px);
+  }
+
+  /* Modern list item hover */
+  .list-item-hover {
+    @apply hover:bg-accent/30 transition-colors;
+  }
+
+  /* Modern progress indicators */
+  .progress-bg {
+    @apply bg-muted/30;
+  }
+
+  .progress-success {
+    @apply bg-success;
+  }
+
+  /* Modern tag/chip styling */
+  .chip-success {
+    @apply bg-success-muted text-success-muted-foreground border border-success/20 rounded-full px-2 py-1 text-xs;
+  }
+
+  /* FontAwesome Plus Icon Size Enhancement */
+  .svg-inline--fa.fa-plus {
+    width: 1.5em !important;
+    height: 1.2em !important;
+  }
+
+  /* Specific Plus Icon Size for Success Buttons */
+  button.btn-success .svg-inline--fa.fa-plus {
+    width: 1.8em !important;
+    height: 1.4em !important;
+  }
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,169 @@
+import React from 'react';
+import { cn } from '../../lib/utils';
+import GlassTooltip from './glass-tooltip';
+
+const GlassInput = React.forwardRef(({
+  className,
+  type = 'text',
+  tooltip,
+  label,
+  error,
+  minimal = false,
+  ...props
+}, ref) => {
+  const inputClasses = cn(
+    'input-glass',
+    'border-0 bg-transparent',
+    'placeholder:text-muted-foreground/50',
+    error && 'border-destructive focus:border-destructive',
+    className
+  );
+
+  const input = (
+    <input
+      type={type}
+      className={inputClasses}
+      ref={ref}
+      {...props}
+    />
+  );
+
+  const wrappedInput = (
+    <div className="relative group glass-input-group w-full">
+      {label && (
+        <label className={cn(
+          'text-sm font-medium text-foreground/80 mb-2 block transition-all duration-200',
+          minimal && 'text-foreground/60 group-focus-within:text-primary group-hover:text-primary group-focus-within:font-semibold group-hover:font-medium',
+          !minimal && 'group-focus-within:text-primary group-hover:text-primary group-focus-within:font-semibold group-hover:font-medium'
+        )}>
+          {label}
+        </label>
+      )}
+      <div className="w-full">
+        {tooltip ? (
+          <GlassTooltip content={tooltip}>
+            {input}
+          </GlassTooltip>
+        ) : (
+          input
+        )}
+      </div>
+      {error && (
+        <p className="text-sm text-destructive mt-1">{error}</p>
+      )}
+    </div>
+  );
+
+  return wrappedInput;
+});
+GlassInput.displayName = 'GlassInput';
+
+const GlassTextarea = React.forwardRef(({
+  className,
+  tooltip,
+  label,
+  error,
+  minimal = false,
+  ...props
+}, ref) => {
+  const textareaClasses = cn(
+    'input-glass min-h-[80px] resize-none',
+    'border-0 bg-transparent',
+    'placeholder:text-muted-foreground/50',
+    error && 'border-destructive focus:border-destructive',
+    className
+  );
+
+  const textarea = (
+    <textarea
+      className={textareaClasses}
+      ref={ref}
+      {...props}
+    />
+  );
+
+  return (
+    <div className="relative group glass-input-group w-full">
+      {label && (
+        <label className={cn(
+          'text-sm font-medium text-foreground/80 mb-2 block transition-all duration-200',
+          minimal && 'text-foreground/60 group-focus-within:text-primary group-hover:text-primary group-focus-within:font-semibold group-hover:font-medium',
+          !minimal && 'group-focus-within:text-primary group-hover:text-primary group-focus-within:font-semibold group-hover:font-medium'
+        )}>
+          {label}
+        </label>
+      )}
+      <div className="w-full">
+        {tooltip ? (
+          <GlassTooltip content={tooltip}>
+            {textarea}
+          </GlassTooltip>
+        ) : (
+          textarea
+        )}
+      </div>
+      {error && (
+        <p className="text-sm text-destructive mt-1">{error}</p>
+      )}
+    </div>
+  );
+});
+GlassTextarea.displayName = 'GlassTextarea';
+
+const GlassSelect = React.forwardRef(({
+  className,
+  tooltip,
+  label,
+  error,
+  minimal = false,
+  children,
+  ...props
+}, ref) => {
+  const selectClasses = cn(
+    'input-glass',
+    'border-0 bg-transparent',
+    'appearance-none bg-no-repeat bg-right bg-[length:16px_16px] pr-10',
+    'bg-[url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%23737373\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'m6 8 4 4 4-4\'/%3e%3c/svg%3e")]',
+    error && 'border-destructive focus:border-destructive',
+    className
+  );
+
+  const select = (
+    <select
+      className={selectClasses}
+      ref={ref}
+      {...props}
+    >
+      {children}
+    </select>
+  );
+
+  return (
+    <div className="relative group glass-input-group w-full">
+      {label && (
+        <label className={cn(
+          'text-sm font-medium text-foreground/80 mb-2 block transition-all duration-200',
+          minimal && 'text-foreground/60 group-focus-within:text-primary group-hover:text-primary group-focus-within:font-semibold group-hover:font-medium',
+          !minimal && 'group-focus-within:text-primary group-hover:text-primary group-focus-within:font-semibold group-hover:font-medium'
+        )}>
+          {label}
+        </label>
+      )}
+      <div className="w-full">
+        {tooltip ? (
+          <GlassTooltip content={tooltip}>
+            {select}
+          </GlassTooltip>
+        ) : (
+          select
+        )}
+      </div>
+      {error && (
+        <p className="text-sm text-destructive mt-1">{error}</p>
+      )}
+    </div>
+  );
+});
+GlassSelect.displayName = 'GlassSelect';
+
+export { GlassInput, GlassTextarea, GlassSelect };

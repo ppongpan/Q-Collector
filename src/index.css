@@ -1,0 +1,1854 @@
+@import url('https://fonts.googleapis.com/css2?family=Mitr:wght@200;300;400;500;600;700&family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Noto+Sans+Thai:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Font System */
+    --font-family: 'Mitr', 'Noto Sans Thai', sans-serif;
+    --font-scale: 1;
+
+    /* Color System - Enhanced for WCAG AA Compliance */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 2%;          /* Enhanced contrast: darker text (was 4.9%) */
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 2%;     /* Enhanced contrast: darker text */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 2%;  /* Enhanced contrast: darker text */
+    --primary: 24 95% 45%;               /* Enhanced contrast: darker orange (was 53%) */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 94%;            /* Slightly darker background (was 96%) */
+    --secondary-foreground: 222.2 84% 2%; /* Enhanced contrast: darker text */
+    --muted: 210 40% 94%;                /* Slightly darker background */
+    --muted-foreground: 215.4 16.3% 35%; /* Enhanced contrast: darker text (was 46.9%) */
+    --accent: 24 95% 45%;                /* Enhanced contrast: darker orange */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 50%;          /* Enhanced contrast: darker red (was 60.2%) */
+    --destructive-foreground: 0 0% 100%;
+    --border: 214.3 31.8% 85%;           /* Slightly darker border (was 91.4%) */
+    --input: 214.3 31.8% 85%;            /* Slightly darker input background */
+    --ring: 222.2 84% 2%;                /* Enhanced contrast: darker ring */
+    --radius: 0.5rem;
+
+    /* Success, Warning, Error, Info with muted variants */
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --success-muted: 142.1 30% 85%;
+    --success-muted-foreground: 142.1 76.2% 36.3%;
+    --warning: 47.9 95.8% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --warning-muted: 47.9 40% 85%;
+    --warning-muted-foreground: 47.9 95.8% 53.1%;
+    --info: 220.9 39.3% 11%;
+    --info-foreground: 220.9 39.3% 90%;
+    --info-muted: 220.9 20% 85%;
+    --info-muted-foreground: 220.9 39.3% 11%;
+    --error: 0 84.2% 60.2%;
+    --error-foreground: 210 40% 98%;
+
+    /* 8px Grid System Variables */
+    --spacing-1: 0.25rem;  /* 4px */
+    --spacing-2: 0.5rem;   /* 8px - base unit */
+    --spacing-3: 0.75rem;  /* 12px */
+    --spacing-4: 1rem;     /* 16px */
+    --spacing-5: 1.25rem;  /* 20px */
+    --spacing-6: 1.5rem;   /* 24px */
+    --spacing-8: 2rem;     /* 32px */
+    --spacing-10: 2.5rem;  /* 40px */
+    --spacing-12: 3rem;    /* 48px */
+    --spacing-16: 4rem;    /* 64px */
+    --spacing-20: 5rem;    /* 80px */
+    --spacing-24: 6rem;    /* 96px */
+
+    /* iOS 26 Typography Scale - Enhanced for Better Accessibility */
+    --font-size-micro: 0.75rem;       /* 12px - Minimum readable size */
+    --font-size-caption: 0.875rem;    /* 14px - Enhanced from 12px */
+    --font-size-footnote: 0.9375rem;  /* 15px - Enhanced from 13px */
+    --font-size-subhead: 1rem;        /* 16px - Enhanced from 15px */
+    --font-size-callout: 1.125rem;    /* 18px - Enhanced from 16px */
+    --font-size-body: 1.25rem;        /* 20px - Enhanced from 17px */
+    --font-size-headline: 1.375rem;   /* 22px - Enhanced from 18px */
+    --font-size-title3: 1.5rem;       /* 24px - Enhanced from 20px */
+    --font-size-title2: 1.625rem;     /* 26px - Enhanced from 22px */
+    --font-size-title1: 2rem;         /* 32px - Enhanced from 28px */
+    --font-size-large-title: 2.5rem;  /* 40px - Enhanced from 34px */
+
+    /* Icon sizes for better visibility */
+    --icon-size-xs: 1rem;     /* 16px */
+    --icon-size-sm: 1.25rem;  /* 20px - Minimum recommended */
+    --icon-size-md: 1.5rem;   /* 24px - Standard */
+    --icon-size-lg: 2rem;     /* 32px - Large */
+    --icon-size-xl: 2.5rem;   /* 40px - Extra large */
+
+    /* Responsive scaling multipliers */
+    --scale-mobile: 1;
+    --scale-tablet: 1.1;
+    --scale-desktop: 1.2;
+    --scale-large: 1.3;
+
+    /* Shadow System */
+    --shadow-elevation-low: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-elevation-medium: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-elevation-high: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Touch Targets - iOS 26 Standards - Enhanced for Better Accessibility */
+    --touch-target-min: 48px;         /* Enhanced minimum for accessibility (was 44px) */
+    --touch-target-comfortable: 52px;  /* Enhanced comfortable tapping (was 48px) */
+    --touch-target-generous: 60px;     /* Enhanced generous spacing (was 56px) */
+    --touch-target-primary: 56px;      /* Enhanced primary actions (was 52px) */
+    --touch-target-secondary: 48px;    /* Enhanced secondary actions (was 44px) */
+
+    /* Container Widths */
+    --container-xs: 320px;
+    --container-sm: 640px;
+    --container-md: 768px;
+    --container-lg: 1024px;
+    --container-xl: 1280px;
+    --container-2xl: 1536px;
+    --container-3xl: 1920px;
+    --container-4xl: 2560px;
+
+    /* Layout Grid System */
+    --grid-columns-mobile: 1;
+    --grid-columns-tablet: 2;
+    --grid-columns-desktop: 3;
+    --grid-columns-wide: 4;
+
+    /* Glass Morphism Enhancement */
+    --glass-blur: 24px;
+    --glass-border: 1px;
+    --glass-opacity: 0.1;
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+
+    /* Modern Animations */
+    --animation-fast: 150ms;
+    --animation-medium: 250ms;
+    --animation-slow: 400ms;
+    --animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
+    --animation-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .dark {
+    --background: 0 0% 3%;               /* Darker background for better contrast */
+    --foreground: 0 0% 98%;              /* Maximum contrast: very light text */
+    --card: 0 0% 6%;                     /* Darker card background */
+    --card-foreground: 0 0% 98%;         /* Maximum contrast: very light text */
+    --popover: 0 0% 6%;                  /* Darker popover background */
+    --popover-foreground: 0 0% 98%;      /* Maximum contrast: very light text */
+    --primary: 24 95% 65%;               /* Bright orange for visibility */
+    --primary-foreground: 0 0% 3%;       /* Dark text on orange background */
+    --secondary: 0 0% 10%;               /* Darker secondary background */
+    --secondary-foreground: 0 0% 98%;    /* Maximum contrast: very light text */
+    --muted: 0 0% 10%;                   /* Darker muted background */
+    --muted-foreground: 0 0% 85%;        /* Very light muted text for visibility */
+    --accent: 24 95% 65%;                /* Bright orange for visibility */
+    --accent-foreground: 0 0% 3%;        /* Dark text on accent background */
+    --destructive: 0 84.2% 70%;          /* Bright red for visibility */
+    --destructive-foreground: 0 0% 3%;   /* Dark text on destructive background */
+    --border: 0 0% 25%;                  /* More visible borders */
+    --input: 0 0% 8%;                    /* Darker input backgrounds */
+    --ring: 24 95% 65%;                  /* Bright ring for visibility */
+    --success: 142.1 70.6% 60%;          /* Bright green for visibility */
+    --success-foreground: 144.9 80.4% 3%; /* Dark text on success background */
+    --success-muted: 142.1 30% 15%;      /* Darker success muted background */
+    --success-muted-foreground: 142.1 70.6% 60%;
+    --warning: 47.9 95.8% 65%;           /* Bright yellow for visibility */
+    --warning-foreground: 26 83.3% 3%;   /* Dark text on warning background */
+    --warning-muted: 47.9 40% 15%;       /* Darker warning muted background */
+    --warning-muted-foreground: 47.9 95.8% 65%;
+    --info: 220.9 39.3% 80%;             /* Bright blue for visibility */
+    --info-foreground: 220.9 39.3% 3%;   /* Dark text on info background */
+    --info-muted: 220.9 20% 15%;         /* Darker info muted background */
+    --info-muted-foreground: 220.9 39.3% 80%;
+    --error: 0 84.2% 70%;                /* Bright red for visibility */
+    --error-foreground: 0 0% 3%;         /* Dark text on error background */
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-family);
+    font-size: 16px; /* Fixed base size - no scaling at body level */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+}
+
+@layer components {
+  /* Responsive Container System */
+  .container-responsive {
+    @apply w-full mx-auto px-4;
+  }
+
+  @screen sm {
+    .container-responsive {
+      @apply px-6;
+    }
+  }
+
+  @screen md {
+    .container-responsive {
+      @apply px-8;
+    }
+  }
+
+  @screen lg {
+    .container-responsive {
+      @apply max-w-7xl px-12;
+    }
+  }
+
+  @screen xl {
+    .container-responsive {
+      @apply px-16;
+    }
+  }
+
+  @screen 2xl {
+    .container-responsive {
+      @apply max-w-8xl px-20;
+    }
+  }
+
+  /* Touch Target Utilities */
+  .touch-target-min {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+  }
+
+  .touch-target-comfortable {
+    min-height: var(--touch-target-comfortable);
+    min-width: var(--touch-target-comfortable);
+  }
+
+  .touch-target-generous {
+    min-height: var(--touch-target-generous);
+    min-width: var(--touch-target-generous);
+  }
+
+  .touch-target-primary {
+    min-height: var(--touch-target-primary);
+    min-width: var(--touch-target-primary);
+  }
+
+  .touch-target-secondary {
+    min-height: var(--touch-target-secondary);
+    min-width: var(--touch-target-secondary);
+  }
+
+  /* Enhanced Mobile Interactions */
+  @media (hover: none) and (pointer: coarse) {
+    /* Mobile-specific styles */
+    .hover\:scale-\[1\.015\]:hover {
+      transform: none;
+    }
+
+    .hover\:scale-\[1\.02\]:hover {
+      transform: none;
+    }
+
+    /* Enhanced tap targets on mobile */
+    .btn, .glass-button, [role="button"], button {
+      min-height: var(--touch-target-comfortable);
+      touch-action: manipulation;
+    }
+
+    /* Prevent double-tap zoom on buttons */
+    .btn, .glass-button, [role="button"], button, input, select, textarea {
+      touch-action: manipulation;
+    }
+  }
+
+  /* Desktop hover states */
+  @media (hover: hover) and (pointer: fine) {
+    .hover\:scale-\[1\.015\]:hover {
+      transform: scale(1.015);
+    }
+
+    .hover\:scale-\[1\.02\]:hover {
+      transform: scale(1.02);
+    }
+  }
+
+  /* Responsive Container Enhancements */
+  @screen xs {
+    .container-responsive {
+      @apply px-4;
+    }
+  }
+
+  @screen sm {
+    .container-responsive {
+      @apply px-6;
+    }
+  }
+
+  @screen md {
+    .container-responsive {
+      @apply px-8;
+    }
+  }
+
+  @screen lg {
+    .container-responsive {
+      @apply px-12 max-w-7xl;
+    }
+  }
+
+  @screen xl {
+    .container-responsive {
+      @apply px-16;
+    }
+  }
+
+  @screen 2xl {
+    .container-responsive {
+      @apply px-20 max-w-8xl;
+    }
+  }
+
+  @screen 3xl {
+    .container-responsive {
+      @apply px-24 max-w-9xl;
+    }
+  }
+
+  /* Enhanced Form Spacing with Better Balance */
+  .form-spacing {
+    @apply space-y-6 sm:space-y-8 lg:space-y-10;    /* Enhanced: more generous spacing */
+  }
+
+  /* Consistent spacing for form elements */
+  .form-element-spacing {
+    @apply mb-6;                                      /* Enhanced: consistent bottom margin */
+  }
+
+  .form-group-spacing {
+    @apply space-y-4;                                 /* Enhanced: consistent group spacing */
+  }
+
+  /* Button group spacing */
+  .button-group-spacing {
+    @apply space-x-3 space-y-3 flex flex-wrap;       /* Enhanced: consistent button spacing */
+  }
+
+  /* Icon and text spacing */
+  .icon-text-spacing {
+    @apply space-x-3;                                 /* Enhanced: consistent icon-text spacing */
+  }
+
+  /* Responsive Text Scaling */
+  .text-responsive-title {
+    @apply text-title3 sm:text-title2 lg:text-title1;
+  }
+
+  .text-responsive-heading {
+    @apply text-headline sm:text-title3 lg:text-title2;
+  }
+
+  .text-responsive-body {
+    @apply text-subhead sm:text-callout lg:text-body;
+  }
+
+  /* iOS 26 Element Proportions */
+  .element-proportions-sm {
+    @apply h-10 lg:h-12;
+  }
+
+  .element-proportions-md {
+    @apply h-12 lg:h-14;
+  }
+
+  .element-proportions-lg {
+    @apply h-14 lg:h-16;
+  }
+
+  /* 8px Grid Spacing Utilities */
+  .space-grid-2 { @apply space-y-2 space-x-2; }
+  .space-grid-4 { @apply space-y-4 space-x-4; }
+  .space-grid-6 { @apply space-y-6 space-x-6; }
+  .space-grid-8 { @apply space-y-8 space-x-8; }
+
+  .gap-grid-2 { @apply gap-2; }
+  .gap-grid-4 { @apply gap-4; }
+  .gap-grid-6 { @apply gap-6; }
+  .gap-grid-8 { @apply gap-8; }
+
+  /* Unified Typography Scale - Larger Sizes for Better Readability */
+  .text-micro { font-size: 16px; line-height: 1.4; font-weight: 500; }        /* Minimum readable size */
+  .text-caption { font-size: 18px; line-height: 1.36; font-weight: 500; }     /* Enhanced from 14px */
+  .text-caption-2 { font-size: 18px; line-height: 1.33; font-weight: 500; }   /* Unified with caption */
+  .text-footnote { font-size: 18px; line-height: 1.38; font-weight: 400; }    /* Unified size */
+  .text-subhead { font-size: 20px; line-height: 1.33; font-weight: 400; }     /* Standard body size */
+  .text-callout { font-size: 22px; line-height: 1.25; font-weight: 400; }     /* Enhanced readability */
+  .text-body { font-size: 20px; line-height: 1.41; font-weight: 400; }        /* Standard body text */
+  .text-headline { font-size: 24px; line-height: 1.41; font-weight: 600; }    /* Clear hierarchy */
+  .text-title-3 { font-size: 28px; line-height: 1.25; font-weight: 600; }     /* Enhanced titles */
+  .text-title-2 { font-size: 32px; line-height: 1.27; font-weight: 700; }     /* Prominent titles */
+  .text-title-1 { font-size: 36px; line-height: 1.21; font-weight: 700; }     /* Major headings */
+  .text-large-title { font-size: 42px; line-height: 1.18; font-weight: 700; } /* Hero text */
+
+  /* Responsive Typography */
+  .text-responsive-xs { @apply text-caption md:text-footnote; }
+  .text-responsive-sm { @apply text-footnote md:text-subhead; }
+  .text-responsive-base { @apply text-subhead md:text-callout; }
+  .text-responsive-lg { @apply text-callout md:text-body; }
+  .text-responsive-xl { @apply text-body md:text-headline; }
+  .text-responsive-2xl { @apply text-headline md:text-title-3; }
+  .text-responsive-3xl { @apply text-title-3 md:text-title-2; }
+  .text-responsive-4xl { @apply text-title-2 md:text-title-1; }
+
+  /* Layout Grid Utilities */
+  .layout-grid {
+    @apply grid grid-cols-1 gap-4;
+  }
+
+  @screen sm {
+    .layout-grid {
+      @apply gap-6;
+    }
+  }
+
+  @screen md {
+    .layout-grid {
+      @apply grid-cols-12 gap-6;
+    }
+  }
+
+  @screen lg {
+    .layout-grid {
+      @apply gap-8;
+    }
+  }
+
+  /* Enhanced 8px Grid System for Form Builder */
+  .grid-responsive {
+    @apply grid gap-4;
+    grid-template-columns: repeat(var(--grid-columns-mobile), 1fr);
+  }
+
+  @screen md {
+    .grid-responsive {
+      @apply gap-6;
+      grid-template-columns: repeat(var(--grid-columns-tablet), 1fr);
+    }
+  }
+
+  @screen lg {
+    .grid-responsive {
+      @apply gap-8;
+      grid-template-columns: repeat(var(--grid-columns-desktop), 1fr);
+    }
+  }
+
+  @screen xl {
+    .grid-responsive {
+      @apply gap-10;
+      grid-template-columns: repeat(var(--grid-columns-wide), 1fr);
+    }
+  }
+
+  /* Form Builder Specific Layouts - Enhanced for better preview space */
+  .form-builder-grid {
+    @apply grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8;
+  }
+
+  .form-builder-sidebar {
+    @apply lg:col-span-4 xl:col-span-3;
+  }
+
+  .form-builder-content {
+    @apply lg:col-span-7 xl:col-span-8;
+  }
+
+  .form-builder-preview {
+    @apply lg:col-span-5 xl:col-span-4;
+  }
+
+  .form-builder-editor {
+    @apply lg:col-span-6;
+  }
+
+  /* Card Component */
+  .card {
+    @apply bg-card text-card-foreground rounded-lg border shadow-elevation-low;
+  }
+
+  .card-header {
+    @apply p-4 md:p-6;
+  }
+
+  .card-content {
+    @apply p-4 md:p-6 pt-0;
+  }
+
+  .card-footer {
+    @apply p-4 md:p-6 pt-0;
+  }
+
+  /* Enhanced Button Components with Touch Targets and Clear Hover States */
+  .btn {
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-xl transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 touch-target-min;
+    font-size: clamp(14px, calc(16px * var(--font-scale)), 18px);  /* Limit font scaling */
+    font-weight: 500;                      /* Enhanced: medium weight for better readability */
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-primary-foreground;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-primary:hover {
+    @apply bg-primary/90;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(249, 115, 22, 0.4);
+    filter: brightness(1.1);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-secondary {
+    @apply btn bg-secondary text-secondary-foreground border border-input;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-secondary:hover {
+    @apply bg-secondary/80;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-color: hsl(var(--border) / 0.6);
+    filter: brightness(1.05);
+  }
+
+  .btn-secondary:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-destructive {
+    @apply btn bg-destructive text-destructive-foreground;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-destructive:hover {
+    @apply bg-destructive/90;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  }
+
+  .btn-destructive:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-sm {
+    @apply px-4 py-3 text-sm font-medium;    /* Enhanced: larger padding */
+    min-height: 44px;                       /* Enhanced: touch target */
+  }
+
+  .btn-md {
+    @apply px-5 py-3 text-base font-medium;  /* Enhanced: larger padding and text */
+    min-height: 48px;                       /* Enhanced: touch target */
+  }
+
+  .btn-lg {
+    @apply px-8 py-4 text-lg font-medium touch-target-comfortable;
+    min-height: 52px;                       /* Enhanced: touch target */
+  }
+
+  /* Enhanced Form Controls with Clear Hover States */
+  .form-input {
+    @apply flex w-full rounded-xl border border-input bg-background ring-offset-background file:border-0 file:bg-transparent file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-target-min;
+    padding: 12px 16px;                     /* Enhanced: more padding */
+    font-size: 16px;                        /* Enhanced: larger, more readable text */
+    line-height: 1.5;
+    min-height: 48px;                       /* Enhanced: larger touch target */
+    transition: all 200ms ease-out;
+  }
+
+  .form-input:hover {
+    border-color: hsl(var(--border) / 0.8);
+    background-color: hsl(var(--muted) / 0.3);
+  }
+
+  .form-input:focus {
+    border-color: hsl(var(--primary) / 0.5);
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+  }
+
+  /* Responsive Tables */
+  .table-responsive {
+    @apply w-full overflow-auto;
+  }
+
+  @screen md {
+    .table-responsive {
+      @apply overflow-visible;
+    }
+  }
+
+  /* Mobile-First Navigation */
+  .nav-mobile {
+    @apply fixed inset-x-0 top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border;
+  }
+
+  @screen md {
+    .nav-mobile {
+      @apply static bg-transparent backdrop-blur-none supports-[backdrop-filter]:bg-transparent border-b-0;
+    }
+  }
+}
+
+@layer utilities {
+  /* Custom scrollbar */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground));
+    border-radius: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--border));
+  }
+
+  /* Date, time, and datetime input styling for dark theme */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    color-scheme: light;
+  }
+
+  .dark input[type="date"],
+  .dark input[type="time"],
+  .dark input[type="datetime-local"] {
+    color-scheme: dark;
+  }
+
+  /* Ensure date input calendar icon is properly themed */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: brightness(1);
+    cursor: pointer;
+  }
+
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="time"]::-webkit-calendar-picker-indicator,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: brightness(0) saturate(100%) invert(1);
+  }
+
+  /* Focus ring utilities */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Mobile-specific utilities */
+  @screen max-sm {
+    .mobile-stack {
+      @apply flex-col space-y-4 space-x-0;
+    }
+
+    .mobile-full {
+      @apply w-full;
+    }
+  }
+
+  /* Standardized Form Label System */
+
+  /* Primary Form Labels (Input Labels) */
+  .form-label {
+    @apply text-base font-medium text-foreground mb-2 block;
+    font-size: 16px !important;          /* Enhanced: minimum readable size */
+    font-weight: 600 !important;         /* Enhanced: bolder for better visibility */
+    color: #ffffff !important;           /* CRITICAL FIX: Force white text */
+    line-height: 1.4 !important;        /* Enhanced: better line spacing */
+    margin-bottom: 8px !important;      /* Enhanced: consistent spacing */
+  }
+
+  .form-label-required {
+    @apply text-base font-medium text-foreground mb-2 block after:content-['*'] after:text-red-500 after:ml-1;
+    font-size: 16px !important;          /* Enhanced: minimum readable size */
+    font-weight: 600 !important;         /* Enhanced: bolder for better visibility */
+    color: #ffffff !important;           /* CRITICAL FIX: Force white text */
+    line-height: 1.4 !important;        /* Enhanced: better line spacing */
+    margin-bottom: 8px !important;      /* Enhanced: consistent spacing */
+  }
+
+  /* Secondary Form Labels (Helper Text) */
+  .form-label-helper {
+    @apply text-base text-muted-foreground mt-1 block;
+    font-size: 16px !important;          /* Enhanced: minimum readable size */
+    font-weight: 500 !important;         /* Enhanced: medium weight for better visibility */
+    color: #cccccc !important;           /* CRITICAL FIX: Light gray with proper contrast */
+    line-height: 1.4 !important;        /* Enhanced: better line spacing */
+  }
+
+  .form-label-description {
+    @apply text-base text-muted-foreground mt-1 block leading-relaxed;
+    font-size: 16px !important;          /* Enhanced: minimum readable size */
+    font-weight: 500 !important;         /* Enhanced: medium weight for better visibility */
+    color: #cccccc !important;           /* CRITICAL FIX: Light gray with proper contrast */
+    line-height: 1.4 !important;        /* Enhanced: better line spacing */
+  }
+
+  /* Group Labels (Section Labels) */
+  .form-label-group {
+    @apply text-base font-semibold text-foreground mb-3 block;
+    font-size: 16px !important;          /* Enhanced: minimum readable size */
+    color: hsl(var(--foreground)) !important; /* Fix: ensure high contrast */
+  }
+
+  .form-label-section {
+    @apply text-lg font-semibold text-foreground mb-4 block;
+    font-size: 18px !important;          /* Enhanced: section headers are larger */
+    color: hsl(var(--foreground)) !important; /* Fix: ensure high contrast */
+  }
+
+  /* Inline Labels (Radio/Checkbox) */
+  .form-label-inline {
+    @apply text-base font-normal text-foreground ml-2 cursor-pointer;
+    font-size: 16px !important;          /* Enhanced: minimum readable size */
+    color: hsl(var(--foreground)) !important; /* Fix: ensure high contrast */
+  }
+
+  .form-label-radio {
+    @apply flex items-center gap-2 cursor-pointer text-base font-normal text-foreground;
+    font-size: 16px !important;          /* Enhanced: minimum readable size */
+    color: hsl(var(--foreground)) !important; /* Fix: ensure high contrast */
+  }
+
+  .form-label-checkbox {
+    @apply flex items-center gap-2 cursor-pointer text-base font-normal text-foreground;
+    font-size: 16px !important;          /* Enhanced: minimum readable size */
+    color: hsl(var(--foreground)) !important; /* Fix: ensure high contrast */
+  }
+
+  /* Field Configuration Labels */
+  .form-label-config {
+    @apply text-base font-medium text-muted-foreground mb-1 block;
+    font-size: 16px !important;          /* Enhanced: minimum readable size */
+    color: hsl(var(--muted-foreground)) !important; /* Fix: ensure proper contrast */
+  }
+
+  /* Form Title Labels */
+  .form-label-title {
+    @apply text-xl font-semibold text-foreground mb-2 block;
+    font-size: 20px !important;          /* Enhanced: larger title text */
+    color: hsl(var(--foreground)) !important; /* Fix: ensure high contrast */
+  }
+
+  /* Error and Validation Labels */
+  .form-label-error {
+    @apply text-base text-destructive mt-1 block;
+    font-size: 16px !important;          /* Enhanced: minimum readable size */
+    color: hsl(var(--destructive)) !important; /* Fix: ensure proper error contrast */
+  }
+
+  .form-label-success {
+    @apply text-base text-success mt-1 block;
+    font-size: 16px !important;          /* Enhanced: minimum readable size */
+    color: hsl(var(--success)) !important; /* Fix: ensure proper success contrast */
+  }
+
+  /* Screen Reader Only Labels */
+  .form-label-sr-only {
+    @apply sr-only;
+  }
+
+  /* Responsive Label Adjustments */
+  @media (max-width: 640px) {
+    .form-label, .form-label-required {
+      @apply text-base mb-2;
+    }
+
+    .form-label-title {
+      @apply text-xl mb-3;
+    }
+
+    .form-label-inline, .form-label-radio, .form-label-checkbox {
+      @apply text-base;
+    }
+  }
+
+  /* Enhanced iOS 26 Liquid Glass Design System */
+
+  /* Enhanced Glass Container Base - Dark Background Focus */
+  .glass-container {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    position: relative;
+  }
+
+  .dark .glass-container {
+    background: rgba(0, 0, 0, 0.5);       /* Darker background for better contrast */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* More visible borders */
+    color: hsl(var(--foreground));        /* Ensure light text */
+  }
+
+  /* Glass Variants */
+  .glass-elevated {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(24px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.1),
+      0 4px 16px rgba(0, 0, 0, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .dark .glass-elevated {
+    background: rgba(0, 0, 0, 0.6);       /* Darker background for contrast */
+    border: 1px solid rgba(255, 255, 255, 0.25); /* More visible borders */
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.5),
+      0 4px 16px rgba(0, 0, 0, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    color: hsl(var(--foreground));        /* Ensure light text */
+  }
+
+  .glass-floating {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(28px) saturate(220%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow:
+      0 12px 48px rgba(0, 0, 0, 0.15),
+      0 6px 24px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  .dark .glass-floating {
+    background: rgba(0, 0, 0, 0.7);       /* Darkest background for maximum contrast */
+    border: 1px solid rgba(255, 255, 255, 0.3); /* Most visible borders */
+    box-shadow:
+      0 12px 48px rgba(0, 0, 0, 0.6),
+      0 6px 24px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    color: hsl(var(--foreground));        /* Ensure light text */
+  }
+
+  .glass-primary {
+    background: rgba(249, 115, 22, 0.15);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+  }
+
+  .dark .glass-primary {
+    background: rgba(249, 115, 22, 0.2);
+    border: 1px solid rgba(249, 115, 22, 0.4);
+  }
+
+  /* Glass Navigation */
+  .glass-nav {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(32px) saturate(180%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .glass-nav {
+    background: rgba(0, 0, 0, 0.8);       /* Darker nav for better contrast */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* More visible border */
+    color: hsl(var(--foreground));        /* Ensure light text */
+  }
+
+  /* Glass Buttons */
+  .btn-glass {
+    @apply relative overflow-hidden rounded-xl font-medium transition-all duration-200 ease-out;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px) saturate(120%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgb(var(--foreground));
+    font-size: clamp(14px, calc(16px * var(--font-scale)), 18px);  /* Limit font scaling */
+  }
+
+  .btn-glass:hover {
+    background: rgba(249, 115, 22, 0.1) !important; /* Orange hint on hover */
+    border: 1px solid rgba(249, 115, 22, 0.4) !important; /* Orange border on hover */
+    color: hsl(var(--primary)) !important; /* Orange text on hover */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.2);
+  }
+
+  .btn-glass:active {
+    transform: translateY(0);
+    background: rgba(249, 115, 22, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .btn-glass {
+    background: rgba(255, 255, 255, 0.08);  /* More visible button background */
+    border: 1px solid rgba(255, 255, 255, 0.15); /* More visible border */
+    color: hsl(var(--foreground)) !important; /* Ensure light text */
+    font-size: clamp(14px, calc(16px * var(--font-scale)), 18px) !important; /* Limit font scaling */
+  }
+
+  .dark .btn-glass:hover {
+    background: rgba(249, 115, 22, 0.15) !important; /* Orange background on hover */
+    border: 1px solid rgba(249, 115, 22, 0.5) !important; /* Orange border on hover */
+    color: hsl(var(--primary)) !important;   /* Orange text on hover */
+    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.3);
+  }
+
+  .btn-glass-primary {
+    background: rgba(249, 115, 22, 0.9);
+    backdrop-filter: blur(12px) saturate(120%);
+    border: 1px solid rgba(249, 115, 22, 1);
+    color: white;
+  }
+
+  .btn-glass-primary:hover {
+    background: rgba(249, 115, 22, 1);
+    box-shadow:
+      0 4px 16px rgba(249, 115, 22, 0.4),
+      0 8px 32px rgba(249, 115, 22, 0.2);
+    transform: translateY(-1px);
+  }
+
+  .btn-glass-primary:active {
+    background: rgba(234, 88, 12, 1);
+    transform: translateY(0);
+  }
+
+  .icon-glass {
+    @apply w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .icon-glass:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+  }
+
+  .dark .icon-glass {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .dark .icon-glass:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  /* Glass Inputs */
+  .input-glass {
+    @apply w-full px-4 py-3 rounded-xl transition-all duration-200 ease-out;
+    @apply text-foreground placeholder:text-muted-foreground/80;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50;
+    background: #1e1e1e !important;      /* CRITICAL FIX: Solid background */
+    backdrop-filter: blur(8px) saturate(120%);
+    border: 2px solid #444 !important;  /* CRITICAL FIX: Visible border */
+    color: #ffffff !important;           /* CRITICAL FIX: White text */
+    font-size: 16px !important;         /* Enhanced: larger text */
+    font-weight: 500 !important;        /* Enhanced: better visibility */
+    min-height: 48px !important;        /* Enhanced: larger touch target */
+    line-height: 1.4 !important;        /* Enhanced: better line spacing */
+    min-width: 100% !important;         /* Enhanced: Force full width */
+    box-sizing: border-box !important;  /* Enhanced: Proper box model */
+    color-scheme: light;
+  }
+
+  .input-glass:hover {
+    background: #2a2a2a !important;     /* CRITICAL FIX: Lighter solid background on hover */
+    border: 2px solid #ff6600 !important; /* CRITICAL FIX: Orange border on hover */
+    color: #ff6600 !important;          /* CRITICAL FIX: Orange text on hover */
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px rgba(255, 102, 0, 0.3) !important; /* Orange glow */
+  }
+
+  .input-glass:focus {
+    background: #2a2a2a !important;     /* CRITICAL FIX: Lighter solid background on focus */
+    border: 2px solid #ff6600 !important; /* CRITICAL FIX: Orange border on focus */
+    color: #ffffff !important;          /* CRITICAL FIX: Keep white text on focus */
+    box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.3) !important; /* Enhanced: larger focus ring */
+    transform: translateY(-1px);
+    outline: none !important;
+  }
+
+  .dark .input-glass {
+    background: #1e1e1e !important;         /* CRITICAL FIX: Solid background in dark mode */
+    border: 2px solid #444 !important;     /* CRITICAL FIX: Visible border */
+    color: #ffffff !important;              /* CRITICAL FIX: White text in dark mode */
+    font-size: 16px !important;            /* Enhanced: larger text */
+    font-weight: 500 !important;           /* Enhanced: better visibility */
+    color-scheme: dark;
+  }
+
+  .dark .input-glass:hover {
+    background: #2a2a2a !important;        /* CRITICAL FIX: Lighter background on hover */
+    border: 2px solid #ff6600 !important;  /* CRITICAL FIX: Orange border on hover */
+    color: #ff6600 !important;             /* CRITICAL FIX: Orange text on hover */
+    box-shadow: 0 0 0 1px rgba(255, 102, 0, 0.3) !important; /* Orange glow */
+  }
+
+  .dark .input-glass:focus {
+    background: #2a2a2a !important;        /* CRITICAL FIX: Lighter background on focus */
+    border: 2px solid #ff6600 !important;  /* CRITICAL FIX: Orange border on focus */
+    color: #ffffff !important;             /* CRITICAL FIX: White text on focus */
+    box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.3) !important; /* Orange focus ring */
+    transform: translateY(-1px);
+    outline: none !important;
+  }
+
+  /* Fix dropdown options for dark theme */
+  select.input-glass option {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  .dark select.input-glass option {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /* Enhanced select styling for better dropdown appearance */
+  select.input-glass {
+    background-image: none !important;   /* CRITICAL FIX: Remove all background images to eliminate triangles */
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1rem;
+    background-color: #1e1e1e !important; /* CRITICAL FIX: Force solid dark background */
+    background: #1e1e1e !important;      /* CRITICAL FIX: Double ensure solid background */
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    font-size: 16px !important;          /* Enhanced: larger text for better readability */
+    font-weight: 500 !important;         /* Enhanced: medium weight for better visibility */
+    line-height: 1.5;
+    min-height: 52px;                    /* Enhanced: larger touch target */
+    padding: 12px 48px 12px 16px;       /* Enhanced: more padding, room for arrow */
+    border: 2px solid #444 !important;  /* CRITICAL FIX: Visible border */
+    color: #ffffff !important;           /* CRITICAL FIX: White text */
+    border-radius: 8px !important;      /* Enhanced: rounded corners */
+  }
+
+  .dark select.input-glass {
+    background-image: none !important;   /* CRITICAL FIX: No background images in dark mode */
+    background-color: #1e1e1e !important; /* CRITICAL FIX: Force solid dark background */
+    background: #1e1e1e !important;      /* CRITICAL FIX: Double ensure solid background */
+    color: #ffffff !important;           /* CRITICAL FIX: White text in dark mode */
+    border: 2px solid #444 !important;  /* CRITICAL FIX: Visible border */
+  }
+
+  /* Enhanced select hover and focus states */
+  select.input-glass:hover {
+    border-color: #ff6600 !important;   /* CRITICAL FIX: Orange border on hover */
+    background-color: #2a2a2a !important; /* Slightly lighter background on hover */
+    color: #ff6600 !important;          /* Orange text on hover */
+    box-shadow: 0 0 0 1px #ff6600 !important; /* Orange glow */
+  }
+
+  select.input-glass:focus {
+    border-color: #ff6600 !important;   /* CRITICAL FIX: Orange border on focus */
+    background-color: #2a2a2a !important; /* Slightly lighter background on focus */
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.3) !important; /* Orange focus ring */
+  }
+
+  /* Enhanced dropdown options */
+  select.input-glass option {
+    padding: 12px 16px !important;      /* Enhanced: larger option padding */
+    font-size: 16px !important;          /* Enhanced: larger option text */
+    font-weight: 500 !important;         /* Enhanced: better visibility */
+    line-height: 1.5;
+    min-height: 44px;                    /* Enhanced: touch-friendly options */
+    background-color: #1e1e1e !important; /* CRITICAL FIX: Solid dark background */
+    color: #ffffff !important;           /* CRITICAL FIX: White text */
+    border: none !important;             /* Remove any borders */
+  }
+
+  .dark select.input-glass option {
+    background-color: #1e1e1e !important; /* CRITICAL FIX: Dark theme solid background */
+    color: #ffffff !important;           /* CRITICAL FIX: White text in dark theme */
+    font-weight: 500 !important;         /* Enhanced: better visibility */
+  }
+
+  select.input-glass option:hover,
+  select.input-glass option:focus {
+    background-color: #2a2a2a !important; /* Lighter background on hover */
+    color: #ff6600 !important;          /* Orange text on hover */
+  }
+
+  /* Enhanced full-width layout for form fields */
+  .glass-container .group,
+  .form-builder .group,
+  .glass-card .group {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .glass-container .relative,
+  .form-builder .relative,
+  .glass-card .relative {
+    width: 100% !important;
+  }
+
+  /* Enhanced label synchronization with input hover/focus states - more specific targeting */
+  /* Target specific group types to avoid global hover effects */
+  .group-fieldtype:hover label,
+  .group-fieldtype:focus-within label,
+  .glass-input-group:hover label,
+  .glass-input-group:focus-within label {
+    color: hsl(var(--primary)) !important;
+    font-weight: 600 !important;
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+  }
+
+  .group label {
+    transition: all 0.2s ease !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Enhanced form grid consistency */
+  .form-builder .grid {
+    width: 100% !important;
+    gap: 1rem !important;
+  }
+
+  .form-builder .grid > * {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Focus Glass System */
+  .focus-glass {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 focus:ring-offset-background;
+  }
+
+  /* Glass Animations */
+  @keyframes glass-in {
+    0% {
+      opacity: 0;
+      transform: translateY(4px) scale(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes glass-out {
+    0% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+  }
+
+  .animate-glass-in {
+    animation: glass-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-glass-out {
+    animation: glass-out 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+
+  /* Minimal Text System */
+  .minimal-text {
+    transition: all 200ms ease-out;
+  }
+
+  .group:hover .minimal-text {
+    opacity: 1 !important;
+  }
+
+  /* iOS 26 Motion System */
+  .motion-safe {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .motion-scale {
+    @apply hover:scale-[1.02] active:scale-[0.98] transition-transform duration-200 ease-out;
+  }
+
+  .motion-lift {
+    @apply hover:shadow-lg hover:-translate-y-1 transition-all duration-200 ease-out;
+  }
+
+  .motion-bounce {
+    @apply hover:scale-105 active:scale-95 transition-transform duration-150 ease-out;
+  }
+
+  /* Enhanced Tooltips */
+  .tooltip-glass {
+    @apply px-3 py-2 rounded-lg text-sm font-medium;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(12px) saturate(120%);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  }
+
+  .dark .tooltip-glass {
+    background: rgba(0, 0, 0, 0.9);       /* Dark background for dark theme */
+    color: hsl(var(--foreground));        /* Light text for dark theme */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Screen Reader Only with proper positioning */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* iOS 26 Object Proportions */
+  .proportion-square { aspect-ratio: 1 / 1; }
+  .proportion-video { aspect-ratio: 16 / 9; }
+  .proportion-photo { aspect-ratio: 4 / 3; }
+  .proportion-golden { aspect-ratio: 1.618 / 1; }
+  .proportion-card { aspect-ratio: 3 / 2; }
+
+  /* Enhanced Focus States */
+  .focus-visible-glass {
+    @apply focus-visible:outline-none;
+    @apply focus-visible:ring-2 focus-visible:ring-primary/30;
+    @apply focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply focus-visible:border-primary/50;
+  }
+
+  /* Icon Size Utilities for Better Accessibility */
+  .icon-xs { width: var(--icon-size-xs); height: var(--icon-size-xs); }
+  .icon-sm { width: var(--icon-size-sm); height: var(--icon-size-sm); }
+  .icon-md { width: var(--icon-size-md); height: var(--icon-size-md); }
+  .icon-lg { width: var(--icon-size-lg); height: var(--icon-size-lg); }
+  .icon-xl { width: var(--icon-size-xl); height: var(--icon-size-xl); }
+
+  /* Enhanced Button + Icon Spacing Fix */
+  .btn-with-icon {
+    @apply inline-flex items-center justify-center gap-3;
+  }
+
+  .btn-with-icon .icon {
+    @apply flex-shrink-0;
+  }
+
+  /* Dropdown and Button Spacing Improvements */
+  .field-control-group {
+    @apply flex items-center gap-4 flex-wrap;
+  }
+
+  .field-control-group > .btn {
+    @apply flex-shrink-0;
+  }
+
+  .field-control-group > select,
+  .field-control-group > .form-input {
+    @apply flex-1 min-w-0;
+  }
+
+  /* Enhanced spacing for complex form layouts */
+  .form-builder-spacing {
+    @apply space-y-8;
+  }
+
+  .form-field-spacing {
+    @apply mb-6;
+  }
+
+  .form-actions-spacing {
+    @apply mt-8 pt-6 border-t border-border/50;
+  }
+
+  /* Enhanced Checkbox and Radio Button Styling */
+  input[type="checkbox"], input[type="radio"] {
+    width: 20px !important;               /* Enhanced: larger touch target */
+    height: 20px !important;              /* Enhanced: larger touch target */
+    accent-color: hsl(var(--primary)) !important; /* Orange accent color */
+    border: 2px solid hsl(var(--border)) !important; /* Visible border */
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 200ms ease-out;
+  }
+
+  input[type="radio"] {
+    border-radius: 50%;                   /* Round radio buttons */
+  }
+
+  input[type="checkbox"]:hover, input[type="radio"]:hover {
+    border-color: hsl(var(--primary)) !important; /* Orange border on hover */
+    transform: scale(1.1);
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
+  }
+
+  input[type="checkbox"]:focus, input[type="radio"]:focus {
+    outline: none;
+    border-color: hsl(var(--primary)) !important; /* Orange border on focus */
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.3) !important; /* Enhanced focus ring */
+    transform: scale(1.05);
+  }
+
+  input[type="checkbox"]:checked, input[type="radio"]:checked {
+    background-color: hsl(var(--primary)) !important; /* Orange background when checked */
+    border-color: hsl(var(--primary)) !important;
+  }
+
+  /* Enhanced Label Styling for Better Accessibility */
+  label {
+    font-size: 16px !important;          /* Enhanced: minimum readable size */
+    font-weight: 600 !important;         /* Enhanced: bold for better visibility */
+    color: #ffffff !important;           /* CRITICAL FIX: Force white text */
+    cursor: pointer;
+    transition: all 200ms ease-out;
+    display: flex !important;            /* CRITICAL FIX: Better alignment */
+    align-items: center !important;     /* CRITICAL FIX: Center alignment */
+    gap: 8px !important;                 /* CRITICAL FIX: Consistent spacing */
+    margin-bottom: 8px !important;      /* Enhanced: consistent bottom margin */
+    line-height: 1.4 !important;        /* Enhanced: better line spacing */
+  }
+
+  label:hover {
+    color: #ff6600 !important;          /* CRITICAL FIX: Orange text on hover */
+  }
+
+  /* Special styling for labels with checkboxes */
+  label:has(input[type="checkbox"]),
+  label:has(input[type="radio"]) {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: #ffffff !important;
+  }
+
+  /* Modern Scrollbars */
+  .scrollbar-glass {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  }
+
+  .scrollbar-glass::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-glass::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-glass::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    backdrop-filter: blur(8px);
+  }
+
+  .scrollbar-glass::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .dark .scrollbar-glass {
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+
+  .dark .scrollbar-glass::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .dark .scrollbar-glass::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  /* Apply font scaling to headings */
+  h1 {
+    font-size: calc(32px * var(--font-scale)) !important;
+    line-height: 1.5 !important;
+    transform: none !important;
+  }
+
+  h2 {
+    font-size: calc(24px * var(--font-scale)) !important;
+    line-height: 1.5 !important;
+    transform: none !important;
+  }
+
+  h3 {
+    font-size: calc(18px * var(--font-scale)) !important;
+    min-height: auto !important;
+    line-height: 1.5 !important;
+    transform: none !important;
+    zoom: 1 !important;
+  }
+
+  .text-base {
+    font-size: calc(16px * var(--font-scale)) !important;
+    line-height: 1.5 !important;
+    transform: none !important;
+  }
+
+  .text-lg {
+    font-size: calc(18px * var(--font-scale)) !important;
+    line-height: 1.5 !important;
+    transform: none !important;
+  }
+
+  .text-sm {
+    font-size: calc(14px * var(--font-scale)) !important;
+    line-height: 1.5 !important;
+    transform: none !important;
+  }
+
+  .text-xs {
+    font-size: calc(12px * var(--font-scale)) !important;
+    line-height: 1.4 !important;
+    transform: none !important;
+  }
+
+  .text-2xs {
+    font-size: calc(10px * var(--font-scale)) !important;
+    line-height: 1.3 !important;
+    transform: none !important;
+  }
+
+  /* Prevent text from being scaled down by transforms */
+  .field-preview h3,
+  .form-builder h3,
+  .glass-card h3 {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    transform: none !important;
+    zoom: 1 !important;
+    min-height: 24px !important;
+  }
+
+  /* Ensure form field titles are properly sized */
+  .form-builder .field-editor h3,
+  .form-builder .sub-form h3,
+  .glass-container h3 {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+    min-height: 24px !important;
+    transform: scale(1) !important;
+    zoom: 1 !important;
+  }
+
+  /* =================================================================== */
+  /* FORM CARD ANIMATION SYSTEM FIXES */
+  /* =================================================================== */
+
+  /* Form Card Container Fixes for Animations */
+  .form-card-borderless {
+    /* Critical: Allow animations to breathe without clipping */
+    overflow: visible !important;
+    position: relative;
+    z-index: 1;
+
+    /* Provide margin to prevent animation clipping */
+    margin: 8px;
+    padding: 0;
+
+    /* Enable smooth transitions */
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center center;
+
+    /* Ensure rounded corners are preserved */
+    isolation: isolate;
+  }
+
+  .form-card-borderless:hover {
+    /* Raise z-index during hover for proper layering */
+    z-index: 10 !important;
+
+    /* Ensure container doesn't clip the glow effect */
+    overflow: visible !important;
+  }
+
+  /* Form List Grid Container - Must allow overflow for animations */
+  .form-list-grid-container {
+    /* Critical overflow fix for form cards */
+    overflow: visible !important;
+    contain: none !important;
+
+    /* Extra spacing to accommodate scale animations and glow effects */
+    padding: 24px;
+    margin: -16px;
+
+    /* Ensure grid items can expand beyond their bounds */
+    isolation: auto;
+
+    /* Additional viewport fixes */
+    position: relative;
+    width: calc(100% + 32px);
+    max-width: none;
+  }
+
+  .form-list-grid-container .grid {
+    /* Critical: Grid must not constrain child animations */
+    overflow: visible !important;
+
+    /* Enhanced gaps to provide animation breathing room */
+    gap: 1.5rem;
+
+    /* Ensure grid doesn't clip scaled items */
+    position: relative;
+  }
+
+  .form-list-grid-container .grid > * {
+    /* Allow grid items to overflow their bounds for animations */
+    overflow: visible !important;
+    contain: none !important;
+
+    /* Enable transform animations */
+    transform-style: preserve-3d;
+  }
+
+  /* Orange Neon Glow Effect - Borderless Blur */
+  .form-card-glow {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 12px;
+    overflow: visible !important;
+    border: none !important;
+
+    /* Ensure proper stacking and space for animations */
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+
+    /* Provide margin for glow effect */
+    margin: 8px;
+  }
+
+  .form-card-glow:hover {
+    /* Critical: Raise z-index for proper layering */
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+
+    /* Pure orange glow - no borders, only blur */
+    box-shadow:
+      /* Soft inner orange glow */
+      0 0 20px rgba(249, 115, 22, 0.6),
+      /* Medium orange glow */
+      0 0 40px rgba(249, 115, 22, 0.4),
+      /* Extended soft glow */
+      0 0 60px rgba(249, 115, 22, 0.3),
+      /* Far reaching glow */
+      0 0 100px rgba(249, 115, 22, 0.2),
+      /* Depth shadow */
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+
+    /* Subtle background tint without borders */
+    background: linear-gradient(
+      135deg,
+      rgba(249, 115, 22, 0.03) 0%,
+      rgba(249, 115, 22, 0.02) 50%,
+      rgba(249, 115, 22, 0.03) 100%
+    );
+    backdrop-filter: blur(8px) saturate(120%) brightness(102%);
+
+    /* Smooth transform with lift */
+    transform: scale(1.02) translateY(-4px);
+
+    /* Preserve border radius */
+    border-radius: 12px;
+
+    /* Force visibility */
+    overflow: visible !important;
+  }
+
+  /* Fix for border radius clipping during scale animations */
+  .form-card-animate {
+    /* Preserve rounded corners during all animations */
+    border-radius: 12px !important;
+    overflow: visible !important;
+
+    /* Smooth transform origin */
+    transform-origin: center center;
+
+    /* Enable GPU acceleration */
+    will-change: transform, box-shadow;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  .form-card-animate:hover {
+    /* Maintain border radius during hover scale */
+    border-radius: 12px !important;
+    overflow: visible !important;
+  }
+
+  /* Container padding fixes to provide animation space */
+  .form-cards-container {
+    /* Provide sufficient padding for scale animations */
+    padding: 20px;
+    margin: -12px;
+
+    /* Allow children to overflow */
+    overflow: visible !important;
+    contain: none !important;
+  }
+
+  /* StaggerTransition component fixes */
+  .stagger-container {
+    /* Allow animated children to overflow */
+    overflow: visible !important;
+    contain: none !important;
+
+    /* Provide space for animations */
+    padding: 12px;
+    margin: -12px;
+  }
+
+  .stagger-container > * {
+    /* Each item can animate freely */
+    overflow: visible !important;
+    contain: none !important;
+
+    /* Enable smooth animations */
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* SwipeableGlassContainer fixes */
+  .swipeable-container {
+    /* Allow smooth animations */
+    overflow: visible !important;
+    position: relative;
+    z-index: 1;
+
+    /* Provide animation space */
+    margin: 4px;
+  }
+
+  .swipeable-container:hover {
+    /* Layer properly during hover */
+    z-index: 5 !important;
+    overflow: visible !important;
+  }
+
+  /* TouchRipple component fixes */
+  .touch-ripple-container {
+    /* Ensure ripple effects are visible */
+    overflow: visible !important;
+    position: relative;
+
+    /* Smooth interactions */
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Motion.div container fixes for Framer Motion */
+  .motion-container {
+    /* Allow Framer Motion animations to work properly */
+    overflow: visible !important;
+    contain: none !important;
+
+    /* Provide transform space */
+    position: relative;
+    z-index: 1;
+  }
+
+  .motion-container:hover {
+    /* Proper layering during animated hover */
+    z-index: 10 !important;
+    overflow: visible !important;
+  }
+
+  /* Grid system adjustments for animations */
+  .animated-grid {
+    /* Grid that supports child animations */
+    overflow: visible !important;
+    contain: none !important;
+
+    /* Enhanced spacing for animations */
+    gap: 1.5rem;
+    padding: 16px;
+    margin: -8px;
+  }
+
+  .animated-grid-item {
+    /* Individual grid items that can animate */
+    overflow: visible !important;
+    contain: none !important;
+
+    /* Animation support */
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+  }
+
+  /* Performance optimization for animations */
+  .animation-optimized {
+    /* GPU acceleration */
+    will-change: transform, box-shadow, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+
+    /* Smooth rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Debug helper - can be removed in production */
+  .debug-animation-bounds {
+    outline: 1px dashed rgba(255, 0, 0, 0.3);
+    background: rgba(255, 0, 0, 0.05);
+  }
+
+  /* Responsive adjustments for animations */
+  @media (max-width: 640px) {
+    .form-list-grid-container {
+      padding: 12px;
+      margin: -6px;
+    }
+
+    .form-card-borderless {
+      margin: 4px;
+    }
+
+    .animated-grid {
+      gap: 1rem;
+      padding: 12px;
+      margin: -6px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .form-list-grid-container {
+      padding: 8px;
+      margin: -4px;
+    }
+
+    .form-card-borderless {
+      margin: 2px;
+    }
+
+    .animated-grid {
+      gap: 0.75rem;
+      padding: 8px;
+      margin: -4px;
+    }
+  }
+
+  /* Additional Container Fixes for Form List Page */
+  .container-responsive,
+  .form-list-container,
+  main {
+    overflow: visible !important;
+  }
+
+  /* Fix for any Tailwind container that might clip animations */
+  .container,
+  .mx-auto {
+    overflow: visible !important;
+  }
+
+  /* Ensure FormManagementApp main wrapper allows glow effects */
+  .min-h-screen {
+    overflow-x: visible !important;
+  }
+
+  /* FormListPage specific fixes */
+  .w-full {
+    overflow: visible !important;
+  }
+
+  /* Global animation container fix for form cards */
+  .form-card-glow,
+  .form-card-glow * {
+    contain: none !important;
+  }
+
+  /* Text clamp utilities */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Form Card Typography Standards */
+  .form-card-title {
+    @apply text-xl font-bold leading-tight text-foreground;
+  }
+
+  .form-card-description {
+    @apply text-sm text-muted-foreground/80 leading-relaxed;
+  }
+
+  .form-card-stats {
+    @apply text-2xs text-muted-foreground/60;
+  }
+
+  .form-card-tag {
+    @apply text-xs font-medium px-2 py-0.5 rounded-full;
+  }
+
+  .form-card-button {
+    @apply text-sm font-medium px-4 py-2;
+  }
+}

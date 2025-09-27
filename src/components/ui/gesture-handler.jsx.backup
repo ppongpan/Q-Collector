@@ -1,0 +1,472 @@
+import React, { useRef, useCallback } from 'react';
+import { motion, usePanInfo, useMotionValue, useTransform } from 'framer-motion';
+import { cn } from '../../lib/utils';
+import { gestureVariants } from '../../lib/animations';
+import { useGestureAnimation, useResponsiveMotion } from '../../hooks/useAnimations';
+
+// Swipeable Container with Glass Effects
+const SwipeableGlassContainer = ({
+  children,
+  onSwipeLeft,
+  onSwipeRight,
+  onSwipeUp,
+  onSwipeDown,
+  threshold = 50,
+  className,
+  disabled = false,
+  ...props
+}) => {
+  const { shouldReduceMotion } = useResponsiveMotion();
+  const { swipeVariants } = useGestureAnimation();
+
+  const constraintsRef = useRef(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  // Transform values for visual feedback
+  const rotateX = useTransform(y, [-100, 0, 100], [5, 0, -5]);
+  const rotateY = useTransform(x, [-100, 0, 100], [-5, 0, 5]);
+  const scale = useTransform(x, [-100, 0, 100], [0.95, 1, 0.95]);
+  const opacity = useTransform(x, [-150, 0, 150], [0.7, 1, 0.7]);
+
+  const handleDragEnd = useCallback((event, info) => {
+    if (disabled) return;
+
+    const { offset, velocity } = info;
+    const swipeThreshold = Math.abs(velocity.x) > 500 || Math.abs(offset.x) > threshold;
+    const swipeThresholdY = Math.abs(velocity.y) > 500 || Math.abs(offset.y) > threshold;
+
+    if (swipeThreshold) {
+      if (offset.x > 0 && onSwipeRight) {
+        onSwipeRight(info);
+      } else if (offset.x < 0 && onSwipeLeft) {
+        onSwipeLeft(info);
+      }
+    }
+
+    if (swipeThresholdY) {
+      if (offset.y > 0 && onSwipeDown) {
+        onSwipeDown(info);
+      } else if (offset.y < 0 && onSwipeUp) {
+        onSwipeUp(info);
+      }
+    }
+
+    // Reset position
+    x.set(0);
+    y.set(0);
+  }, [disabled, onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, threshold, x, y]);
+
+  if (shouldReduceMotion || disabled) {
+    return (
+      <div className={cn('w-full', className)} {...props}>
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={constraintsRef} className="w-full">
+      <motion.div
+        className={cn('w-full cursor-grab active:cursor-grabbing', className)}
+        drag
+        dragConstraints={constraintsRef}
+        dragElastic={0.2}
+        dragMomentum={false}
+        onDragEnd={handleDragEnd}
+        style={{
+          x,
+          y,
+          rotateX,
+          rotateY,
+          scale,
+          opacity,
+          willChange: 'transform, opacity'
+        }}
+        whileDrag={{
+          scale: 1.05,
+          rotateZ: 2,
+          backdropFilter: 'blur(24px) saturate(180%)',
+          transition: { duration: 0.2 }
+        }}
+        {...props}
+      >
+        {children}
+
+        {/* Visual feedback indicators */}
+        <motion.div
+          className="absolute inset-0 pointer-events-none rounded-xl"
+          style={{
+            background: useTransform(
+              x,
+              [-100, -50, 0, 50, 100],
+              [
+                'linear-gradient(90deg, rgba(34, 197, 94, 0.1), transparent)',
+                'linear-gradient(90deg, rgba(34, 197, 94, 0.05), transparent)',
+                'transparent',
+                'linear-gradient(-90deg, rgba(239, 68, 68, 0.05), transparent)',
+                'linear-gradient(-90deg, rgba(239, 68, 68, 0.1), transparent)'
+              ]
+            )
+          }}
+        />
+      </motion.div>
+    </div>
+  );
+};
+
+// Draggable Card with Liquid Glass Effects
+const DraggableGlassCard = ({
+  children,
+  onDragStart,
+  onDragEnd,
+  onDrop,
+  className,
+  dragConstraints,
+  snapToOrigin = true,
+  ...props
+}) => {
+  const { shouldReduceMotion } = useResponsiveMotion();
+  const { dragVariants } = useGestureAnimation();
+
+  const dragRef = useRef(null);
+  const [isDragging, setIsDragging] = React.useState(false);
+
+  const handleDragStart = useCallback(() => {
+    setIsDragging(true);
+    onDragStart?.();
+  }, [onDragStart]);
+
+  const handleDragEnd = useCallback((event, info) => {
+    setIsDragging(false);
+    onDragEnd?.(event, info);
+
+    if (onDrop) {
+      // Check if dropped over a valid drop zone
+      const dropZones = document.querySelectorAll('[data-drop-zone="true"]');
+      const draggedElement = dragRef.current;
+
+      if (draggedElement) {
+        const dragRect = draggedElement.getBoundingClientRect();
+        const dragCenterX = dragRect.left + dragRect.width / 2;
+        const dragCenterY = dragRect.top + dragRect.height / 2;
+
+        for (const zone of dropZones) {
+          const zoneRect = zone.getBoundingClientRect();
+          if (
+            dragCenterX >= zoneRect.left &&
+            dragCenterX <= zoneRect.right &&
+            dragCenterY >= zoneRect.top &&
+            dragCenterY <= zoneRect.bottom
+          ) {
+            onDrop(zone, info);
+            return;
+          }
+        }
+      }
+    }
+  }, [onDragEnd, onDrop]);
+
+  if (shouldReduceMotion) {
+    return (
+      <div className={cn('glass-container', className)} {...props}>
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
+      ref={dragRef}
+      className={cn(
+        'glass-container cursor-grab active:cursor-grabbing select-none',
+        isDragging && 'z-50',
+        className
+      )}
+      drag
+      dragConstraints={dragConstraints}
+      dragElastic={0.1}
+      dragMomentum={false}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      variants={dragVariants}
+      whileDrag="drag"
+      style={{
+        willChange: 'transform, opacity, filter, backdrop-filter'
+      }}
+      {...props}
+    >
+      {children}
+
+      {/* Dragging glow effect */}
+      <motion.div
+        className="absolute inset-0 rounded-xl pointer-events-none"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isDragging ? 1 : 0 }}
+        transition={{ duration: 0.2 }}
+        style={{
+          boxShadow: '0 8px 32px rgba(247, 115, 22, 0.3)',
+          background: 'linear-gradient(45deg, rgba(247, 115, 22, 0.1), transparent)'
+        }}
+      />
+    </motion.div>
+  );
+};
+
+// Pull to Refresh Component
+const PullToRefresh = ({
+  children,
+  onRefresh,
+  threshold = 80,
+  className,
+  disabled = false,
+  ...props
+}) => {
+  const { shouldReduceMotion } = useResponsiveMotion();
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [pullProgress, setPullProgress] = React.useState(0);
+
+  const y = useMotionValue(0);
+  const opacity = useTransform(y, [0, threshold], [0, 1]);
+  const scale = useTransform(y, [0, threshold], [0.8, 1]);
+  const rotate = useTransform(y, [0, threshold], [0, 180]);
+
+  const handleDrag = useCallback((event, info) => {
+    if (disabled || isRefreshing) return;
+
+    const progress = Math.max(0, Math.min(info.offset.y / threshold, 1));
+    setPullProgress(progress);
+  }, [disabled, isRefreshing, threshold]);
+
+  const handleDragEnd = useCallback(async (event, info) => {
+    if (disabled || isRefreshing) return;
+
+    if (info.offset.y > threshold && onRefresh) {
+      setIsRefreshing(true);
+      setPullProgress(1);
+
+      try {
+        await onRefresh();
+      } finally {
+        setIsRefreshing(false);
+        setPullProgress(0);
+        y.set(0);
+      }
+    } else {
+      setPullProgress(0);
+      y.set(0);
+    }
+  }, [disabled, isRefreshing, threshold, onRefresh, y]);
+
+  if (shouldReduceMotion || disabled) {
+    return (
+      <div className={cn('w-full', className)} {...props}>
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full">
+      {/* Pull indicator */}
+      <motion.div
+        className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full z-10"
+        style={{ opacity, scale }}
+      >
+        <div className="glass-container p-3 rounded-full">
+          <motion.div
+            style={{ rotate }}
+            className="w-6 h-6 text-primary"
+          >
+            {isRefreshing ? (
+              <motion.div
+                className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              />
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            )}
+          </motion.div>
+        </div>
+      </motion.div>
+
+      {/* Content */}
+      <motion.div
+        className={cn('w-full', className)}
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0.3, bottom: 0 }}
+        onDrag={handleDrag}
+        onDragEnd={handleDragEnd}
+        style={{ y }}
+        {...props}
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+};
+
+// Long Press Handler
+const LongPressGlass = ({
+  children,
+  onLongPress,
+  onPress,
+  delay = 500,
+  className,
+  disabled = false,
+  ...props
+}) => {
+  const { shouldReduceMotion } = useResponsiveMotion();
+  const [isPressed, setIsPressed] = React.useState(false);
+  const [isLongPressed, setIsLongPressed] = React.useState(false);
+  const timeoutRef = useRef(null);
+
+  const handlePressStart = useCallback(() => {
+    if (disabled) return;
+
+    setIsPressed(true);
+    timeoutRef.current = setTimeout(() => {
+      setIsLongPressed(true);
+      onLongPress?.();
+    }, delay);
+  }, [disabled, delay, onLongPress]);
+
+  const handlePressEnd = useCallback(() => {
+    if (disabled) return;
+
+    setIsPressed(false);
+    setIsLongPressed(false);
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+
+      if (!isLongPressed) {
+        onPress?.();
+      }
+    }
+  }, [disabled, isLongPressed, onPress]);
+
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  if (shouldReduceMotion || disabled) {
+    return (
+      <div className={className} onClick={onPress} {...props}>
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
+      className={cn('select-none cursor-pointer', className)}
+      onPointerDown={handlePressStart}
+      onPointerUp={handlePressEnd}
+      onPointerLeave={handlePressEnd}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      animate={{
+        scale: isPressed ? 0.96 : 1,
+        backdropFilter: isPressed ? 'blur(24px) saturate(180%)' : 'blur(20px) saturate(150%)'
+      }}
+      transition={{ duration: 0.15 }}
+      {...props}
+    >
+      {children}
+
+      {/* Long press progress indicator */}
+      {isPressed && (
+        <motion.div
+          className="absolute inset-0 rounded-xl pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{
+            background: 'conic-gradient(from 0deg, rgba(247, 115, 22, 0.3) 0%, transparent 0%)'
+          }}
+        >
+          <motion.div
+            className="w-full h-full rounded-xl"
+            initial={{ background: 'conic-gradient(from 0deg, rgba(247, 115, 22, 0.3) 0%, transparent 0%)' }}
+            animate={{
+              background: `conic-gradient(from 0deg, rgba(247, 115, 22, 0.3) ${(delay / 500) * 360}deg, transparent 0%)`
+            }}
+            transition={{ duration: delay / 1000, ease: 'linear' }}
+          />
+        </motion.div>
+      )}
+    </motion.div>
+  );
+};
+
+// Touch Ripple Effect
+const TouchRipple = ({ children, className, disabled = false, ...props }) => {
+  const { shouldReduceMotion } = useResponsiveMotion();
+  const [ripples, setRipples] = React.useState([]);
+
+  const addRipple = useCallback((event) => {
+    if (disabled || shouldReduceMotion) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const newRipple = {
+      id: Date.now(),
+      x,
+      y,
+      size: Math.max(rect.width, rect.height) * 2
+    };
+
+    setRipples(prev => [...prev, newRipple]);
+
+    // Remove ripple after animation
+    setTimeout(() => {
+      setRipples(prev => prev.filter(r => r.id !== newRipple.id));
+    }, 600);
+  }, [disabled, shouldReduceMotion]);
+
+  return (
+    <div
+      className={cn('relative overflow-hidden', className)}
+      onPointerDown={addRipple}
+      {...props}
+    >
+      {children}
+
+      {/* Ripple effects */}
+      {ripples.map(ripple => (
+        <motion.div
+          key={ripple.id}
+          className="absolute rounded-full bg-white/20 pointer-events-none"
+          style={{
+            left: ripple.x - ripple.size / 2,
+            top: ripple.y - ripple.size / 2,
+            width: ripple.size,
+            height: ripple.size
+          }}
+          initial={{ scale: 0, opacity: 1 }}
+          animate={{ scale: 1, opacity: 0 }}
+          transition={{ duration: 0.6, ease: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
+        />
+      ))}
+    </div>
+  );
+};
+
+export {
+  SwipeableGlassContainer,
+  DraggableGlassCard,
+  PullToRefresh,
+  LongPressGlass,
+  TouchRipple
+};

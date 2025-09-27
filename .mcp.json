@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "node",
+      "args": ["C:\\Users\\Pongpan\\AppData\\Roaming\\npm\\node_modules\\@magnusrodseth\\shadcn-mcp-server\\dist\\index.js"]
+    }
+  }
+}

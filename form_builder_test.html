@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Form Builder - Test Version</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        const FIELD_TYPES = [
+            "short_answer",
+            "paragraph",
+            "email",
+            "phone",
+            "number",
+            "url",
+            "file_upload",
+            "image_upload",
+            "date",
+            "time",
+            "datetime",
+            "multiple_choice",
+            "rating",
+            "slider",
+            "lat_long",
+            "province",
+            "factory"
+        ];
+
+        const THAI_PROVINCES = [
+            "กรุงเทพมหานคร", "กระบี่", "กาญจนบุรี", "กาฬสินธุ์", "กำแพงเพชร", "ขอนแก่น", "จันทบุรี", "ฉะเชิงเทรา",
+            "ชลบุรี", "ชัยนาท", "ชัยภูมิ", "ชุมพร", "เชียงราย", "เชียงใหม่", "ตรัง", "ตราด", "ตาก", "นครนายก",
+            "นครปฐม", "นครพนม", "นครราชสีมา", "นครศรีธรรมราช", "นครสวรรค์", "นนทบุรี", "นราธิวาส", "น่าน",
+            "บึงกาฬ", "บุรีรัมย์", "ปทุมธานี", "ประจวบคีรีขันธ์", "ปราจีนบุรี", "ปัตตานี", "พระนครศรีอยุธยา",
+            "พะเยา", "พังงา", "พัทลุง", "พิจิตร", "พิษณุโลก", "เพชรบุรี", "เพชรบูรณ์", "แพร่", "ภูเก็ต",
+            "มหาสารคาม", "มุกดาหาร", "แม่ฮ่องสอน", "ยะลา", "ยโสธร", "ร้อยเอ็ด", "ระนอง", "ระยอง", "ราชบุรี",
+            "ลพบุรี", "ลำปาง", "ลำพูน", "เลย", "ศรีสะเกษ", "สกลนคร", "สงขลา", "สตูล", "สมุทรปราการ", "สมุทรสงคราม",
+            "สมุทรสาคร", "สระแก้ว", "สระบุรี", "สิงห์บุรี", "สุโขทัย", "สุพรรณบุรี", "สุราษฎร์ธานี", "สุรินทร์",
+            "หนองคาย", "หนองบัวลำภู", "อ่างทอง", "อุดรธานี", "อุทัยธานี", "อุตราดิตถ์", "อุบลราชธานี", "อำนาจเจริญ"
+        ];
+
+        const FACTORY_OPTIONS = [
+            "โรงงานบางปะอิน",
+            "โรงงานระยอง",
+            "โรงงานสระบุรี",
+            "โรงงานสงขลา"
+        ];
+
+        const MULTIPLE_CHOICE_DISPLAY_OPTIONS = [
+            { value: "radio", label: "Radio Buttons" },
+            { value: "buttons", label: "Button Group" },
+            { value: "dropdown", label: "Dropdown" }
+        ];
+
+        function uid(prefix = "id") {
+            return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
+        }
+
+        function FieldPreview({ field }) {
+            const [selectedValues, setSelectedValues] = useState([]);
+
+            const handleButtonClick = (value) => {
+                if (field.allowMultiple) {
+                    setSelectedValues(prev =>
+                        prev.includes(value)
+                            ? prev.filter(v => v !== value)
+                            : [...prev, value]
+                    );
+                } else {
+                    setSelectedValues([value]);
+                }
+            };
+
+            const renderFieldInput = () => {
+                switch (field.type) {
+                    case "short_answer":
+                        return <input className="w-full border rounded px-3 py-2" placeholder="กรอกข้อความสั้น ๆ" />;
+
+                    case "paragraph":
+                        return <textarea className="w-full border rounded px-3 py-2 min-h-[100px]" placeholder="กรอกข้อความยาว ๆ" />;
+
+                    case "email":
+                        return <input type="email" className="w-full border rounded px-3 py-2" placeholder="example@email.com" />;
+
+                    case "phone":
+                        return <input type="tel" className="w-full border rounded px-3 py-2" placeholder="0xx-xxx-xxxx" />;
+
+                    case "number":
+                        return <input type="number" className="w-full border rounded px-3 py-2" placeholder="กรอกตัวเลข" />;
+
+                    case "url":
+                        return <input type="url" className="w-full border rounded px-3 py-2" placeholder="https://example.com" />;
+
+                    case "file_upload":
+                        return (
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                                <div className="text-gray-500">📎 คลิกเพื่อแนบไฟล์หรือลากไฟล์มาวางที่นี่</div>
+                                <input type="file" className="hidden" />
+                            </div>
+                        );
+
+                    case "image_upload":
+                        return (
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                                <div className="text-gray-500">🖼️ คลิกเพื่อแนบรูปภาพหรือลากรูปมาวางที่นี่</div>
+                                <input type="file" accept="image/*" className="hidden" />
+                            </div>
+                        );
+
+                    case "date":
+                        return <input type="date" className="border rounded px-3 py-2" />;
+
+                    case "time":
+                        return <input type="time" className="border rounded px-3 py-2" />;
+
+                    case "datetime":
+                        return <input type="datetime-local" className="border rounded px-3 py-2" />;
+
+                    case "multiple_choice":
+                        if (!field.options || field.options.length === 0) {
+                            return <div className="text-gray-400 italic">โปรดเพิ่มตัวเลือก</div>;
+                        }
+
+                        if (field.displayStyle === "dropdown") {
+                            return (
+                                <select className="w-full border rounded px-3 py-2">
+                                    <option value="">เลือกตัวเลือก</option>
+                                    {field.options.map((opt, idx) => (
+                                        <option key={idx} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                            );
+                        }
+
+                        if (field.displayStyle === "buttons") {
+                            return (
+                                <div className="flex flex-wrap gap-2">
+                                    {field.options.map((opt, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => handleButtonClick(opt)}
+                                            className={`px-4 py-2 border rounded-lg transition-colors ${
+                                                selectedValues.includes(opt)
+                                                    ? 'bg-blue-500 text-white border-blue-500'
+                                                    : 'hover:bg-gray-50 border-gray-300'
+                                            }`}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div className="space-y-2">
+                                {field.options.map((opt, idx) => (
+                                    <label key={idx} className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type={field.allowMultiple ? "checkbox" : "radio"}
+                                            name={field.id}
+                                            className="rounded"
+                                        />
+                                        <span>{opt}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        );
+
+
+                    case "rating":
+                        return (
+                            <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button key={star} className="text-2xl text-gray-300 hover:text-yellow-400 transition-colors">
+                                        ⭐
+                                    </button>
+                                ))}
+                            </div>
+                        );
+
+                    case "slider":
+                        return (
+                            <div className="space-y-2">
+                                <input
+                                    type="range"
+                                    min={field.sliderMin || 0}
+                                    max={field.sliderMax || 100}
+                                    className="w-full"
+                                />
+                                <div className="flex justify-between text-sm text-gray-500">
+                                    <span>{field.sliderMin || 0}</span>
+                                    <span>{field.sliderMax || 100}</span>
+                                </div>
+                            </div>
+                        );
+
+                    case "lat_long":
+                        return (
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm text-gray-600 mb-1">ละติจูด</label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            className="w-full border rounded px-3 py-2"
+                                            placeholder="13.7563"
+                                            value={field.currentLat || ""}
+                                            readOnly
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-600 mb-1">ลองจิจูด</label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            className="w-full border rounded px-3 py-2"
+                                            placeholder="100.5018"
+                                            value={field.currentLng || ""}
+                                            readOnly
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        if (navigator.geolocation) {
+                                            navigator.geolocation.getCurrentPosition((position) => {
+                                                console.log('Location:', position.coords.latitude, position.coords.longitude);
+                                                alert(`ตำแหน่งปัจจุบัน:\nละติจูด: ${position.coords.latitude}\nลองจิจูด: ${position.coords.longitude}`);
+                                            }, (error) => {
+                                                alert('ไม่สามารถเข้าถึงตำแหน่งได้: ' + error.message);
+                                            });
+                                        } else {
+                                            alert('เบราว์เซอร์ไม่รองรับ Geolocation');
+                                        }
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                                >
+                                    📍 ตำแหน่งปัจจุบัน
+                                </button>
+                            </div>
+                        );
+
+                    case "province":
+                        return (
+                            <select className="w-full border rounded px-3 py-2">
+                                <option value="">เลือกจังหวัด</option>
+                                {THAI_PROVINCES.map((province, idx) => (
+                                    <option key={idx} value={province}>{province}</option>
+                                ))}
+                            </select>
+                        );
+
+                    case "factory":
+                        return (
+                            <div className="flex flex-wrap gap-2">
+                                {FACTORY_OPTIONS.map((factory, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleButtonClick(factory)}
+                                        className={`px-4 py-2 border rounded-lg transition-colors ${
+                                            selectedValues.includes(factory)
+                                                ? 'bg-green-500 text-white border-green-500'
+                                                : 'hover:bg-gray-50 border-gray-300'
+                                        }`}
+                                    >
+                                        {factory}
+                                    </button>
+                                ))}
+                            </div>
+                        );
+
+                    default:
+                        return <input className="w-full border rounded px-3 py-2" placeholder="ไม่รู้จักประเภทนี้" />;
+                }
+            };
+
+            return (
+                <div className="mt-3 p-4 bg-gray-50 rounded-lg border">
+                    <div className="text-sm font-medium text-gray-600 mb-2">ตัวอย่างการแสดงผล:</div>
+                    {renderFieldInput()}
+                </div>
+            );
+        }
+
+        function SubFormBuilder({ subForm, onChange, onDelete, onDuplicate, onMoveUp, onMoveDown, index, total }) {
+            const updateField = (i, next) => {
+                const fields = [...subForm.fields];
+                fields[i] = next;
+                onChange({ ...subForm, fields });
+            };
+
+            const addField = () => {
+                const f = {
+                    id: uid('f'),
+                    type: 'short_answer',
+                    title: 'คำถามใหม่',
+                    description: '',
+                    required: false,
+                    options: []
+                };
+                onChange({ ...subForm, fields: [...subForm.fields, f] });
+            };
+
+            const deleteField = (i) => {
+                const fields = subForm.fields.filter((_, idx) => idx !== i);
+                onChange({ ...subForm, fields });
+            };
+
+            const duplicateField = (i) => {
+                const f = { ...subForm.fields[i], id: uid('f'), title: subForm.fields[i].title + ' (สำเนา)' };
+                onChange({
+                    ...subForm,
+                    fields: [...subForm.fields.slice(0, i + 1), f, ...subForm.fields.slice(i + 1)]
+                });
+            };
+
+            const moveField = (i, dir) => {
+                const fields = [...subForm.fields];
+                const j = i + dir;
+                if (j < 0 || j >= fields.length) return;
+                [fields[i], fields[j]] = [fields[j], fields[i]];
+                onChange({ ...subForm, fields });
+            };
+
+            return (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 mb-4">
+                    <div className="flex justify-between items-center mb-3">
+                        <div className="flex-1">
+                            <input
+                                value={subForm.title || ""}
+                                onChange={(e) => onChange({ ...subForm, title: e.target.value })}
+                                placeholder="ชื่อฟอร์มย่อย"
+                                className="text-lg font-semibold w-full mb-1 bg-transparent focus:outline-none focus:bg-white focus:border focus:border-blue-500 rounded px-2 py-1"
+                            />
+                            <input
+                                value={subForm.description || ""}
+                                onChange={(e) => onChange({ ...subForm, description: e.target.value })}
+                                placeholder="คำอธิบายฟอร์มย่อย"
+                                className="text-sm w-full text-gray-500 bg-transparent focus:outline-none focus:bg-white focus:border focus:border-blue-500 rounded px-2 py-1"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-2 ml-4">
+                            <button
+                                onClick={onDuplicate}
+                                className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 transition-colors text-sm"
+                            >
+                                คัดลอก
+                            </button>
+                            <button
+                                onClick={onDelete}
+                                className="px-3 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors text-sm"
+                            >
+                                ลบ
+                            </button>
+                            <div className="flex flex-col gap-1">
+                                <button
+                                    onClick={onMoveUp}
+                                    disabled={index === 0}
+                                    className="px-2 py-1 border rounded disabled:opacity-40 hover:bg-gray-50 transition-colors text-sm"
+                                >
+                                    ↑
+                                </button>
+                                <button
+                                    onClick={onMoveDown}
+                                    disabled={index === total - 1}
+                                    className="px-2 py-1 border rounded disabled:opacity-40 hover:bg-gray-50 transition-colors text-sm"
+                                >
+                                    ↓
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mb-3">
+                        {subForm.fields.map((f, i) => (
+                            <FieldEditor
+                                key={f.id}
+                                field={f}
+                                index={i}
+                                total={subForm.fields.length}
+                                onChange={(next) => updateField(i, next)}
+                                onDelete={() => deleteField(i)}
+                                onDuplicate={() => duplicateField(i)}
+                                onMoveUp={() => moveField(i, -1)}
+                                onMoveDown={() => moveField(i, 1)}
+                            />
+                        ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={addField}
+                            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                        >
+                            + เพิ่มคำถาม
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        function FieldEditor({ field, onChange, onDelete, onDuplicate, onMoveUp, onMoveDown, index, total }) {
+            const handleFieldTypeChange = (newType) => {
+                let updatedField = { ...field, type: newType };
+
+                if (newType === "multiple_choice") {
+                    if (!updatedField.options || updatedField.options.length === 0) {
+                        updatedField.options = ["ตัวเลือก 1", "ตัวเลือก 2"];
+                    }
+                    updatedField.displayStyle = updatedField.displayStyle || "radio";
+                    updatedField.allowMultiple = updatedField.allowMultiple || false;
+                }
+
+                if (newType === "slider") {
+                    updatedField.sliderMin = updatedField.sliderMin || 0;
+                    updatedField.sliderMax = updatedField.sliderMax || 100;
+                }
+
+                onChange(updatedField);
+            };
+
+            const requiresOptions = ["multiple_choice"].includes(field.type);
+
+            return (
+                <div className="border rounded-lg p-4 bg-white shadow-sm mb-4">
+                    <div className="flex justify-between items-start">
+                        <div className="flex-1 mr-4">
+                            <input
+                                className="text-lg font-medium w-full mb-2 border-b pb-1 focus:outline-none focus:border-blue-500"
+                                value={field.title || ""}
+                                onChange={(e) => onChange({ ...field, title: e.target.value })}
+                                placeholder="คำถาม"
+                            />
+
+                            <input
+                                className="text-sm w-full mb-3 text-gray-500 focus:outline-none"
+                                value={field.description || ""}
+                                onChange={(e) => onChange({ ...field, description: e.target.value })}
+                                placeholder="คำอธิบาย (ไม่บังคับ)"
+                            />
+
+                            <div className="flex flex-wrap gap-3 items-center mb-3">
+                                <select
+                                    value={field.type}
+                                    onChange={(e) => handleFieldTypeChange(e.target.value)}
+                                    className="border rounded px-3 py-2"
+                                >
+                                    {FIELD_TYPES.map((t) => (
+                                        <option key={t} value={t}>
+                                            {t.replace(/_/g, " ")}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                <label className="flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={field.required || false}
+                                        onChange={(e) => onChange({ ...field, required: e.target.checked })}
+                                        className="rounded"
+                                    />
+                                    บังคับตอบ
+                                </label>
+
+                                <label className="flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={field.showInSubmissionTable || false}
+                                        onChange={(e) => onChange({ ...field, showInSubmissionTable: e.target.checked })}
+                                        className="rounded"
+                                    />
+                                    แสดงในตาราง Submission
+                                </label>
+
+                                <label className="flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={field.sendToTelegram || false}
+                                        onChange={(e) => onChange({ ...field, sendToTelegram: e.target.checked })}
+                                        className="rounded"
+                                    />
+                                    ส่งแจ้งเตือน Telegram
+                                </label>
+                            </div>
+
+                            {field.type === "multiple_choice" && (
+                                <div className="space-y-3 mb-3">
+                                    <div className="flex gap-3">
+                                        <select
+                                            value={field.displayStyle || "radio"}
+                                            onChange={(e) => onChange({ ...field, displayStyle: e.target.value })}
+                                            className="border rounded px-3 py-1 text-sm"
+                                        >
+                                            {MULTIPLE_CHOICE_DISPLAY_OPTIONS.map((option) => (
+                                                <option key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+
+                                        <label className="flex items-center gap-2 text-sm">
+                                            <input
+                                                type="checkbox"
+                                                checked={field.allowMultiple || false}
+                                                onChange={(e) => onChange({ ...field, allowMultiple: e.target.checked })}
+                                                className="rounded"
+                                            />
+                                            เลือกได้หลายตัวเลือก
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
+
+                            {field.type === "slider" && (
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label className="block text-sm text-gray-600 mb-1">ค่าต่ำสุด</label>
+                                        <input
+                                            type="number"
+                                            value={field.sliderMin || 0}
+                                            onChange={(e) => onChange({ ...field, sliderMin: parseInt(e.target.value) || 0 })}
+                                            className="w-full border rounded px-3 py-1 text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-600 mb-1">ค่าสูงสุด</label>
+                                        <input
+                                            type="number"
+                                            value={field.sliderMax || 100}
+                                            onChange={(e) => onChange({ ...field, sliderMax: parseInt(e.target.value) || 100 })}
+                                            className="w-full border rounded px-3 py-1 text-sm"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {requiresOptions && (
+                                <div className="mt-3">
+                                    <div className="text-sm text-gray-600 mb-2">ตัวเลือก</div>
+                                    {field.options?.map((opt, i) => (
+                                        <div key={i} className="flex gap-2 items-center mb-2">
+                                            <input
+                                                value={opt || ""}
+                                                onChange={(e) => {
+                                                    const opts = [...(field.options || [])];
+                                                    opts[i] = e.target.value;
+                                                    onChange({ ...field, options: opts });
+                                                }}
+                                                className="flex-1 border px-3 py-2 rounded focus:outline-none focus:border-blue-500"
+                                                placeholder={`ตัวเลือก ${i + 1}`}
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    const opts = (field.options || []).filter((_, idx) => idx !== i);
+                                                    onChange({ ...field, options: opts });
+                                                }}
+                                                className="px-3 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <button
+                                        onClick={() => onChange({
+                                            ...field,
+                                            options: [...(field.options || []), `ตัวเลือก ${((field.options || []).length + 1)}`]
+                                        })}
+                                        className="text-sm px-3 py-2 border rounded hover:bg-gray-50 transition-colors"
+                                    >
+                                        + เพิ่มตัวเลือก
+                                    </button>
+                                </div>
+                            )}
+
+                            <FieldPreview field={field} />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <button
+                                onClick={onDuplicate}
+                                className="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors text-sm"
+                            >
+                                คัดลอก
+                            </button>
+                            <button
+                                onClick={onDelete}
+                                className="px-3 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors text-sm"
+                            >
+                                ลบ
+                            </button>
+                            <div className="flex flex-col gap-1">
+                                <button
+                                    onClick={onMoveUp}
+                                    disabled={index === 0}
+                                    className="px-2 py-1 border rounded disabled:opacity-40 hover:bg-gray-50 transition-colors text-sm"
+                                >
+                                    ↑
+                                </button>
+                                <button
+                                    onClick={onMoveDown}
+                                    disabled={index === total - 1}
+                                    className="px-2 py-1 border rounded disabled:opacity-40 hover:bg-gray-50 transition-colors text-sm"
+                                >
+                                    ↓
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function EnhancedFormBuilder() {
+            const [title, setTitle] = useState('ฟอร์มใหม่');
+            const [description, setDescription] = useState('คำอธิบายฟอร์ม');
+
+            const [fields, setFields] = useState([
+                {
+                    id: uid('f'),
+                    type: 'short_answer',
+                    title: 'ชื่อ-นามสกุล',
+                    description: '',
+                    required: true,
+                    options: []
+                }
+            ]);
+
+            const [subForms, setSubForms] = useState([]);
+
+            const [preview, setPreview] = useState(false);
+
+            // Form settings state
+            const [formSettings, setFormSettings] = useState({
+                telegramEnabled: false,
+                telegramBotToken: '',
+                telegramGroupId: '',
+                autoDocumentNumber: false,
+                documentPrefix: 'DOC',
+                documentSuffix: 'year',
+                yearFormat: 'buddhist',
+                documentFormat: 'prefix_number_year'
+            });
+
+            const addField = () => {
+                setFields([...fields, {
+                    id: uid('f'),
+                    type: 'short_answer',
+                    title: 'คำถามใหม่',
+                    description: '',
+                    required: false,
+                    options: []
+                }]);
+            };
+
+            const updateField = (i, next) => {
+                // Check submission table limit
+                if (next.showInSubmissionTable && !fields[i].showInSubmissionTable) {
+                    const currentSubmissionCount = fields.filter(f => f.showInSubmissionTable).length;
+                    if (currentSubmissionCount >= 5) {
+                        alert('สามารถเลือกแสดงในตาราง Submission ได้ไม่เกิน 5 ฟิลด์');
+                        return;
+                    }
+                }
+
+                const arr = [...fields];
+                arr[i] = next;
+                setFields(arr);
+            };
+
+            const deleteField = (i) => {
+                setFields(fields.filter((_, idx) => idx !== i));
+            };
+
+            const duplicateField = (i) => {
+                const f = { ...fields[i], id: uid('f'), title: fields[i].title + ' (สำเนา)' };
+                setFields([...fields.slice(0, i + 1), f, ...fields.slice(i + 1)]);
+            };
+
+            const moveField = (i, dir) => {
+                const arr = [...fields];
+                const j = i + dir;
+                if (j < 0 || j >= arr.length) return;
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+                setFields(arr);
+            };
+
+            // Sub form management functions
+            const addSubForm = () => {
+                setSubForms([...subForms, {
+                    id: uid('s'),
+                    title: 'ฟอร์มย่อยใหม่',
+                    description: '',
+                    fields: []
+                }]);
+            };
+
+            const updateSubForm = (i, next) => {
+                const arr = [...subForms];
+                arr[i] = next;
+                setSubForms(arr);
+            };
+
+            const deleteSubForm = (i) => {
+                setSubForms(subForms.filter((_, idx) => idx !== i));
+            };
+
+            const duplicateSubForm = (i) => {
+                const s = JSON.parse(JSON.stringify(subForms[i]));
+                s.id = uid('s');
+                s.title += ' (สำเนา)';
+                setSubForms([...subForms.slice(0, i + 1), s, ...subForms.slice(i + 1)]);
+            };
+
+            const moveSubForm = (i, dir) => {
+                const arr = [...subForms];
+                const j = i + dir;
+                if (j < 0 || j >= arr.length) return;
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+                setSubForms(arr);
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-100 p-6">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="mb-6 flex items-center justify-between">
+                            <div className="flex-1">
+                                <input
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    className="text-3xl font-bold w-full mb-2 focus:outline-none bg-transparent border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 transition-colors"
+                                    placeholder="ชื่อฟอร์ม"
+                                />
+                                <input
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    className="text-lg w-full text-gray-600 focus:outline-none bg-transparent"
+                                    placeholder="คำอธิบายฟอร์ม"
+                                />
+                            </div>
+                            <div className="flex gap-3 ml-6">
+                                <button
+                                    onClick={() => setPreview(p => !p)}
+                                    className={`px-6 py-3 rounded-lg transition-colors font-medium ${
+                                        preview
+                                            ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                            : 'bg-white border border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    {preview ? '✏️ แก้ไข' : '👁️ ดูตัวอย่าง'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {!preview && (
+                            <>
+                                <div className="mb-6">
+                                    {fields.map((f, i) => (
+                                        <FieldEditor
+                                            key={f.id}
+                                            field={f}
+                                            index={i}
+                                            total={fields.length}
+                                            onChange={(next) => updateField(i, next)}
+                                            onDelete={() => deleteField(i)}
+                                            onDuplicate={() => duplicateField(i)}
+                                            onMoveUp={() => moveField(i, -1)}
+                                            onMoveDown={() => moveField(i, 1)}
+                                        />
+                                    ))}
+                                </div>
+
+                                <div className="mb-6">
+                                    <button
+                                        onClick={addField}
+                                        className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                                    >
+                                        + เพิ่มคำถาม
+                                    </button>
+                                </div>
+
+                                <div className="mb-6">
+                                    <div className="mb-4">
+                                        <h3 className="text-xl font-semibold text-gray-800 mb-2">ฟอร์มย่อย</h3>
+                                        <p className="text-sm text-gray-600">ฟอร์มย่อยจะแสดงแยกออกจากฟอร์มหลัก และสามารถกรอกแยกต่างหากได้</p>
+                                    </div>
+
+                                    {subForms.map((s, i) => (
+                                        <SubFormBuilder
+                                            key={s.id}
+                                            subForm={s}
+                                            index={i}
+                                            total={subForms.length}
+                                            onChange={(next) => updateSubForm(i, next)}
+                                            onDelete={() => deleteSubForm(i)}
+                                            onDuplicate={() => duplicateSubForm(i)}
+                                            onMoveUp={() => moveSubForm(i, -1)}
+                                            onMoveDown={() => moveSubForm(i, 1)}
+                                        />
+                                    ))}
+
+                                    <button
+                                        onClick={addSubForm}
+                                        className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
+                                    >
+                                        + เพิ่มฟอร์มย่อย
+                                    </button>
+                                </div>
+
+                                <div className="mb-6">
+                                    <div className="mb-4">
+                                        <h3 className="text-xl font-semibold text-gray-800 mb-2">การตั้งค่าฟอร์ม</h3>
+                                        <p className="text-sm text-gray-600">ตั้งค่าการแจ้งเตือนและการสร้างเอกสารอัตโนมัติ</p>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-lg border space-y-4">
+                                        <div className="space-y-3">
+                                            <label className="flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formSettings.telegramEnabled}
+                                                    onChange={(e) => setFormSettings({...formSettings, telegramEnabled: e.target.checked})}
+                                                    className="rounded"
+                                                />
+                                                <span className="font-medium">เปิดการแจ้งเตือนไป Telegram</span>
+                                            </label>
+
+                                            {formSettings.telegramEnabled && (
+                                                <div className="ml-6 space-y-3 pl-4 border-l-2 border-blue-200">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            Telegram Bot Token
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={formSettings.telegramBotToken}
+                                                            onChange={(e) => setFormSettings({...formSettings, telegramBotToken: e.target.value})}
+                                                            placeholder="1234567890:ABCdefGHijklMNopqRSTuvwxYZ"
+                                                            className="w-full border rounded px-3 py-2 text-sm"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            Telegram Group ID
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={formSettings.telegramGroupId}
+                                                            onChange={(e) => setFormSettings({...formSettings, telegramGroupId: e.target.value})}
+                                                            placeholder="-1001234567890"
+                                                            className="w-full border rounded px-3 py-2 text-sm"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <hr className="border-gray-200" />
+
+                                        <div className="space-y-3">
+                                            <label className="flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formSettings.autoDocumentNumber}
+                                                    onChange={(e) => setFormSettings({...formSettings, autoDocumentNumber: e.target.checked})}
+                                                    className="rounded"
+                                                />
+                                                <span className="font-medium">สร้างหมายเลขเอกสารอัตโนมัติ</span>
+                                            </label>
+
+                                            {formSettings.autoDocumentNumber && (
+                                                <div className="ml-6 space-y-3 pl-4 border-l-2 border-green-200">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            รหัสเอกสาร (Prefix)
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={formSettings.documentPrefix}
+                                                            onChange={(e) => setFormSettings({...formSettings, documentPrefix: e.target.value})}
+                                                            placeholder="TS-ISO"
+                                                            className="border rounded px-3 py-2 text-sm w-32"
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            รูปแบบปี
+                                                        </label>
+                                                        <select
+                                                            value={formSettings.yearFormat}
+                                                            onChange={(e) => setFormSettings({...formSettings, yearFormat: e.target.value})}
+                                                            className="border rounded px-3 py-2 text-sm"
+                                                        >
+                                                            <option value="buddhist">พ.ศ. (2568)</option>
+                                                            <option value="christian">ค.ศ. (2025)</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            รูปแบบเอกสาร
+                                                        </label>
+                                                        <select
+                                                            value={formSettings.documentFormat}
+                                                            onChange={(e) => setFormSettings({...formSettings, documentFormat: e.target.value})}
+                                                            className="border rounded px-3 py-2 text-sm w-64"
+                                                        >
+                                                            <option value="prefix_number_year">Prefix-Number/Year (TS-ISO-0995/2025)</option>
+                                                            <option value="prefix_year_number">Prefix-Year/Number (TS-ISO-2025/0995)</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div className="bg-gray-50 p-3 rounded border text-sm">
+                                                        <div className="font-medium text-gray-700 mb-1">ตัวอย่างหมายเลขเอกสาร:</div>
+                                                        <div className="text-blue-600 font-mono">
+                                                            {formSettings.documentFormat === 'prefix_number_year'
+                                                                ? `${formSettings.documentPrefix}-0001/${formSettings.yearFormat === 'buddhist' ? '2568' : '2025'}`
+                                                                : `${formSettings.documentPrefix}-${formSettings.yearFormat === 'buddhist' ? '2568' : '2025'}/0001`
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <hr className="border-gray-200" />
+
+                                        <div className="bg-blue-50 p-4 rounded border border-blue-200">
+                                            <h4 className="font-medium text-blue-800 mb-2">สรุปการตั้งค่า</h4>
+                                            <div className="text-sm text-blue-700 space-y-1">
+                                                <div>• ฟิลด์ที่แสดงใน Submission Table: {fields.filter(f => f.showInSubmissionTable).length}/5</div>
+                                                <div>• ฟิลด์ที่ส่งแจ้งเตือน Telegram: {fields.filter(f => f.sendToTelegram).length}</div>
+                                                <div>• การแจ้งเตือน Telegram: {formSettings.telegramEnabled ? 'เปิด' : 'ปิด'}</div>
+                                                <div>• หมายเลขเอกสารอัตโนมัติ: {formSettings.autoDocumentNumber ? 'เปิด' : 'ปิด'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {preview && (
+                            <div className="bg-white p-8 rounded-lg shadow-lg">
+                                <div className="mb-8">
+                                    <h1 className="text-3xl font-bold text-gray-900 mb-2">{title}</h1>
+                                    <p className="text-lg text-gray-600">{description}</p>
+                                </div>
+
+                                <form className="space-y-6">
+                                    {fields.map((f) => (
+                                        <div key={f.id} className="p-6 border rounded-lg bg-gray-50">
+                                            <div className="mb-4">
+                                                <label className="block text-lg font-medium text-gray-900 mb-1">
+                                                    {f.title}{f.required ? ' *' : ''}
+                                                </label>
+                                                {f.description && (
+                                                    <p className="text-sm text-gray-600">{f.description}</p>
+                                                )}
+                                            </div>
+
+                                            <FieldPreview field={f} />
+                                        </div>
+                                    ))}
+
+                                    {subForms.map((s) => (
+                                        <details key={s.id} className="border rounded-lg p-6 bg-blue-50 border-blue-200">
+                                            <summary className="font-semibold text-lg cursor-pointer text-blue-800 hover:text-blue-600">
+                                                {s.title || 'ฟอร์มย่อย'} - {s.description}
+                                            </summary>
+                                            <div className="mt-4 space-y-4">
+                                                {s.fields.map((f) => (
+                                                    <div key={f.id} className="p-4 border rounded-lg bg-white">
+                                                        <div className="mb-4">
+                                                            <label className="block text-lg font-medium text-gray-900 mb-1">
+                                                                {f.title}{f.required ? ' *' : ''}
+                                                            </label>
+                                                            {f.description && (
+                                                                <p className="text-sm text-gray-600">{f.description}</p>
+                                                            )}
+                                                        </div>
+
+                                                        <FieldPreview field={f} />
+                                                    </div>
+                                                ))}
+                                                {s.fields.length === 0 && (
+                                                    <p className="text-gray-500 italic">ยังไม่มีคำถามในฟอร์มย่อยนี้</p>
+                                                )}
+                                            </div>
+                                        </details>
+                                    ))}
+
+                                    <div className="pt-6">
+                                        <button
+                                            type="submit"
+                                            className="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                alert('ฟอร์มถูกส่งแล้ว! (นี่เป็นเพียงการทดสอบ)');
+                                            }}
+                                        >
+                                            ส่งฟอร์ม
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<EnhancedFormBuilder />, document.getElementById('root'));
+    </script>
+</body>
+</html>

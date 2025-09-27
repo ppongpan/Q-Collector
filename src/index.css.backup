@@ -1,0 +1,458 @@
+@import url('https://fonts.googleapis.com/css2?family=Mitr:wght@200;300;400;500;600;700&family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Noto+Sans+Thai:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Font System */
+    --font-family: 'Mitr', 'Noto Sans Thai', sans-serif;
+
+    /* Color System */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 24 95% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 24 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+
+    /* Success, Warning, Error */
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 47.9 95.8% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --error: 0 84.2% 60.2%;
+    --error-foreground: 210 40% 98%;
+
+    /* 8px Grid System Variables */
+    --spacing-1: 0.25rem;  /* 4px */
+    --spacing-2: 0.5rem;   /* 8px - base unit */
+    --spacing-3: 0.75rem;  /* 12px */
+    --spacing-4: 1rem;     /* 16px */
+    --spacing-5: 1.25rem;  /* 20px */
+    --spacing-6: 1.5rem;   /* 24px */
+    --spacing-8: 2rem;     /* 32px */
+    --spacing-10: 2.5rem;  /* 40px */
+    --spacing-12: 3rem;    /* 48px */
+    --spacing-16: 4rem;    /* 64px */
+    --spacing-20: 5rem;    /* 80px */
+    --spacing-24: 6rem;    /* 96px */
+
+    /* Responsive Typography Scale */
+    --font-size-xs: 0.75rem;      /* 12px */
+    --font-size-sm: 0.875rem;     /* 14px */
+    --font-size-base: 1rem;       /* 16px */
+    --font-size-lg: 1.125rem;     /* 18px */
+    --font-size-xl: 1.25rem;      /* 20px */
+    --font-size-2xl: 1.5rem;      /* 24px */
+    --font-size-3xl: 1.875rem;    /* 30px */
+    --font-size-4xl: 2.25rem;     /* 36px */
+
+    /* Shadow System */
+    --shadow-elevation-low: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-elevation-medium: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-elevation-high: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Minimum Touch Targets */
+    --touch-target-min: 44px;
+    --touch-target-comfortable: 48px;
+    --touch-target-generous: 56px;
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 210 40% 98%;
+    --card: 0 0% 4%;
+    --card-foreground: 210 40% 98%;
+    --popover: 0 0% 4%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 24 95% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 9%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 0 0% 9%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 24 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 24 95% 53%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+    --warning: 47.9 95.8% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --error: 0 62.8% 30.6%;
+    --error-foreground: 210 40% 98%;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif, 'Noto Sans Thai', 'Sarabun';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+}
+
+@layer components {
+  /* Responsive Container System */
+  .container-responsive {
+    @apply w-full mx-auto px-4;
+  }
+
+  @screen sm {
+    .container-responsive {
+      @apply px-6;
+    }
+  }
+
+  @screen md {
+    .container-responsive {
+      @apply px-8;
+    }
+  }
+
+  @screen lg {
+    .container-responsive {
+      @apply max-w-7xl px-12;
+    }
+  }
+
+  @screen xl {
+    .container-responsive {
+      @apply px-16;
+    }
+  }
+
+  @screen 2xl {
+    .container-responsive {
+      @apply max-w-8xl px-20;
+    }
+  }
+
+  /* Touch Target Utilities */
+  .touch-target-min {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+  }
+
+  .touch-target-comfortable {
+    min-height: var(--touch-target-comfortable);
+    min-width: var(--touch-target-comfortable);
+  }
+
+  .touch-target-generous {
+    min-height: var(--touch-target-generous);
+    min-width: var(--touch-target-generous);
+  }
+
+  /* 8px Grid Spacing Utilities */
+  .space-grid-2 { @apply space-y-2 space-x-2; }
+  .space-grid-4 { @apply space-y-4 space-x-4; }
+  .space-grid-6 { @apply space-y-6 space-x-6; }
+  .space-grid-8 { @apply space-y-8 space-x-8; }
+
+  .gap-grid-2 { @apply gap-2; }
+  .gap-grid-4 { @apply gap-4; }
+  .gap-grid-6 { @apply gap-6; }
+  .gap-grid-8 { @apply gap-8; }
+
+  /* Responsive Typography */
+  .text-responsive-xs { @apply text-xs md:text-sm; }
+  .text-responsive-sm { @apply text-sm md:text-base; }
+  .text-responsive-base { @apply text-base md:text-lg; }
+  .text-responsive-lg { @apply text-lg md:text-xl; }
+  .text-responsive-xl { @apply text-xl md:text-2xl; }
+  .text-responsive-2xl { @apply text-2xl md:text-3xl; }
+
+  /* Layout Grid Utilities */
+  .layout-grid {
+    @apply grid grid-cols-1 gap-4;
+  }
+
+  @screen sm {
+    .layout-grid {
+      @apply gap-6;
+    }
+  }
+
+  @screen md {
+    .layout-grid {
+      @apply grid-cols-12 gap-6;
+    }
+  }
+
+  @screen lg {
+    .layout-grid {
+      @apply gap-8;
+    }
+  }
+
+  /* Card Component */
+  .card {
+    @apply bg-card text-card-foreground rounded-lg border shadow-elevation-low;
+  }
+
+  .card-header {
+    @apply p-4 md:p-6;
+  }
+
+  .card-content {
+    @apply p-4 md:p-6 pt-0;
+  }
+
+  .card-footer {
+    @apply p-4 md:p-6 pt-0;
+  }
+
+  /* Button Components with Touch Targets */
+  .btn {
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 touch-target-min;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .btn-secondary {
+    @apply btn bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-input;
+  }
+
+  .btn-destructive {
+    @apply btn bg-destructive text-destructive-foreground hover:bg-destructive/90;
+  }
+
+  .btn-sm {
+    @apply px-3 py-2 text-xs font-medium;
+  }
+
+  .btn-md {
+    @apply px-4 py-2 text-sm font-medium;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-base font-medium touch-target-comfortable;
+  }
+
+  /* Form Controls */
+  .form-input {
+    @apply flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-target-min;
+  }
+
+  /* Responsive Tables */
+  .table-responsive {
+    @apply w-full overflow-auto;
+  }
+
+  @screen md {
+    .table-responsive {
+      @apply overflow-visible;
+    }
+  }
+
+  /* Mobile-First Navigation */
+  .nav-mobile {
+    @apply fixed inset-x-0 top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border;
+  }
+
+  @screen md {
+    .nav-mobile {
+      @apply static bg-transparent backdrop-blur-none supports-[backdrop-filter]:bg-transparent border-b-0;
+    }
+  }
+}
+
+@layer utilities {
+  /* Custom scrollbar */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground));
+    border-radius: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--border));
+  }
+
+  /* Date, time, and datetime input styling for dark theme */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    color-scheme: light;
+  }
+
+  .dark input[type="date"],
+  .dark input[type="time"],
+  .dark input[type="datetime-local"] {
+    color-scheme: dark;
+  }
+
+  /* Ensure date input calendar icon is properly themed */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: brightness(1);
+    cursor: pointer;
+  }
+
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="time"]::-webkit-calendar-picker-indicator,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: brightness(0) saturate(100%) invert(1);
+  }
+
+  /* Focus ring utilities */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Mobile-specific utilities */
+  @screen max-sm {
+    .mobile-stack {
+      @apply flex-col space-y-4 space-x-0;
+    }
+
+    .mobile-full {
+      @apply w-full;
+    }
+  }
+
+  /* Standardized Form Label System */
+
+  /* Primary Form Labels (Input Labels) */
+  .form-label {
+    @apply text-sm font-medium text-foreground mb-2 block;
+  }
+
+  .form-label-required {
+    @apply text-sm font-medium text-foreground mb-2 block after:content-['*'] after:text-red-500 after:ml-1;
+  }
+
+  /* Secondary Form Labels (Helper Text) */
+  .form-label-helper {
+    @apply text-xs text-muted-foreground mt-1 block;
+  }
+
+  .form-label-description {
+    @apply text-xs text-muted-foreground mt-1 block leading-relaxed;
+  }
+
+  /* Group Labels (Section Labels) */
+  .form-label-group {
+    @apply text-sm font-semibold text-foreground mb-3 block;
+  }
+
+  .form-label-section {
+    @apply text-base font-semibold text-foreground mb-4 block;
+  }
+
+  /* Inline Labels (Radio/Checkbox) */
+  .form-label-inline {
+    @apply text-sm font-normal text-foreground ml-2 cursor-pointer;
+  }
+
+  .form-label-radio {
+    @apply flex items-center gap-2 cursor-pointer text-sm font-normal text-foreground;
+  }
+
+  .form-label-checkbox {
+    @apply flex items-center gap-2 cursor-pointer text-sm font-normal text-foreground;
+  }
+
+  /* Field Configuration Labels */
+  .form-label-config {
+    @apply text-xs font-medium text-muted-foreground mb-1 block;
+  }
+
+  /* Form Title Labels */
+  .form-label-title {
+    @apply text-lg font-semibold text-foreground mb-2 block;
+  }
+
+  /* Error and Validation Labels */
+  .form-label-error {
+    @apply text-xs text-destructive mt-1 block;
+  }
+
+  .form-label-success {
+    @apply text-xs text-success mt-1 block;
+  }
+
+  /* Screen Reader Only Labels */
+  .form-label-sr-only {
+    @apply sr-only;
+  }
+
+  /* Responsive Label Adjustments */
+  @media (max-width: 640px) {
+    .form-label, .form-label-required {
+      @apply text-base mb-2;
+    }
+
+    .form-label-title {
+      @apply text-xl mb-3;
+    }
+
+    .form-label-inline, .form-label-radio, .form-label-checkbox {
+      @apply text-base;
+    }
+  }
+}
