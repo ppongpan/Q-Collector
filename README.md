@@ -1,8 +1,8 @@
-# 🎨 iOS 26 Liquid Glass Form Builder
+# 📋 Q-Collector
 
-> **Premium React form builder with glass morphism design, 60fps animations, and comprehensive field types**
+> **Smart data collection platform with premium iOS 26 glass morphism design, 60fps animations, and comprehensive field types**
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/your-username/ios26-liquid-glass-form-builder)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/your-username/Q-Collector)
 [![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://reactjs.org/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.0+-38B2AC.svg)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -43,8 +43,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/ios26-liquid-glass-form-builder.git
-cd ios26-liquid-glass-form-builder
+git clone https://github.com/your-username/Q-Collector.git
+cd Q-Collector
 
 # Install dependencies
 npm install
@@ -208,7 +208,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Animations**: Framer Motion animation system
 - **Thai Fonts**: ThaiSans Neue typography family
 
-## 📊 Project Stats
+## 📊 Q-Collector Stats
 
 - **Lines of Code**: 42,000+
 - **Components**: 50+ custom components
@@ -236,6 +236,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using [Claude Code](https://claude.ai/code)**
 
-[⭐ Star this project](https://github.com/your-username/ios26-liquid-glass-form-builder) | [🐛 Report Issues](https://github.com/your-username/ios26-liquid-glass-form-builder/issues) | [💡 Request Features](https://github.com/your-username/ios26-liquid-glass-form-builder/issues/new)
+[⭐ Star this project](https://github.com/your-username/Q-Collector) | [🐛 Report Issues](https://github.com/your-username/Q-Collector/issues) | [💡 Request Features](https://github.com/your-username/Q-Collector/issues/new)
 
 </div>
