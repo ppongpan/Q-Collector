@@ -92,7 +92,7 @@ const AnimatedGlassInput = React.forwardRef(({
     <MotionDiv
       className={cn(
         'relative flex items-center',
-        'glass-input-container rounded-xl overflow-hidden',
+        'glass-input-container rounded-2xl overflow-visible',
         'border border-white/20 dark:border-white/10',
         'backdrop-blur-16 bg-white/5 dark:bg-black/20',
         'transition-all duration-200 ease-out',
@@ -267,7 +267,7 @@ const AnimatedGlassTextarea = React.forwardRef(({
     <MotionDiv
       className={cn(
         'relative',
-        'glass-input-container rounded-xl overflow-hidden',
+        'glass-input-container rounded-2xl overflow-visible',
         'border border-white/20 dark:border-white/10',
         'backdrop-blur-16 bg-white/5 dark:bg-black/20',
         'transition-all duration-200 ease-out',
@@ -370,7 +370,7 @@ const AnimatedGlassSelect = React.forwardRef(({
     <MotionDiv
       className={cn(
         'relative',
-        'glass-input-container rounded-xl overflow-hidden',
+        'glass-input-container rounded-2xl overflow-visible',
         'border border-white/20 dark:border-white/10',
         'backdrop-blur-16 bg-white/5 dark:bg-black/20',
         'transition-all duration-200 ease-out',

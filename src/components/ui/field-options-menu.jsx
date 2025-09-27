@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEllipsisV, faArrowUp, faArrowDown, faCopy, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
-import { GlassButton } from './glass-button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './dropdown-menu';
 
 /**
@@ -106,34 +105,42 @@ const FieldOptionsMenu = React.memo(({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <GlassButton
-          variant="ghost"
-          size="icon"
-          tooltip="ตัวเลือกเพิ่มเติม"
-          className="opacity-70 hover:opacity-100 w-7 h-7"
+        <div
+          title="ตัวเลือกเพิ่มเติม"
+          className="flex items-center justify-center opacity-70 hover:opacity-100 w-7 h-7 cursor-pointer transition-all duration-300"
+          style={{
+            background: 'transparent',
+            border: 'none'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.transform = 'scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'scale(1)';
+          }}
         >
-          <FontAwesomeIcon icon={faEllipsisV} className="text-sm" />
-        </GlassButton>
+          <FontAwesomeIcon icon={faEllipsisV} className="w-3 h-3" />
+        </div>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="glass-container w-56">
         {/* Move Up/Down Options */}
         {canMoveUp && (
           <DropdownMenuItem onClick={onMoveUp}>
-            <FontAwesomeIcon icon={faArrowUp} className="mr-2" />
+            <FontAwesomeIcon icon={faArrowUp} className="mr-2 w-3 h-3" />
             ย้ายขึ้น
           </DropdownMenuItem>
         )}
 
         {canMoveDown && (
           <DropdownMenuItem onClick={onMoveDown}>
-            <FontAwesomeIcon icon={faArrowDown} className="mr-2" />
+            <FontAwesomeIcon icon={faArrowDown} className="mr-2 w-3 h-3" />
             ย้ายลง
           </DropdownMenuItem>
         )}
 
         <DropdownMenuItem onClick={onDuplicate}>
-          <FontAwesomeIcon icon={faCopy} className="mr-2" />
+          <FontAwesomeIcon icon={faCopy} className="mr-2 w-3 h-3" />
           ทำสำเนา
         </DropdownMenuItem>
 
@@ -218,7 +225,7 @@ const FieldOptionsMenu = React.memo(({
         <DropdownMenuSeparator />
 
         <DropdownMenuItem onClick={onRemove} className="text-destructive">
-          <FontAwesomeIcon icon={faTrashAlt} className="mr-2" />
+          <FontAwesomeIcon icon={faTrashAlt} className="mr-2 w-3 h-3" />
           ลบ
         </DropdownMenuItem>
       </DropdownMenuContent>

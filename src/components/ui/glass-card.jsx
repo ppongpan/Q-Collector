@@ -8,21 +8,27 @@ const GlassCard = React.forwardRef(({
   ...props
 }, ref) => {
   const variants = {
-    base: 'glass-container',
-    elevated: 'glass-elevated',
-    floating: 'glass-floating',
-    primary: 'glass-primary glass-container'
+    base: 'glass-container blur-edge',
+    elevated: 'glass-elevated blur-edge-intense',
+    floating: 'glass-floating blur-edge-intense',
+    primary: 'glass-primary glass-container blur-edge-intense'
   };
 
   return (
     <div
       ref={ref}
       className={cn(
-        'rounded-xl overflow-hidden relative',
+        'rounded-2xl overflow-visible relative',
+        'transition-all duration-300 ease-out',
+        'will-change-transform',
         variants[variant],
         'animate-glass-in',
         className
       )}
+      style={{
+        borderRadius: '24px',
+        ...props.style
+      }}
       {...props}
     >
       {children}

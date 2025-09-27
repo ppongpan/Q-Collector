@@ -39,9 +39,9 @@ const UnifiedFieldRow = ({
       className={`
         unified-field-row
         grid grid-cols-1 lg:grid-cols-[200px_1fr_180px]
-        gap-3 lg:gap-4
+        gap-2 lg:gap-3
         w-full
-        px-4 py-3
+        px-3 py-1.5
         bg-background/30
         rounded-xl
         border border-border/20
@@ -128,9 +128,9 @@ export const UnifiedFieldPreview = ({
       {React.isValidElement(fieldType.icon) ? (
         fieldType.icon
       ) : typeof fieldType.icon === 'function' ? (
-        <fieldType.icon className={`text-${fieldType.color}-600 text-lg`} />
+        <fieldType.icon className={`text-${fieldType.color}-600 w-4 h-4`} />
       ) : (
-        <FontAwesomeIcon icon={fieldType.icon} className={`text-${fieldType.color}-600 text-lg`} />
+        <FontAwesomeIcon icon={fieldType.icon} className={`text-${fieldType.color}-600 w-4 h-4`} />
       )}
     </div>
   ) : null;

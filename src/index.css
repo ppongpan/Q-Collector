@@ -510,7 +510,7 @@
 
   /* Enhanced Button Components with Touch Targets and Clear Hover States */
   .btn {
-    @apply inline-flex items-center justify-center whitespace-nowrap rounded-xl transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 touch-target-min;
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-xl transition-all duration-200 ease-out focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 touch-target-min;
     font-size: clamp(14px, calc(16px * var(--font-scale)), 18px);  /* Limit font scaling */
     font-weight: 500;                      /* Enhanced: medium weight for better readability */
   }
@@ -583,7 +583,7 @@
 
   /* Enhanced Form Controls with Clear Hover States */
   .form-input {
-    @apply flex w-full rounded-xl border border-input bg-background ring-offset-background file:border-0 file:bg-transparent file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-target-min;
+    @apply flex w-full rounded-xl border border-input bg-background ring-offset-background file:border-0 file:bg-transparent file:font-medium placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 touch-target-min;
     padding: 12px 16px;                     /* Enhanced: more padding */
     font-size: 16px;                        /* Enhanced: larger, more readable text */
     line-height: 1.5;
@@ -625,6 +625,187 @@
 }
 
 @layer utilities {
+  /* Enhanced Orange Neon Effects System */
+  .orange-neon-focus {
+    position: relative;
+    border: none !important; /* Remove double borders */
+    backdrop-filter: blur(8px);
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    /* Remove box-shadow to prevent square glow */
+  }
+
+  .orange-neon-focus::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 28px !important;
+    background: linear-gradient(135deg,
+      rgba(249, 115, 22, 0.3) 0%,
+      rgba(249, 115, 22, 0.1) 50%,
+      rgba(249, 115, 22, 0.2) 100%);
+    z-index: -1;
+    filter: blur(8px);
+    opacity: 0.9;
+  }
+
+  .orange-neon-hover {
+    position: relative;
+    border: none !important;
+    backdrop-filter: blur(12px);
+    transform: translateY(-1px);
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    /* Remove box-shadow to prevent square glow */
+  }
+
+  .orange-neon-hover::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 28px !important;
+    background: linear-gradient(135deg,
+      rgba(249, 115, 22, 0.4) 0%,
+      rgba(249, 115, 22, 0.2) 50%,
+      rgba(249, 115, 22, 0.3) 100%);
+    z-index: -1;
+    filter: blur(10px);
+    opacity: 0.8;
+  }
+
+  .orange-neon-active {
+    box-shadow:
+      0 0 30px rgba(249, 115, 22, 0.6),
+      0 0 60px rgba(249, 115, 22, 0.4),
+      inset 0 0 30px rgba(249, 115, 22, 0.2);
+    border: none !important;
+    backdrop-filter: blur(16px);
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .orange-neon-permanent {
+    box-shadow:
+      0 0 15px rgba(249, 115, 22, 0.3),
+      0 0 30px rgba(249, 115, 22, 0.15),
+      inset 0 0 15px rgba(249, 115, 22, 0.08);
+    border: none !important;
+    backdrop-filter: blur(8px);
+  }
+
+  /* Legacy Orange Neon Effects - Updated */
+  .shadow-orange-neon {
+    @apply orange-neon-focus;
+  }
+
+  .focus\:shadow-orange-neon:focus {
+    @apply orange-neon-focus;
+  }
+
+  .hover\:shadow-orange-neon:hover {
+    @apply orange-neon-hover;
+  }
+
+  /* Enhanced Date/Time Input Styling */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    position: absolute;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
+
+  /* Date/Time Input Focus Enhancement */
+  input[type="date"]:focus,
+  input[type="time"]:focus,
+  input[type="datetime-local"]:focus {
+    background: rgba(var(--background), 0.7);
+  }
+
+  /* Date/Time Picker Popup Styling */
+  input[type="date"]::-webkit-datetime-edit,
+  input[type="time"]::-webkit-datetime-edit,
+  input[type="datetime-local"]::-webkit-datetime-edit {
+    padding: 0;
+    font-size: 0.875rem;
+  }
+
+  input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+  input[type="time"]::-webkit-datetime-edit-fields-wrapper,
+  input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+  }
+
+  input[type="date"]::-webkit-datetime-edit-text,
+  input[type="time"]::-webkit-datetime-edit-text,
+  input[type="datetime-local"]::-webkit-datetime-edit-text {
+    color: rgba(var(--muted-foreground), 0.7);
+    padding: 0 2px;
+  }
+
+  input[type="date"]::-webkit-datetime-edit-month-field,
+  input[type="date"]::-webkit-datetime-edit-day-field,
+  input[type="date"]::-webkit-datetime-edit-year-field,
+  input[type="time"]::-webkit-datetime-edit-hour-field,
+  input[type="time"]::-webkit-datetime-edit-minute-field,
+  input[type="datetime-local"]::-webkit-datetime-edit-month-field,
+  input[type="datetime-local"]::-webkit-datetime-edit-day-field,
+  input[type="datetime-local"]::-webkit-datetime-edit-year-field,
+  input[type="datetime-local"]::-webkit-datetime-edit-hour-field,
+  input[type="datetime-local"]::-webkit-datetime-edit-minute-field {
+    padding: 2px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  input[type="date"]:focus::-webkit-datetime-edit-month-field:focus,
+  input[type="date"]:focus::-webkit-datetime-edit-day-field:focus,
+  input[type="date"]:focus::-webkit-datetime-edit-year-field:focus,
+  input[type="time"]:focus::-webkit-datetime-edit-hour-field:focus,
+  input[type="time"]:focus::-webkit-datetime-edit-minute-field:focus,
+  input[type="datetime-local"]:focus::-webkit-datetime-edit-month-field:focus,
+  input[type="datetime-local"]:focus::-webkit-datetime-edit-day-field:focus,
+  input[type="datetime-local"]:focus::-webkit-datetime-edit-year-field:focus,
+  input[type="datetime-local"]:focus::-webkit-datetime-edit-hour-field:focus,
+  input[type="datetime-local"]:focus::-webkit-datetime-edit-minute-field:focus {
+    background: rgba(249, 115, 22, 0.1);
+    color: rgb(249, 115, 22);
+  }
+
+  /* Custom Slider Styling */
+  .slider-orange::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4);
+    border: 2px solid #ffffff;
+    transition: all 0.2s ease;
+  }
+
+  .slider-orange::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.6);
+  }
+
+  .slider-orange::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4);
+    transition: all 0.2s ease;
+  }
+
+  .slider-orange::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.6);
+  }
+
   /* Custom scrollbar */
   .scrollbar-thin::-webkit-scrollbar {
     width: 4px;
@@ -674,7 +855,121 @@
 
   /* Focus ring utilities */
   .focus-ring {
-    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply focus:outline-none;
+  }
+
+  /* Override all default browser focus/hover rings */
+  button:focus,
+  button:focus-visible,
+  button:hover,
+  a:focus,
+  a:focus-visible,
+  a:hover,
+  .btn:focus,
+  .btn:focus-visible,
+  .btn:hover,
+  [role="button"]:focus,
+  [role="button"]:focus-visible,
+  [role="button"]:hover,
+  /* Icon specific selectors */
+  .icon:focus,
+  .icon:focus-visible,
+  .icon:hover,
+  [class*="icon"]:focus,
+  [class*="icon"]:focus-visible,
+  [class*="icon"]:hover,
+  .icon-glass:focus,
+  .icon-glass:focus-visible,
+  .icon-glass:hover,
+  /* Size variant selectors */
+  [class*="size=\"icon\""]:focus,
+  [class*="size=\"icon\""]:focus-visible,
+  [class*="size=\"icon\""]:hover,
+  /* Touch target selectors */
+  .touch-target-comfortable:focus,
+  .touch-target-comfortable:focus-visible,
+  .touch-target-comfortable:hover {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Specific override for WebKit focus rings */
+  button::-moz-focus-inner,
+  input::-moz-focus-inner {
+    border: 0 !important;
+    outline: none !important;
+  }
+
+  /* Universal override for all interactive elements */
+  *:focus,
+  *:focus-visible,
+  *:hover,
+  *[tabindex]:focus,
+  *[tabindex]:focus-visible,
+  *[tabindex]:hover {
+    outline: none !important;
+  }
+
+  /* Override WebKit tap highlight */
+  * {
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Allow text selection for text elements */
+  input,
+  textarea,
+  [contenteditable],
+  .selectable-text {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+  }
+
+  /* Preserve border-radius in all states for icon containers and interactive elements */
+  .glass-interactive,
+  .glass-interactive:hover,
+  .glass-interactive:focus,
+  .glass-interactive:active,
+  .icon-glass,
+  .icon-glass:hover,
+  .icon-glass:focus,
+  .icon-glass:active,
+  .btn-glass,
+  .btn-glass:hover,
+  .btn-glass:focus,
+  .btn-glass:active,
+  button[class*="rounded"],
+  button[class*="rounded"]:hover,
+  button[class*="rounded"]:focus,
+  button[class*="rounded"]:active,
+  [class*="icon"][class*="rounded"],
+  [class*="icon"][class*="rounded"]:hover,
+  [class*="icon"][class*="rounded"]:focus,
+  [class*="icon"][class*="rounded"]:active {
+    border-radius: inherit !important;
+  }
+
+  /* Ensure all GlassButton variants preserve rounded corners */
+  .rounded-xl,
+  .rounded-xl:hover,
+  .rounded-xl:focus,
+  .rounded-xl:active,
+  .rounded-lg,
+  .rounded-lg:hover,
+  .rounded-lg:focus,
+  .rounded-lg:active,
+  .rounded-md,
+  .rounded-md:hover,
+  .rounded-md:focus,
+  .rounded-md:active {
+    border-radius: inherit !important;
   }
 
   /* Animation utilities */
@@ -828,7 +1123,7 @@
 
   .dark .glass-container {
     background: rgba(0, 0, 0, 0.5);       /* Darker background for better contrast */
-    border: 1px solid rgba(255, 255, 255, 0.2); /* More visible borders */
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: hsl(var(--foreground));        /* Ensure light text */
   }
 
@@ -936,9 +1231,10 @@
   }
 
   .btn-glass-primary {
+    @apply rounded-xl;
     background: rgba(249, 115, 22, 0.9);
     backdrop-filter: blur(12px) saturate(120%);
-    border: 1px solid rgba(249, 115, 22, 1);
+    border: none;
     color: white;
   }
 
@@ -956,10 +1252,10 @@
   }
 
   .icon-glass {
-    @apply w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200;
+    @apply w-10 h-10 flex items-center justify-center transition-all duration-200 rounded-xl;
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: none;
   }
 
   .icon-glass:hover {
@@ -978,64 +1274,85 @@
     border: 1px solid rgba(255, 255, 255, 0.15);
   }
 
-  /* Glass Inputs */
+  /* Enhanced Glass Inputs with Orange Neon Effects */
   .input-glass {
-    @apply w-full px-4 py-3 rounded-xl transition-all duration-200 ease-out;
+    @apply w-full px-4 py-3 rounded-xl transition-all duration-300 ease-out;
     @apply text-foreground placeholder:text-muted-foreground/80;
-    @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50;
-    background: #1e1e1e !important;      /* CRITICAL FIX: Solid background */
+    @apply focus:outline-none;
+    background: rgba(30, 30, 30, 0.8) !important;      /* Semi-transparent background */
     backdrop-filter: blur(8px) saturate(120%);
-    border: 2px solid #444 !important;  /* CRITICAL FIX: Visible border */
-    color: #ffffff !important;           /* CRITICAL FIX: White text */
-    font-size: 16px !important;         /* Enhanced: larger text */
-    font-weight: 500 !important;        /* Enhanced: better visibility */
-    min-height: 48px !important;        /* Enhanced: larger touch target */
-    line-height: 1.4 !important;        /* Enhanced: better line spacing */
-    min-width: 100% !important;         /* Enhanced: Force full width */
-    box-sizing: border-box !important;  /* Enhanced: Proper box model */
+    border: none !important;                            /* Remove all borders */
+    color: #ffffff !important;                          /* White text */
+    font-size: 16px !important;                        /* Larger text */
+    font-weight: 500 !important;                       /* Better visibility */
+    min-height: 48px !important;                       /* Larger touch target */
+    line-height: 1.4 !important;                       /* Better line spacing */
+    min-width: 100% !important;                        /* Force full width */
+    box-sizing: border-box !important;                 /* Proper box model */
     color-scheme: light;
+
+    /* Glass morphism edge effect */
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
   }
 
   .input-glass:hover {
-    background: #2a2a2a !important;     /* CRITICAL FIX: Lighter solid background on hover */
-    border: 2px solid #ff6600 !important; /* CRITICAL FIX: Orange border on hover */
-    color: #ff6600 !important;          /* CRITICAL FIX: Orange text on hover */
+    background: rgba(42, 42, 42, 0.9) !important;      /* Lighter background on hover */
+    color: #ff6600 !important;                          /* Orange text on hover */
     transform: translateY(-1px);
-    box-shadow: 0 0 0 1px rgba(255, 102, 0, 0.3) !important; /* Orange glow */
+    /* Apply orange neon hover effect */
+    box-shadow:
+      0 0 20px rgba(249, 115, 22, 0.5),
+      0 0 40px rgba(249, 115, 22, 0.3),
+      inset 0 0 20px rgba(249, 115, 22, 0.15),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.15) !important;
   }
 
   .input-glass:focus {
-    background: #2a2a2a !important;     /* CRITICAL FIX: Lighter solid background on focus */
-    border: 2px solid #ff6600 !important; /* CRITICAL FIX: Orange border on focus */
-    color: #ffffff !important;          /* CRITICAL FIX: Keep white text on focus */
-    box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.3) !important; /* Enhanced: larger focus ring */
+    background: rgba(42, 42, 42, 0.9) !important;      /* Lighter background on focus */
+    color: #ffffff !important;                          /* White text on focus */
     transform: translateY(-1px);
     outline: none !important;
+    /* Apply orange neon focus effect */
+    box-shadow:
+      0 0 25px rgba(249, 115, 22, 0.6),
+      0 0 50px rgba(249, 115, 22, 0.4),
+      inset 0 0 25px rgba(249, 115, 22, 0.2),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
   }
 
   .dark .input-glass {
-    background: #1e1e1e !important;         /* CRITICAL FIX: Solid background in dark mode */
-    border: 2px solid #444 !important;     /* CRITICAL FIX: Visible border */
-    color: #ffffff !important;              /* CRITICAL FIX: White text in dark mode */
-    font-size: 16px !important;            /* Enhanced: larger text */
-    font-weight: 500 !important;           /* Enhanced: better visibility */
+    background: rgba(30, 30, 30, 0.8) !important;         /* Semi-transparent background in dark mode */
+    backdrop-filter: blur(8px) saturate(120%);
+    border: none !important;                                /* Remove border */
+    color: #ffffff !important;                              /* White text in dark mode */
+    font-size: 16px !important;                            /* Enhanced: larger text */
+    font-weight: 500 !important;                           /* Enhanced: better visibility */
     color-scheme: dark;
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
   }
 
   .dark .input-glass:hover {
-    background: #2a2a2a !important;        /* CRITICAL FIX: Lighter background on hover */
-    border: 2px solid #ff6600 !important;  /* CRITICAL FIX: Orange border on hover */
-    color: #ff6600 !important;             /* CRITICAL FIX: Orange text on hover */
-    box-shadow: 0 0 0 1px rgba(255, 102, 0, 0.3) !important; /* Orange glow */
+    background: rgba(42, 42, 42, 0.9) !important;        /* Lighter background on hover */
+    color: #ff6600 !important;                            /* Orange text on hover */
+    /* Apply orange neon hover effect */
+    box-shadow:
+      0 0 20px rgba(249, 115, 22, 0.5),
+      0 0 40px rgba(249, 115, 22, 0.3),
+      inset 0 0 20px rgba(249, 115, 22, 0.15),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.15) !important;
   }
 
   .dark .input-glass:focus {
-    background: #2a2a2a !important;        /* CRITICAL FIX: Lighter background on focus */
-    border: 2px solid #ff6600 !important;  /* CRITICAL FIX: Orange border on focus */
-    color: #ffffff !important;             /* CRITICAL FIX: White text on focus */
-    box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.3) !important; /* Orange focus ring */
+    background: rgba(42, 42, 42, 0.9) !important;        /* Lighter background on focus */
+    color: #ffffff !important;                            /* White text on focus */
     transform: translateY(-1px);
     outline: none !important;
+    /* Apply orange neon focus effect */
+    box-shadow:
+      0 0 25px rgba(249, 115, 22, 0.6),
+      0 0 50px rgba(249, 115, 22, 0.4),
+      inset 0 0 25px rgba(249, 115, 22, 0.2),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
   }
 
   /* Fix dropdown options for dark theme */
@@ -1049,72 +1366,82 @@
     color: hsl(var(--foreground));
   }
 
-  /* Enhanced select styling for better dropdown appearance */
+  /* Enhanced select styling with orange neon effects */
   select.input-glass {
-    background-image: none !important;   /* CRITICAL FIX: Remove all background images to eliminate triangles */
+    background-image: none !important;   /* Remove all background images */
     background-repeat: no-repeat;
     background-position: right 1rem center;
     background-size: 1rem;
-    background-color: #1e1e1e !important; /* CRITICAL FIX: Force solid dark background */
-    background: #1e1e1e !important;      /* CRITICAL FIX: Double ensure solid background */
+    background: rgba(30, 30, 30, 0.8) !important;      /* Semi-transparent background */
+    backdrop-filter: blur(8px) saturate(120%);
     appearance: none !important;
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
-    font-size: 16px !important;          /* Enhanced: larger text for better readability */
-    font-weight: 500 !important;         /* Enhanced: medium weight for better visibility */
+    font-size: 16px !important;                        /* Larger text for better readability */
+    font-weight: 500 !important;                       /* Medium weight for better visibility */
     line-height: 1.5;
-    min-height: 52px;                    /* Enhanced: larger touch target */
-    padding: 12px 48px 12px 16px;       /* Enhanced: more padding, room for arrow */
-    border: 2px solid #444 !important;  /* CRITICAL FIX: Visible border */
-    color: #ffffff !important;           /* CRITICAL FIX: White text */
-    border-radius: 8px !important;      /* Enhanced: rounded corners */
+    min-height: 52px;                                  /* Larger touch target */
+    padding: 12px 48px 12px 16px;                     /* More padding, room for arrow */
+    border: none !important;                           /* Remove all borders */
+    color: #ffffff !important;                         /* White text */
+    border-radius: 8px !important;                    /* Rounded corners */
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
   }
 
   .dark select.input-glass {
-    background-image: none !important;   /* CRITICAL FIX: No background images in dark mode */
-    background-color: #1e1e1e !important; /* CRITICAL FIX: Force solid dark background */
-    background: #1e1e1e !important;      /* CRITICAL FIX: Double ensure solid background */
-    color: #ffffff !important;           /* CRITICAL FIX: White text in dark mode */
-    border: 2px solid #444 !important;  /* CRITICAL FIX: Visible border */
+    background-image: none !important;                     /* No background images in dark mode */
+    background: rgba(30, 30, 30, 0.8) !important;         /* Semi-transparent background */
+    backdrop-filter: blur(8px) saturate(120%);
+    color: #ffffff !important;                             /* White text in dark mode */
+    border: none !important;                               /* Remove all borders */
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
   }
 
-  /* Enhanced select hover and focus states */
+  /* Enhanced select hover and focus states with orange neon */
   select.input-glass:hover {
-    border-color: #ff6600 !important;   /* CRITICAL FIX: Orange border on hover */
-    background-color: #2a2a2a !important; /* Slightly lighter background on hover */
-    color: #ff6600 !important;          /* Orange text on hover */
-    box-shadow: 0 0 0 1px #ff6600 !important; /* Orange glow */
+    background: rgba(42, 42, 42, 0.9) !important;         /* Lighter background on hover */
+    color: #ff6600 !important;                             /* Orange text on hover */
+    /* Apply orange neon hover effect */
+    box-shadow:
+      0 0 20px rgba(249, 115, 22, 0.5),
+      0 0 40px rgba(249, 115, 22, 0.3),
+      inset 0 0 20px rgba(249, 115, 22, 0.15),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.15) !important;
   }
 
   select.input-glass:focus {
-    border-color: #ff6600 !important;   /* CRITICAL FIX: Orange border on focus */
-    background-color: #2a2a2a !important; /* Slightly lighter background on focus */
+    background: rgba(42, 42, 42, 0.9) !important;         /* Lighter background on focus */
     outline: none !important;
-    box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.3) !important; /* Orange focus ring */
+    /* Apply orange neon focus effect */
+    box-shadow:
+      0 0 25px rgba(249, 115, 22, 0.6),
+      0 0 50px rgba(249, 115, 22, 0.4),
+      inset 0 0 25px rgba(249, 115, 22, 0.2),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
   }
 
   /* Enhanced dropdown options */
   select.input-glass option {
-    padding: 12px 16px !important;      /* Enhanced: larger option padding */
-    font-size: 16px !important;          /* Enhanced: larger option text */
-    font-weight: 500 !important;         /* Enhanced: better visibility */
-    line-height: 1.5;
-    min-height: 44px;                    /* Enhanced: touch-friendly options */
-    background-color: #1e1e1e !important; /* CRITICAL FIX: Solid dark background */
-    color: #ffffff !important;           /* CRITICAL FIX: White text */
+    padding: 8px 12px !important;       /* Reduced padding for compact options */
+    font-size: 14px !important;         /* Smaller font size as requested */
+    font-weight: 400 !important;        /* Normal weight for better readability */
+    line-height: 1.4;
+    min-height: 36px;                    /* Reduced height for compact appearance */
+    background-color: hsl(var(--background)) !important; /* Theme-aware background */
+    color: hsl(var(--foreground)) !important;           /* Theme-aware text color */
     border: none !important;             /* Remove any borders */
   }
 
   .dark select.input-glass option {
-    background-color: #1e1e1e !important; /* CRITICAL FIX: Dark theme solid background */
-    color: #ffffff !important;           /* CRITICAL FIX: White text in dark theme */
-    font-weight: 500 !important;         /* Enhanced: better visibility */
+    background-color: hsl(var(--background)) !important; /* Theme-aware dark background */
+    color: hsl(var(--foreground)) !important;           /* Theme-aware text color */
+    font-weight: 400 !important;         /* Normal weight for consistency */
   }
 
   select.input-glass option:hover,
   select.input-glass option:focus {
-    background-color: #2a2a2a !important; /* Lighter background on hover */
-    color: #ff6600 !important;          /* Orange text on hover */
+    background-color: hsl(var(--accent)) !important; /* Theme-aware hover background */
+    color: hsl(var(--primary)) !important;          /* Orange theme color on hover */
   }
 
   /* Enhanced full-width layout for form fields */
@@ -1161,7 +1488,7 @@
 
   /* Focus Glass System */
   .focus-glass {
-    @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 focus:ring-offset-background;
+    @apply focus:outline-none;
   }
 
   /* Glass Animations */
@@ -1261,9 +1588,6 @@
   /* Enhanced Focus States */
   .focus-visible-glass {
     @apply focus-visible:outline-none;
-    @apply focus-visible:ring-2 focus-visible:ring-primary/30;
-    @apply focus-visible:ring-offset-2 focus-visible:ring-offset-background;
-    @apply focus-visible:border-primary/50;
   }
 
   /* Icon Size Utilities for Better Accessibility */
@@ -1505,6 +1829,11 @@
 
     /* Ensure rounded corners are preserved */
     isolation: isolate;
+
+    /* Force border-radius at this level too */
+    border-radius: 24px !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
   }
 
   .form-card-borderless:hover {
@@ -1558,9 +1887,13 @@
   .form-card-glow {
     position: relative;
     transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 12px;
+    border-radius: 24px !important;
     overflow: visible !important;
     border: none !important;
+
+    /* Force rounded corners with webkit prefix */
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
 
     /* Ensure proper stacking and space for animations */
     z-index: 1;
@@ -1602,8 +1935,8 @@
     /* Smooth transform with lift */
     transform: scale(1.02) translateY(-4px);
 
-    /* Preserve border radius */
-    border-radius: 12px;
+    /* Preserve border radius - force 24px explicitly */
+    border-radius: 24px !important;
 
     /* Force visibility */
     overflow: visible !important;
@@ -1612,7 +1945,7 @@
   /* Fix for border radius clipping during scale animations */
   .form-card-animate {
     /* Preserve rounded corners during all animations */
-    border-radius: 12px !important;
+    border-radius: 24px !important;
     overflow: visible !important;
 
     /* Smooth transform origin */
@@ -1626,7 +1959,7 @@
 
   .form-card-animate:hover {
     /* Maintain border radius during hover scale */
-    border-radius: 12px !important;
+    border-radius: 24px !important;
     overflow: visible !important;
   }
 
@@ -1725,6 +2058,11 @@
     /* Animation support */
     transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
     transform-origin: center;
+
+    /* Force border-radius on motion container */
+    border-radius: 24px !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
   }
 
   /* Performance optimization for animations */
@@ -1745,6 +2083,147 @@
     background: rgba(255, 0, 0, 0.05);
   }
 
+  /* Blur Edge Effects System - Fixed for Rounded Corners */
+  .blur-edge {
+    position: relative;
+    overflow: visible;
+    border-radius: 24px !important;
+  }
+
+  .blur-edge::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    backdrop-filter: blur(12px);
+    border-radius: 24px !important;
+    z-index: -1;
+  }
+
+  .blur-edge-intense {
+    position: relative;
+    overflow: visible;
+    border-radius: 24px !important;
+  }
+
+  .blur-edge-intense::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    backdrop-filter: blur(16px) saturate(120%);
+    border-radius: 24px !important;
+    z-index: -1;
+  }
+
+  /* Enhanced Interactive Element Utilities */
+  .focus-orange-neon:focus {
+    @apply orange-neon-focus;
+  }
+
+  .hover-orange-neon:hover {
+    @apply orange-neon-hover;
+  }
+
+  .active-orange-neon.active,
+  .active-orange-neon:active {
+    @apply orange-neon-active;
+  }
+
+  /* Glass Container Utilities */
+  .glass-container {
+    @apply blur-edge rounded-2xl;
+    background: rgba(var(--card), 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(var(--border), 0.3);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  }
+
+  /* Fix layered container rounded corners inheritance */
+  .glass-container > div,
+  .glass-container > *:first-child,
+  .glass-card > div,
+  .glass-card > *:first-child,
+  [class*="glass-container"] > div,
+  [class*="glass-card"] > div,
+  [class*="rounded"] > div:first-child,
+  [class*="rounded"] > *:first-child {
+    border-radius: 24px !important;
+  }
+
+  /* Ensure background elements inside rounded containers inherit shape */
+  .glass-container [class*="bg-"],
+  .glass-card [class*="bg-"],
+  [class*="rounded"] [class*="bg-"]:first-child {
+    border-radius: 24px !important;
+    overflow: hidden;
+  }
+
+  /* Force background transparency for nested containers that might show square edges */
+  .glass-container [class*="bg-card"],
+  .glass-container [class*="bg-background"],
+  .glass-container [class*="bg-muted"],
+  .glass-card [class*="bg-card"],
+  .glass-card [class*="bg-background"],
+  .glass-card [class*="bg-muted"],
+  [class*="rounded"] [class*="bg-card"],
+  [class*="rounded"] [class*="bg-background"],
+  [class*="rounded"] [class*="bg-muted"] {
+    background: transparent !important;
+    border-radius: inherit;
+  }
+
+  /* Alternative: make nested backgrounds semi-transparent with rounded corners */
+  .glass-container .p-6,
+  .glass-container .p-4,
+  .glass-container .p-3,
+  .glass-card .p-6,
+  .glass-card .p-4,
+  .glass-card .p-3 {
+    border-radius: 24px !important;
+    background: rgba(var(--background), 0.1);
+  }
+
+  /* Comprehensive rounded corners fix for glass containers */
+  .glass-container,
+  .glass-card {
+    overflow: hidden;
+  }
+
+  /* Fix specific problematic background elements inside glass containers */
+  .glass-container [class*="bg-card"]:first-child,
+  .glass-container [class*="bg-background"]:first-child,
+  .glass-container [class*="bg-muted"]:first-child,
+  .glass-card [class*="bg-card"]:first-child,
+  .glass-card [class*="bg-background"]:first-child,
+  .glass-card [class*="bg-muted"]:first-child {
+    border-radius: 24px !important;
+    background: transparent !important;
+  }
+
+  /* Ensure content areas inside glass containers have proper rounded corners */
+  .glass-container > div:first-child,
+  .glass-card > div:first-child {
+    border-radius: 24px !important;
+  }
+
+  /* Remove duplicate backdrop-blur from nested elements */
+  .glass-container [class*="backdrop-blur"],
+  .glass-card [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+  }
+
+  .glass-interactive {
+    @apply glass-container blur-edge transition-all duration-300;
+    will-change: transform, box-shadow;
+    transform: translateZ(0);
+  }
+
+  .glass-interactive:hover {
+    @apply blur-edge-intense;
+    transform: translateY(-2px) translateZ(0);
+  }
+
   /* Responsive adjustments for animations */
   @media (max-width: 640px) {
     .form-list-grid-container {
@@ -1760,6 +2239,12 @@
       gap: 1rem;
       padding: 12px;
       margin: -6px;
+    }
+
+    /* Reduce blur effects on mobile for performance */
+    .blur-edge::before,
+    .blur-edge-intense::before {
+      backdrop-filter: blur(8px);
     }
   }
 
@@ -1777,6 +2262,12 @@
       gap: 0.75rem;
       padding: 8px;
       margin: -4px;
+    }
+
+    /* Further reduce blur effects on small mobile */
+    .blur-edge::before,
+    .blur-edge-intense::before {
+      backdrop-filter: blur(6px);
     }
   }
 

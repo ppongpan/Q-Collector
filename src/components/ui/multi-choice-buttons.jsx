@@ -62,7 +62,7 @@ const MultiChoiceButtons = ({
   return (
     <div
       className={`
-        grid grid-cols-2 md:grid-cols-3 gap-3
+        grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3
         ${className}
       `}
       role="group"
@@ -83,27 +83,29 @@ const MultiChoiceButtons = ({
             className={`
               inline-flex items-center justify-center
               px-4 py-3 min-h-[3rem]
-              rounded-lg border-2
+              border-0
               text-sm font-medium
-              transition-all duration-200
-              focus:outline-none focus:ring-2 focus:ring-offset-2
+              transition-all duration-300 ease-out
+              focus:outline-none focus-orange-neon
               disabled:opacity-50 disabled:cursor-not-allowed
+              glass-interactive blur-edge
+              will-change-transform
 
               ${isSelected
                 ? `
-                  bg-orange-600 text-white border-orange-600
-                  hover:bg-orange-700 hover:border-orange-700
-                  focus:ring-orange-500
-                  shadow-lg shadow-orange-600/25
-                  scale-[1.02]
+                  bg-orange-600/90 text-white
+                  hover-orange-neon active-orange-neon
+                  backdrop-filter blur-edge-intense
+                  scale-[1.02] shadow-lg
+                  rounded-lg
                 `
                 : `
-                  bg-background border-border
+                  bg-background/60 border-border/30
                   text-foreground hover:bg-accent hover:text-accent-foreground
-                  hover:border-accent-foreground/20
-                  focus:ring-primary
-                  hover:shadow-md hover:shadow-foreground/5
+                  hover-orange-neon
+                  backdrop-filter blur-edge
                   hover:scale-[1.01]
+                  rounded-lg
                 `
               }
 

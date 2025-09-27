@@ -36,82 +36,51 @@ const FONT_OPTIONS = [
   }
 ];
 
-// Font size options with Thai labels and scale values
-// ใช้ scale ที่สอดคล้องกับ CSS variables ที่กำหนดไว้
-const FONT_SIZE_OPTIONS = [
-  {
-    id: 'small',
-    thaiName: 'เล็ก',
-    description: 'ขนาดเล็ก',
-    scale: 0.85,  // 85% - ตรงกับ --font-scale-small (ปรับปรุงแล้ว)
-    previewText: 'ข้อความขนาดเล็ก'
-  },
-  {
-    id: 'medium',
-    thaiName: 'กลาง',
-    description: 'ขนาดปกติ (Form List)',
-    scale: 1.0,  // 100% - ตรงกับ --font-scale-medium
-    previewText: 'ข้อความขนาดกลาง'
-  },
-  {
-    id: 'large',
-    thaiName: 'ใหญ่',
-    description: 'ขนาดใหญ่',
-    scale: 1.15,  // 115% - ตรงกับ --font-scale-large (ปรับปรุงแล้ว)
-    previewText: 'ข้อความขนาดใหญ่'
-  }
-];
+// Fixed font size - medium scale only
+const DEFAULT_FONT_SCALE = 1.0;
 
 const FontContext = createContext();
 
 export function FontProvider({ children }) {
   const [selectedFont, setSelectedFont] = useState(FONT_OPTIONS[0]);
-  const [selectedFontSize, setSelectedFontSize] = useState(FONT_SIZE_OPTIONS[1]); // Default to 'medium' (index 1)
   const [isLoading, setIsLoading] = useState(true);
 
-  // Apply font and font size to document root
-  const applyFontToDocument = React.useCallback((font, fontSize = FONT_SIZE_OPTIONS[1]) => {
-    console.log('Applying font settings:', { fontFamily: font.family, fontSize: fontSize.thaiName, scale: fontSize.scale });
+  // Apply font to document root with fixed medium scale
+  const applyFontToDocument = React.useCallback((font) => {
+    console.log('Applying font settings:', { fontFamily: font.family, scale: DEFAULT_FONT_SCALE });
 
     // Apply font family
     document.documentElement.style.setProperty('--font-family', font.family);
 
-    // Apply font scale with proper bounds to prevent infinite growth/shrink
-    const normalizedScale = Math.min(Math.max(fontSize.scale, 0.85), 1.15); // Updated bounds: 0.85-1.15 for Small/Medium/Large
-    document.documentElement.style.setProperty('--font-scale', normalizedScale.toString());
+    // Apply fixed medium font scale
+    document.documentElement.style.setProperty('--font-scale', DEFAULT_FONT_SCALE.toString());
 
-    console.log('Font scale applied:', normalizedScale);
+    console.log('Font scale applied:', DEFAULT_FONT_SCALE);
   }, []);
 
-  // Load font and font size preferences from localStorage on mount
+  // Load font preferences from localStorage on mount
   useEffect(() => {
     const initializeSettings = () => {
       try {
         const savedFontId = localStorage.getItem('preferred-font');
-        const savedFontSizeId = localStorage.getItem('preferred-font-size');
+
+        // Clean up old font size preference
+        localStorage.removeItem('preferred-font-size');
 
         const targetFont = savedFontId
           ? FONT_OPTIONS.find(f => f.id === savedFontId) || FONT_OPTIONS[0]
           : FONT_OPTIONS[0];
 
-        const targetFontSize = savedFontSizeId
-          ? FONT_SIZE_OPTIONS.find(s => s.id === savedFontSizeId) || FONT_SIZE_OPTIONS[1]
-          : FONT_SIZE_OPTIONS[1]; // Default to 'medium' (index 1)
-
         if (savedFontId) {
           setSelectedFont(targetFont);
         }
 
-        if (savedFontSizeId) {
-          setSelectedFontSize(targetFontSize);
-        }
-
-        // Apply settings to document
-        applyFontToDocument(targetFont, targetFontSize);
+        // Apply settings to document with fixed scale
+        applyFontToDocument(targetFont);
       } catch (error) {
         console.error('Error loading font preferences:', error);
         // Apply defaults on error
-        applyFontToDocument(FONT_OPTIONS[0], FONT_SIZE_OPTIONS[1]);
+        applyFontToDocument(FONT_OPTIONS[0]);
       } finally {
         setIsLoading(false);
       }
@@ -127,24 +96,10 @@ export function FontProvider({ children }) {
 
     try {
       setSelectedFont(newFont);
-      applyFontToDocument(newFont, selectedFontSize);
+      applyFontToDocument(newFont);
       localStorage.setItem('preferred-font', fontId);
     } catch (error) {
       console.error('Error saving font preference:', error);
-    }
-  };
-
-  // Change font size preference
-  const changeFontSize = (fontSizeId) => {
-    const newFontSize = FONT_SIZE_OPTIONS.find(size => size.id === fontSizeId);
-    if (!newFontSize) return;
-
-    try {
-      setSelectedFontSize(newFontSize);
-      applyFontToDocument(selectedFont, newFontSize);
-      localStorage.setItem('preferred-font-size', fontSizeId);
-    } catch (error) {
-      console.error('Error saving font size preference:', error);
     }
   };
 
@@ -152,7 +107,7 @@ export function FontProvider({ children }) {
   const resetFont = () => {
     const defaultFont = FONT_OPTIONS[0];
     setSelectedFont(defaultFont);
-    applyFontToDocument(defaultFont, selectedFontSize);
+    applyFontToDocument(defaultFont);
     try {
       localStorage.removeItem('preferred-font');
     } catch (error) {
@@ -160,43 +115,11 @@ export function FontProvider({ children }) {
     }
   };
 
-  // Reset to default font size
-  const resetFontSize = () => {
-    const defaultFontSize = FONT_SIZE_OPTIONS[1]; // Medium
-    setSelectedFontSize(defaultFontSize);
-    applyFontToDocument(selectedFont, defaultFontSize);
-    try {
-      localStorage.removeItem('preferred-font-size');
-    } catch (error) {
-      console.error('Error removing font size preference:', error);
-    }
-  };
-
-  // Reset both font and font size
-  const resetAll = () => {
-    const defaultFont = FONT_OPTIONS[0];
-    const defaultFontSize = FONT_SIZE_OPTIONS[1];
-    setSelectedFont(defaultFont);
-    setSelectedFontSize(defaultFontSize);
-    applyFontToDocument(defaultFont, defaultFontSize);
-    try {
-      localStorage.removeItem('preferred-font');
-      localStorage.removeItem('preferred-font-size');
-    } catch (error) {
-      console.error('Error removing font preferences:', error);
-    }
-  };
-
   const value = {
     fonts: FONT_OPTIONS,
-    fontSizes: FONT_SIZE_OPTIONS,
     selectedFont,
-    selectedFontSize,
     changeFont,
-    changeFontSize,
     resetFont,
-    resetFontSize,
-    resetAll,
     isLoading
   };
 
@@ -215,4 +138,4 @@ export function useFont() {
   return context;
 }
 
-export { FONT_OPTIONS, FONT_SIZE_OPTIONS };
+export { FONT_OPTIONS };

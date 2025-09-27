@@ -22,7 +22,7 @@ import { UnifiedFieldPreview } from './unified-field-row';
  * @param {Object} props.fieldType - Field type info with icon and color
  * @param {boolean} props.isExpanded - Whether field is expanded
  */
-const FieldPreviewRow = ({ field, fieldType, isExpanded = false }) => {
+const FieldPreviewRow = ({ field, fieldType, isExpanded = false, showFieldTypeIcon = true }) => {
   if (!fieldType) return null;
 
   // Status tags configuration
@@ -71,7 +71,7 @@ const FieldPreviewRow = ({ field, fieldType, isExpanded = false }) => {
 
   return (
     <UnifiedFieldPreview
-      fieldType={fieldType}
+      fieldType={showFieldTypeIcon ? fieldType : null}
       field={field}
       inputElement={inputElement}
       statusTags={statusTags}

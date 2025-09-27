@@ -42,7 +42,7 @@ const AnimatedGlassCard = React.forwardRef(({
     <MotionDiv
       ref={!scrollTrigger ? ref : undefined}
       className={cn(
-        'rounded-xl overflow-hidden relative group',
+        'rounded-2xl overflow-visible relative group',
         'glass-shine', // Add shine effect
         variants[variant],
         animated && 'animate-glass-in',

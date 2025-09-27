@@ -24,14 +24,9 @@ import {
 function SettingsPage({ onNavigate }) {
   const {
     fonts,
-    fontSizes,
     selectedFont,
-    selectedFontSize,
     changeFont,
-    changeFontSize,
-    resetFont,
-    resetFontSize,
-    resetAll
+    resetFont
   } = useFont();
   const [activeSection, setActiveSection] = useState('fonts');
   const [isChanging, setIsChanging] = useState(false);
@@ -118,13 +113,6 @@ function SettingsPage({ onNavigate }) {
     showSuccessFeedback('font');
   };
 
-  const handleFontSizeChange = async (fontSizeId) => {
-    setIsChanging(true);
-    await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.timing.fast));
-    changeFontSize(fontSizeId);
-    setIsChanging(false);
-    showSuccessFeedback('fontSize');
-  };
 
 
   const renderFontSettings = () => (
@@ -134,7 +122,8 @@ function SettingsPage({ onNavigate }) {
       initial="initial"
       animate="animate"
     >
-      {/* Font Size Selection - Single Row Button Group */}
+
+      {/* Font Selection - Single Row Button Group */}
       <motion.div
         className="space-y-4"
         variants={componentVariants.glassCard}
@@ -145,84 +134,6 @@ function SettingsPage({ onNavigate }) {
         <div className="flex items-center gap-3">
           <motion.h2
             className="text-lg font-medium text-foreground mt-2"
-            animate={isChanging ? settingsChangeVariants.changing : settingsChangeVariants.changed}
-          >
-            ขนาดตัวอักษร
-          </motion.h2>
-          <AnimatePresence>
-            {showFeedback && lastChanged === 'fontSize' && (
-              <motion.div
-                variants={feedbackVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                className="inline-flex items-center gap-1 text-green-600 text-sm"
-              >
-                <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
-                <span>เปลี่ยนแล้ว!</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <div className="flex gap-3 lg:gap-4">
-          {fontSizes.map((fontSize, index) => (
-            <motion.button
-              key={fontSize.id}
-              onClick={() => handleFontSizeChange(fontSize.id)}
-              className={`btn-glass flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-200 border-2 relative overflow-hidden ${
-                selectedFontSize.id === fontSize.id
-                  ? 'bg-primary/10 border-primary text-primary shadow-lg'
-                  : 'bg-background/60 border-border/40 text-foreground hover:bg-background/80 hover:border-border/60'
-              }`}
-              variants={componentVariants.glassButton}
-              whileHover={shouldReduceMotion ? {} : "hover"}
-              whileTap={shouldReduceMotion ? {} : "tap"}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                scale: isChanging ? 1.02 : 1,
-                transition: {
-                  delay: index * 0.1,
-                  duration: ANIMATION_CONFIG.timing.medium / 1000,
-                  ease: ANIMATION_CONFIG.easing.glass
-                }
-              }}
-              disabled={isChanging}
-            >
-              <span className={selectedFontSize.id === fontSize.id ? 'font-semibold' : 'font-medium'}>
-                {fontSize.thaiName}
-              </span>
-              {selectedFontSize.id === fontSize.id && (
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                  initial={{ x: '-100%' }}
-                  animate={{ x: '100%' }}
-                  transition={{
-                    duration: 1.5,
-                    ease: 'linear',
-                    repeat: Infinity,
-                    repeatDelay: 3
-                  }}
-                />
-              )}
-            </motion.button>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Font Selection - Single Row Button Group */}
-      <motion.div
-        className="space-y-4"
-        variants={componentVariants.glassCard}
-        initial="initial"
-        animate="animate"
-        transition={{ delay: 0.2 }}
-      >
-        <div className="flex items-center gap-3">
-          <motion.h2
-            className="text-lg font-medium text-foreground"
             animate={isChanging ? settingsChangeVariants.changing : settingsChangeVariants.changed}
           >
             เลือกฟอนต์
@@ -262,7 +173,7 @@ function SettingsPage({ onNavigate }) {
                 y: 0,
                 scale: isChanging ? 1.02 : 1,
                 transition: {
-                  delay: index * 0.1 + 0.3,
+                  delay: index * 0.1 + 0.2,
                   duration: ANIMATION_CONFIG.timing.medium / 1000,
                   ease: ANIMATION_CONFIG.easing.glass
                 }
@@ -315,7 +226,7 @@ function SettingsPage({ onNavigate }) {
           animate="animate"
           transition={{ delay: 0.1 }}
         >
-          <h2 className="text-lg font-medium text-foreground">ธีมสี</h2>
+          <h2 className="text-lg font-medium text-foreground mt-2">ธีมสี</h2>
           <p className="text-sm text-muted-foreground">เปลี่ยนระหว่างธีมสีแสงและสีมืด</p>
         </motion.div>
         <motion.div
@@ -346,7 +257,7 @@ function SettingsPage({ onNavigate }) {
       animate="animate"
     >
       <motion.h2
-        className="text-lg font-medium text-foreground"
+        className="text-lg font-medium text-foreground mt-2"
         variants={animationPresets.slideUpGlass}
         initial="initial"
         animate="animate"
@@ -504,29 +415,6 @@ function SettingsPage({ onNavigate }) {
               </motion.h1>
             </motion.div>
 
-            {/* Loading indicator */}
-            <AnimatePresence>
-              {isChanging && (
-                <motion.div
-                  className="flex items-center gap-2 text-primary"
-                  variants={feedbackVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                >
-                  <motion.div
-                    className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full"
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      ease: 'linear'
-                    }}
-                  />
-                  <span className="text-sm font-medium">กำลังเปลี่ยนแปลง...</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
         </div>
       </motion.header>
@@ -542,7 +430,7 @@ function SettingsPage({ onNavigate }) {
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Compact Section Navigation */}
           <motion.div
-            className="flex gap-2 p-1 bg-muted rounded-lg overflow-x-auto"
+            className="flex gap-1 sm:gap-2 overflow-x-auto flex-1"
             variants={componentVariants.glassCard}
             initial="initial"
             animate="animate"
@@ -552,11 +440,26 @@ function SettingsPage({ onNavigate }) {
               <motion.button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
-                className={`flex items-center gap-3 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap relative overflow-hidden touch-target-min ${
+                title={section.description}
+                className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-lg border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
                   activeSection === section.id
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground hover:bg-background'
+                    ? 'text-primary bg-primary/5 border-primary shadow-sm backdrop-blur-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/10 border-transparent'
                 }`}
+                style={{
+                  borderRadius: '16px 16px 0 0',
+                  overflow: 'visible'
+                }}
+                onMouseEnter={(e) => {
+                  if (activeSection !== section.id) {
+                    e.target.style.boxShadow = '0 0 15px 2px rgba(249,115,22,0.3), 0 0 30px 4px rgba(249,115,22,0.2)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeSection !== section.id) {
+                    e.target.style.boxShadow = '';
+                  }
+                }}
                 variants={componentVariants.glassButton}
                 whileHover={shouldReduceMotion ? {} : "hover"}
                 whileTap={shouldReduceMotion ? {} : "tap"}
@@ -571,38 +474,10 @@ function SettingsPage({ onNavigate }) {
                   }
                 }}
               >
-                <motion.div
-                  variants={microInteractions.iconHover}
-                  whileHover={shouldReduceMotion ? {} : "hover"}
-                >
-                  <FontAwesomeIcon
-                    icon={section.icon}
-                    className="w-4 h-4"
-                  />
-                </motion.div>
-                <motion.span
-                  animate={{
-                    scale: activeSection === section.id ? 1.05 : 1,
-                    transition: {
-                      duration: ANIMATION_CONFIG.timing.fast / 1000,
-                      ease: ANIMATION_CONFIG.easing.liquid
-                    }
-                  }}
-                >
-                  {section.title}
-                </motion.span>
+                <FontAwesomeIcon icon={section.icon} className="w-4 h-4" />
+                <span className="ml-2">{section.title}</span>
                 {activeSection === section.id && (
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
-                    initial={{ x: '-100%' }}
-                    animate={{ x: '100%' }}
-                    transition={{
-                      duration: 1.5,
-                      ease: 'linear',
-                      repeat: Infinity,
-                      repeatDelay: 2
-                    }}
-                  />
+                  <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary to-orange-500 rounded-full" />
                 )}
               </motion.button>
             ))}
@@ -681,8 +556,7 @@ function SettingsPage({ onNavigate }) {
             >
               <FontAwesomeIcon icon={faStar} className="w-4 h-4" />
               <span className="text-sm font-medium">
-                {lastChanged === 'font' && 'ฟอนต์เปลี่ยนแล้ว!'}
-                {lastChanged === 'fontSize' && 'ขนาดตัวอักษรเปลี่ยนแล้ว!'}
+                ฟอนต์เปลี่ยนแล้ว!
               </span>
             </motion.div>
           </motion.div>

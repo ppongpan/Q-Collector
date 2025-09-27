@@ -18,7 +18,7 @@ const GlassSkeleton = ({
   return (
     <div
       className={cn(
-        'glass-skeleton relative overflow-hidden',
+        'glass-skeleton relative overflow-visible',
         'bg-white/10 dark:bg-white/5',
         'backdrop-blur-sm',
         width,

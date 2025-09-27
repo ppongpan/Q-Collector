@@ -127,7 +127,7 @@ const GlassTooltip = ({
 
   const getTooltipClasses = () => {
     const baseClasses = `
-      tooltip-glass px-4 py-3 text-sm font-medium rounded-xl pointer-events-none
+      tooltip-glass px-4 py-3 text-sm font-medium rounded-2xl pointer-events-none
       transition-all duration-200 ease-out max-w-xs
       ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
       ${className}

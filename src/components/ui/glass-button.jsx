@@ -12,10 +12,10 @@ const GlassButton = React.forwardRef(({
   ...props
 }, ref) => {
   const variants = {
-    default: 'btn-glass',
-    primary: 'btn-glass-primary',
-    ghost: 'btn-glass hover:bg-glass-elevated/50',
-    icon: 'icon-glass p-0 w-10 h-10'
+    default: 'btn-glass glass-interactive hover-orange-neon blur-edge',
+    primary: 'btn-glass-primary glass-interactive blur-edge-intense',
+    ghost: 'btn-glass hover:bg-glass-elevated/50 glass-interactive hover-orange-neon blur-edge',
+    icon: 'icon-glass glass-interactive hover-orange-neon blur-edge p-0 w-10 h-10'
   };
 
   const sizes = {
@@ -29,10 +29,12 @@ const GlassButton = React.forwardRef(({
     <button
       ref={ref}
       className={cn(
-        'inline-flex items-center justify-center whitespace-nowrap rounded-xl font-medium',
-        'transition-all duration-200 ease-out',
-        'focus-glass disabled:opacity-50 disabled:pointer-events-none',
-        'relative overflow-hidden',
+        'inline-flex items-center justify-center whitespace-nowrap font-medium',
+        size === 'icon' ? 'rounded-full' : 'rounded-2xl',
+        'transition-all duration-300 ease-out',
+        'focus-glass focus-orange-neon disabled:opacity-50 disabled:pointer-events-none',
+        'relative overflow-visible',
+        'will-change-transform',
         variants[variant],
         sizes[size],
         className

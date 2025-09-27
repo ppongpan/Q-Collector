@@ -1,0 +1,725 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faFont,
+  faPalette,
+  faCog,
+  faGlobe,
+  faBell,
+  faStar
+} from '@fortawesome/free-solid-svg-icons';
+import { useFont } from '../contexts/FontContext';
+import { ThemeToggle } from './ThemeToggle';
+import {
+  pageTransitions,
+  componentVariants,
+  microInteractions,
+  animationPresets,
+  ANIMATION_CONFIG
+} from '../lib/animations';
+
+function SettingsPage({ onNavigate }) {
+  const {
+    fonts,
+    selectedFont,
+    changeFont
+  } = useFont();
+  const [activeSection, setActiveSection] = useState('fonts');
+  const [isChanging, setIsChanging] = useState(false);
+  const [lastChanged, setLastChanged] = useState(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
+
+  const sections = [
+    {
+      id: 'fonts',
+      title: 'ฟอนต์',
+      icon: faFont,
+      description: 'เลือกฟอนต์ที่ใช้ในแอปพลิเคชัน'
+    },
+    {
+      id: 'theme',
+      title: 'ธีม',
+      icon: faPalette,
+      description: 'เปลี่ยนธีมสีของแอปพลิเคชัน'
+    },
+    {
+      id: 'general',
+      title: 'ทั่วไป',
+      icon: faCog,
+      description: 'การตั้งค่าทั่วไปของแอปพลิเคชัน'
+    }
+  ];
+
+  // Animation variants for settings changes
+  const settingsChangeVariants = {
+    initial: { scale: 1, filter: 'brightness(1)' },
+    changing: {
+      scale: 1.02,
+      filter: 'brightness(1.1)',
+      transition: {
+        duration: ANIMATION_CONFIG.timing.fast / 1000,
+        ease: ANIMATION_CONFIG.easing.ios
+      }
+    },
+    changed: {
+      scale: 1,
+      filter: 'brightness(1)',
+      transition: {
+        duration: ANIMATION_CONFIG.timing.medium / 1000,
+        ease: ANIMATION_CONFIG.easing.bounce
+      }
+    }
+  };
+
+  const feedbackVariants = {
+    initial: { scale: 0, opacity: 0, rotate: -180 },
+    animate: {
+      scale: 1,
+      opacity: 1,
+      rotate: 0,
+      transition: {
+        type: 'spring',
+        stiffness: 500,
+        damping: 25
+      }
+    },
+    exit: {
+      scale: 0,
+      opacity: 0,
+      rotate: 180,
+      transition: {
+        duration: ANIMATION_CONFIG.timing.fast / 1000,
+        ease: ANIMATION_CONFIG.easing.exit
+      }
+    }
+  };
+
+  const showSuccessFeedback = (type) => {
+    setLastChanged(type);
+    setShowFeedback(true);
+    setTimeout(() => setShowFeedback(false), 2000);
+  };
+
+  const handleFontChange = async (fontId) => {
+    setIsChanging(true);
+    await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.timing.fast));
+    changeFont(fontId);
+    setIsChanging(false);
+    showSuccessFeedback('font');
+  };
+
+
+
+  const renderFontSettings = () => (
+    <motion.div
+      className="space-y-6"
+      variants={animationPresets.fadeInGlass}
+      initial="initial"
+      animate="animate"
+    >
+      {/* Font Selection Section - Matching Form List Design */}
+      <motion.div
+        className="space-y-4"
+        variants={componentVariants.glassCard}
+        initial="initial"
+        animate="animate"
+        transition={{ delay: 0.2 }}
+      >
+        <div className="flex items-center gap-3">
+          <motion.h2
+            className="form-card-title"
+            animate={isChanging ? settingsChangeVariants.changing : settingsChangeVariants.changed}
+          >
+            เลือกฟอนต์
+          </motion.h2>
+          <AnimatePresence>
+            {showFeedback && lastChanged === 'font' && (
+              <motion.div
+                variants={feedbackVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="inline-flex items-center gap-1 text-green-600 text-sm"
+              >
+                <FontAwesomeIcon icon={faStar} className="w-3 h-3" />
+                <span>เปลี่ยนฟอนต์แล้ว!</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Font Selection Buttons - Form List Style */}
+        <div className="flex flex-col sm:flex-row gap-3 lg:gap-4">
+          {fonts.map((font, index) => (
+            <motion.button
+              key={font.id}
+              onClick={() => handleFontChange(font.id)}
+              className={`form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out flex-1 px-4 py-3 rounded-2xl text-center relative overflow-visible touch-target-comfortable ${
+                selectedFont.id === font.id
+                  ? 'bg-card/60 backdrop-blur-md border border-border/30'
+                  : 'bg-card/60 backdrop-blur-md border border-border/30 hover:bg-card/80'
+              }`}
+              style={{
+                boxShadow: selectedFont.id === font.id
+                  ? '0 0 20px rgba(249, 115, 22, 0.4), 0 0 40px rgba(249, 115, 22, 0.2), inset 0 0 20px rgba(249, 115, 22, 0.1)'
+                  : 'inset 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              }}
+              onMouseEnter={(e) => {
+                if (selectedFont.id !== font.id) {
+                  e.target.style.boxShadow = `
+                    inset 0 2px 8px rgba(0, 0, 0, 0.1),
+                    0 0 0 1px rgba(255, 255, 255, 0.1),
+                    0 0 15px rgba(249, 115, 22, 0.2)
+                  `;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedFont.id !== font.id) {
+                  e.target.style.boxShadow = 'inset 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.1)';
+                }
+              }}
+              variants={componentVariants.glassButton}
+              whileHover={shouldReduceMotion ? {} : "hover"}
+              whileTap={shouldReduceMotion ? {} : "tap"}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                scale: isChanging ? 1.02 : 1,
+                transition: {
+                  delay: index * 0.1 + 0.3,
+                  duration: ANIMATION_CONFIG.timing.medium / 1000,
+                  ease: ANIMATION_CONFIG.easing.glass
+                }
+              }}
+              disabled={isChanging}
+            >
+              <div
+                className={`form-card-description ${selectedFont.id === font.id ? 'font-bold text-primary' : 'font-medium'}`}
+                style={{ fontFamily: selectedFont.id === font.id ? font.family : 'inherit' }}
+              >
+                {font.thaiName} - {font.name}
+              </div>
+
+              {/* Selected Font Effects - Form List Style */}
+              {selectedFont.id === font.id && (
+                <>
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-400/25 to-transparent rounded-2xl"
+                    initial={{ x: '-100%' }}
+                    animate={{ x: '100%' }}
+                    transition={{
+                      duration: 2.5,
+                      ease: 'linear',
+                      repeat: Infinity,
+                      repeatDelay: 1.5
+                    }}
+                  />
+                  <motion.div
+                    className="absolute inset-0 rounded-2xl"
+                    initial={{ opacity: 0.7 }}
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{
+                      duration: 2.5,
+                      repeat: Infinity,
+                      ease: 'easeInOut'
+                    }}
+                    style={{
+                      boxShadow: '0 0 15px rgba(249, 115, 22, 0.6), inset 0 0 15px rgba(249, 115, 22, 0.2)'
+                    }}
+                  />
+                </>
+              )}
+            </motion.button>
+          ))}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+
+  const renderThemeSettings = () => (
+    <motion.div
+      className="space-y-6"
+      variants={animationPresets.fadeInGlass}
+      initial="initial"
+      animate="animate"
+    >
+      {/* Theme Settings Section - Form List Style */}
+      <motion.div
+        className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized rounded-2xl p-6"
+        style={{
+          background: 'rgba(var(--card), 0.6)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(var(--border), 0.3)',
+          boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
+        }}
+        variants={componentVariants.glassCard}
+        initial="initial"
+        animate="animate"
+        transition={{ delay: 0.2 }}
+      >
+        <div className="flex items-center justify-between">
+          <motion.div
+            variants={animationPresets.slideUpGlass}
+            initial="initial"
+            animate="animate"
+            transition={{ delay: 0.1 }}
+          >
+            <h2 className="form-card-title">ธีมสี</h2>
+            <p className="form-card-description">เปลี่ยนระหว่างธีมสีแสงและสีมืด</p>
+          </motion.div>
+          <motion.div
+            variants={microInteractions.iconHover}
+            whileHover={shouldReduceMotion ? {} : "hover"}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{
+              opacity: 1,
+              x: 0,
+              transition: {
+                delay: 0.2,
+                duration: ANIMATION_CONFIG.timing.medium / 1000,
+                ease: ANIMATION_CONFIG.easing.glass
+              }
+            }}
+          >
+            <ThemeToggle />
+          </motion.div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+
+  const renderGeneralSettings = () => (
+    <motion.div
+      className="space-y-6"
+      variants={animationPresets.fadeInGlass}
+      initial="initial"
+      animate="animate"
+    >
+      {/* General Settings Section - Form List Style */}
+      <motion.div
+        className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized rounded-2xl p-6"
+        style={{
+          background: 'rgba(var(--card), 0.6)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(var(--border), 0.3)',
+          boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
+        }}
+        variants={componentVariants.glassCard}
+        initial="initial"
+        animate="animate"
+        transition={{ delay: 0.2 }}
+      >
+        <motion.h2
+          className="form-card-title mb-4"
+          variants={animationPresets.slideUpGlass}
+          initial="initial"
+          animate="animate"
+        >
+          การตั้งค่าทั่วไป
+        </motion.h2>
+
+        <motion.div
+          className="space-y-4"
+          variants={componentVariants.glassCard}
+          initial="initial"
+          animate="animate"
+        >
+          {/* Language Settings */}
+          <motion.div
+            className="flex items-center justify-between py-3 px-4 rounded-xl transition-all duration-300 hover:bg-card/40"
+            variants={componentVariants.listItem}
+            initial="initial"
+            animate={(index) => componentVariants.listItem.animate(0)}
+            whileHover={shouldReduceMotion ? {} : { scale: 1.01, transition: { duration: 0.15 } }}
+          >
+            <div className="flex items-center gap-3">
+              <motion.div
+                variants={microInteractions.iconHover}
+                whileHover={shouldReduceMotion ? {} : "hover"}
+              >
+                <FontAwesomeIcon icon={faGlobe} className="w-4 h-4 text-muted-foreground" />
+              </motion.div>
+              <span className="form-card-description font-medium">ภาษา</span>
+            </div>
+            <motion.span
+              className="form-card-tag bg-primary/10 text-primary"
+              variants={microInteractions.badge}
+              initial="initial"
+              animate="animate"
+            >
+              ไทย (TH)
+            </motion.span>
+          </motion.div>
+
+          {/* Notifications */}
+          <motion.div
+            className="flex items-center justify-between py-3 px-4 rounded-xl transition-all duration-300 hover:bg-card/40"
+            variants={componentVariants.listItem}
+            initial="initial"
+            animate={(index) => componentVariants.listItem.animate(1)}
+            whileHover={shouldReduceMotion ? {} : { scale: 1.01, transition: { duration: 0.15 } }}
+          >
+            <div className="flex items-center gap-3">
+              <motion.div
+                variants={microInteractions.iconHover}
+                whileHover={shouldReduceMotion ? {} : "hover"}
+              >
+                <FontAwesomeIcon icon={faBell} className="w-4 h-4 text-muted-foreground" />
+              </motion.div>
+              <span className="form-card-description font-medium">การแจ้งเตือน</span>
+            </div>
+            <motion.label
+              className="flex items-center gap-2 cursor-pointer"
+              whileHover={shouldReduceMotion ? {} : { scale: 1.02 }}
+              whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
+            >
+              <motion.input
+                type="checkbox"
+                className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary focus:ring-2 transition-all duration-200"
+                defaultChecked
+                aria-label="เปิดใช้งานการแจ้งเตือน"
+                whileFocus={{ scale: 1.1, transition: { duration: 0.15 } }}
+              />
+              <span className="form-card-description text-foreground">เปิดใช้งาน</span>
+            </motion.label>
+          </motion.div>
+
+          {/* App Info */}
+          <motion.div
+            className="pt-4 mt-4 border-t border-border/30"
+            variants={animationPresets.slideUpGlass}
+            initial="initial"
+            animate="animate"
+            transition={{ delay: 0.3 }}
+          >
+            <motion.div
+              className="space-y-3"
+              variants={{ animate: { transition: { staggerChildren: 0.1 } } }}
+              animate="animate"
+            >
+              <motion.div
+                className="flex justify-between items-center py-2 px-4 rounded-xl bg-card/20"
+                variants={componentVariants.listItem}
+                initial="initial"
+                animate={(index) => componentVariants.listItem.animate(0)}
+              >
+                <span className="form-card-stats">ชื่อแอป:</span>
+                <span className="form-card-tag bg-primary/10 text-primary">Q-Collector</span>
+              </motion.div>
+              <motion.div
+                className="flex justify-between items-center py-2 px-4 rounded-xl bg-card/20"
+                variants={componentVariants.listItem}
+                initial="initial"
+                animate={(index) => componentVariants.listItem.animate(1)}
+              >
+                <span className="form-card-stats">เวอร์ชัน:</span>
+                <span className="form-card-tag bg-green-500/10 text-green-500">v0.1.5</span>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+      </motion.div>
+    </motion.div>
+  );
+
+  return (
+    <motion.div
+      className="min-h-screen bg-background transition-colors duration-300"
+      variants={pageTransitions.liquidGlass}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+    >
+
+      {/* Main Content - Form List Container Style */}
+      <motion.div
+        className="container-responsive py-8"
+        variants={animationPresets.fadeInGlass}
+        initial="initial"
+        animate="animate"
+        transition={{ delay: 0.1 }}
+      >
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* Tab Navigation - Form List Glass Style */}
+          <motion.div
+            className="form-card-glow form-card-animate motion-container rounded-xl p-1"
+            style={{
+              background: 'rgba(var(--card), 0.6)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(var(--border), 0.3)',
+              boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
+            }}
+            variants={componentVariants.glassCard}
+            initial="initial"
+            animate="animate"
+            transition={{ delay: 0.2 }}
+          >
+            <div className="flex gap-1 relative">
+              {sections.map((section, index) => (
+                <motion.button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-300 relative overflow-visible touch-target-comfortable ${
+                    activeSection === section.id
+                      ? 'bg-card/60 backdrop-blur-md border border-border/30 text-primary'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-card/40'
+                  }`}
+                  style={{
+                    boxShadow: activeSection === section.id
+                      ? '0 0 20px rgba(249, 115, 22, 0.4), 0 0 40px rgba(249, 115, 22, 0.2), inset 0 0 20px rgba(249, 115, 22, 0.1)'
+                      : 'inset 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+                  }}
+                  variants={componentVariants.glassButton}
+                  whileHover={shouldReduceMotion ? {} : "hover"}
+                  whileTap={shouldReduceMotion ? {} : "tap"}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    transition: {
+                      delay: index * 0.1 + 0.3,
+                      duration: ANIMATION_CONFIG.timing.medium / 1000,
+                      ease: ANIMATION_CONFIG.easing.glass
+                    }
+                  }}
+                >
+                  {/* Tab Icon */}
+                  <motion.div
+                    variants={microInteractions.iconHover}
+                    whileHover={shouldReduceMotion ? {} : "hover"}
+                    animate={{
+                      scale: activeSection === section.id ? 1.1 : 1,
+                      rotate: activeSection === section.id ? [0, 5, -5, 0] : 0,
+                      transition: {
+                        duration: activeSection === section.id ? 1 : 0.2,
+                        ease: 'easeInOut'
+                      }
+                    }}
+                  >
+                    <FontAwesomeIcon
+                      icon={section.icon}
+                      className={`w-4 h-4 ${
+                        activeSection === section.id ? 'text-orange-400' : ''
+                      }`}
+                    />
+                  </motion.div>
+
+                  {/* Tab Label */}
+                  <motion.span
+                    className="hidden sm:block"
+                    animate={{
+                      scale: activeSection === section.id ? 1.05 : 1,
+                      fontWeight: activeSection === section.id ? 600 : 500,
+                      transition: {
+                        duration: ANIMATION_CONFIG.timing.fast / 1000,
+                        ease: ANIMATION_CONFIG.easing.liquid
+                      }
+                    }}
+                  >
+                    {section.title}
+                  </motion.span>
+
+                  {/* Active Tab Effects */}
+                  {activeSection === section.id && (
+                    <>
+                      {/* Sweeping Light Effect */}
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-400/25 to-transparent rounded-lg"
+                        initial={{ x: '-100%' }}
+                        animate={{ x: '100%' }}
+                        transition={{
+                          duration: 2.5,
+                          ease: 'linear',
+                          repeat: Infinity,
+                          repeatDelay: 2
+                        }}
+                      />
+
+                      {/* Pulsating Glow */}
+                      <motion.div
+                        className="absolute inset-0 rounded-lg"
+                        initial={{ opacity: 0.7 }}
+                        animate={{ opacity: [0.7, 1, 0.7] }}
+                        transition={{
+                          duration: 3,
+                          repeat: Infinity,
+                          ease: 'easeInOut'
+                        }}
+                        style={{
+                          boxShadow: '0 0 15px rgba(249, 115, 22, 0.6), inset 0 0 15px rgba(249, 115, 22, 0.2)'
+                        }}
+                      />
+
+                      {/* Active Tab Indicator */}
+                      <motion.div
+                        className="absolute bottom-0 left-1/2 w-8 h-0.5 bg-gradient-to-r from-orange-400 to-orange-500 rounded-full"
+                        initial={{ scaleX: 0, x: '-50%' }}
+                        animate={{ scaleX: 1 }}
+                        transition={{
+                          duration: 0.3,
+                          ease: 'easeOut'
+                        }}
+                        style={{
+                          boxShadow: '0 0 8px rgba(249, 115, 22, 0.8)'
+                        }}
+                      />
+                    </>
+                  )}
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Tab Content - Form List Glass Card Style */}
+          <motion.div
+            className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized rounded-2xl overflow-visible"
+            style={{
+              background: 'rgba(var(--card), 0.6)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(var(--border), 0.3)',
+              boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
+            }}
+            variants={componentVariants.glassCard}
+            initial="initial"
+            animate="animate"
+            transition={{ delay: 0.4 }}
+          >
+            {/* Tab Content Header - Form List Typography */}
+            <motion.div
+              className="border-b border-border/20 bg-gradient-to-r from-background/30 to-background/10 px-6 py-4"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <div className="flex items-center gap-3">
+                <motion.div
+                  animate={{
+                    rotate: activeSection === 'fonts' ? [0, 10, -10, 0] : 0,
+                    scale: 1.1
+                  }}
+                  transition={{ duration: 1, ease: 'easeInOut' }}
+                >
+                  <FontAwesomeIcon
+                    icon={sections.find(s => s.id === activeSection)?.icon}
+                    className="w-5 h-5 text-orange-400"
+                  />
+                </motion.div>
+                <div>
+                  <motion.h2
+                    className="form-card-title"
+                    key={activeSection}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {sections.find(s => s.id === activeSection)?.title}
+                  </motion.h2>
+                  <motion.p
+                    className="form-card-description"
+                    key={activeSection + '-desc'}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                  >
+                    {sections.find(s => s.id === activeSection)?.description}
+                  </motion.p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Tab Content Body */}
+            <motion.div
+              className="p-6"
+              animate={{
+                scale: isChanging ? 1.005 : 1,
+                transition: {
+                  duration: ANIMATION_CONFIG.timing.medium / 1000,
+                  ease: ANIMATION_CONFIG.easing.liquid
+                }
+              }}
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeSection}
+                  variants={{
+                    initial: { opacity: 0, y: 20, filter: 'blur(4px)' },
+                    animate: {
+                      opacity: 1,
+                      y: 0,
+                      filter: 'blur(0px)',
+                      transition: {
+                        duration: ANIMATION_CONFIG.timing.medium / 1000,
+                        ease: ANIMATION_CONFIG.easing.glass
+                      }
+                    },
+                    exit: {
+                      opacity: 0,
+                      y: -20,
+                      filter: 'blur(4px)',
+                      transition: {
+                        duration: ANIMATION_CONFIG.timing.fast / 1000,
+                        ease: ANIMATION_CONFIG.easing.exit
+                      }
+                    }
+                  }}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                >
+                  {activeSection === 'fonts' && renderFontSettings()}
+                  {activeSection === 'theme' && renderThemeSettings()}
+                  {activeSection === 'general' && renderGeneralSettings()}
+                </motion.div>
+              </AnimatePresence>
+            </motion.div>
+          </motion.div>
+        </div>
+      </motion.div>
+
+      {/* Global success feedback overlay */}
+      <AnimatePresence>
+        {showFeedback && (
+          <motion.div
+            className="fixed bottom-6 right-6 z-50"
+            variants={feedbackVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+          >
+            <motion.div
+              className="bg-green-600 dark:bg-green-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2"
+              variants={microInteractions.badge}
+              whileHover={shouldReduceMotion ? {} : "hover"}
+            >
+              <FontAwesomeIcon icon={faStar} className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {lastChanged === 'font' && 'ฟอนต์เปลี่ยนแล้ว!'}
+              </span>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+export default SettingsPage;
+
+// Performance optimization: Preload heavy animations
+if (typeof window !== 'undefined') {
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!prefersReducedMotion) {
+    // Warm up the animation engine
+    requestIdleCallback(() => {
+      const warmupElement = document.createElement('div');
+      warmupElement.style.transform = 'translateZ(0)';
+      warmupElement.style.opacity = '0';
+      warmupElement.style.position = 'absolute';
+      warmupElement.style.top = '-1px';
+      document.body.appendChild(warmupElement);
+      setTimeout(() => document.body.removeChild(warmupElement), 100);
+    });
+  }
+}

@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
-import { GlassInput } from './ui/glass-input';
+// import { GlassInput } from './ui/glass-input'; // Unused
 import EnhancedFormBuilder from './EnhancedFormBuilder';
 import SettingsPage from './SettingsPage';
 import FormView from './FormView';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faPlus, faEdit, faEye, faHome, faCog, faArrowLeft,
-  faFileAlt, faUsers, faCalendarAlt, faBuilding, faList, faUser, faBell, faSearch
+  faPlus, faEdit, faEye, faCog, faArrowLeft,
+  faFileAlt, faUsers, faCalendarAlt, faBuilding, faBell, faSearch
 } from '@fortawesome/free-solid-svg-icons';
 
 // Import USER_ROLES from EnhancedFormBuilder
@@ -183,17 +183,18 @@ export default function MainFormApp() {
       }
     };
 
-    const getPageIcon = () => {
-      switch (currentPage) {
-        case 'form-list': return faList;
-        case 'form-builder': return faFileAlt;
-        case 'settings': return faCog;
-        case 'submission-list': return faEye;
-        case 'detail-view': return faUser;
-        case 'form-view': return faFileAlt;
-        default: return faFileAlt;
-      }
-    };
+    // Unused function - commented out
+    // const getPageIcon = () => {
+    //   switch (currentPage) {
+    //     case 'form-list': return faList;
+    //     case 'form-builder': return faFileAlt;
+    //     case 'settings': return faCog;
+    //     case 'submission-list': return faEye;
+    //     case 'detail-view': return faUser;
+    //     case 'form-view': return faFileAlt;
+    //     default: return faFileAlt;
+    //   }
+    // };
 
     const canGoBack = currentPage !== 'form-list';
 
@@ -208,15 +209,26 @@ export default function MainFormApp() {
           <div className="flex items-center justify-between h-16 lg:h-20">
             <div className="flex items-center gap-4">
               {canGoBack && (
-                <GlassButton
-                  variant="ghost"
-                  size="icon"
+                <div
                   onClick={() => handleNavigate('form-list')}
-                  tooltip="กลับสู่รายการฟอร์ม"
-                  className="touch-target-comfortable"
+                  title="กลับสู่รายการฟอร์ม"
+                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                  style={{
+                    background: 'transparent',
+                    border: 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                  }}
                 >
-                  <FontAwesomeIcon icon={faArrowLeft} className="text-base" />
-                </GlassButton>
+                  <FontAwesomeIcon
+                    icon={faArrowLeft}
+                    className="text-base text-muted-foreground group-hover:text-primary transition-colors duration-300"
+                  />
+                </div>
               )}
 
               <div>
@@ -227,25 +239,48 @@ export default function MainFormApp() {
             </div>
 
             <div className="flex items-center gap-2">
-              <GlassButton
-                variant="ghost"
-                size="icon"
+              <div
                 onClick={() => handleNavigate('settings')}
-                tooltip="ตั้งค่า"
-                className="touch-target-comfortable"
+                title="ตั้งค่า"
+                className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                style={{
+                  background: 'transparent',
+                  border: 'none'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.1) rotate(90deg)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1) rotate(0deg)';
+                }}
               >
-                <FontAwesomeIcon icon={faCog} />
-              </GlassButton>
+                <FontAwesomeIcon
+                  icon={faCog}
+                  className="text-muted-foreground group-hover:text-primary transition-colors duration-300"
+                />
+              </div>
 
-              <GlassButton
-                variant="ghost"
-                size="icon"
+              <div
                 onClick={() => handleNavigate('form-list')}
-                tooltip="หน้าหลัก"
-                className="touch-target-comfortable"
+                title="หน้าหลัก"
+                className="w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                style={{
+                  background: 'transparent',
+                  border: 'none'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                }}
               >
-                <FontAwesomeIcon icon={faHome} />
-              </GlassButton>
+                <img
+                  src="/qlogo.png"
+                  alt="Q-Collector Logo"
+                  className="w-full h-full object-cover rounded-lg transition-all duration-300 group-hover:rounded-full"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -310,18 +345,46 @@ export default function MainFormApp() {
             <button
               onClick={handleNewForm}
               title="สร้างฟอร์ม"
-              className="relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-primary/20 to-orange-500/20 backdrop-blur-md border border-primary/30 text-primary hover:text-orange-400 transition-all duration-300 touch-target-comfortable group overflow-hidden"
+              className="relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 text-primary hover:text-orange-400 transition-all duration-300 touch-target-comfortable group"
               style={{
-                boxShadow: '0 0 20px rgba(249, 115, 22, 0.3), inset 0 0 20px rgba(249, 115, 22, 0.1)'
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(249, 115, 22, 0.08) 0%, rgba(234, 88, 12, 0.04) 70%, transparent 70%)',
+                backdropFilter: 'blur(8px)',
+                border: 'none',
+                clipPath: 'circle(50% at center)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.boxShadow = `
+                  0 0 20px 4px rgba(249, 115, 22, 0.4),
+                  0 0 40px 8px rgba(249, 115, 22, 0.25),
+                  0 0 60px 12px rgba(249, 115, 22, 0.15),
+                  inset 0 0 20px rgba(249, 115, 22, 0.1)
+                `;
+                e.target.style.borderRadius = '50%';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.boxShadow = 'none';
               }}
             >
               {/* Background Glow Effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-orange-500/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div
+                className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{
+                  inset: 0,
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(249, 115, 22, 0.2) 0%, rgba(234, 88, 12, 0.15) 70%, transparent 70%)',
+                  clipPath: 'circle(50% at center)'
+                }}
+              />
 
               {/* Orange Neon Ring on Hover */}
-              <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 animate-pulse"
+              <div
+                className="absolute opacity-0 group-hover:opacity-100 transition-all duration-300 animate-pulse"
                 style={{
-                  boxShadow: '0 0 30px rgba(249, 115, 22, 0.8), 0 0 60px rgba(249, 115, 22, 0.6), inset 0 0 20px rgba(249, 115, 22, 0.2)'
+                  inset: 0,
+                  borderRadius: '50%',
+                  boxShadow: '0 0 30px rgba(249, 115, 22, 0.8), 0 0 60px rgba(249, 115, 22, 0.6), inset 0 0 20px rgba(249, 115, 22, 0.2)',
+                  clipPath: 'circle(50% at center)'
                 }}
               />
 
@@ -332,7 +395,15 @@ export default function MainFormApp() {
               />
 
               {/* Ripple Effect on Click */}
-              <div className="absolute inset-0 rounded-full bg-primary/30 opacity-0 group-active:opacity-100 group-active:animate-ping" />
+              <div
+                className="absolute opacity-0 group-active:opacity-100 group-active:animate-ping"
+                style={{
+                  inset: 0,
+                  borderRadius: '50%',
+                  background: 'rgba(249, 115, 22, 0.3)',
+                  clipPath: 'circle(50% at center)'
+                }}
+              />
             </button>
           </motion.div>
         </div>
@@ -361,7 +432,8 @@ export default function MainFormApp() {
                 className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out h-full flex flex-col cursor-pointer"
                 onClick={() => handleFormClick(form.id)}
               >
-                <GlassCardHeader className="flex-1 p-4">
+                {/* Content Area - Expandable */}
+                <div className="flex-1 p-4">
                   {/* Form Title with Telegram Icon */}
                   <GlassCardTitle className="form-card-title mb-2 group-hover:text-primary/90 transition-colors text-left flex items-center gap-2">
                     <span>{form.title}</span>
@@ -380,7 +452,7 @@ export default function MainFormApp() {
                   </GlassCardDescription>
 
                   {/* Role Tags Section */}
-                  <div className="flex flex-wrap gap-1 mb-3 justify-start">
+                  <div className="flex flex-wrap gap-1 justify-start">
                     {/* Role Tags */}
                     {convertRoleIdsToNames(form.selectedRoles)?.map((roleName, index) => (
                       <span
@@ -391,9 +463,12 @@ export default function MainFormApp() {
                       </span>
                     ))}
                   </div>
+                </div>
 
+                {/* Footer Area - Fixed at Bottom */}
+                <div className="mt-auto p-4 pt-0">
                   {/* Stats with Action Icons */}
-                  <div className="form-card-stats flex items-center justify-between">
+                  <div className="form-card-stats flex items-center justify-between border-t border-border/20 pt-3">
                     {/* Left side - Submissions and Update date as tags */}
                     <div className="flex items-center gap-2 text-left">
                       <span
@@ -421,12 +496,25 @@ export default function MainFormApp() {
                           e.stopPropagation();
                           handleViewSubmissions(form.id);
                         }}
-                        className="flex items-center justify-center w-8 h-8 hover:bg-primary/10 rounded-md transition-colors cursor-pointer"
+                        className="flex items-center justify-center w-8 h-8 transition-all duration-300 cursor-pointer group"
                         title="ดูข้อมูล"
+                        style={{
+                          borderRadius: '50%',
+                          background: 'transparent',
+                          clipPath: 'circle(50% at center)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = 'radial-gradient(circle, rgba(249, 115, 22, 0.1) 0%, rgba(234, 88, 12, 0.05) 70%, transparent 70%)';
+                          e.target.style.boxShadow = '0 0 15px rgba(249, 115, 22, 0.2)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = 'transparent';
+                          e.target.style.boxShadow = 'none';
+                        }}
                       >
                         <FontAwesomeIcon
                           icon={faEye}
-                          className="text-sm text-muted-foreground/60 hover:text-primary transition-colors"
+                          className="text-sm text-muted-foreground/60 group-hover:text-primary transition-colors"
                         />
                       </div>
                       <div
@@ -434,17 +522,30 @@ export default function MainFormApp() {
                           e.stopPropagation();
                           handleEditForm(form.id);
                         }}
-                        className="flex items-center justify-center w-8 h-8 hover:bg-primary/10 rounded-md transition-colors cursor-pointer"
+                        className="flex items-center justify-center w-8 h-8 transition-all duration-300 cursor-pointer group"
                         title="แก้ไขฟอร์ม"
+                        style={{
+                          borderRadius: '50%',
+                          background: 'transparent',
+                          clipPath: 'circle(50% at center)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = 'radial-gradient(circle, rgba(249, 115, 22, 0.1) 0%, rgba(234, 88, 12, 0.05) 70%, transparent 70%)';
+                          e.target.style.boxShadow = '0 0 15px rgba(249, 115, 22, 0.2)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = 'transparent';
+                          e.target.style.boxShadow = 'none';
+                        }}
                       >
                         <FontAwesomeIcon
                           icon={faEdit}
-                          className="text-sm text-muted-foreground/60 hover:text-primary transition-colors"
+                          className="text-sm text-muted-foreground/60 group-hover:text-primary transition-colors"
                         />
                       </div>
                     </div>
                   </div>
-                </GlassCardHeader>
+                </div>
               </GlassCard>
             </motion.div>
           ))}

@@ -27,7 +27,7 @@ import FieldOptionsMenu from "./ui/field-options-menu";
 // import EnhancedSlider from "./ui/enhanced-slider"; // Commented out - not used
 
 // ShadCN UI components
-import { Badge } from "./ui/badge"; // Used for role tags display
+// Badge import removed - not currently used
 import { Separator } from "./ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
@@ -38,9 +38,9 @@ import {
   faStar, faSliders, faMapMarkerAlt, faGlobeAmericas, faIndustry,
   faTextHeight, faParagraph, faAt, faPhone, faLink, faFileAlt,
   faImage, faCalendarAlt, faClock, faCalendarDay, faListUl,
-  faEllipsisV, faArrowUp, faArrowDown, faCopy, faUndo,
+  faEllipsisV, faArrowUp, faArrowDown, faCopy,
   faQuestionCircle, faLayerGroup, faComments, faFileUpload, faCog, faHashtag as faNumbers,
-  faClipboardList, faSave, faUsers, faShieldAlt
+  faClipboardList, faSave, faUsers
 } from '@fortawesome/free-solid-svg-icons';
 
 // User Role definitions with colors for access control
@@ -152,7 +152,7 @@ function InlineEdit({ value, onChange, placeholder, className = "", isTitle = fa
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className={`bg-transparent border-2 border-primary/50 rounded-lg px-3 py-2 text-base sm:text-lg font-semibold text-foreground/90 focus:outline-none focus:border-primary w-full ${className}`}
+          className={`input-glass glass-interactive blur-edge rounded-xl text-xl font-semibold focus-orange-neon hover-orange-neon transition-all duration-300 ease-out w-full ${className}`}
         />
       );
     } else {
@@ -164,7 +164,7 @@ function InlineEdit({ value, onChange, placeholder, className = "", isTitle = fa
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className={`bg-transparent border-2 border-primary/50 rounded-lg px-3 py-2 text-sm text-muted-foreground focus:outline-none focus:border-primary w-full resize-none ${className}`}
+          className={`input-glass glass-interactive blur-edge rounded-xl text-base min-h-[80px] resize-none focus-orange-neon hover-orange-neon transition-all duration-300 ease-out w-full ${className}`}
           rows={2}
         />
       );
@@ -178,7 +178,7 @@ function InlineEdit({ value, onChange, placeholder, className = "", isTitle = fa
     return (
       <h1
         onClick={() => setIsEditing(true)}
-        className={`text-base sm:text-lg font-semibold cursor-pointer transition-all duration-200 hover:text-primary/80 active:scale-98 ${isEmpty ? 'text-muted-foreground/60 italic' : 'text-foreground/90'} ${className}`}
+        className={`text-xl font-semibold cursor-pointer transition-all duration-300 ease-out px-3 py-2 hover:text-primary/80 ${isEmpty ? 'text-muted-foreground/60 italic' : 'text-foreground/90'} ${className}`}
         title="คลิกเพื่อแก้ไข"
       >
         {displayValue}
@@ -188,7 +188,7 @@ function InlineEdit({ value, onChange, placeholder, className = "", isTitle = fa
     return (
       <p
         onClick={() => setIsEditing(true)}
-        className={`text-sm text-muted-foreground cursor-pointer transition-all duration-200 hover:text-primary/60 active:scale-98 ${isEmpty ? 'opacity-50 italic' : ''} ${className}`}
+        className={`text-base cursor-pointer transition-all duration-300 ease-out px-3 py-2 hover:text-primary/70 ${isEmpty ? 'text-muted-foreground/60 italic' : 'text-muted-foreground'} ${className}`}
         title="คลิกเพื่อแก้ไข"
       >
         {displayValue}
@@ -250,7 +250,7 @@ function FieldEditor({
   allFields = [],
   maxTableFields = 5
 }) {
-  const [isExpanded, setIsExpanded] = useState(true); // Changed default to true (expanded)
+  const [isExpanded, setIsExpanded] = useState(false); // Default to collapsed for better overview
   const fieldType = FIELD_TYPES.find(type => type.value === field.type);
 
   // Check if field title is too long (roughly 50 characters for single line)
@@ -272,13 +272,14 @@ function FieldEditor({
           field={field}
           fieldType={fieldType}
           isExpanded={isExpanded}
+          showFieldTypeIcon={isExpanded}
         />
       </div>
     );
   };
 
   return (
-    <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out bg-card/60 backdrop-blur-lg shadow-lg hover:shadow-xl hover:border-primary/30 hover:scale-[1.01]">
+    <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out shadow-lg hover:shadow-xl hover:border-primary/30 hover:scale-[1.01]">
       {/* Field Header - Responsive Visual Hierarchy */}
       <GlassCardHeader className="pb-3 sm:pb-4 lg:pb-6">
         <div className="flex items-center gap-3 sm:gap-4 lg:gap-6">
@@ -286,15 +287,38 @@ function FieldEditor({
           <div className="flex-shrink-0">
             <div
               {...dragHandleProps}
-              className="flex items-center justify-center min-w-12 min-h-12 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-md hover:bg-background/50 focus:bg-background/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200 cursor-grab active:cursor-grabbing opacity-50 group-hover:opacity-100 touch-target-min"
+              className="flex items-center justify-center min-w-12 min-h-12 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full hover:bg-background/50 focus:bg-background/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200 cursor-grab active:cursor-grabbing opacity-50 group-hover:opacity-100 touch-target-min"
+              style={{ clipPath: 'circle(50% at center)' }}
               title="ลากเพื่อเรียงลำดับ"
               tabIndex="0"
               role="button"
               aria-label="เลื่อนเพื่อย้ายฟิลด์"
             >
-              <FontAwesomeIcon icon={faGripVertical} className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-muted-foreground" />
+              <FontAwesomeIcon icon={faGripVertical} className="w-3 h-3 text-muted-foreground" />
             </div>
           </div>
+
+          {/* Field Type Selector - Only visible when expanded */}
+          {isExpanded && (
+            <div className="flex-shrink-0">
+              <GlassSelect
+                value={field.type}
+                onChange={(e) => updateField({ type: e.target.value })}
+                tooltip="เลือกประเภทฟิลด์"
+                className="h-8 w-36 text-xs border-0 bg-orange-500/10 text-orange-500 orange-neon-permanent"
+                data-interactive="true"
+              >
+                <option value="" disabled className="text-muted-foreground">
+                  เลือกประเภท
+                </option>
+                {FIELD_TYPES.map((type) => (
+                  <option key={type.value} value={type.value} className="text-foreground">
+                    {type.label}
+                  </option>
+                ))}
+              </GlassSelect>
+            </div>
+          )}
 
           {/* Field Preview - Flexible */}
           <div
@@ -315,18 +339,25 @@ function FieldEditor({
 
           {/* Action Icons - Accessible Touch Targets */}
           <div className="flex-shrink-0">
-            <div className="inline-flex items-center gap-1 xs:gap-2 bg-background/50 rounded-lg px-1 xs:px-2 py-1 xs:py-2">
+            <div className="inline-flex items-center gap-1 xs:gap-2 rounded-xl px-1 xs:px-2 py-1 xs:py-2">
               {/* Expand/Collapse */}
-              <GlassButton
-                variant="ghost"
-                size="icon"
+              <div
                 onClick={() => setIsExpanded(!isExpanded)}
-                tooltip={isExpanded ? "ย่อ" : "ขยาย"}
-                className="opacity-70 hover:opacity-100 focus:opacity-100 focus:ring-2 focus:ring-primary/50 min-w-12 min-h-12 w-6 xs:w-7 sm:w-8 md:w-9 lg:w-10 h-6 xs:h-7 sm:h-8 md:h-9 lg:h-10 touch-target-min"
-                aria-label={isExpanded ? "ย่อส่วนการตั้งค่า" : "ขยายส่วนการตั้งค่า"}
+                title={isExpanded ? "ย่อ" : "ขยาย"}
+                className="flex items-center justify-center opacity-70 hover:opacity-100 focus:opacity-100 min-w-12 min-h-12 w-6 xs:w-7 sm:w-8 md:w-9 lg:w-10 h-6 xs:h-7 sm:h-8 md:h-9 lg:h-10 touch-target-min cursor-pointer transition-all duration-300"
+                style={{
+                  background: 'transparent',
+                  border: 'none'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                }}
               >
-                <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="w-3 h-3 xs:w-4 xs:h-4 sm:w-4 sm:h-4 md:w-5 md:h-5" />
-              </GlassButton>
+                <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="w-3 h-3" />
+              </div>
 
               {/* Optimized Field Options Menu */}
               <FieldOptionsMenu
@@ -353,7 +384,7 @@ function FieldEditor({
           <Separator />
 
           {/* Basic Configuration - Enhanced Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
             <div className="space-y-2 xs:space-y-3 sm:space-y-4">
               <GlassInput
                 label="ชื่อฟิลด์"
@@ -371,44 +402,10 @@ function FieldEditor({
                 </div>
               )}
             </div>
-
-            {/* Field Type Selector - Mobile-First Priority */}
-            <div className="space-y-2 xs:space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6 group-fieldtype">
-              <label
-                className="block text-xs font-medium text-foreground/80 mb-2 transition-colors duration-200"
-              >
-                ประเภทฟิลด์ <span className="text-primary">*</span>
-              </label>
-              <div className="relative">
-                <GlassSelect
-                  value={field.type}
-                  onChange={(e) => updateField({ type: e.target.value })}
-                  tooltip="เลือกประเภทของฟิลด์ - สำคัญที่สุด!"
-                  className="h-14 text-base font-medium border-3 border-primary/60 focus:border-primary shadow-lg shadow-primary/20 ring-4 ring-primary/10 hover:ring-primary/20 transition-all duration-300 bg-gradient-to-r from-primary/5 to-orange-400/10"
-                >
-                  <option value="" disabled className="text-muted-foreground">
-                    🔥 เลือกประเภทฟิลด์ที่ต้องการ
-                  </option>
-                  {FIELD_TYPES.map((type) => (
-                    <option key={type.value} value={type.value} className="text-foreground py-2">
-                      {type.label}
-                    </option>
-                  ))}
-                </GlassSelect>
-                {/* Enhanced Visual Indicator */}
-                <div className="absolute inset-0 pointer-events-none border-3 border-primary/80 rounded-xl animate-pulse shadow-2xl shadow-primary/30" />
-                <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-primary to-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg animate-bounce">
-                  !
-                </div>
-              </div>
-              <p className="text-sm text-primary/80 font-medium animate-pulse">
-                ⚡ เลือกประเภทฟิลด์ก่อนดำเนินการต่อ
-              </p>
-            </div>
           </div>
 
-          {/* Description and Placeholder - Full Responsive */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
+          {/* Description Field */}
+          <div className="space-y-3">
             <GlassTextarea
               label="คำอธิบาย"
               value={field.description || ''}
@@ -418,16 +415,21 @@ function FieldEditor({
               minimal
               className="min-h-16"
             />
-
-            <GlassInput
-              label="Placeholder"
-              value={field.placeholder || ''}
-              onChange={(e) => updateField({ placeholder: e.target.value })}
-              placeholder="ข้อความแนะนำในช่องกรอกข้อมูล"
-              tooltip="ข้อความตัวอย่างที่จะแสดงในช่องกรอกข้อมูล"
-              minimal
-            />
           </div>
+
+          {/* Placeholder Field - Only for text-based fields */}
+          {!['date', 'time', 'datetime', 'rating', 'slider', 'multiple_choice', 'file_upload', 'image_upload', 'lat_long', 'province', 'factory'].includes(field.type) && (
+            <div className="space-y-3">
+              <GlassInput
+                label="Placeholder"
+                value={field.placeholder || ''}
+                onChange={(e) => updateField({ placeholder: e.target.value })}
+                placeholder="ข้อความแนะนำในช่องกรอกข้อมูล"
+                tooltip="ข้อความตัวอย่างที่จะแสดงในช่องกรอกข้อมูล"
+                minimal
+              />
+            </div>
+          )}
 
           {/* Field Options */}
           {renderFieldSpecificOptions()}
@@ -577,16 +579,23 @@ function MultipleChoiceOptions({ options = [], onChange }) {
 
           {/* Compact Delete Button */}
           <div className="flex-shrink-0">
-            <GlassButton
-              variant="ghost"
-              size="icon"
+            <div
               onClick={() => removeOption(index)}
-              tooltip="ลบตัวเลือก"
-              className="text-destructive hover:bg-destructive/10 focus:bg-destructive/20 focus:ring-2 focus:ring-destructive/50 min-w-12 min-h-12 w-8 xs:w-9 sm:w-10 h-8 xs:h-9 sm:h-10 touch-target-min"
-              aria-label={`ลบตัวเลือกที่ ${index + 1}`}
+              title="ลบตัวเลือก"
+              className="flex items-center justify-center text-destructive hover:text-red-400 min-w-12 min-h-12 w-8 xs:w-9 sm:w-10 h-8 xs:h-9 sm:h-10 touch-target-min cursor-pointer transition-all duration-300"
+              style={{
+                background: 'transparent',
+                border: 'none'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'scale(1)';
+              }}
             >
-              <FontAwesomeIcon icon={faTrashAlt} className="w-3 h-3 xs:w-4 xs:h-4" />
-            </GlassButton>
+              <FontAwesomeIcon icon={faTrashAlt} className="w-3 h-3" />
+            </div>
           </div>
         </div>
       ))}
@@ -595,7 +604,7 @@ function MultipleChoiceOptions({ options = [], onChange }) {
       <GlassButton
         variant="ghost"
         onClick={addOption}
-        className="w-full border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/50 py-2 sm:py-3 mt-3 sm:mt-4 touch-target-comfortable min-h-12"
+        className="w-full border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/50 py-2 sm:py-3 mt-3 sm:mt-4 touch-target-comfortable min-h-12 rounded-xl"
         aria-label="เพิ่มตัวเลือกใหม่"
       >
         <FontAwesomeIcon icon={faPlus} className="mr-2 w-4 h-4" />
@@ -607,7 +616,7 @@ function MultipleChoiceOptions({ options = [], onChange }) {
 
 // Enhanced Sub Form Builder with Main Form Structure
 function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, onMoveUp, onMoveDown, onDuplicate }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [currentTab, setCurrentTab] = useState('fields'); // 'fields' or 'settings'
 
   // Drag and drop sensors for subform fields
@@ -698,11 +707,14 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
   };
 
   return (
-    <GlassCard variant="elevated" className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out border-2 border-dashed border-accent/30 bg-card/60 backdrop-blur-lg shadow-lg hover:shadow-xl hover:border-accent/50">
+    <GlassCard variant="elevated" className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out border-2 border-dashed border-accent/30 shadow-lg hover:shadow-xl hover:border-accent/50">
       <GlassCardHeader>
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
-            <FontAwesomeIcon icon={faLayerGroup} className="text-accent text-lg" />
+          <div
+            className="w-10 h-10 rounded-full bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center"
+            style={{ clipPath: 'circle(50% at center)' }}
+          >
+            <FontAwesomeIcon icon={faLayerGroup} className="text-white w-4 h-4" />
           </div>
 
           <div className="flex-1 min-w-0">
@@ -716,29 +728,45 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
 
           {/* Action Icons for SubForm - 8px Grid */}
           <div className="flex-shrink-0">
-            <div className="inline-flex items-center gap-2 bg-background/50 rounded-lg px-2 py-2">
-              <GlassButton
-                variant="ghost"
-                size="icon"
+            <div className="inline-flex items-center gap-2 rounded-xl px-2 py-2">
+              <div
                 onClick={() => setIsExpanded(!isExpanded)}
-                tooltip={isExpanded ? "ย่อ" : "ขยาย"}
-                className="opacity-70 hover:opacity-100 w-8 h-8 touch-target-min"
+                title={isExpanded ? "ย่อ" : "ขยาย"}
+                className="flex items-center justify-center opacity-70 hover:opacity-100 w-8 h-8 touch-target-min cursor-pointer transition-all duration-300"
+                style={{
+                  background: 'transparent',
+                  border: 'none'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                }}
               >
-                <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="w-4 h-4" />
-              </GlassButton>
+                <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="w-3 h-3" />
+              </div>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <GlassButton
-                    variant="ghost"
-                    size="icon"
-                    tooltip="ตัวเลือกเพิ่มเติม"
-                    className="opacity-60 hover:opacity-100 transition-opacity w-8 h-8 touch-target-min"
+                  <div
+                    title="ตัวเลือกเพิ่มเติม"
+                    className="flex items-center justify-center opacity-60 hover:opacity-100 transition-all duration-300 w-8 h-8 touch-target-min cursor-pointer"
+                    style={{
+                      background: 'transparent',
+                      border: 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'scale(1.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                    }}
                   >
-                    <FontAwesomeIcon icon={faEllipsisV} className="text-sm" />
-                  </GlassButton>
+                    <FontAwesomeIcon icon={faEllipsisV} className="w-3 h-3" />
+                  </div>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="glass-container">
+                <DropdownMenuContent align="end" className="glass-container blur-edge-intense">
                   {canMoveUp && (
                     <DropdownMenuItem onClick={onMoveUp}>
                       <FontAwesomeIcon icon={faArrowUp} className="mr-2" />
@@ -922,6 +950,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
         title: "",
         type: "short_answer",
         required: false,
+        showInTable: false,
+        sendTelegram: false,
         options: {}
       }
     ],
@@ -955,6 +985,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
       title: "",
       type: "short_answer",
       required: false,
+      showInTable: false,
+      sendTelegram: false,
       options: {}
     };
     updateForm({ fields: [...form.fields, newField] });
@@ -1085,6 +1117,14 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
   };
 
   const handleSave = () => {
+    // ตรวจสอบว่ามีการเลือกฟิลด์สำหรับแสดงในตารางหรือไม่
+    const tableFields = form.fields.filter(field => field.showInTable);
+
+    if (tableFields.length === 0) {
+      alert('⚠️ กรุณาเลือกฟิลด์อย่างน้อย 1 ฟิลด์เพื่อแสดงในตาราง Submission\n\nไปที่การตั้งค่าฟิลด์แต่ละฟิลด์ แล้วเลือก "แสดงในตาราง Submission"');
+      return;
+    }
+
     onSave(form, initialForm?.id);
   };
 
@@ -1111,6 +1151,20 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                       ? 'text-primary bg-primary/5 border-primary shadow-sm backdrop-blur-sm'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/10 border-transparent'
                   }`}
+                  style={{
+                    borderRadius: '16px 16px 0 0',
+                    overflow: 'visible'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeSection !== 'main') {
+                      e.target.style.boxShadow = '0 0 15px 2px rgba(249,115,22,0.3), 0 0 30px 4px rgba(249,115,22,0.2)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeSection !== 'main') {
+                      e.target.style.boxShadow = '';
+                    }
+                  }}
                 >
                   <FontAwesomeIcon icon={faClipboardList} className="w-4 h-4" />
                   <span className="ml-2">({form.fields.length})</span>
@@ -1122,7 +1176,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                 <button
                   onClick={() => setActiveSection('sub')}
                   title="ฟอร์มย่อย"
-                  className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-lg border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
+                  className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-xl border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
                     activeSection === 'sub'
                       ? 'text-primary bg-primary/5 border-primary shadow-sm backdrop-blur-sm'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/10 border-transparent'
@@ -1138,7 +1192,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                 <button
                   onClick={() => setActiveSection('settings')}
                   title="ตั้งค่า"
-                  className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-lg border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
+                  className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-xl border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
                     activeSection === 'settings'
                       ? 'text-primary bg-primary/5 border-primary shadow-sm backdrop-blur-sm'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/10 border-transparent'
@@ -1158,7 +1212,17 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                   onClick={handleSave}
                   disabled={!isFormValid()}
                   tooltip={isFormValid() ? "บันทึกฟอร์ม" : "กรอกข้อมูลให้ครบถ้วน"}
-                  className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out flex items-center justify-center gap-2 h-10 sm:h-12 px-3 sm:px-4 text-xs sm:text-sm touch-target-comfortable hover:shadow-[0_0_20px_rgba(249,115,22,0.6),0_0_40px_rgba(249,115,22,0.4)]"
+                  className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out flex items-center justify-center gap-2 h-10 sm:h-12 px-3 sm:px-4 text-xs sm:text-sm touch-target-comfortable"
+                  style={{
+                    borderRadius: '16px',
+                    overflow: 'visible'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.boxShadow = '0 0 20px 4px rgba(249,115,22,0.6), 0 0 40px 8px rgba(249,115,22,0.4), 0 0 60px 12px rgba(249,115,22,0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.boxShadow = '';
+                  }}
                 >
                   <FontAwesomeIcon icon={faSave} className="w-3 h-3" />
                   <span className="hidden sm:inline">บันทึก</span>
@@ -1166,17 +1230,27 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
 
                 {/* Delete Button - Only show in edit mode */}
                 {initialForm && (
-                  <button
+                  <div
                     onClick={() => {
                       if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบฟอร์มนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) {
                         onCancel(initialForm.id, 'delete');
                       }
                     }}
                     title="ลบฟอร์ม"
-                    className="p-2 text-red-500 hover:text-red-400 transition-colors duration-200 touch-target-comfortable"
+                    className="p-2 text-red-500 hover:text-red-400 transition-all duration-300 touch-target-comfortable cursor-pointer"
+                    style={{
+                      background: 'transparent',
+                      border: 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'scale(1.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                    }}
                   >
                     <FontAwesomeIcon icon={faTrashAlt} className="w-4 h-4" />
-                  </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -1185,7 +1259,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
             {activeSection === 'main' && (
               <div className="space-y-6 sm:space-y-8 lg:space-y-10">
                 {/* Form Title and Description - Responsive Layout */}
-                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out animate-fade-in border-2 border-primary/20 bg-card/60 backdrop-blur-lg shadow-lg hover:shadow-xl hover:border-primary/40">
+                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out animate-fade-in border-2 border-primary/20 shadow-lg hover:shadow-xl hover:border-primary/40">
                   <GlassCardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
                     <div className="space-y-3 sm:space-y-4">
                       <InlineEdit
@@ -1204,14 +1278,6 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                   </GlassCardContent>
                 </GlassCard>
 
-                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8 items-start sm:items-center">
-                  <div className="flex-1">
-                    <h2 className="form-card-title text-lg sm:text-xl lg:text-2xl font-semibold tracking-tight">ฟิลด์ในฟอร์ม</h2>
-                    <p className="form-card-description mt-2 sm:mt-3 text-sm sm:text-base lg:text-lg leading-relaxed opacity-75 max-w-2xl">
-                      จัดการฟิลด์ต่างๆ ในฟอร์มหลัก - ลากและวางเพื่อเรียงลำดับใหม่
-                    </p>
-                  </div>
-                </div>
 
                 <DndContext
                   sensors={sensors}
@@ -1261,12 +1327,6 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
             {/* Sub Forms - 8px Grid */}
             {activeSection === 'sub' && (
               <div className="space-y-6">
-                <div>
-                  <h2 className="form-card-title">ฟอร์มย่อย</h2>
-                  <p className="form-card-description mt-2">
-                    สร้างฟอร์มย่อยเพื่อเก็บข้อมูลเพิ่มเติมหลังจากบันทึกฟอร์มหลัก
-                  </p>
-                </div>
 
                 {form.subForms.length > 0 ? (
                   <div className="space-y-6">
@@ -1323,8 +1383,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
             {activeSection === 'settings' && (
               <div className="space-y-8">
                 <div>
-                  <h2 className="form-card-title">ตั้งค่าฟอร์ม</h2>
-                  <p className="form-card-description mt-2">
+                  <h2 className="form-card-title text-lg font-semibold">ตั้งค่าฟอร์ม</h2>
+                  <p className="form-card-description mt-2 text-xs">
                     กำหนดค่าขั้นสูงสำหรับการแจ้งเตือน การจัดการผู้ใช้ และระบบอัตโนมัติ
                   </p>
                 </div>
@@ -1333,22 +1393,18 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                 <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
                   <GlassCardHeader>
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500/20 to-green-600/20 flex items-center justify-center">
-                        <FontAwesomeIcon icon={faUsers} className="text-green-600 text-lg" />
+                      <div
+                        className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500/20 to-green-600/20 flex items-center justify-center"
+                        style={{ clipPath: 'circle(50% at center)' }}
+                      >
+                        <FontAwesomeIcon icon={faUsers} className="text-green-600 w-4 h-4" />
                       </div>
                       <div>
                         <GlassCardTitle className="form-card-title">การควบคุมสิทธิ์ผู้ใช้</GlassCardTitle>
-                        <GlassCardDescription className="form-card-description">
-                          เลือกกลุ่มผู้ใช้ที่สามารถเข้าถึงและใช้งานฟอร์มนี้ได้
-                        </GlassCardDescription>
                       </div>
                     </div>
                   </GlassCardHeader>
                   <GlassCardContent className="space-y-6">
-                    <div className="text-sm text-muted-foreground mb-6">
-                      <FontAwesomeIcon icon={faShieldAlt} className="mr-3" />
-                      Choose user roles that can access this form
-                    </div>
 
                     <div className="flex flex-wrap gap-3">
                       {Object.values(USER_ROLES).map((role) => {
@@ -1369,16 +1425,17 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                             }}
                             title={isDisabled ? `${role.name} • Always selected (cannot be changed)` : `Toggle ${role.name} access`}
                             className={`
-                              px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200
+                              px-3 py-2 rounded-xl font-medium text-sm transition-all duration-200
                               ${isVisible
-                                ? `${role.bgColor} ${role.color} shadow-sm border-2 border-current/20 hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]`
-                                : 'bg-muted/20 text-muted-foreground border-2 border-transparent hover:bg-muted/40 hover:shadow-[0_0_10px_rgba(249,115,22,0.2)]'
+                                ? `${role.bgColor} ${role.color} shadow-sm hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]`
+                                : 'bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:shadow-[0_0_10px_rgba(249,115,22,0.2)]'
                               }
                               ${isDisabled
                                 ? 'cursor-not-allowed opacity-90'
                                 : 'cursor-pointer hover:scale-105'
                               }
                             `}
+                            style={{ border: 'none' }}
                           >
                             {role.name}
                             {isDisabled && (
@@ -1395,8 +1452,11 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                 <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
                   <GlassCardHeader>
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
-                        <FontAwesomeIcon icon={faComments} className="text-blue-600 text-lg" />
+                      <div
+                        className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center"
+                        style={{ clipPath: 'circle(50% at center)' }}
+                      >
+                        <FontAwesomeIcon icon={faComments} className="text-blue-600 w-4 h-4" />
                       </div>
                       <div>
                         <GlassCardTitle className="form-card-title">การแจ้งเตือน Telegram</GlassCardTitle>
@@ -1462,8 +1522,11 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                 <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
                   <GlassCardHeader>
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center">
-                        <FontAwesomeIcon icon={faFileUpload} className="text-purple-600 text-lg" />
+                      <div
+                        className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center"
+                        style={{ clipPath: 'circle(50% at center)' }}
+                      >
+                        <FontAwesomeIcon icon={faFileUpload} className="text-purple-600 w-4 h-4" />
                       </div>
                       <div>
                         <GlassCardTitle className="form-card-title">หมายเลขเอกสารอัตโนมัติ</GlassCardTitle>
@@ -1539,7 +1602,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                           </GlassSelect>
                         </div>
 
-                        <div className="p-6 bg-muted/10 rounded-lg">
+                        <div className="p-6 bg-muted/10 rounded-xl">
                           <p className="text-sm text-muted-foreground mb-2">ตัวอย่าง:</p>
                           <code className="text-sm font-mono text-foreground/80">
                             {form.settings.documentNumber.prefix}-
