@@ -62,7 +62,7 @@
     --spacing-20: 5rem;    /* 80px */
     --spacing-24: 6rem;    /* 96px */
 
-    /* iOS 26 Typography Scale - Enhanced for Better Accessibility */
+    /* Modern Typography Scale - Enhanced for Better Accessibility */
     --font-size-micro: 0.75rem;       /* 12px - Minimum readable size */
     --font-size-caption: 0.875rem;    /* 14px - Enhanced from 12px */
     --font-size-footnote: 0.9375rem;  /* 15px - Enhanced from 13px */
@@ -93,7 +93,7 @@
     --shadow-elevation-medium: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-elevation-high: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 
-    /* Touch Targets - iOS 26 Standards - Enhanced for Better Accessibility */
+    /* Touch Targets - Modern Standards - Enhanced for Better Accessibility */
     --touch-target-min: 48px;         /* Enhanced minimum for accessibility (was 44px) */
     --touch-target-comfortable: 52px;  /* Enhanced comfortable tapping (was 48px) */
     --touch-target-generous: 60px;     /* Enhanced generous spacing (was 56px) */
@@ -372,7 +372,7 @@
     @apply text-subhead sm:text-callout lg:text-body;
   }
 
-  /* iOS 26 Element Proportions */
+  /* Modern Element Proportions */
   .element-proportions-sm {
     @apply h-10 lg:h-12;
   }
@@ -815,7 +815,7 @@
     }
   }
 
-  /* Enhanced iOS 26 Liquid Glass Design System */
+  /* Enhanced Modern Glass Design System */
 
   /* Enhanced Glass Container Base - Dark Background Focus */
   .glass-container {
@@ -1204,7 +1204,7 @@
     opacity: 1 !important;
   }
 
-  /* iOS 26 Motion System */
+  /* Modern Motion System */
   .motion-safe {
     @apply transition-all duration-300 ease-out;
   }
@@ -1251,7 +1251,7 @@
     border: 0;
   }
 
-  /* iOS 26 Object Proportions */
+  /* Modern Object Proportions */
   .proportion-square { aspect-ratio: 1 / 1; }
   .proportion-video { aspect-ratio: 16 / 9; }
   .proportion-photo { aspect-ratio: 4 / 3; }
