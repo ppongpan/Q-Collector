@@ -1,6 +1,6 @@
 {
   "name": "q-collector",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "private": true,
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

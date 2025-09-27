@@ -449,7 +449,7 @@ function SettingsPage({ onNavigate }) {
               animate={(index) => componentVariants.listItem.animate(1)}
             >
               <span>เวอร์ชัน:</span>
-              <span className="font-medium text-foreground">1.0.0</span>
+              <span className="font-medium text-foreground">0.1.5</span>
             </motion.div>
           </motion.div>
         </motion.div>
@@ -478,65 +478,31 @@ function SettingsPage({ onNavigate }) {
             variants={{ animate: { transition: { staggerChildren: 0.1 } } }}
             animate="animate"
           >
-            <div className="flex items-center gap-4">
-              <motion.button
-                onClick={() => onNavigate('form-list')}
-                className="btn btn-secondary btn-sm touch-target-min"
-                title="กลับไปรายการฟอร์ม"
-                variants={microInteractions.iconHover}
-                whileHover={shouldReduceMotion ? {} : "hover"}
-                whileTap={shouldReduceMotion ? {} : "tap"}
-                initial={{ opacity: 0, x: -20 }}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                transition: {
+                  delay: 0.1,
+                  duration: ANIMATION_CONFIG.timing.medium / 1000,
+                  ease: ANIMATION_CONFIG.easing.glass
+                }
+              }}
+            >
+              <motion.h1
+                className="text-responsive-xl font-bold text-foreground"
                 animate={{
-                  opacity: 1,
-                  x: 0,
+                  color: 'var(--foreground)',
                   transition: {
                     duration: ANIMATION_CONFIG.timing.medium / 1000,
-                    ease: ANIMATION_CONFIG.easing.glass
+                    ease: ANIMATION_CONFIG.easing.ios
                   }
                 }}
               >
-                <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5" />
-              </motion.button>
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  transition: {
-                    delay: 0.1,
-                    duration: ANIMATION_CONFIG.timing.medium / 1000,
-                    ease: ANIMATION_CONFIG.easing.glass
-                  }
-                }}
-              >
-                <motion.h1
-                  className="text-responsive-xl font-bold text-foreground"
-                  animate={{
-                    color: 'var(--foreground)',
-                    transition: {
-                      duration: ANIMATION_CONFIG.timing.medium / 1000,
-                      ease: ANIMATION_CONFIG.easing.ios
-                    }
-                  }}
-                >
-                  ตั้งค่า
-                </motion.h1>
-                <motion.p
-                  className="text-sm text-muted-foreground hidden md:block"
-                  initial={{ opacity: 0 }}
-                  animate={{
-                    opacity: 1,
-                    transition: {
-                      delay: 0.2,
-                      duration: ANIMATION_CONFIG.timing.medium / 1000
-                    }
-                  }}
-                >
-                  จัดการการตั้งค่าแอปพลิเคชัน
-                </motion.p>
-              </motion.div>
-            </div>
+                จัดการการตั้งค่าแอปพลิเคชัน
+              </motion.h1>
+            </motion.div>
 
             {/* Loading indicator */}
             <AnimatePresence>

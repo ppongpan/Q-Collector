@@ -1831,24 +1831,83 @@
     overflow: hidden;
   }
 
+  /* Typography Scale Variables */
+  :root {
+    /* Base font sizes optimized for better hierarchy */
+    --font-size-title: 20px;          /* Primary headlines - increased for better hierarchy */
+    --font-size-standard: 16px;       /* Body text, inputs, descriptions */
+    --font-size-detail: 12px;         /* Tags, stats, metadata - slightly increased for readability */
+
+    /* Font size scale for settings - adjusted for better proportions */
+    --font-scale-small: 0.85;         /* 85% - better scaling */
+    --font-scale-medium: 1.0;         /* 100% - current Form List */
+    --font-scale-large: 1.15;         /* 115% - improved scaling */
+  }
+
   /* Form Card Typography Standards */
   .form-card-title {
-    @apply text-xl font-bold leading-tight text-foreground;
+    @apply font-bold leading-tight text-foreground;
+    font-size: calc(var(--font-size-title) * var(--font-scale)) !important;
+  }
+
+  /* Override generic h3 rules with higher specificity */
+  .glass-card h3.form-card-title,
+  .glass-container h3.form-card-title {
+    font-size: calc(var(--font-size-title) * var(--font-scale)) !important;
   }
 
   .form-card-description {
-    @apply text-sm text-muted-foreground/80 leading-relaxed;
+    @apply text-muted-foreground/80 leading-relaxed;
+    font-size: calc(var(--font-size-standard) * var(--font-scale));
+  }
+
+  /* Override generic p rules with higher specificity */
+  .glass-card p.form-card-description,
+  .glass-container p.form-card-description {
+    font-size: calc(var(--font-size-standard) * var(--font-scale)) !important;
   }
 
   .form-card-stats {
-    @apply text-2xs text-muted-foreground/60;
+    @apply text-muted-foreground/60;
   }
 
   .form-card-tag {
-    @apply text-xs font-medium px-2 py-0.5 rounded-full;
+    @apply font-medium px-2 py-0.5 rounded-full;
+    font-size: calc(var(--font-size-detail) * var(--font-scale));
+  }
+
+  /* Standard input size */
+  .form-input-standard {
+    font-size: calc(var(--font-size-standard) * var(--font-scale));
   }
 
   .form-card-button {
     @apply text-sm font-medium px-4 py-2;
+  }
+
+  /* Settings Page Typography */
+  .settings-title {
+    @apply font-bold text-foreground;
+    font-size: calc(var(--font-size-title) * var(--font-scale)) !important;
+  }
+
+  .settings-subtitle {
+    @apply font-medium text-foreground;
+    font-size: calc(var(--font-size-standard) * var(--font-scale));
+  }
+
+  .settings-description {
+    @apply text-muted-foreground;
+    font-size: calc(var(--font-size-standard) * var(--font-scale));
+  }
+
+  .settings-detail {
+    @apply text-muted-foreground;
+    font-size: calc(var(--font-size-detail) * var(--font-scale));
+  }
+
+  .settings-button-text {
+    @apply font-medium;
+    font-size: calc(var(--font-size-detail) * var(--font-scale));
   }
 }

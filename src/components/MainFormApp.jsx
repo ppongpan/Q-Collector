@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
+import { GlassInput } from './ui/glass-input';
 import EnhancedFormBuilder from './EnhancedFormBuilder';
 import SettingsPage from './SettingsPage';
 import FormView from './FormView';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faPlus, faEdit, faEye, faHome, faCog, faArrowLeft,
-  faFileAlt, faUsers, faCalendarAlt, faBuilding, faList, faUser, faBell
+  faFileAlt, faUsers, faCalendarAlt, faBuilding, faList, faUser, faBell, faSearch
 } from '@fortawesome/free-solid-svg-icons';
 
 // Import USER_ROLES from EnhancedFormBuilder
@@ -27,6 +28,7 @@ export default function MainFormApp() {
   const [currentPage, setCurrentPage] = useState('form-list'); // 'form-list', 'form-builder', 'settings', 'submission-list', 'detail-view', 'form-view'
   const [currentFormId, setCurrentFormId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [forms, setForms] = useState([
     {
@@ -38,7 +40,7 @@ export default function MainFormApp() {
       submissions: 45,
       lastUpdated: '2024-01-15',
       status: 'active',
-      selectedRoles: ['HR Manager', 'Admin'],
+      selectedRoles: ['super_admin', 'admin', 'moderator'],
       telegramEnabled: true
     },
     {
@@ -50,7 +52,7 @@ export default function MainFormApp() {
       submissions: 128,
       lastUpdated: '2024-01-10',
       status: 'active',
-      selectedRoles: ['All'],
+      selectedRoles: ['customer_service', 'technic'],
       telegramEnabled: false
     },
     {
@@ -62,7 +64,7 @@ export default function MainFormApp() {
       submissions: 23,
       lastUpdated: '2024-01-08',
       status: 'active',
-      selectedRoles: ['Manager', 'Supervisor'],
+      selectedRoles: ['super_admin', 'admin', 'moderator', 'customer_service'],
       telegramEnabled: true
     },
     {
@@ -74,7 +76,7 @@ export default function MainFormApp() {
       submissions: 67,
       lastUpdated: '2024-01-12',
       status: 'active',
-      selectedRoles: ['Technician'],
+      selectedRoles: ['technic', 'moderator'],
       telegramEnabled: false
     },
     {
@@ -86,7 +88,7 @@ export default function MainFormApp() {
       submissions: 89,
       lastUpdated: '2024-01-14',
       status: 'active',
-      selectedRoles: ['All'],
+      selectedRoles: ['sale', 'marketing', 'general_user'],
       telegramEnabled: true
     },
     {
@@ -98,7 +100,7 @@ export default function MainFormApp() {
       submissions: 156,
       lastUpdated: '2024-01-16',
       status: 'active',
-      selectedRoles: ['Employee', 'Manager'],
+      selectedRoles: ['super_admin', 'admin', 'moderator', 'customer_service', 'technic', 'sale', 'marketing', 'general_user'],
       telegramEnabled: false
     }
   ]);
@@ -174,7 +176,7 @@ export default function MainFormApp() {
         case 'form-list': return 'จัดการฟอร์ม';
         case 'form-builder': return isEditing ? 'แก้ไขฟอร์ม' : 'สร้างฟอร์มใหม่';
         case 'settings': return 'ตั้งค่า';
-        case 'submission-list': return 'รายการ Submissions';
+        case 'submission-list': return 'รายการข้อมูล';
         case 'detail-view': return 'รายละเอียดฟอร์ม';
         case 'form-view': return 'กรอกข้อมูลฟอร์ม';
         default: return 'จัดการฟอร์ม';
@@ -217,32 +219,14 @@ export default function MainFormApp() {
                 </GlassButton>
               )}
 
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                  <FontAwesomeIcon icon={getPageIcon()} className="text-primary text-lg" />
-                </div>
-                <div>
-                  <h1 className="text-xl lg:text-2xl font-bold text-foreground">
-                    {getPageTitle()}
-                  </h1>
-                  <p className="text-sm text-muted-foreground">
-                    {currentPage === 'form-list' ? 'รายการฟอร์มทั้งหมดในระบบ' : 'Form Builder System'}
-                  </p>
-                </div>
+              <div>
+                <h1 className="text-xl lg:text-2xl font-bold text-foreground">
+                  {getPageTitle()}
+                </h1>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              {currentPage === 'form-list' && (
-                <GlassButton
-                  onClick={handleNewForm}
-                  className="gap-2"
-                >
-                  <FontAwesomeIcon icon={faPlus} />
-                  สร้างฟอร์มใหม่
-                </GlassButton>
-              )}
-
               <GlassButton
                 variant="ghost"
                 size="icon"
@@ -269,16 +253,99 @@ export default function MainFormApp() {
     );
   };
 
+  // Filter forms based on search query
+  const filteredForms = forms.filter(form =>
+    form.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    form.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    form.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const renderFormList = () => (
     <main className="container-responsive py-8">
+      {/* Search and Create Section */}
+      <motion.div
+        className="mb-8"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="flex gap-4 items-center justify-between">
+          {/* Search Box */}
+          <div className="flex-1 max-w-md">
+            <div className="relative">
+              <FontAwesomeIcon
+                icon={faSearch}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/50 w-4 h-4 z-10"
+              />
+              <input
+                type="text"
+                placeholder="ค้นหาฟอร์ม..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="form-input-standard w-full pl-10 pr-4 py-3 bg-card/60 backdrop-blur-md border border-border/30 rounded-lg text-foreground placeholder:text-muted-foreground/60 transition-all duration-300 focus:outline-none focus:border-transparent focus:ring-0"
+                style={{
+                  boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+                }}
+                onFocus={(e) => {
+                  e.target.style.boxShadow = `
+                    inset 0 2px 8px rgba(0, 0, 0, 0.1),
+                    0 0 0 1px rgba(255, 255, 255, 0.1),
+                    0 0 20px rgba(249, 115, 22, 0.4),
+                    0 0 40px rgba(249, 115, 22, 0.2),
+                    inset 0 0 20px rgba(249, 115, 22, 0.1)
+                  `;
+                }}
+                onBlur={(e) => {
+                  e.target.style.boxShadow = 'inset 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.1)';
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Create Form Button with Orange Neon Effect */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <button
+              onClick={handleNewForm}
+              title="สร้างฟอร์ม"
+              className="relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-primary/20 to-orange-500/20 backdrop-blur-md border border-primary/30 text-primary hover:text-orange-400 transition-all duration-300 touch-target-comfortable group overflow-hidden"
+              style={{
+                boxShadow: '0 0 20px rgba(249, 115, 22, 0.3), inset 0 0 20px rgba(249, 115, 22, 0.1)'
+              }}
+            >
+              {/* Background Glow Effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-orange-500/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+              {/* Orange Neon Ring on Hover */}
+              <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 animate-pulse"
+                style={{
+                  boxShadow: '0 0 30px rgba(249, 115, 22, 0.8), 0 0 60px rgba(249, 115, 22, 0.6), inset 0 0 20px rgba(249, 115, 22, 0.2)'
+                }}
+              />
+
+              {/* Plus Icon */}
+              <FontAwesomeIcon
+                icon={faPlus}
+                className="relative z-10 w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-90 transition-transform duration-300"
+              />
+
+              {/* Ripple Effect on Click */}
+              <div className="absolute inset-0 rounded-full bg-primary/30 opacity-0 group-active:opacity-100 group-active:animate-ping" />
+            </button>
+          </motion.div>
+        </div>
+      </motion.div>
+
       <motion.div
         className="form-list-grid-container"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8, delay: 0.2 }}
       >
-        <div className="animated-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {forms.map((form, index) => (
+        <div className="animated-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3">
+          {filteredForms.map((form, index) => (
             <motion.div
               key={form.id}
               className="animated-grid-item"
@@ -294,19 +361,26 @@ export default function MainFormApp() {
                 className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out h-full flex flex-col cursor-pointer"
                 onClick={() => handleFormClick(form.id)}
               >
-                <GlassCardHeader className="flex-1">
-                  {/* Form Title */}
-                  <GlassCardTitle className="form-card-title mb-3 group-hover:text-primary/90 transition-colors">
-                    {form.title}
+                <GlassCardHeader className="flex-1 p-4">
+                  {/* Form Title with Telegram Icon */}
+                  <GlassCardTitle className="form-card-title mb-2 group-hover:text-primary/90 transition-colors text-left flex items-center gap-2">
+                    <span>{form.title}</span>
+                    {form.telegramEnabled && (
+                      <FontAwesomeIcon
+                        icon={faBell}
+                        className="text-sm text-blue-400 flex-shrink-0"
+                        title="มีการแจ้งเตือน Telegram"
+                      />
+                    )}
                   </GlassCardTitle>
 
                   {/* Form Description */}
-                  <GlassCardDescription className="form-card-description line-clamp-3 mb-4 group-hover:text-muted-foreground transition-colors">
+                  <GlassCardDescription className="form-card-description line-clamp-2 mb-3 group-hover:text-muted-foreground transition-colors text-left">
                     {form.description}
                   </GlassCardDescription>
 
-                  {/* Tags Section */}
-                  <div className="flex flex-wrap gap-1.5 mb-4">
+                  {/* Role Tags Section */}
+                  <div className="flex flex-wrap gap-1 mb-3 justify-start">
                     {/* Role Tags */}
                     {convertRoleIdsToNames(form.selectedRoles)?.map((roleName, index) => (
                       <span
@@ -316,49 +390,61 @@ export default function MainFormApp() {
                         {roleName}
                       </span>
                     ))}
-
-                    {/* Telegram Tag */}
-                    {form.telegramEnabled && (
-                      <span className="form-card-tag inline-flex items-center bg-blue-500/20 text-blue-200 gap-1">
-                        <FontAwesomeIcon icon={faBell} className="text-xs" />
-                        Telegram
-                      </span>
-                    )}
                   </div>
 
-                  {/* Stats */}
+                  {/* Stats with Action Icons */}
                   <div className="form-card-stats flex items-center justify-between">
-                    <span>{form.submissions} submissions</span>
-                    <span>อัพเดต: {form.lastUpdated}</span>
+                    {/* Left side - Submissions and Update date as tags */}
+                    <div className="flex items-center gap-2 text-left">
+                      <span
+                        className="form-card-tag inline-flex items-center justify-center border border-muted-foreground/30 text-muted-foreground/60"
+                        title="จำนวนข้อมูล"
+                      >
+                        {form.submissions}
+                      </span>
+                      <span
+                        className="form-card-tag inline-flex items-center justify-center border border-muted-foreground/30 text-muted-foreground/60"
+                        title="Updated date"
+                      >
+                        {new Date(form.lastUpdated).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    </div>
+
+                    {/* Right side - Action Icons with touch-friendly areas */}
+                    <div className="flex items-center gap-1">
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewSubmissions(form.id);
+                        }}
+                        className="flex items-center justify-center w-8 h-8 hover:bg-primary/10 rounded-md transition-colors cursor-pointer"
+                        title="ดูข้อมูล"
+                      >
+                        <FontAwesomeIcon
+                          icon={faEye}
+                          className="text-sm text-muted-foreground/60 hover:text-primary transition-colors"
+                        />
+                      </div>
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditForm(form.id);
+                        }}
+                        className="flex items-center justify-center w-8 h-8 hover:bg-primary/10 rounded-md transition-colors cursor-pointer"
+                        title="แก้ไขฟอร์ม"
+                      >
+                        <FontAwesomeIcon
+                          icon={faEdit}
+                          className="text-sm text-muted-foreground/60 hover:text-primary transition-colors"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </GlassCardHeader>
-
-                {/* Action Buttons */}
-                <div className="px-6 pb-6">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewSubmissions(form.id);
-                      }}
-                      className="p-2 text-muted-foreground/60 hover:text-primary transition-colors"
-                      title="ดูข้อมูล Submissions"
-                    >
-                      <FontAwesomeIcon icon={faEye} className="text-sm" />
-                    </button>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditForm(form.id);
-                      }}
-                      className="p-2 text-muted-foreground/60 hover:text-primary transition-colors"
-                      title="แก้ไขฟอร์ม"
-                    >
-                      <FontAwesomeIcon icon={faEdit} className="text-sm" />
-                    </button>
-                  </div>
-                </div>
               </GlassCard>
             </motion.div>
           ))}
@@ -468,7 +554,7 @@ export default function MainFormApp() {
       >
         <GlassCard>
           <GlassCardHeader>
-            <GlassCardTitle>รายการ Submissions</GlassCardTitle>
+            <GlassCardTitle>รายการข้อมูล</GlassCardTitle>
             <GlassCardDescription>
               รายการข้อมูลที่ถูกส่งผ่านฟอร์มนี้
             </GlassCardDescription>

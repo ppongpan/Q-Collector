@@ -37,33 +37,27 @@ const FONT_OPTIONS = [
 ];
 
 // Font size options with Thai labels and scale values
+// ใช้ scale ที่สอดคล้องกับ CSS variables ที่กำหนดไว้
 const FONT_SIZE_OPTIONS = [
-  {
-    id: 'extra-small',
-    thaiName: 'เล็กมาก',
-    description: 'ขนาดเล็กมาก',
-    scale: 0.7,
-    previewText: 'ข้อความขนาดเล็กมาก'
-  },
   {
     id: 'small',
     thaiName: 'เล็ก',
     description: 'ขนาดเล็ก',
-    scale: 0.8,
+    scale: 0.85,  // 85% - ตรงกับ --font-scale-small (ปรับปรุงแล้ว)
     previewText: 'ข้อความขนาดเล็ก'
   },
   {
     id: 'medium',
     thaiName: 'กลาง',
-    description: 'ขนาดปกติ',
-    scale: 1.0,
+    description: 'ขนาดปกติ (Form List)',
+    scale: 1.0,  // 100% - ตรงกับ --font-scale-medium
     previewText: 'ข้อความขนาดกลาง'
   },
   {
     id: 'large',
     thaiName: 'ใหญ่',
     description: 'ขนาดใหญ่',
-    scale: 1.1,  // ลดจาก 1.2 เป็น 1.1 เพื่อไม่ให้ใหญ่เกินไป
+    scale: 1.15,  // 115% - ตรงกับ --font-scale-large (ปรับปรุงแล้ว)
     previewText: 'ข้อความขนาดใหญ่'
   }
 ];
@@ -72,7 +66,7 @@ const FontContext = createContext();
 
 export function FontProvider({ children }) {
   const [selectedFont, setSelectedFont] = useState(FONT_OPTIONS[0]);
-  const [selectedFontSize, setSelectedFontSize] = useState(FONT_SIZE_OPTIONS[1]); // Default to 'medium'
+  const [selectedFontSize, setSelectedFontSize] = useState(FONT_SIZE_OPTIONS[1]); // Default to 'medium' (index 1)
   const [isLoading, setIsLoading] = useState(true);
 
   // Apply font and font size to document root
@@ -83,7 +77,7 @@ export function FontProvider({ children }) {
     document.documentElement.style.setProperty('--font-family', font.family);
 
     // Apply font scale with proper bounds to prevent infinite growth/shrink
-    const normalizedScale = Math.min(Math.max(fontSize.scale, 0.65), 1.15); // Updated bounds: 0.65-1.15 to support extra-small
+    const normalizedScale = Math.min(Math.max(fontSize.scale, 0.85), 1.15); // Updated bounds: 0.85-1.15 for Small/Medium/Large
     document.documentElement.style.setProperty('--font-scale', normalizedScale.toString());
 
     console.log('Font scale applied:', normalizedScale);
@@ -102,7 +96,7 @@ export function FontProvider({ children }) {
 
         const targetFontSize = savedFontSizeId
           ? FONT_SIZE_OPTIONS.find(s => s.id === savedFontSizeId) || FONT_SIZE_OPTIONS[1]
-          : FONT_SIZE_OPTIONS[1];
+          : FONT_SIZE_OPTIONS[1]; // Default to 'medium' (index 1)
 
         if (savedFontId) {
           setSelectedFont(targetFont);

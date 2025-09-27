@@ -278,18 +278,21 @@ function FieldEditor({
   };
 
   return (
-    <GlassCard className="group bg-card/60 backdrop-blur-lg shadow-lg hover:shadow-xl hover:border-primary/30 hover:scale-[1.01] transition-all duration-300">
-      {/* Field Header - Always Visible */}
-      <GlassCardHeader className="pb-3">
-        <div className="flex items-center gap-3">
-          {/* Compact Drag Handle */}
+    <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out bg-card/60 backdrop-blur-lg shadow-lg hover:shadow-xl hover:border-primary/30 hover:scale-[1.01]">
+      {/* Field Header - Responsive Visual Hierarchy */}
+      <GlassCardHeader className="pb-3 sm:pb-4 lg:pb-6">
+        <div className="flex items-center gap-3 sm:gap-4 lg:gap-6">
+          {/* Drag Handle - Accessible Touch Target */}
           <div className="flex-shrink-0">
             <div
               {...dragHandleProps}
-              className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-background/50 transition-colors cursor-grab active:cursor-grabbing opacity-50 group-hover:opacity-100"
+              className="flex items-center justify-center min-w-12 min-h-12 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-md hover:bg-background/50 focus:bg-background/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200 cursor-grab active:cursor-grabbing opacity-50 group-hover:opacity-100 touch-target-min"
               title="ลากเพื่อเรียงลำดับ"
+              tabIndex="0"
+              role="button"
+              aria-label="เลื่อนเพื่อย้ายฟิลด์"
             >
-              <FontAwesomeIcon icon={faGripVertical} className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
+              <FontAwesomeIcon icon={faGripVertical} className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-muted-foreground" />
             </div>
           </div>
 
@@ -310,18 +313,19 @@ function FieldEditor({
             {getFieldPreview()}
           </div>
 
-          {/* Compact Action Icons */}
+          {/* Action Icons - Accessible Touch Targets */}
           <div className="flex-shrink-0">
-            <div className="inline-flex items-center gap-1 bg-background/50 rounded-lg px-1 py-1">
+            <div className="inline-flex items-center gap-1 xs:gap-2 bg-background/50 rounded-lg px-1 xs:px-2 py-1 xs:py-2">
               {/* Expand/Collapse */}
               <GlassButton
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsExpanded(!isExpanded)}
                 tooltip={isExpanded ? "ย่อ" : "ขยาย"}
-                className="opacity-70 hover:opacity-100 w-7 h-7"
+                className="opacity-70 hover:opacity-100 focus:opacity-100 focus:ring-2 focus:ring-primary/50 min-w-12 min-h-12 w-6 xs:w-7 sm:w-8 md:w-9 lg:w-10 h-6 xs:h-7 sm:h-8 md:h-9 lg:h-10 touch-target-min"
+                aria-label={isExpanded ? "ย่อส่วนการตั้งค่า" : "ขยายส่วนการตั้งค่า"}
               >
-                <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="w-3 h-3 sm:w-4 sm:h-4" />
+                <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="w-3 h-3 xs:w-4 xs:h-4 sm:w-4 sm:h-4 md:w-5 md:h-5" />
               </GlassButton>
 
               {/* Optimized Field Options Menu */}
@@ -343,14 +347,14 @@ function FieldEditor({
         </div>
       </GlassCardHeader>
 
-      {/* Field Configuration - Expandable */}
+      {/* Field Configuration - Responsive Expandable */}
       {isExpanded && (
-        <GlassCardContent className="space-y-3 pt-0">
+        <GlassCardContent className="space-y-4 sm:space-y-6 lg:space-y-8 pt-0">
           <Separator />
 
-          {/* Basic Configuration */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-2">
+          {/* Basic Configuration - Enhanced Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
+            <div className="space-y-2 xs:space-y-3 sm:space-y-4">
               <GlassInput
                 label="ชื่อฟิลด์"
                 value={field.title}
@@ -368,8 +372,8 @@ function FieldEditor({
               )}
             </div>
 
-            {/* Field Type Selector - Scoped hover group to fix global hover issue */}
-            <div className="space-y-3 group-fieldtype">
+            {/* Field Type Selector - Mobile-First Priority */}
+            <div className="space-y-2 xs:space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6 group-fieldtype">
               <label
                 className="block text-xs font-medium text-foreground/80 mb-2 transition-colors duration-200"
               >
@@ -403,8 +407,8 @@ function FieldEditor({
             </div>
           </div>
 
-          {/* Description and Placeholder */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Description and Placeholder - Full Responsive */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
             <GlassTextarea
               label="คำอธิบาย"
               value={field.description || ''}
@@ -436,8 +440,8 @@ function FieldEditor({
     switch (field.type) {
       case 'multiple_choice':
         return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
+          <div className="space-y-6">
+            <div className="flex items-center gap-6">
               <GlassSelect
                 label="รูปแบบการแสดงผล"
                 value={field.options?.displayStyle || 'radio'}
@@ -464,7 +468,7 @@ function FieldEditor({
               </label>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <label className="text-sm font-medium text-foreground/80">ตัวเลือก</label>
               <MultipleChoiceOptions
                 options={field.options?.options || []}
@@ -494,7 +498,7 @@ function FieldEditor({
 
       case 'slider':
         return (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <GlassInput
               label="ค่าต่ำสุด"
               type="number"
@@ -558,9 +562,9 @@ function MultipleChoiceOptions({ options = [], onChange }) {
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 sm:space-y-3">
       {options.map((option, index) => (
-        <div key={index} className="flex items-center gap-2">
+        <div key={index} className="flex items-center gap-2 sm:gap-3">
           {/* Option Input - Takes most space */}
           <div className="flex-1">
             <GlassInput
@@ -578,19 +582,21 @@ function MultipleChoiceOptions({ options = [], onChange }) {
               size="icon"
               onClick={() => removeOption(index)}
               tooltip="ลบตัวเลือก"
-              className="text-destructive hover:bg-destructive/10 w-8 h-8"
+              className="text-destructive hover:bg-destructive/10 focus:bg-destructive/20 focus:ring-2 focus:ring-destructive/50 min-w-12 min-h-12 w-8 xs:w-9 sm:w-10 h-8 xs:h-9 sm:h-10 touch-target-min"
+              aria-label={`ลบตัวเลือกที่ ${index + 1}`}
             >
-              <FontAwesomeIcon icon={faTrashAlt} className="w-3 h-3 sm:w-4 sm:h-4" />
+              <FontAwesomeIcon icon={faTrashAlt} className="w-3 h-3 xs:w-4 xs:h-4" />
             </GlassButton>
           </div>
         </div>
       ))}
 
-      {/* Add Option Button */}
+      {/* Add Option Button - Accessible */}
       <GlassButton
         variant="ghost"
         onClick={addOption}
-        className="w-full border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 py-2 mt-3"
+        className="w-full border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/50 py-2 sm:py-3 mt-3 sm:mt-4 touch-target-comfortable min-h-12"
+        aria-label="เพิ่มตัวเลือกใหม่"
       >
         <FontAwesomeIcon icon={faPlus} className="mr-2 w-4 h-4" />
         <span className="text-sm font-medium">เพิ่มตัวเลือก</span>
@@ -692,33 +698,33 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
   };
 
   return (
-    <GlassCard variant="elevated" className="border-2 border-dashed border-accent/30 bg-card/60 backdrop-blur-lg shadow-lg hover:shadow-xl hover:border-accent/50 transition-all duration-300">
+    <GlassCard variant="elevated" className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out border-2 border-dashed border-accent/30 bg-card/60 backdrop-blur-lg shadow-lg hover:shadow-xl hover:border-accent/50">
       <GlassCardHeader>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
             <FontAwesomeIcon icon={faLayerGroup} className="text-accent text-lg" />
           </div>
 
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-semibold text-foreground/90">
+            <h3 className="form-card-title">
               {subForm.title || "ฟอร์มย่อย"}
             </h3>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="form-card-stats mt-1">
               {subForm.fields?.length || 0} ฟิลด์
             </p>
           </div>
 
-          {/* Compact Action Icons for SubForm */}
+          {/* Action Icons for SubForm - 8px Grid */}
           <div className="flex-shrink-0">
-            <div className="inline-flex items-center gap-1 bg-background/50 rounded-lg px-1 py-1">
+            <div className="inline-flex items-center gap-2 bg-background/50 rounded-lg px-2 py-2">
               <GlassButton
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsExpanded(!isExpanded)}
                 tooltip={isExpanded ? "ย่อ" : "ขยาย"}
-                className="opacity-70 hover:opacity-100 w-7 h-7"
+                className="opacity-70 hover:opacity-100 w-8 h-8 touch-target-min"
               >
-                <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="w-3 h-3 sm:w-4 sm:h-4" />
+                <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="w-4 h-4" />
               </GlassButton>
 
               <DropdownMenu>
@@ -727,7 +733,7 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
                     variant="ghost"
                     size="icon"
                     tooltip="ตัวเลือกเพิ่มเติม"
-                    className="opacity-60 hover:opacity-100 transition-opacity w-7 h-7"
+                    className="opacity-60 hover:opacity-100 transition-opacity w-8 h-8 touch-target-min"
                   >
                     <FontAwesomeIcon icon={faEllipsisV} className="text-sm" />
                   </GlassButton>
@@ -761,13 +767,13 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
       </GlassCardHeader>
 
       {isExpanded && (
-        <GlassCardContent className="space-y-6 pt-0">
+        <GlassCardContent className="space-y-8 pt-0">
           <Separator />
 
-          {/* Form Info Section - Using InlineEdit like Main Form */}
-          <GlassCard className="animate-fade-in border-2 border-primary/20">
-            <GlassCardContent className="space-y-4 p-8">
-              <div className="space-y-3">
+          {/* Form Info Section - Using InlineEdit like Main Form - 8px Grid */}
+          <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out animate-fade-in border-2 border-primary/20">
+            <GlassCardContent className="space-y-6 p-6 sm:p-8">
+              <div className="space-y-4">
                 <InlineEdit
                   value={subForm.title}
                   onChange={(value) => updateSubForm({ title: value })}
@@ -784,12 +790,12 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
             </GlassCardContent>
           </GlassCard>
 
-          {/* Navigation Tabs - Matching Main Form */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 border-b border-border/20">
+          {/* Navigation Tabs - Matching Main Form - 8px Grid */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-6 border-b border-border/20">
               <button
                 onClick={() => setCurrentTab('fields')}
-                className={`relative px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                className={`relative px-6 py-3 text-sm font-medium transition-all duration-200 ${
                   currentTab === 'fields'
                     ? 'text-primary border-b-2 border-primary'
                     : 'text-muted-foreground hover:text-foreground'
@@ -800,7 +806,7 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
               </button>
               <button
                 onClick={() => setCurrentTab('settings')}
-                className={`relative px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                className={`relative px-6 py-3 text-sm font-medium transition-all duration-200 ${
                   currentTab === 'settings'
                     ? 'text-primary border-b-2 border-primary'
                     : 'text-muted-foreground hover:text-foreground'
@@ -811,9 +817,9 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
               </button>
             </div>
 
-            {/* Fields Tab Content */}
+            {/* Fields Tab Content - 8px Grid */}
             {currentTab === 'fields' && (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {subForm.fields && subForm.fields.length > 0 ? (
                   <DndContext
                     sensors={subFormSensors}
@@ -824,7 +830,7 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
                       items={subForm.fields.map(field => field.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         {subForm.fields.map((field, index) => (
                           <SortableFieldEditor
                             key={field.id}
@@ -846,30 +852,30 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
                   </DndContext>
                 ) : null}
 
-                {/* Add Field Button - Always visible, positioned after fields or as standalone */}
-                <div className="pt-4 flex justify-center">
+                {/* Add Field Button - Always visible, positioned after fields or as standalone - 8px Grid */}
+                <div className="pt-8 flex justify-center">
                   {subForm.fields && subForm.fields.length > 0 ? (
                     <GlassButton
                       variant="primary"
                       onClick={addField}
                       tooltip="เพิ่มฟิลด์ใหม่"
-                      className="flex items-center gap-3 h-12 px-6 touch-target-comfortable"
+                      className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out flex items-center gap-4 h-14 px-8 touch-target-comfortable"
                     >
                       <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-                      <span className="text-callout font-medium">เพิ่มฟิลด์</span>
+                      <span className="form-card-button">เพิ่มฟิลด์</span>
                     </GlassButton>
                   ) : (
-                    <GlassCard className="text-center py-8 border-2 border-dashed border-muted-foreground/30 w-full">
+                    <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out text-center py-12 border-2 border-dashed border-muted-foreground/30 w-full">
                       <GlassCardContent>
-                        <div className="text-4xl mb-2 opacity-50">📝</div>
-                        <p className="text-muted-foreground mb-3">ยังไม่มีฟิลด์ในฟอร์มย่อย</p>
+                        <div className="text-4xl mb-4 opacity-50">📝</div>
+                        <p className="form-card-description mb-6">ยังไม่มีฟิลด์ในฟอร์มย่อย</p>
                         <GlassButton
                           variant="primary"
                           onClick={addField}
-                          className="h-12 px-6"
+                          className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out h-14 px-8 touch-target-comfortable"
                         >
                           <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                          สร้างฟิลด์แรก
+                          <span className="form-card-button">สร้างฟิลด์แรก</span>
                         </GlassButton>
                       </GlassCardContent>
                     </GlassCard>
@@ -878,16 +884,16 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
               </div>
             )}
 
-            {/* Settings Tab Content */}
+            {/* Settings Tab Content - 8px Grid */}
             {currentTab === 'settings' && (
-              <div className="space-y-4">
-                <GlassCard>
-                  <GlassCardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
+              <div className="space-y-6">
+                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
+                  <GlassCardContent className="space-y-6 p-6 sm:p-8">
+                    <div className="flex items-center gap-4">
                       <FontAwesomeIcon icon={faCog} className="text-primary" />
-                      <h3 className="font-medium text-foreground">ตั้งค่าฟอร์มย่อย</h3>
+                      <h3 className="form-card-title">ตั้งค่าฟอร์มย่อย</h3>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="form-card-description">
                       <p>• ฟอร์มย่อยจะแสดงในหน้ารายละเอียดของฟอร์มหลักหลังจากบันทึกข้อมูลแล้ว</p>
                       <p>• ผู้ใช้สามารถเพิ่มข้อมูลฟอร์มย่อยได้หลายครั้ง</p>
                       <p>• ข้อมูลฟอร์มย่อยจะแสดงในรูปแบบตารางสรุป</p>
@@ -1088,99 +1094,100 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90">
-      <div className="container-responsive">
-        {/* Enhanced Header with iOS 26 proportions */}
-        <div className="flex flex-col lg:flex-row gap-6 mb-8 lg:mb-10">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base sm:text-lg font-semibold text-foreground/90 mb-2">
-              {initialForm ? 'แก้ไขฟอร์ม' : 'สร้างฟอร์มใหม่'}
-            </h1>
-            <p className="text-sm text-muted-foreground leading-normal">
-              สร้างและกำหนดค่าฟอร์มด้วยระบบ iOS 26 liquid glass design
-            </p>
-          </div>
+      <div className="container-responsive px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
 
-          {/* Enhanced Action Bar */}
-          <div className="flex items-center gap-3 lg:gap-4 shrink-0">
+        {/* Main Form Builder - Optimized Layout Hierarchy */}
+        <div className="space-y-6 sm:space-y-8 lg:space-y-10 xl:space-y-12">
 
-            <GlassButton
-              variant="ghost"
-              onClick={onCancel}
-              tooltip="ยกเลิกและกลับ"
-              className="flex items-center gap-3 h-12 px-6 touch-target-comfortable"
-            >
-              <FontAwesomeIcon icon={faUndo} className="w-4 h-4" />
-              <span className="text-sm font-medium">ยกเลิก</span>
-            </GlassButton>
+            {/* Enhanced Tab Navigation - Responsive Proportions */}
+            <div className="flex items-center justify-between gap-2 sm:gap-4 lg:gap-6 border-b border-border/20 pb-3 sm:pb-4 mb-6 sm:mb-8 lg:mb-10">
+              {/* Tab Navigation */}
+              <div className="flex gap-1 sm:gap-2 overflow-x-auto flex-1">
+                <button
+                  onClick={() => setActiveSection('main')}
+                  title="ฟอร์มหลัก"
+                  className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-lg border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
+                    activeSection === 'main'
+                      ? 'text-primary bg-primary/5 border-primary shadow-sm backdrop-blur-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/10 border-transparent'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={faClipboardList} className="w-4 h-4" />
+                  <span className="ml-2">({form.fields.length})</span>
+                  {activeSection === 'main' && (
+                    <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary to-orange-500 rounded-full" />
+                  )}
+                </button>
 
-            <GlassButton
-              variant="primary"
-              onClick={handleSave}
-              disabled={!isFormValid()}
-              tooltip={isFormValid() ? "บันทึกฟอร์ม" : "กรอกข้อมูลให้ครบถ้วน"}
-              className="flex items-center gap-3 h-12 px-8 touch-target-primary"
-            >
-              <FontAwesomeIcon icon={faSave} className="w-4 h-4" />
-              <span className="text-sm font-medium">บันทึก</span>
-            </GlassButton>
+                <button
+                  onClick={() => setActiveSection('sub')}
+                  title="ฟอร์มย่อย"
+                  className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-lg border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
+                    activeSection === 'sub'
+                      ? 'text-primary bg-primary/5 border-primary shadow-sm backdrop-blur-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/10 border-transparent'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={faLayerGroup} className="w-4 h-4" />
+                  <span className="ml-2">({form.subForms.length})</span>
+                  {activeSection === 'sub' && (
+                    <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary to-orange-500 rounded-full" />
+                  )}
+                </button>
 
-            {/* Delete Button - Only show in edit mode */}
-            {initialForm && (
-              <GlassButton
-                variant="ghost"
-                onClick={() => {
-                  if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบฟอร์มนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) {
-                    onCancel(initialForm.id, 'delete');
-                  }
-                }}
-                tooltip="ลบฟอร์ม"
-                className="flex items-center gap-3 h-12 px-6 touch-target-comfortable text-red-400 hover:text-red-300 hover:bg-red-500/10"
-              >
-                <FontAwesomeIcon icon={faTrashAlt} className="w-4 h-4" />
-                <span className="text-sm font-medium">ลบ</span>
-              </GlassButton>
-            )}
-          </div>
-        </div>
+                <button
+                  onClick={() => setActiveSection('settings')}
+                  title="ตั้งค่า"
+                  className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-lg border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
+                    activeSection === 'settings'
+                      ? 'text-primary bg-primary/5 border-primary shadow-sm backdrop-blur-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/10 border-transparent'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={faCog} className="w-4 h-4" />
+                  {activeSection === 'settings' && (
+                    <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary to-orange-500 rounded-full" />
+                  )}
+                </button>
+              </div>
 
-        {/* Main Form Builder - Streamlined Layout */}
-        <div className="space-y-3 sm:space-y-4">
+              {/* Action Buttons - Enhanced Responsive */}
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <GlassButton
+                  variant="primary"
+                  onClick={handleSave}
+                  disabled={!isFormValid()}
+                  tooltip={isFormValid() ? "บันทึกฟอร์ม" : "กรอกข้อมูลให้ครบถ้วน"}
+                  className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out flex items-center justify-center gap-2 h-10 sm:h-12 px-3 sm:px-4 text-xs sm:text-sm touch-target-comfortable hover:shadow-[0_0_20px_rgba(249,115,22,0.6),0_0_40px_rgba(249,115,22,0.4)]"
+                >
+                  <FontAwesomeIcon icon={faSave} className="w-3 h-3" />
+                  <span className="hidden sm:inline">บันทึก</span>
+                </GlassButton>
 
-            {/* Enhanced Section Navigation */}
-            <div className="flex gap-3 lg:gap-4 overflow-x-auto pb-2">
-              <GlassButton
-                variant={activeSection === 'main' ? 'primary' : 'ghost'}
-                onClick={() => setActiveSection('main')}
-                className="whitespace-nowrap h-12 px-6 touch-target-comfortable"
-              >
-                <FontAwesomeIcon icon={faClipboardList} className="mr-2 w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="text-sm font-medium">ฟอร์มหลัก ({form.fields.length})</span>
-              </GlassButton>
-              <GlassButton
-                variant={activeSection === 'sub' ? 'primary' : 'ghost'}
-                onClick={() => setActiveSection('sub')}
-                className="whitespace-nowrap h-12 px-6 touch-target-comfortable"
-              >
-                <FontAwesomeIcon icon={faLayerGroup} className="mr-2 w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="text-sm font-medium">ฟอร์มย่อย ({form.subForms.length})</span>
-              </GlassButton>
-              <GlassButton
-                variant={activeSection === 'settings' ? 'primary' : 'ghost'}
-                onClick={() => setActiveSection('settings')}
-                className="whitespace-nowrap h-12 px-6 touch-target-comfortable"
-              >
-                <FontAwesomeIcon icon={faCog} className="mr-2 w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="text-sm font-medium">ตั้งค่า</span>
-              </GlassButton>
+                {/* Delete Button - Only show in edit mode */}
+                {initialForm && (
+                  <button
+                    onClick={() => {
+                      if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบฟอร์มนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) {
+                        onCancel(initialForm.id, 'delete');
+                      }
+                    }}
+                    title="ลบฟอร์ม"
+                    className="p-2 text-red-500 hover:text-red-400 transition-colors duration-200 touch-target-comfortable"
+                  >
+                    <FontAwesomeIcon icon={faTrashAlt} className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Main Fields Section */}
+            {/* Main Fields Section - Optimized Proportions */}
             {activeSection === 'main' && (
-              <div className="space-y-3 sm:space-y-4">
-                {/* Form Title and Description - Inline Editing */}
-                <GlassCard className="animate-fade-in border-2 border-primary/20 bg-card/60 backdrop-blur-lg shadow-lg hover:shadow-xl hover:border-primary/40 transition-all duration-300">
-                  <GlassCardContent className="space-y-3 px-4 py-3">
-                    <div className="space-y-2">
+              <div className="space-y-6 sm:space-y-8 lg:space-y-10">
+                {/* Form Title and Description - Responsive Layout */}
+                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out animate-fade-in border-2 border-primary/20 bg-card/60 backdrop-blur-lg shadow-lg hover:shadow-xl hover:border-primary/40">
+                  <GlassCardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+                    <div className="space-y-3 sm:space-y-4">
                       <InlineEdit
                         value={form.title}
                         onChange={(value) => updateForm({ title: value })}
@@ -1197,11 +1204,11 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                   </GlassCardContent>
                 </GlassCard>
 
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                  <div>
-                    <h2 className="text-base font-semibold text-foreground/90">ฟิลด์ในฟอร์ม</h2>
-                    <p className="text-footnote text-muted-foreground mt-1">
-                      จัดการฟิลด์ต่างๆ ในฟอร์มหลัก
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8 items-start sm:items-center">
+                  <div className="flex-1">
+                    <h2 className="form-card-title text-lg sm:text-xl lg:text-2xl font-semibold tracking-tight">ฟิลด์ในฟอร์ม</h2>
+                    <p className="form-card-description mt-2 sm:mt-3 text-sm sm:text-base lg:text-lg leading-relaxed opacity-75 max-w-2xl">
+                      จัดการฟิลด์ต่างๆ ในฟอร์มหลัก - ลากและวางเพื่อเรียงลำดับใหม่
                     </p>
                   </div>
                 </div>
@@ -1215,7 +1222,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                     items={form.fields.map(field => field.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="space-y-3 sm:space-y-4">
+                    <div className="space-y-6 sm:space-y-8 lg:space-y-10">
                       {form.fields.map((field, index) => (
                         <SortableFieldEditor
                           key={field.id}
@@ -1236,30 +1243,33 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                   </SortableContext>
                 </DndContext>
 
-                {/* Add Field Button - Positioned after all fields */}
-                <div className="pt-4 flex justify-center">
+                {/* Add Field Button - Full Responsive */}
+                <div className="pt-4 sm:pt-6 md:pt-8 lg:pt-10 flex justify-center">
                   <GlassButton
                     variant="primary"
                     onClick={addField}
                     tooltip="เพิ่มฟิลด์ใหม่"
-                    className="flex items-center gap-3 h-12 px-6 touch-target-comfortable"
+                    className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out flex items-center gap-2 sm:gap-3 md:gap-4 h-10 xs:h-11 sm:h-12 md:h-14 lg:h-16 xl:h-18 px-4 xs:px-5 sm:px-6 md:px-8 lg:px-10 xl:px-12 text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl touch-target-comfortable hover:shadow-[0_0_20px_rgba(249,115,22,0.6),0_0_40px_rgba(249,115,22,0.4)]"
                   >
                     <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-                    <span className="text-callout font-medium">เพิ่มฟิลด์</span>
+                    <span className="form-card-button">เพิ่มฟิลด์</span>
                   </GlassButton>
                 </div>
               </div>
             )}
 
-            {/* Sub Forms */}
+            {/* Sub Forms - 8px Grid */}
             {activeSection === 'sub' && (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
-                  <h2 className="text-lg font-semibold text-foreground/90">ฟอร์มย่อย</h2>
+                  <h2 className="form-card-title">ฟอร์มย่อย</h2>
+                  <p className="form-card-description mt-2">
+                    สร้างฟอร์มย่อยเพื่อเก็บข้อมูลเพิ่มเติมหลังจากบันทึกฟอร์มหลัก
+                  </p>
                 </div>
 
                 {form.subForms.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {form.subForms.map((subForm, index) => (
                       <SubFormBuilder
                         key={subForm.id}
@@ -1274,34 +1284,34 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                       />
                     ))}
 
-                    {/* Add SubForm Button - Positioned after all subforms */}
-                    <div className="pt-4 flex justify-center">
+                    {/* Add SubForm Button - Positioned after all subforms - 8px Grid */}
+                    <div className="pt-8 flex justify-center">
                       <GlassButton
                         variant="primary"
                         onClick={addSubForm}
                         tooltip="เพิ่มฟอร์มย่อย"
-                        className="flex items-center gap-3 h-12 px-6 touch-target-comfortable"
+                        className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out flex items-center gap-4 h-14 px-8 touch-target-comfortable hover:shadow-[0_0_20px_rgba(249,115,22,0.6),0_0_40px_rgba(249,115,22,0.4)]"
                       >
                         <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-                        <span className="text-callout font-medium">เพิ่มฟอร์มย่อย</span>
+                        <span className="form-card-button">เพิ่มฟอร์มย่อย</span>
                       </GlassButton>
                     </div>
                   </div>
                 ) : (
-                  <GlassCard className="text-center py-12 border-2 border-dashed border-muted-foreground/30">
+                  <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out text-center py-16 border-2 border-dashed border-muted-foreground/30">
                     <GlassCardContent>
-                      <div className="text-6xl mb-4 opacity-50">📄</div>
-                      <GlassCardTitle className="mb-2">ยังไม่มีฟอร์มย่อย</GlassCardTitle>
-                      <GlassCardDescription className="mb-4">
+                      <div className="text-6xl mb-6 opacity-50">📄</div>
+                      <GlassCardTitle className="form-card-title mb-3">ยังไม่มีฟอร์มย่อย</GlassCardTitle>
+                      <GlassCardDescription className="form-card-description mb-6">
                         ฟอร์มย่อยใช้สำหรับเก็บข้อมูลเพิ่มเติมหลังจากบันทึกฟอร์มหลักแล้ว
                       </GlassCardDescription>
                       <GlassButton
                         variant="primary"
                         onClick={addSubForm}
-                        className="h-12 px-6"
+                        className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out h-14 px-8 touch-target-comfortable"
                       >
                         <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                        สร้างฟอร์มย่อยแรก
+                        <span className="form-card-button">สร้างฟอร์มย่อยแรก</span>
                       </GlassButton>
                     </GlassCardContent>
                   </GlassCard>
@@ -1309,28 +1319,95 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
               </div>
             )}
 
-            {/* Settings */}
+            {/* Settings - 8px Grid */}
             {activeSection === 'settings' && (
-              <div className="space-y-6">
-                <h2 className="text-lg font-semibold text-foreground/90">ตั้งค่าฟอร์ม</h2>
+              <div className="space-y-8">
+                <div>
+                  <h2 className="form-card-title">ตั้งค่าฟอร์ม</h2>
+                  <p className="form-card-description mt-2">
+                    กำหนดค่าขั้นสูงสำหรับการแจ้งเตือน การจัดการผู้ใช้ และระบบอัตโนมัติ
+                  </p>
+                </div>
 
-                {/* Telegram Settings */}
-                <GlassCard>
+                {/* User Role Access Control Settings - 8px Grid - MOVED TO TOP */}
+                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
                   <GlassCardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500/20 to-green-600/20 flex items-center justify-center">
+                        <FontAwesomeIcon icon={faUsers} className="text-green-600 text-lg" />
+                      </div>
+                      <div>
+                        <GlassCardTitle className="form-card-title">การควบคุมสิทธิ์ผู้ใช้</GlassCardTitle>
+                        <GlassCardDescription className="form-card-description">
+                          เลือกกลุ่มผู้ใช้ที่สามารถเข้าถึงและใช้งานฟอร์มนี้ได้
+                        </GlassCardDescription>
+                      </div>
+                    </div>
+                  </GlassCardHeader>
+                  <GlassCardContent className="space-y-6">
+                    <div className="text-sm text-muted-foreground mb-6">
+                      <FontAwesomeIcon icon={faShieldAlt} className="mr-3" />
+                      Choose user roles that can access this form
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      {Object.values(USER_ROLES).map((role) => {
+                        const isVisible = form.visibleRoles.includes(role.id);
+                        const isDisabled = role.isDefault; // Super Admin and Admin are always selected
+
+                        return (
+                          <button
+                            key={role.id}
+                            type="button"
+                            disabled={isDisabled}
+                            onClick={() => {
+                              if (isDisabled) return;
+                              const newVisibleRoles = isVisible
+                                ? form.visibleRoles.filter(id => id !== role.id)
+                                : [...form.visibleRoles, role.id];
+                              updateForm({ visibleRoles: newVisibleRoles });
+                            }}
+                            title={isDisabled ? `${role.name} • Always selected (cannot be changed)` : `Toggle ${role.name} access`}
+                            className={`
+                              px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200
+                              ${isVisible
+                                ? `${role.bgColor} ${role.color} shadow-sm border-2 border-current/20 hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]`
+                                : 'bg-muted/20 text-muted-foreground border-2 border-transparent hover:bg-muted/40 hover:shadow-[0_0_10px_rgba(249,115,22,0.2)]'
+                              }
+                              ${isDisabled
+                                ? 'cursor-not-allowed opacity-90'
+                                : 'cursor-pointer hover:scale-105'
+                              }
+                            `}
+                          >
+                            {role.name}
+                            {isDisabled && (
+                              <span className="ml-1 text-xs opacity-70">•</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </GlassCardContent>
+                </GlassCard>
+
+                {/* Telegram Settings - 8px Grid */}
+                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
+                  <GlassCardHeader>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
                         <FontAwesomeIcon icon={faComments} className="text-blue-600 text-lg" />
                       </div>
                       <div>
-                        <GlassCardTitle>การแจ้งเตือน Telegram</GlassCardTitle>
-                        <GlassCardDescription minimal>
+                        <GlassCardTitle className="form-card-title">การแจ้งเตือน Telegram</GlassCardTitle>
+                        <GlassCardDescription className="form-card-description">
                           ส่งการแจ้งเตือนไปยัง Telegram เมื่อมีการส่งฟอร์ม
                         </GlassCardDescription>
                       </div>
                     </div>
                   </GlassCardHeader>
-                  <GlassCardContent className="space-y-4">
-                    <label className="flex items-center gap-3 cursor-pointer group">
+                  <GlassCardContent className="space-y-6">
+                    <label className="flex items-center gap-4 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={form.settings.telegram.enabled}
@@ -1348,7 +1425,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                     </label>
 
                     {form.settings.telegram.enabled && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-3">
                         <GlassInput
                           label="Bot Token"
                           value={form.settings.telegram.botToken}
@@ -1380,112 +1457,24 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                   </GlassCardContent>
                 </GlassCard>
 
-                {/* User Role Access Control Settings */}
-                <GlassCard>
+
+                {/* Document Number Settings - 8px Grid */}
+                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
                   <GlassCardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500/20 to-green-600/20 flex items-center justify-center">
-                        <FontAwesomeIcon icon={faUsers} className="text-green-600 text-lg" />
-                      </div>
-                      <div>
-                        <GlassCardTitle>User Role Access Control</GlassCardTitle>
-                        <GlassCardDescription minimal>
-                          Select which user roles can view and access this form
-                        </GlassCardDescription>
-                      </div>
-                    </div>
-                  </GlassCardHeader>
-                  <GlassCardContent className="space-y-4">
-                    <div className="text-sm text-muted-foreground mb-4">
-                      <FontAwesomeIcon icon={faShieldAlt} className="mr-2" />
-                      Choose user roles that can access this form
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {Object.values(USER_ROLES).map((role) => {
-                        const isVisible = form.visibleRoles.includes(role.id);
-                        const isDisabled = role.isDefault; // Super Admin and Admin are always selected
-
-                        return (
-                          <button
-                            key={role.id}
-                            type="button"
-                            disabled={isDisabled}
-                            onClick={() => {
-                              if (isDisabled) return;
-                              const newVisibleRoles = isVisible
-                                ? form.visibleRoles.filter(id => id !== role.id)
-                                : [...form.visibleRoles, role.id];
-                              updateForm({ visibleRoles: newVisibleRoles });
-                            }}
-                            className={`
-                              px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200
-                              ${isVisible
-                                ? `${role.bgColor} ${role.color} shadow-sm border-2 border-current/20`
-                                : 'bg-muted/20 text-muted-foreground border-2 border-transparent hover:bg-muted/40'
-                              }
-                              ${isDisabled
-                                ? 'cursor-not-allowed opacity-90'
-                                : 'cursor-pointer hover:scale-105'
-                              }
-                            `}
-                          >
-                            {role.name}
-                            {isDisabled && (
-                              <span className="ml-1 text-xs opacity-70">•</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="mt-4 p-3 bg-muted/10 rounded-lg">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <FontAwesomeIcon icon={faUsers} className="text-primary" />
-                        <span className="font-medium">Selected Roles ({form.visibleRoles.length} of {Object.keys(USER_ROLES).length}):</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {form.visibleRoles.map(roleId => {
-                          const role = Object.values(USER_ROLES).find(r => r.id === roleId);
-                          if (!role) return null;
-                          return (
-                            <Badge
-                              key={roleId}
-                              className={`${role.bgColor} ${role.color} border-0 text-xs font-medium px-2 py-1`}
-                            >
-                              {role.name}
-                              {role.isDefault && <span className="ml-1 opacity-70">•</span>}
-                            </Badge>
-                          );
-                        })}
-                        {form.visibleRoles.length === 0 && (
-                          <span className="text-xs text-muted-foreground italic">No roles selected - form will not be visible to anyone</span>
-                        )}
-                      </div>
-                      <div className="mt-2 text-xs text-muted-foreground/70">
-                        <span className="opacity-70">•</span> Always selected roles (cannot be changed)
-                      </div>
-                    </div>
-                  </GlassCardContent>
-                </GlassCard>
-
-                {/* Document Number Settings */}
-                <GlassCard>
-                  <GlassCardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center">
                         <FontAwesomeIcon icon={faFileUpload} className="text-purple-600 text-lg" />
                       </div>
                       <div>
-                        <GlassCardTitle>หมายเลขเอกสารอัตโนมัติ</GlassCardTitle>
-                        <GlassCardDescription minimal>
+                        <GlassCardTitle className="form-card-title">หมายเลขเอกสารอัตโนมัติ</GlassCardTitle>
+                        <GlassCardDescription className="form-card-description">
                           สร้างหมายเลขเอกสารอัตโนมัติสำหรับแต่ละการส่งฟอร์ม
                         </GlassCardDescription>
                       </div>
                     </div>
                   </GlassCardHeader>
-                  <GlassCardContent className="space-y-4">
-                    <label className="flex items-center gap-3 cursor-pointer group">
+                  <GlassCardContent className="space-y-6">
+                    <label className="flex items-center gap-4 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={form.settings.documentNumber.enabled}
@@ -1503,8 +1492,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                     </label>
 
                     {form.settings.documentNumber.enabled && (
-                      <div className="space-y-4 pt-2">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-6 pt-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           <GlassInput
                             label="คำนำหน้า"
                             value={form.settings.documentNumber.prefix}
@@ -1550,8 +1539,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                           </GlassSelect>
                         </div>
 
-                        <div className="p-4 bg-muted/10 rounded-lg">
-                          <p className="text-sm text-muted-foreground mb-1">ตัวอย่าง:</p>
+                        <div className="p-6 bg-muted/10 rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-2">ตัวอย่าง:</p>
                           <code className="text-sm font-mono text-foreground/80">
                             {form.settings.documentNumber.prefix}-
                             {form.settings.documentNumber.format === 'prefix-number/year' ? '0001/2567' : '2567/0001'}

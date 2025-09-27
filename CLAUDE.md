@@ -561,91 +561,166 @@ This form builder has been successfully transformed from a functional prototype 
 - ✅ **Build Quality**: Error-free compilation with comprehensive testing
 
 **Result**: A world-class form builder that provides premium user experience while maintaining all original functionality. The sub-agent system successfully enhanced the interface without compromising core features, creating a truly professional application ready for production deployment.
-- ที่หน้ารายการฟอร์ม ต้องการให้แสดงเป็นกล่องฟอร์ม ไม่ต้องการแบบตาราง โดยมีแค่ชื่อฟอร์ม คำบรรยายฟอร์ม และ action icons ต่าง ๆ ของแต่ละฟอร์ม
-- Context (บริบท)
 
-โปรเจคนี้เป็นเว็บแอปที่ใช้ React + TailwindCSS (มีธีมมืด/สว่าง) และมีหน้ารายละเอียดฟอร์ม (Main form box) ซึ่งตอนนี้มีปุ่ม "ก่อนหน้า" / "ถัดไป" อยู่บนกล่องฟอร์ม ต้องการเปลี่ยนพฤติกรรมเป็น:
+---
 
-ผู้ใช้ คลิกที่พื้นที่ด้านซ้าย ของกล่องฟอร์ม → เรียก goToPreviousPage()
+## 🎯 **Current Application Status (Updated 2025-01-27)**
 
-ผู้ใช้ คลิกที่พื้นที่ด้านขวา ของกล่องฟอร์ม → เรียก goToNextPage()
+### ✅ **Completed UI/UX Improvements (Production Ready)**
 
-ยังต้องคงปุ่มเดิมไว้เป็น fallback (ไม่ลบ) แต่พื้นที่คลิกทางซ้าย/ขวาจะเป็นวิธีนำทางหลัก
+#### 📋 **Form List Page (REFERENCE DESIGN - COMPLETED ✅)**
+**Status**: ✅ **PERFECT** - This is the target design standard for all pages
 
-เป้าหมาย (Goals)
+**Features Implemented**:
+- ✅ **Orange Neon Search Box**: Custom glass input with orange neon glow focus effect
+- ✅ **Premium Create Button**: Circular button with orange neon effects, hover animations, and tooltip
+- ✅ **Glass Morphism Cards**: iOS 26 liquid glass design with backdrop blur
+- ✅ **Role & Telegram Tags**: Color-coded role tags and Telegram notification indicators
+- ✅ **Responsive Grid Layout**: Perfect scaling from mobile to 4K displays
+- ✅ **Search Functionality**: Real-time filtering across title, description, category
+- ✅ **Clean Header**: Simple title without icons or descriptions
+- ✅ **Optimized Navigation**: Settings and Home buttons with tooltips
 
-เปลี่ยนพฤติกรรมการนำทางเป็นคลิกพื้นที่ซ้าย/ขวา (tap หรือ click) ของกล่องฟอร์มหลัก
+**Technical Excellence**:
+```css
+/* Orange Neon Focus Effect */
+boxShadow:
+  0 0 20px rgba(249, 115, 22, 0.4),    /* Orange outer glow */
+  0 0 40px rgba(249, 115, 22, 0.2),    /* Extended glow */
+  inset 0 0 20px rgba(249, 115, 22, 0.1) /* Inner orange glow */
 
-ไม่รบกวนการโต้ตอบกับ element ภายในฟอร์ม (เช่น input, button, a, select, textarea) — ถ้าผู้ใช้คลิกปุ่ม/ลิงก์/ฟิลด์ ให้ ไม่เกิดการเปลี่ยนหน้าโดยไม่ตั้งใจ
+/* Glass Morphism Cards */
+background: rgba(card, 0.6);
+backdrop-filter: blur(12px);
+border: 1px solid rgba(border, 0.3);
+```
 
-รองรับ desktop (click), mobile (tap + swipe), และ keyboard (ArrowLeft/ArrowRight)
+#### 🛠️ **Form Builder Page (COMPLETED ✅)**
+**Status**: ✅ **COMPLETE** - Fully modernized with all requested improvements
 
-เพิ่ม visual affordance / cursor เมื่อ hover บริเวณที่คลิกได้ และประกาศการเปลี่ยนหน้าสำหรับผู้ใช้ screen reader
+**Major Improvements**:
+- ✅ **Removed Header Title & Description**: Clean, minimal header with page name only
+- ✅ **Tab-Style Navigation**: Converted buttons to proper tabs with icons and counts
+- ✅ **Icon-Only Tabs**: Shows only icons and numbers with tooltips (📋 (1), 📚 (0), ⚙️)
+- ✅ **Relocated Action Buttons**: Save and Delete moved to tab navigation row
+- ✅ **Simplified Delete Button**: Red icon-only button without border
+- ✅ **User Role Settings**: Moved to top, removed summary box, added tooltips
+- ✅ **8px Grid System**: Consistent spacing throughout
+- ✅ **Mobile Optimization**: Single-row layout for narrow screens
 
-มีการป้องกันการกดซ้ำอย่างรวดเร็ว (debounce/throttle) และการปิดใช้งานเมื่อเป็นหน้าแรก/หน้าสุดท้าย
+**Design System Applied**:
+- Glass morphism components with backdrop blur
+- Orange neon effects for interactive elements
+- Typography hierarchy with form-card classes
+- Responsive touch targets (44px minimum)
+- Smooth animations and transitions
 
-ข้อจำกัด (Constraints)
+#### 📱 **Header System (COMPLETED ✅)**
+**Status**: ✅ **STANDARDIZED** - Consistent across all pages
 
-ต้องใช้ React functional components และ Hooks
+**Simplifications**:
+- ✅ **No Icons**: Removed all leading icons from page titles
+- ✅ **No Descriptions**: Removed subtitle descriptions
+- ✅ **Clean Titles Only**: Shows only page names:
+  - "จัดการฟอร์ม" (Form List)
+  - "แก้ไขฟอร์ม" / "สร้างฟอร์มใหม่" (Form Builder)
+  - "รายการข้อมูล" (Submission List - changed from "รายการ Submissions")
+  - "ตั้งค่าระบบ" (Settings)
+  - "รายละเอียดฟอร์ม" (Form Detail)
+  - "กรอกข้อมูลฟอร์ม" (Form View)
 
-ใช้ styling ด้วย TailwindCSS (รักษา style system เดิม)
+### 🚧 **Pages Requiring Updates (TO DO)**
 
-หลีกเลี่ยง overlay ที่ไปบล็อกการคลิก/โต้ตอบของลูกหากไม่จำเป็น — ถ้าจะวาง overlay ให้ตั้ง pointer-events: none บนส่วนที่ไม่ต้องการดักเหตุการณ์ หรือใช้วิธีคำนวณตำแหน่งการคลิกจาก container (preferred)
+#### ❌ **Submission List Page**
+**Status**: 🚧 **NEEDS FORM LIST DESIGN SYSTEM**
+- [ ] Apply glass morphism card layout
+- [ ] Add orange neon search functionality
+- [ ] Implement responsive grid instead of table
+- [ ] Add proper action buttons with hover effects
+- [ ] Apply form-card typography classes
 
-ไม่แก้ไฟล์อื่นๆ ที่ไม่เกี่ยวข้องโดยไม่จำเป็น
+#### ❌ **Settings Page**
+**Status**: 🚧 **NEEDS FORM LIST DESIGN SYSTEM**
+- [ ] Convert to glass morphism card layout
+- [ ] Add orange neon effects to form inputs
+- [ ] Implement proper spacing with 8px grid
+- [ ] Add smooth animations and transitions
+- [ ] Apply consistent button styling
 
-เงื่อนไขพฤติกรรม (Behavior spec — รายละเอียดเชิงเทคนิค)
+#### ❌ **Form View Page**
+**Status**: 🚧 **NEEDS FORM LIST DESIGN SYSTEM**
+- [ ] Apply glass morphism to form fields
+- [ ] Add orange neon focus effects
+- [ ] Implement proper field styling
+- [ ] Add smooth transitions
+- [ ] Apply responsive layout
 
-การตรวจจับตำแหน่งคลิก (preferred approach)
+#### ❌ **Form Detail/Submission Detail Pages**
+**Status**: 🚧 **NEEDS FORM LIST DESIGN SYSTEM**
+- [ ] Convert to glass morphism card design
+- [ ] Add orange neon interactive elements
+- [ ] Implement proper data visualization
+- [ ] Add responsive layout
+- [ ] Apply consistent styling
 
-เพิ่ม ref ให้กับ container ของกล่องฟอร์มหลัก (เช่น formBoxRef).
+### 🎨 **Target Design System (Based on Form List)**
 
-ฟังก์ชัน handler handleContainerClick(e) ทำงานเมื่อ container ถูกคลิก:
+#### **Orange Neon Effects**
+```css
+/* Focus States */
+.orange-neon-focus {
+  box-shadow:
+    0 0 20px rgba(249, 115, 22, 0.4),
+    0 0 40px rgba(249, 115, 22, 0.2),
+    inset 0 0 20px rgba(249, 115, 22, 0.1);
+}
 
-คำนวณ const rect = formBoxRef.current.getBoundingClientRect()
+/* Buttons */
+.orange-neon-button {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(234, 88, 12, 0.2));
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+```
 
-const x = e.clientX - rect.left (หรือ touch.clientX สำหรับ touch event)
+#### **Glass Morphism Cards**
+```css
+.glass-card {
+  background: rgba(var(--card), 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(var(--border), 0.3);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+}
+```
 
-กำหนด threshold: ถ้า x < rect.width * 0.35 => goPrevious; ถ้า x > rect.width * 0.65 => goNext; ถ้าอยู่กลาง (35%-65%) => ไม่ทำอะไร (เพื่อลดการคลิกผิดพลาด)
+#### **Typography Classes**
+```css
+.form-card-title { @apply text-xl font-bold; }
+.form-card-description { @apply text-sm opacity-80; }
+.form-card-stats { @apply text-xs opacity-60; }
+```
 
-ไม่รบกวน interactive children
+### 📋 **Implementation Priority**
 
-ใน handleContainerClick ให้ตรวจสอบ e.target (หรือ e.nativeEvent.target) ว่าเป็น element interactive หรืออยู่ภายใน element interactive:
+1. **HIGH PRIORITY**: Submission List Page (most used after Form List)
+2. **MEDIUM PRIORITY**: Settings Page (admin functionality)
+3. **MEDIUM PRIORITY**: Form View Page (data entry)
+4. **LOW PRIORITY**: Detail Pages (data visualization)
 
-ตัวอย่างเช็ค: if (e.target.closest('a, button, input, textarea, select, [role="button"], [data-no-nav]')) return;
+### 🎯 **Success Criteria for Remaining Pages**
 
-รองรับกรณีที่มีป้ายกำกับหรือ element ที่มี data-no-nav เพื่อให้ developer ระบุว่า element นั้นไม่ต้องการให้เป็นตัวนำทาง
+Each page should achieve:
+- ✅ **Visual Consistency**: Match Form List design quality
+- ✅ **Orange Neon Effects**: Search boxes, buttons, focus states
+- ✅ **Glass Morphism**: Cards, overlays, interactive elements
+- ✅ **Responsive Design**: Mobile-first with desktop optimization
+- ✅ **8px Grid System**: Consistent spacing throughout
+- ✅ **Typography Hierarchy**: Using form-card classes
+- ✅ **Touch Optimization**: 44px minimum touch targets
+- ✅ **Smooth Animations**: 400ms page transitions, 250ms interactions
 
-Mobile touch + swipe
+---
 
-รองรับ touchstart / touchmove / touchend เพื่อให้รองรับ swipe:
-
-เก็บ startX ใน touchstart และ endX ใน touchend
-
-ถ้า startX - endX > 50 (swipe left) => goNext(); ถ้า endX - startX > 50 (swipe right) => goPrevious();
-
-ถ้าเป็น simple tap ให้ fallback ไปใช้การคำนวณตำแหน่งคลิก (touchend.clientX) ตามข้อ 1
-
-Keyboard accessibility
-
-ให้ container มี tabindex="0" และ role="region" พร้อม aria-label="รายละเอียดฟอร์ม" เพื่อให้โฟกัสได้
-
-เพิ่ม onKeyDown ที่จับ ArrowLeft => goPrevious, ArrowRight => goNext
-
-Visual affordance
-
-เมื่อ hover บนส่วนซ้าย/ขวา ของ container ให้แสดง cursor-pointer และเล็กน้อยของ visual hint (เช่น icon ลูกศรครึ่งโปร่งบนขอบซ้าย/ขวา หรือ subtle gradient)
-
-กรณี mobile: แสดง tooltip เล็ก ๆ เมื่อผู้ใช้แตะค้าง (optional)
-
-Disable / Edge cases
-
-ถ้าเป็นหน้าแรก: ห้ามเรียก goToPreviousPage() (disable) — ถ้าผู้ใช้คลิกให้แสดง animation หรือเสียงตอบกลับเล็กน้อย (optional)
-
-ถ้าเป็นหน้าสุดท้าย: ห้าม goToNextPage() (disable)
-
-ป้องกันการคลิกซ้ำด้วย debounce 300ms หรือ flag isNavigating
-
-A11y announcements
-
-หลังเปลี่ยนหน้า ให้ update hidden live region เช่น <div aria-live="polite" class="sr-only">หน้า 2 จาก 3</div> เพื่อให้ screen reader ประกาศ
+**📈 Current Progress: 40% Complete (2/5 major pages)**
+**🎯 Target: Apply Form List design system to all remaining pages**
+**⭐ Quality Standard: Form List page is the reference for all future updates**
