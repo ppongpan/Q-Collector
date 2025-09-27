@@ -1,8 +1,8 @@
 # 📋 Q-Collector
 
-> **ระบบสร้างฟอร์มบันทึกข้อมูล Q-CON พร้อม iOS 26 glass morphism design, 60fps animations และระบบฟิลด์ครบครัน**
+> **ระบบสร้างฟอร์มบันทึกข้อมูล Q-CON พร้อม glass morphism design, 60fps animations และระบบฟิลด์ครบครัน**
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/your-username/Q-Collector)
+[![Version](https://img.shields.io/badge/version-0.1.5-blue.svg)](https://github.com/ppongpan/Q-Collector)
 [![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://reactjs.org/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.0+-38B2AC.svg)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -10,7 +10,7 @@
 ## ✨ Features
 
 ### 🎨 **Premium Design System**
-- **iOS 26 Liquid Glass**: Premium glass morphism interface with backdrop blur effects
+- **Glass Morphism**: Premium glass morphism interface with backdrop blur effects
 - **Dark/Light Themes**: Seamless theme switching with black-orange color palette
 - **60fps Animations**: Hardware-accelerated Framer Motion animations
 - **Touch Optimized**: 44px minimum touch targets with gesture support
@@ -43,7 +43,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/Q-Collector.git
+git clone https://github.com/ppongpan/Q-Collector.git
 cd Q-Collector
 
 # Install dependencies
@@ -148,7 +148,7 @@ border: 1px solid rgba(255, 255, 255, 0.2)
 ```bash
 # .env
 PORT=3001
-REACT_APP_VERSION=0.1.0
+REACT_APP_VERSION=0.1.5
 ```
 
 ### Custom Settings
@@ -203,7 +203,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- **Design Inspiration**: iOS 26 glass morphism principles
+- **Design Inspiration**: Modern glass morphism principles
 - **UI Components**: ShadCN UI component library
 - **Animations**: Framer Motion animation system
 - **Thai Fonts**: ThaiSans Neue typography family
@@ -236,6 +236,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using [Claude Code](https://claude.ai/code)**
 
-[⭐ Star this project](https://github.com/your-username/Q-Collector) | [🐛 Report Issues](https://github.com/your-username/Q-Collector/issues) | [💡 Request Features](https://github.com/your-username/Q-Collector/issues/new)
+[⭐ Star this project](https://github.com/ppongpan/Q-Collector) | [🐛 Report Issues](https://github.com/ppongpan/Q-Collector/issues) | [💡 Request Features](https://github.com/ppongpan/Q-Collector/issues/new)
 
 </div>
