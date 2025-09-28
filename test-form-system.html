@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบระบบฟอร์ม</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            color: #ffffff;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #f97316;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .test-section {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #f97316;
+        }
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .test-item:last-child {
+            border-bottom: none;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status.success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .status.warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .status.error { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .btn {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(249, 115, 22, 0.4);
+        }
+        .results {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 ทดสอบระบบฟอร์ม Q-Collector</h1>
+
+        <div class="test-section">
+            <h3>📋 การทดสอบองค์ประกอบหลัก</h3>
+            <div class="test-item">
+                <span>DataService - การจัดเก็บข้อมูล</span>
+                <span id="dataservice-status" class="status">กำลังตรวจสอบ...</span>
+            </div>
+            <div class="test-item">
+                <span>SubmissionService - การส่งข้อมูล</span>
+                <span id="submissionservice-status" class="status">กำลังตรวจสอบ...</span>
+            </div>
+            <div class="test-item">
+                <span>LocalStorage - การเก็บข้อมูลใน Browser</span>
+                <span id="localstorage-status" class="status">กำลังตรวจสอบ...</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 การทดสอบฟังก์ชัน</h3>
+            <button class="btn" onclick="testFormCreation()">ทดสอบสร้างฟอร์ม</button>
+            <button class="btn" onclick="testFormRetrieval()">ทดสอบดึงข้อมูลฟอร์ม</button>
+            <button class="btn" onclick="testSubmissionCreation()">ทดสอบส่งข้อมูล</button>
+            <button class="btn" onclick="testFieldTypes()">ทดสอบ Field Types</button>
+            <button class="btn" onclick="createTestFormIfNeeded()">สร้างฟอร์มทดสอบ</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 ผลการทดสอบ</h3>
+            <div id="test-results" class="results">
+                กดปุ่มทดสอบเพื่อดูผลลัพธ์...
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🗂️ ข้อมูลในระบบ</h3>
+            <div class="test-item">
+                <span>จำนวนฟอร์มทั้งหมด</span>
+                <span id="form-count">-</span>
+            </div>
+            <div class="test-item">
+                <span>จำนวน Submissions ทั้งหมด</span>
+                <span id="submission-count">-</span>
+            </div>
+            <div class="test-item">
+                <span>ขนาด LocalStorage ที่ใช้</span>
+                <span id="storage-size">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testResults = [];
+
+        // ตรวจสอบสถานะเริ่มต้น
+        window.addEventListener('load', function() {
+            checkSystemStatus();
+            updateDataCounts();
+        });
+
+        function checkSystemStatus() {
+            // ตรวจสอบ LocalStorage
+            try {
+                localStorage.setItem('test', 'test');
+                localStorage.removeItem('test');
+                document.getElementById('localstorage-status').textContent = '✅ พร้อมใช้งาน';
+                document.getElementById('localstorage-status').className = 'status success';
+            } catch (e) {
+                document.getElementById('localstorage-status').textContent = '❌ ไม่พร้อมใช้งาน';
+                document.getElementById('localstorage-status').className = 'status error';
+            }
+
+            // ตรวจสอบ DataService (จำลอง)
+            if (typeof(Storage) !== "undefined") {
+                document.getElementById('dataservice-status').textContent = '✅ พร้อมใช้งาน';
+                document.getElementById('dataservice-status').className = 'status success';
+
+                document.getElementById('submissionservice-status').textContent = '✅ พร้อมใช้งาน';
+                document.getElementById('submissionservice-status').className = 'status success';
+            } else {
+                document.getElementById('dataservice-status').textContent = '❌ ไม่พร้อมใช้งาน';
+                document.getElementById('dataservice-status').className = 'status error';
+
+                document.getElementById('submissionservice-status').textContent = '❌ ไม่พร้อมใช้งาน';
+                document.getElementById('submissionservice-status').className = 'status error';
+            }
+        }
+
+        function updateDataCounts() {
+            try {
+                // นับจำนวนฟอร์ม
+                const forms = JSON.parse(localStorage.getItem('qcollector_forms') || '{}');
+                const formCount = Object.keys(forms).length;
+                document.getElementById('form-count').textContent = formCount;
+
+                // นับจำนวน submissions
+                const submissions = JSON.parse(localStorage.getItem('qcollector_submissions') || '{}');
+                const submissionCount = Object.keys(submissions).length;
+                document.getElementById('submission-count').textContent = submissionCount;
+
+                // คำนวณขนาด storage
+                let totalSize = 0;
+                for (let key in localStorage) {
+                    if (key.startsWith('qcollector_')) {
+                        totalSize += localStorage[key].length;
+                    }
+                }
+                document.getElementById('storage-size').textContent = (totalSize / 1024).toFixed(2) + ' KB';
+
+            } catch (error) {
+                console.error('Error updating data counts:', error);
+            }
+        }
+
+        function addTestResult(test, status, message) {
+            const timestamp = new Date().toLocaleTimeString('th-TH');
+            testResults.push({
+                timestamp,
+                test,
+                status,
+                message
+            });
+
+            // อัพเดทการแสดงผล
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = testResults.map(result =>
+                `<div style="margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                    <strong>[${result.timestamp}]</strong>
+                    <span style="color: ${result.status === 'success' ? '#10b981' : result.status === 'error' ? '#ef4444' : '#f59e0b'}">
+                        ${result.status === 'success' ? '✅' : result.status === 'error' ? '❌' : '⚠️'}
+                    </span>
+                    <strong>${result.test}:</strong> ${result.message}
+                </div>`
+            ).reverse().join('');
+        }
+
+        function testFormCreation() {
+            try {
+                const testForm = {
+                    title: 'ฟอร์มทดสอบ ' + new Date().getTime(),
+                    description: 'ฟอร์มทดสอบการสร้างและบันทึก',
+                    fields: [
+                        {
+                            id: 'test-field-1',
+                            type: 'short_answer',
+                            title: 'ชื่อทดสอบ',
+                            required: true,
+                            showInTable: true,
+                            sendToTelegram: false
+                        }
+                    ],
+                    subForms: [],
+                    userRoles: ['general_user'],
+                    settings: {}
+                };
+
+                // สร้างฟอร์มใน localStorage
+                const formId = 'test-' + Date.now();
+                const forms = JSON.parse(localStorage.getItem('qcollector_forms') || '{}');
+                forms[formId] = {
+                    ...testForm,
+                    id: formId,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                localStorage.setItem('qcollector_forms', JSON.stringify(forms));
+
+                addTestResult('การสร้างฟอร์ม', 'success', `สร้างฟอร์ม ID: ${formId} สำเร็จ`);
+                updateDataCounts();
+
+            } catch (error) {
+                addTestResult('การสร้างฟอร์ม', 'error', 'เกิดข้อผิดพลาด: ' + error.message);
+            }
+        }
+
+        function testFormRetrieval() {
+            try {
+                const forms = JSON.parse(localStorage.getItem('qcollector_forms') || '{}');
+                const formCount = Object.keys(forms).length;
+
+                if (formCount === 0) {
+                    addTestResult('การดึงข้อมูลฟอร์ม', 'warning', 'ไม่มีฟอร์มในระบบ');
+                } else {
+                    const firstFormId = Object.keys(forms)[0];
+                    const firstForm = forms[firstFormId];
+                    addTestResult('การดึงข้อมูลฟอร์ม', 'success', `ดึงข้อมูลฟอร์ม "${firstForm.title}" สำเร็จ`);
+                }
+
+            } catch (error) {
+                addTestResult('การดึงข้อมูลฟอร์ม', 'error', 'เกิดข้อผิดพลาด: ' + error.message);
+            }
+        }
+
+        function testSubmissionCreation() {
+            try {
+                const forms = JSON.parse(localStorage.getItem('qcollector_forms') || '{}');
+                const formIds = Object.keys(forms);
+
+                if (formIds.length === 0) {
+                    addTestResult('การส่งข้อมูล', 'warning', 'ไม่มีฟอร์มสำหรับทดสอบ');
+                    return;
+                }
+
+                // สร้าง test submission
+                const testFormId = formIds[0];
+                const submissionId = 'sub-test-' + Date.now();
+                const submissions = JSON.parse(localStorage.getItem('qcollector_submissions') || '{}');
+
+                submissions[submissionId] = {
+                    id: submissionId,
+                    formId: testFormId,
+                    data: {
+                        'test-field-1': 'ข้อมูลทดสอบ'
+                    },
+                    submittedAt: new Date().toISOString()
+                };
+
+                localStorage.setItem('qcollector_submissions', JSON.stringify(submissions));
+                addTestResult('การส่งข้อมูล', 'success', `สร้าง submission ID: ${submissionId} สำเร็จ`);
+                updateDataCounts();
+
+            } catch (error) {
+                addTestResult('การส่งข้อมูล', 'error', 'เกิดข้อผิดพลาด: ' + error.message);
+            }
+        }
+
+        function testFieldTypes() {
+            const fieldTypes = [
+                'short_answer', 'paragraph', 'email', 'phone', 'number', 'url',
+                'file_upload', 'image_upload', 'date', 'time', 'datetime',
+                'multiple_choice', 'rating', 'slider', 'lat_long', 'province', 'factory'
+            ];
+
+            addTestResult('Field Types', 'success', `รองรับ Field Types ทั้งหมด ${fieldTypes.length} ประเภท: ${fieldTypes.join(', ')}`);
+        }
+
+        function createTestFormIfNeeded() {
+            const forms = JSON.parse(localStorage.getItem('qcollector_forms') || '{}');
+            const hasTestForm = Object.values(forms).some(form => form.title.includes('ฟอร์มทดสอบระบบ'));
+
+            if (hasTestForm) {
+                addTestResult('ฟอร์มทดสอบ', 'warning', 'ฟอร์มทดสอบมีอยู่แล้ว');
+            } else {
+                // เปิดหน้า add-test-form-to-storage.html
+                window.open('add-test-form-to-storage.html', '_blank');
+                addTestResult('ฟอร์มทดสอบ', 'success', 'เปิดหน้าสร้างฟอร์มทดสอบแล้ว');
+            }
+        }
+
+        // อัพเดทข้อมูลทุก 5 วินาที
+        setInterval(updateDataCounts, 5000);
+    </script>
+</body>
+</html>

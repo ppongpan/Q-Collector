@@ -1,15 +1,12 @@
-import React, { useState, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
+import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { GlassCard, GlassCardContent } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
 import { GlassInput, GlassTextarea, GlassSelect } from './ui/glass-input';
-import { useEnhancedToast } from './ui/enhanced-toast';
+import { ValidatedGlassInput } from './ui/field-validation';
+import { useToast } from './ui/toast';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSave, faMapMarkerAlt, faStar } from '@fortawesome/free-solid-svg-icons';
-import ThaiDateInput from './ui/thai-date-input';
-import ThaiDateTimeInput from './ui/thai-datetime-input';
-import ThaiPhoneInput from './ui/thai-phone-input';
-import { FieldErrorAlert } from './ui/alert';
 
 // Data services
 import dataService from '../services/DataService.js';
@@ -23,36 +20,9 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [fieldErrors, setFieldErrors] = useState({});
   const [fieldTouched, setFieldTouched] = useState({});
-  const [hasSubmissionAttempt, setHasSubmissionAttempt] = useState(false);
 
-  // Enhanced toast notifications
-  const toast = useEnhancedToast();
-
-  // Date formatting utilities
-  const formatDateForInput = (dateValue) => {
-    if (!dateValue) return '';
-    try {
-      const date = new Date(dateValue);
-      if (isNaN(date.getTime())) return '';
-      // Format as YYYY-MM-DD for HTML date input
-      return date.toISOString().split('T')[0];
-    } catch (error) {
-      return '';
-    }
-  };
-
-  const formatDateTimeForInput = (dateTimeValue) => {
-    if (!dateTimeValue) return '';
-    try {
-      const date = new Date(dateTimeValue);
-      if (isNaN(date.getTime())) return '';
-      // Format as YYYY-MM-DDTHH:MM for HTML datetime-local input
-      const isoString = date.toISOString();
-      return isoString.slice(0, 16); // Remove seconds and timezone
-    } catch (error) {
-      return '';
-    }
-  };
+  // Toast notifications
+  const toast = useToast();
 
   // Load form and submission data
   useEffect(() => {
@@ -128,19 +98,14 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
           }
           break;
         case 'phone':
-          const phoneDigits = value.replace(/\D/g, '');
-          if (phoneDigits.length !== 10) {
-            return 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง (ต้องการ 10 หลัก)';
+          const phoneRegex = /^[0-9\-\+\(\)\s]+$/;
+          if (!phoneRegex.test(value)) {
+            return 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง';
           }
           break;
         case 'url':
           try {
-            // Auto-add https:// if no protocol is specified
-            let urlToValidate = value;
-            if (!/^https?:\/\//i.test(value)) {
-              urlToValidate = 'https://' + value;
-            }
-            new URL(urlToValidate);
+            new URL(value);
           } catch {
             return 'รูปแบบ URL ไม่ถูกต้อง';
           }
@@ -177,7 +142,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     return '';
   };
 
-  const handleInputChange = useCallback((fieldId, value) => {
+  const handleInputChange = (fieldId, value) => {
     setFormData(prev => ({
       ...prev,
       [fieldId]: value
@@ -198,20 +163,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         [fieldId]: error
       }));
     }
-  }, [form]);
-
-  // Factory button click handler
-  const handleFactoryClick = useCallback((fieldId, factory, allowMultiple, currentValue) => {
-    if (allowMultiple) {
-      const selectedFactories = Array.isArray(currentValue) ? currentValue : (currentValue ? [currentValue] : []);
-      const newSelection = selectedFactories.includes(factory)
-        ? selectedFactories.filter(f => f !== factory)
-        : [...selectedFactories, factory];
-      handleInputChange(fieldId, newSelection);
-    } else {
-      handleInputChange(fieldId, factory);
-    }
-  }, [handleInputChange]);
+  };
 
   const handleFileChange = (fieldId, files) => {
     const updatedFiles = [...uploadedFiles];
@@ -235,34 +187,10 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         accuracy: position.accuracy,
         timestamp: position.timestamp
       });
-      toast.success('ได้รับตำแหน่งปัจจุบันแล้ว', {
-        title: "GPS สำเร็จ",
-        duration: 3000
-      });
+      toast.success('ได้รับตำแหน่งปัจจุบันแล้ว');
     } catch (error) {
       console.error('GPS error:', error);
-
-      let errorTitle = "ไม่สามารถรับตำแหน่ง GPS ได้";
-      let errorMessage = error.message;
-      let actionLabel = "ลองอีกครั้ง";
-
-      if (error.message.includes('Permission denied')) {
-        errorTitle = "ไม่ได้รับอนุญาตใช้ GPS";
-        errorMessage = "กรุณาอนุญาตให้เว็บไซต์เข้าถึงตำแหน่งของคุณ";
-        actionLabel = "ตั้งค่าอนุญาต";
-      } else if (error.message.includes('Position unavailable')) {
-        errorTitle = "ไม่พบสัญญาณ GPS";
-        errorMessage = "กรุณาตรวจสอบการเชื่อมต่อและลองใหม่";
-      }
-
-      toast.error(errorMessage, {
-        title: errorTitle,
-        duration: 8000,
-        action: {
-          label: actionLabel,
-          onClick: () => handleGPSLocation(fieldId)
-        }
-      });
+      toast.error('ไม่สามารถรับตำแหน่งปัจจุบันได้: ' + error.message);
     }
   };
 
@@ -312,46 +240,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     if (hasErrors) {
       setFieldErrors(errors);
       setFieldTouched(touched);
-
-      // Create detailed error message with specific field names and issues
-      const errorFields = Object.keys(errors);
-      const errorCount = errorFields.length;
-      const fieldNames = errorFields.map(fieldId => {
-        const field = form.fields.find(f => f.id === fieldId);
-        return field ? field.title : fieldId;
-      });
-
-      let errorMessage = `พบข้อผิดพลาด ${errorCount} จุด: `;
-      if (errorCount === 1) {
-        errorMessage = `กรุณาแก้ไขข้อมูล "${fieldNames[0]}" - ${errors[errorFields[0]]}`;
-      } else if (errorCount <= 3) {
-        errorMessage += fieldNames.join(', ');
-      } else {
-        errorMessage += `${fieldNames.slice(0, 2).join(', ')} และอีก ${errorCount - 2} ฟิลด์`;
-      }
-
-      toast.error(errorMessage, {
-        title: "ข้อมูลไม่ครบถ้วน",
-        duration: 8000,
-        action: {
-          label: "ไปที่ฟิลด์แรก",
-          onClick: () => {
-            const firstErrorField = document.querySelector(`[data-field-id="${errorFields[0]}"]`);
-            if (firstErrorField) {
-              firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          }
-        }
-      });
-
-      // Auto scroll to first error field
-      setTimeout(() => {
-        const firstErrorField = document.querySelector(`[data-field-id="${errorFields[0]}"]`);
-        if (firstErrorField) {
-          firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-
+      toast.error('กรุณาแก้ไขข้อมูลในฟิลด์ที่มีข้อผิดพลาด');
       return false;
     }
 
@@ -360,9 +249,6 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
 
   const handleSubmit = async () => {
     if (submitting) return;
-
-    // Mark that user has attempted to submit
-    setHasSubmissionAttempt(true);
 
     // Validate all fields before submission
     if (!validateAllFields()) {
@@ -374,7 +260,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
       let result;
       if (submissionId) {
         // Update existing submission
-        result = await submissionService.updateSubmission(formId, submissionId, formData);
+        result = await submissionService.updateSubmission(submissionId, formData);
       } else {
         // Create new submission
         const flatFiles = uploadedFiles.flatMap(uf =>
@@ -384,61 +270,16 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
       }
 
       if (result.success) {
-        toast.success(result.message || 'บันทึกข้อมูลเรียบร้อยแล้ว', {
-          title: submissionId ? "อัพเดทข้อมูลสำเร็จ" : "บันทึกข้อมูลสำเร็จ",
-          duration: 5000
-        });
+        toast.success(result.message);
         if (onSave) {
           onSave(result.submission || result.updatedSubmission, !!submissionId);
         }
       } else {
-        // Enhanced error handling for submission failure
-        console.error('Submission failed:', result);
-
-        if (result.validationErrors && result.validationErrors.length > 0) {
-          // Handle validation errors from server
-          const validationMessage = result.validationErrors.join(', ');
-          toast.error(validationMessage, {
-            title: "การตรวจสอบข้อมูลล้มเหลว",
-            duration: 10000,
-            action: {
-              label: "ตรวจสอบข้อมูล",
-              onClick: () => setHasSubmissionAttempt(true)
-            }
-          });
-        } else if (result.message) {
-          toast.error(result.message, {
-            title: "บันทึกข้อมูลไม่สำเร็จ",
-            duration: 8000
-          });
-        } else {
-          toast.error('กรุณาลองใหม่อีกครั้ง', {
-            title: "บันทึกข้อมูลไม่สำเร็จ",
-            duration: 8000
-          });
-        }
+        toast.error(result.message);
       }
     } catch (error) {
       console.error('Submit error:', error);
-
-      // Enhanced error handling with specific error types
-      let errorMessage = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
-
-      if (error.message.includes('Network')) {
-        errorMessage = 'เกิดปัญหาการเชื่อมต่อ กรุณาตรวจสอบอินเทอร์เน็ตและลองใหม่';
-      } else if (error.message.includes('Validation failed')) {
-        errorMessage = `ข้อมูลไม่ถูกต้อง: ${error.message.replace('Validation failed: ', '')}`;
-      } else if (error.message.includes('Permission denied')) {
-        errorMessage = 'ไม่มีสิทธิ์ในการบันทึกข้อมูล';
-      } else if (error.message.includes('Storage quota')) {
-        errorMessage = 'พื้นที่จัดเก็บข้อมูลเต็ม กรุณาลบข้อมูลเก่าหรือติดต่อผู้ดูแลระบบ';
-      } else if (error.message.includes('File too large')) {
-        errorMessage = 'ไฟล์ที่แนบมีขนาดใหญ่เกินไป กรุณาเลือกไฟล์ที่มีขนาดเล็กกว่า';
-      } else {
-        errorMessage += `: ${error.message}`;
-      }
-
-      toast.error(errorMessage);
+      toast.error('เกิดข้อผิดพลาด: ' + error.message);
     } finally {
       setSubmitting(false);
     }
@@ -447,45 +288,41 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   const renderField = (field) => {
     const fieldValue = formData[field.id];
 
-    // Check if field has validation error and user has attempted to submit
-    const hasError = hasSubmissionAttempt && field.required && validateField(field, fieldValue);
-    const fieldError = fieldErrors[field.id];
-    const isFieldTouched = fieldTouched[field.id];
+    // Check if field has validation error
+    const hasError = field.required && validateField(field, fieldValue);
+
+    // Wrapper function to add red neon effect for validation errors
+    const wrapWithErrorEffect = (fieldComponent) => {
+      if (hasError) {
+        return (
+          <div className="field-error-container p-3 rounded-xl transition-all duration-300">
+            {fieldComponent}
+          </div>
+        );
+      }
+      return fieldComponent;
+    };
 
     switch (field.type) {
       case 'short_answer':
       case 'email':
-      case 'url':
-        return (
-          <div key={field.id} data-field-id={field.id} className="space-y-1">
-            <GlassInput
-              label={field.title}
-              type={field.type === 'email' ? 'email' : field.type === 'url' ? 'url' : 'text'}
-              required={field.required}
-              placeholder={field.placeholder || `กรอก${field.title}`}
-              value={fieldValue || ''}
-              onChange={(e) => handleInputChange(field.id, e.target.value)}
-              hasValidationError={hasError || (isFieldTouched && fieldError)}
-            />
-            <FieldErrorAlert error={isFieldTouched && fieldError ? fieldError : null} />
-          </div>
-        );
-
       case 'phone':
-        return (
-          <ThaiPhoneInput
+      case 'url':
+        return wrapWithErrorEffect(
+          <ValidatedGlassInput
             key={field.id}
             label={field.title}
+            type={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : field.type === 'url' ? 'url' : 'text'}
             required={field.required}
-            placeholder={field.placeholder || "XXX-XXX-XXXX"}
+            placeholder={field.placeholder || `กรอก${field.title}`}
             value={fieldValue || ''}
             onChange={(e) => handleInputChange(field.id, e.target.value)}
-            hasValidationError={hasError}
+            error={fieldTouched[field.id] ? fieldErrors[field.id] : ''}
           />
         );
 
       case 'paragraph':
-        return (
+        return wrapWithErrorEffect(
           <GlassTextarea
             key={field.id}
             label={field.title}
@@ -494,13 +331,12 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
             value={fieldValue || ''}
             onChange={(e) => handleInputChange(field.id, e.target.value)}
             rows={4}
-            hasValidationError={hasError}
           />
         );
 
       case 'number':
-        return (
-          <GlassInput
+        return wrapWithErrorEffect(
+          <ValidatedGlassInput
             key={field.id}
             type="number"
             label={field.title}
@@ -508,25 +344,24 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
             placeholder={field.placeholder || `กরอก${field.title}`}
             value={fieldValue || ''}
             onChange={(e) => handleInputChange(field.id, e.target.value)}
-            hasValidationError={hasError}
+            error={fieldTouched[field.id] ? fieldErrors[field.id] : ''}
           />
         );
 
       case 'date':
-        return (
-          <ThaiDateInput
+        return wrapWithErrorEffect(
+          <GlassInput
             key={field.id}
+            type="date"
             label={field.title}
             required={field.required}
-            placeholder={field.placeholder || "DD/MM/YYYY"}
-            value={fieldValue}
+            value={fieldValue || ''}
             onChange={(e) => handleInputChange(field.id, e.target.value)}
-            hasValidationError={hasError}
           />
         );
 
       case 'time':
-        return (
+        return wrapWithErrorEffect(
           <GlassInput
             key={field.id}
             type="time"
@@ -534,20 +369,18 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
             required={field.required}
             value={fieldValue || ''}
             onChange={(e) => handleInputChange(field.id, e.target.value)}
-            hasValidationError={hasError}
           />
         );
 
       case 'datetime':
-        return (
-          <ThaiDateTimeInput
+        return wrapWithErrorEffect(
+          <GlassInput
             key={field.id}
+            type="datetime-local"
             label={field.title}
             required={field.required}
-            placeholder={field.placeholder || "DD/MM/YYYY HH:MM"}
-            value={fieldValue}
+            value={fieldValue || ''}
             onChange={(e) => handleInputChange(field.id, e.target.value)}
-            hasValidationError={hasError}
           />
         );
 
@@ -557,7 +390,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         const displayStyle = field.options?.displayStyle || 'radio';
 
         if (!options || options.length === 0) {
-          return (
+          return wrapWithErrorEffect(
             <div key={field.id} className="space-y-3">
               <label className="block text-sm font-medium text-foreground/80">
                 {field.title}
@@ -571,7 +404,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         }
 
         if (displayStyle === 'dropdown') {
-          return (
+          return wrapWithErrorEffect(
             <GlassSelect
               key={field.id}
               label={field.title}
@@ -949,90 +782,35 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         );
 
       case 'factory':
-        const factories = ['บางปะอิน', 'ระยอง', 'สระบุรี', 'สงขลา'];
-        const allowMultipleFactory = field.options?.allowMultiple || false;
-        const selectedFactories = Array.isArray(fieldValue) ? fieldValue : (fieldValue ? [fieldValue] : []);
+        const factories = ['โรงงานบางปะอิน', 'โรงงานระยอง', 'โรงงานสระบุรี', 'โรงงานสงขลา'];
 
         return (
-          <div key={field.id} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                {field.title}
-                {field.required && <span className="text-destructive ml-1">*</span>}
-              </label>
-              {field.description && (
-                <p className="text-sm text-muted-foreground">
-                  เลือกโรงงานที่ต้องการ
-                </p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {factories.map((factory, idx) => {
-                const isSelected = allowMultipleFactory ? selectedFactories.includes(factory) : fieldValue === factory;
-
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    variant={isSelected ? "default" : "outline"}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleFactoryClick(field.id, factory, allowMultipleFactory, fieldValue);
+          <div key={field.id} className="space-y-2">
+            <label className="block text-sm font-medium text-foreground/80">
+              {field.title}
+              {field.required && <span className="text-destructive ml-1">*</span>}
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {factories.map((factory, index) => (
+                <label key={index} className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border border-border/40 hover:bg-accent/20 transition-colors">
+                  <input
+                    type="checkbox"
+                    name={field.id}
+                    value={factory}
+                    checked={(fieldValue || []).includes(factory)}
+                    onChange={(e) => {
+                      const current = fieldValue || [];
+                      const newValue = e.target.checked
+                        ? [...current, factory]
+                        : current.filter(item => item !== factory);
+                      handleInputChange(field.id, newValue);
                     }}
-                    className={`
-                      inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium
-                      ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2
-                      focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none
-                      disabled:opacity-50 h-10 px-4 py-2 w-full min-h-[3rem] relative overflow-hidden
-                      border-2
-                      ${isSelected
-                        ? 'bg-white text-orange-600 border-orange-600 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-700 shadow-lg shadow-orange-500/25'
-                        : 'border-input bg-background hover:bg-orange-50 hover:text-orange-700 hover:border-orange-300 dark:hover:bg-orange-900/20 dark:hover:text-orange-200 dark:hover:border-orange-500'
-                      }
-                    `}
-                    aria-pressed={isSelected}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      {isSelected && (
-                        <svg
-                          className="w-4 h-4 text-orange-600"
-                          fill="none"
-                          strokeWidth="2"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <polyline points="20,6 9,17 4,12"></polyline>
-                        </svg>
-                      )}
-                      <span className="font-medium">{factory}</span>
-                    </div>
-                  </button>
-                );
-              })}
+                    className="w-4 h-4 text-primary border-border/40 rounded focus:ring-primary/40"
+                  />
+                  <span className="text-foreground/80">{factory}</span>
+                </label>
+              ))}
             </div>
-
-            {allowMultipleFactory && selectedFactories.length > 0 && (
-              <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 border">
-                <svg
-                  className="w-4 h-4 text-muted-foreground flex-shrink-0"
-                  fill="none"
-                  strokeWidth="2"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="m9 12 2 2 4-4"></path>
-                  <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"></path>
-                </svg>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">เลือกแล้ว {selectedFactories.length} โรงงาน</p>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedFactories.join(', ')}
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         );
 
@@ -1110,7 +888,6 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         >
           <GlassCard className="glass-container">
             <div className="p-4">
-
               <div className="space-y-4 sm:space-y-6">
                 {/* Main Form Fields */}
                 {form.fields?.map(field => renderField(field))}

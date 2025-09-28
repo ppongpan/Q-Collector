@@ -41,12 +41,8 @@ const UnifiedFieldRow = ({
         grid grid-cols-1 lg:grid-cols-[200px_1fr_180px]
         gap-2 lg:gap-3
         w-full
-        px-3 py-1.5
-        bg-background/30
-        rounded-xl
-        border border-border/20
+        px-0 py-1.5
         transition-all duration-200
-        hover:bg-background/50
         ${className}
       `}
       onClick={onClick}
@@ -54,7 +50,7 @@ const UnifiedFieldRow = ({
       {...props}
     >
       {/* Zone 1: Icon + Label (Fixed width 200px on desktop) */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-3 min-w-0 justify-start">
         {/* Icon Container */}
         {icon && (
           <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
@@ -64,7 +60,7 @@ const UnifiedFieldRow = ({
 
         {/* Label Container */}
         {label && (
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 text-left">
             {label}
           </div>
         )}
@@ -137,7 +133,7 @@ export const UnifiedFieldPreview = ({
 
   // Create standardized label with line-clamp support
   const standardLabel = (
-    <h3 className="text-base font-semibold text-foreground/90 line-clamp-2 leading-tight">
+    <h3 className="text-base font-semibold text-foreground/90 line-clamp-2 leading-tight text-left">
       {field.title || fieldType?.label || 'Untitled Field'}
     </h3>
   );

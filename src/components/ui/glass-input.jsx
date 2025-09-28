@@ -9,6 +9,8 @@ const GlassInput = React.forwardRef(({
   label,
   error,
   minimal = false,
+  hasValidationError = false,
+  required = false,
   ...props
 }, ref) => {
   const inputClasses = cn(
@@ -19,6 +21,7 @@ const GlassInput = React.forwardRef(({
     'focus-orange-neon hover-orange-neon',
     'transition-all duration-300 ease-out',
     error && 'border-destructive focus:border-destructive',
+    hasValidationError && 'red-neon-focus',
     className
   );
 
@@ -32,7 +35,10 @@ const GlassInput = React.forwardRef(({
   );
 
   const wrappedInput = (
-    <div className="relative group glass-input-group w-full">
+    <div className={cn(
+      "relative group glass-input-group w-full",
+      hasValidationError && "field-error-container"
+    )}>
       {label && (
         <label className={cn(
           'text-sm font-medium text-foreground/80 mb-2 block transition-all duration-300',
@@ -41,9 +47,11 @@ const GlassInput = React.forwardRef(({
           'group-focus-within:transform group-focus-within:-translate-y-0.5',
           'group-hover:transform group-hover:-translate-y-0.5',
           minimal && 'text-foreground/60',
-          !minimal && 'text-foreground/80'
+          !minimal && 'text-foreground/80',
+          hasValidationError && 'text-red-500'
         )}>
           {label}
+          {required && <span className="text-destructive ml-1">*</span>}
         </label>
       )}
       <div className="w-full">
@@ -71,6 +79,8 @@ const GlassTextarea = React.forwardRef(({
   label,
   error,
   minimal = false,
+  hasValidationError = false,
+  required = false,
   ...props
 }, ref) => {
   const textareaClasses = cn(
@@ -81,6 +91,7 @@ const GlassTextarea = React.forwardRef(({
     'focus-orange-neon hover-orange-neon',
     'transition-all duration-300 ease-out',
     error && 'border-destructive focus:border-destructive',
+    hasValidationError && 'red-neon-focus',
     className
   );
 
@@ -93,7 +104,10 @@ const GlassTextarea = React.forwardRef(({
   );
 
   return (
-    <div className="relative group glass-input-group w-full">
+    <div className={cn(
+      "relative group glass-input-group w-full",
+      hasValidationError && "field-error-container"
+    )}>
       {label && (
         <label className={cn(
           'text-sm font-medium text-foreground/80 mb-2 block transition-all duration-300',
@@ -102,9 +116,11 @@ const GlassTextarea = React.forwardRef(({
           'group-focus-within:transform group-focus-within:-translate-y-0.5',
           'group-hover:transform group-hover:-translate-y-0.5',
           minimal && 'text-foreground/60',
-          !minimal && 'text-foreground/80'
+          !minimal && 'text-foreground/80',
+          hasValidationError && 'text-red-500'
         )}>
           {label}
+          {required && <span className="text-destructive ml-1">*</span>}
         </label>
       )}
       <div className="w-full">
@@ -130,6 +146,7 @@ const GlassSelect = React.forwardRef(({
   label,
   error,
   minimal = false,
+  required = false,
   children,
   ...props
 }, ref) => {
@@ -156,7 +173,10 @@ const GlassSelect = React.forwardRef(({
   );
 
   return (
-    <div className="relative group glass-input-group w-full">
+    <div className={cn(
+      "relative group glass-input-group w-full",
+      error && "field-error-container"
+    )}>
       {label && (
         <label className={cn(
           'text-sm font-medium text-foreground/80 mb-2 block transition-all duration-300',
@@ -165,9 +185,11 @@ const GlassSelect = React.forwardRef(({
           'group-focus-within:transform group-focus-within:-translate-y-0.5',
           'group-hover:transform group-hover:-translate-y-0.5',
           minimal && 'text-foreground/60',
-          !minimal && 'text-foreground/80'
+          !minimal && 'text-foreground/80',
+          error && 'text-red-500'
         )}>
           {label}
+          {required && <span className="text-destructive ml-1">*</span>}
         </label>
       )}
       <div className="w-full">

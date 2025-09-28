@@ -3,6 +3,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faStar, faCalendarAlt, faClock, faCalendarDay } from '@fortawesome/free-solid-svg-icons';
 import GlassTooltip from './ui/glass-tooltip';
 import MultiChoiceButtons from './ui/multi-choice-buttons';
+import ThaiDateInput from './ui/thai-date-input';
+import ThaiDateTimeInput from './ui/thai-datetime-input';
+import ThaiPhoneInput from './ui/thai-phone-input';
 
 /**
  * FieldInlinePreview - Interactive preview for collapsed field cards
@@ -54,10 +57,10 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
     onTempChange?.(v);
   };
 
-  // Enhanced input styling with orange neon focus effects
-  const inputBaseClasses = "w-full max-w-md bg-background/50 border border-border/50 rounded-lg px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:shadow-orange-neon transition-all duration-200 hover:border-border/70";
-  const textareaClasses = "w-full max-w-md min-h-[80px] bg-background/50 border border-border/50 rounded-lg px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:shadow-orange-neon resize-none transition-all duration-200 hover:border-border/70";
-  const selectClasses = "w-full max-w-md bg-background/50 border border-border/50 rounded-lg px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:shadow-orange-neon transition-all duration-200 hover:border-border/70";
+  // Enhanced input styling with orange neon focus effects - matching glass-input pattern
+  const inputBaseClasses = "w-full max-w-md input-glass border-0 bg-transparent placeholder:text-muted-foreground/50 glass-interactive blur-edge focus-orange-neon hover-orange-neon transition-all duration-300 ease-out";
+  const textareaClasses = "w-full max-w-md min-h-[80px] input-glass border-0 bg-transparent placeholder:text-muted-foreground/50 glass-interactive blur-edge focus-orange-neon hover-orange-neon transition-all duration-300 ease-out resize-none";
+  const selectClasses = "w-full max-w-md input-glass border-0 bg-transparent glass-interactive blur-edge focus-orange-neon hover-orange-neon transition-all duration-300 ease-out [&>option]:bg-background [&>option]:text-foreground [&>option]:dark:bg-slate-800 [&>option]:dark:text-slate-200";
 
   // Helper function to wrap element with tooltip if description exists
   const withTooltip = (element) => {
@@ -188,28 +191,19 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
       );
 
     case "phone":
-      const isValidPhone = temp ? /^[0-9]{3}-?[0-9]{3}-?[0-9]{4}$|^[0-9]{10}$/.test(temp.replace(/\s/g, '')) : null;
+      const phoneDigits = temp ? temp.replace(/\D/g, '') : '';
+      const isValidPhone = phoneDigits.length === 10;
       return withTooltip(
         <div className="w-full max-w-md space-y-1">
           <div className="relative">
-            <input
-              type="tel"
+            <ThaiPhoneInput
               value={temp}
-              onChange={(e) => {
-                let value = e.target.value.replace(/[^0-9]/g, '');
-                if (value.length >= 3 && value.length <= 6) {
-                  value = value.slice(0, 3) + '-' + value.slice(3);
-                } else if (value.length > 6) {
-                  value = value.slice(0, 3) + '-' + value.slice(3, 6) + '-' + value.slice(6, 10);
-                }
-                handleChange(value);
-              }}
-              placeholder={field.placeholder || "081-234-5678"}
-              className={`${inputBaseClasses} ${temp && isValidPhone === false ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
+              onChange={handleChange}
+              placeholder="XXX-XXX-XXXX"
+              className={`${inputBaseClasses} ${temp && !isValidPhone ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
               aria-label={field.title}
-              maxLength={12}
             />
-            {temp && isValidPhone !== null && (
+            {temp && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                 {isValidPhone ? (
                   <span className="text-green-500 text-sm">✓</span>
@@ -219,8 +213,8 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
               </div>
             )}
           </div>
-          {temp && isValidPhone === false && (
-            <div className="text-xs text-red-500">รูปแบบเบอร์โทรไม่ถูกต้อง (081-234-5678)</div>
+          {temp && !isValidPhone && phoneDigits.length > 0 && (
+            <div className="text-xs text-red-500">รูปแบบเบอร์โทรไม่ถูกต้อง (ต้องการ 10 หลัก)</div>
           )}
         </div>
       );
@@ -280,36 +274,39 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
 
       const formatDateForDisplay = (dateValue) => {
         if (!dateValue) return '';
-        const date = new Date(dateValue);
-        if (isNaN(date.getTime())) return dateValue;
-        return date.toLocaleDateString('th-TH', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
+        try {
+          const date = new Date(dateValue);
+          if (isNaN(date.getTime())) return dateValue;
+          const day = date.getDate().toString().padStart(2, '0');
+          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          const year = date.getFullYear();
+          return `${day}/${month}/${year}`;
+        } catch (error) {
+          return dateValue;
+        }
+      };
+
+      const formatDateForInput = (dateValue) => {
+        if (!dateValue) return '';
+        try {
+          const date = new Date(dateValue);
+          if (isNaN(date.getTime())) return '';
+          // Format as YYYY-MM-DD for HTML date input
+          return date.toISOString().split('T')[0];
+        } catch (error) {
+          return '';
+        }
       };
 
       return withTooltip(
         <div className="w-full max-w-md space-y-1">
-          <div className="relative">
-            <input
-              ref={dateInputRef}
-              type="date"
-              value={temp}
-              onChange={(e) => handleChange(e.target.value)}
-              className={`${inputBaseClasses} pr-10`}
-              aria-label={field.title}
-            />
-            <button
-              type="button"
-              onClick={handleDateIconClick}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-orange-500 transition-colors duration-200 focus:outline-none focus:text-orange-500"
-              aria-label="เปิดปฏิทิน"
-              tabIndex={-1}
-            >
-              <FontAwesomeIcon icon={faCalendarAlt} className="w-4 h-4" />
-            </button>
-          </div>
+          <ThaiDateInput
+            value={temp}
+            onChange={(e) => handleChange(e.target.value)}
+            className={inputBaseClasses}
+            placeholder="DD/MM/YYYY"
+            aria-label={field.title}
+          />
         </div>
       );
 
@@ -372,11 +369,10 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
           const date = new Date(datetimeValue);
           if (isNaN(date.getTime())) return datetimeValue;
 
-          const dateStr = date.toLocaleDateString('th-TH', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-          });
+          const day = date.getDate().toString().padStart(2, '0');
+          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          const year = date.getFullYear();
+          const dateStr = `${day}/${month}/${year}`;
 
           const timeStr = date.toLocaleTimeString('th-TH', {
             hour: '2-digit',
@@ -390,29 +386,28 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
         }
       };
 
+      const formatDateTimeForInput = (datetimeValue) => {
+        if (!datetimeValue) return '';
+        try {
+          const date = new Date(datetimeValue);
+          if (isNaN(date.getTime())) return '';
+          // Format as YYYY-MM-DDTHH:MM for HTML datetime-local input
+          const isoString = date.toISOString();
+          return isoString.slice(0, 16); // Remove seconds and timezone
+        } catch (error) {
+          return '';
+        }
+      };
+
       return withTooltip(
         <div className="w-full max-w-md space-y-1">
-          <div className="relative">
-            <input
-              ref={datetimeInputRef}
-              type="datetime-local"
-              value={temp}
-              onChange={(e) => handleChange(e.target.value)}
-              className={`${inputBaseClasses} pr-12`}
-              aria-label={field.title}
-            />
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
-              <button
-                type="button"
-                onClick={handleDateTimeIconClick}
-                className="text-muted-foreground hover:text-orange-500 transition-colors duration-200 focus:outline-none focus:text-orange-500"
-                aria-label="เปิดปฏิทินและเวลา"
-                tabIndex={-1}
-              >
-                <FontAwesomeIcon icon={faCalendarDay} className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+          <ThaiDateTimeInput
+            value={temp}
+            onChange={(e) => handleChange(e.target.value)}
+            className={inputBaseClasses}
+            placeholder="DD/MM/YYYY HH:MM"
+            aria-label={field.title}
+          />
         </div>
       );
 
@@ -503,7 +498,7 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
       return withTooltip(
         <div className="space-y-2" role="group" aria-label={field.title}>
           {options.slice(0, 3).map((opt, idx) => (
-            <label key={idx} className="flex items-center space-x-3 text-sm cursor-pointer hover:bg-accent/20 rounded-md p-1 transition-colors">
+            <label key={idx} className="flex items-center space-x-3 text-sm cursor-pointer hover:bg-orange-50 hover:border-orange-200 dark:hover:bg-orange-900/20 rounded-md p-1 transition-all duration-200 border border-transparent">
               <input
                 type={allowMultiple ? "checkbox" : "radio"}
                 name={`preview-${field.id}`}
@@ -1138,7 +1133,7 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
         } else if (value && isValid === true) {
           return `${baseClass} border-green-500 text-green-600 focus:border-green-500 focus:ring-green-500/20`;
         } else {
-          return `${baseClass} border-border/50 hover:border-border/70 focus:border-orange-500 focus:ring-orange-500/20 focus:shadow-orange-neon`;
+          return `${baseClass} input-glass border-0 bg-transparent glass-interactive blur-edge focus-orange-neon hover-orange-neon transition-all duration-300 ease-out`;
         }
       };
 
@@ -1276,11 +1271,6 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
             </div>
           )}
 
-          {/* Coordinate Range Helper */}
-          <div className="text-xs text-muted-foreground space-y-1">
-            <div>• ละติจูด: -90 ถึง 90 (เหนือ-ใต้)</div>
-            <div>• ลองจิจูด: -180 ถึง 180 (ตะวันออก-ตะวันตก)</div>
-          </div>
         </div>
       );
 
@@ -1336,7 +1326,7 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
 
       return withTooltip(
         <div className="w-full max-w-md space-y-2">
-          <div className="flex flex-wrap gap-2" role="group" aria-label={field.title}>
+          <div className="grid grid-cols-2 gap-3 relative z-10" role="group" aria-label={field.title}>
             {factories.map((factory, idx) => {
               const isSelected = allowMultipleFactory ? selectedFactories.includes(factory) : temp === factory;
               return (
@@ -1344,14 +1334,45 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
                   key={idx}
                   type="button"
                   onClick={() => handleFactoryChange(factory)}
-                  className={`px-4 py-2 text-sm rounded-lg border-2 transition-all duration-200 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-green-500/50 ${
-                    isSelected
-                      ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-600/25 scale-105'
-                      : 'bg-background/50 border-border/50 hover:bg-green-50 hover:border-green-300 hover:scale-102 dark:hover:bg-green-900/20'
-                  }`}
+                  className={`
+                    inline-flex items-center justify-center
+                    px-4 py-3 min-h-[3rem]
+                    border-0
+                    text-sm font-medium
+                    transition-all duration-300 ease-out
+                    focus:outline-none focus-orange-neon
+                    will-change-transform
+                    flex-shrink-0 cursor-pointer
+                    active:scale-95 transform-gpu
+                    factory-button-rounded
+                    hover-orange-neon
+                    rounded-lg
+                    ${isSelected
+                      ? `
+                        bg-orange-600/90 text-white
+                        hover:bg-orange-500
+                        scale-[1.02] shadow-lg
+                        blur-edge-intense
+                      `
+                      : `
+                        bg-background/60 border-border/30
+                        text-foreground
+                        hover:bg-orange-100 hover:text-orange-700 hover:border-orange-300
+                        dark:hover:bg-orange-900/30 dark:hover:text-orange-200
+                        hover:scale-[1.01]
+                        blur-edge
+                      `
+                    }
+                  `}
+                  style={{
+                    borderRadius: '0.5rem !important',
+                    '--border-radius': '0.5rem'
+                  }}
                   aria-pressed={isSelected}
                 >
-                  {factory}
+                  <span className="text-center leading-tight line-clamp-2 max-w-full break-words hyphens-auto">
+                    {factory}
+                  </span>
                 </button>
               );
             })}

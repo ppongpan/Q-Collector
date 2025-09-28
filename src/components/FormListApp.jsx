@@ -1,76 +1,162 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faPlus, faEdit, faEye, faTrashAlt, faCopy,
-  faFileAlt, faUsers, faCalendarAlt, faBuilding
+  faFileAlt, faUsers, faCalendarAlt, faBuilding, faBell
 } from '@fortawesome/free-solid-svg-icons';
+import dataService from '../services/DataService.js';
 
-export default function FormListApp() {
-  const [forms] = useState([
-    {
-      id: 1,
-      title: 'ฟอร์มลงทะเบียนพนักงาน',
-      description: 'ฟอร์มสำหรับลงทะเบียนพนักงานใหม่ รวมข้อมูลส่วนบุคคลและตำแหน่งงาน',
-      category: 'HR',
-      icon: faUsers,
-      submissions: 45,
-      lastUpdated: '2024-01-15',
-      status: 'active'
-    },
-    {
-      id: 2,
-      title: 'ฟอร์มขออนุมัติลางาน',
-      description: 'ฟอร์มสำหรับการขออนุมัติลางานประเภทต่างๆ พร้อมระบบอนุมัติ',
-      category: 'HR',
-      icon: faCalendarAlt,
-      submissions: 128,
-      lastUpdated: '2024-01-10',
-      status: 'active'
-    },
-    {
-      id: 3,
-      title: 'ฟอร์มรายงานการประชุม',
-      description: 'ฟอร์มบันทึกรายงานการประชุม วาระการประชุม และมติที่ได้',
-      category: 'Meeting',
-      icon: faFileAlt,
-      submissions: 23,
-      lastUpdated: '2024-01-08',
-      status: 'active'
-    },
-    {
-      id: 4,
-      title: 'ฟอร์มการตรวจสอบอุปกรณ์',
-      description: 'ฟอร์มสำหรับการตรวจสอบและบำรุงรักษาอุปกรณ์ในโรงงาน',
-      category: 'Maintenance',
-      icon: faBuilding,
-      submissions: 67,
-      lastUpdated: '2024-01-12',
-      status: 'active'
-    },
-    {
-      id: 5,
-      title: 'ฟอร์มประเมินความพึงพอใจ',
-      description: 'ฟอร์มประเมินความพึงพอใจของลูกค้าต่อการให้บริการ',
-      category: 'Survey',
-      icon: faUsers,
-      submissions: 89,
-      lastUpdated: '2024-01-14',
-      status: 'active'
-    },
-    {
-      id: 6,
-      title: 'ฟอร์มคำร้องขอวัสดุอุปกรณ์',
-      description: 'ฟอร์มสำหรับการขอวัสดุและอุปกรณ์สำนักงาน',
-      category: 'Request',
-      icon: faFileAlt,
-      submissions: 156,
-      lastUpdated: '2024-01-16',
-      status: 'active'
+// USER_ROLES from version 0.1.5
+const USER_ROLES = {
+  SUPER_ADMIN: { id: 'super_admin', color: 'text-red-500', bgColor: 'bg-red-500/10', name: 'Super Admin', isDefault: true },
+  ADMIN: { id: 'admin', color: 'text-pink-500', bgColor: 'bg-pink-500/10', name: 'Admin', isDefault: true },
+  MODERATOR: { id: 'moderator', color: 'text-purple-500', bgColor: 'bg-purple-500/10', name: 'Moderator', isDefault: false },
+  CUSTOMER_SERVICE: { id: 'customer_service', color: 'text-blue-500', bgColor: 'bg-blue-500/10', name: 'Customer Service', isDefault: false },
+  TECHNIC: { id: 'technic', color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', name: 'Technic', isDefault: false },
+  SALE: { id: 'sale', color: 'text-green-500', bgColor: 'bg-green-500/10', name: 'Sale', isDefault: false },
+  MARKETING: { id: 'marketing', color: 'text-orange-500', bgColor: 'bg-orange-500/10', name: 'Marketing', isDefault: false },
+  GENERAL_USER: { id: 'general_user', color: 'text-gray-500', bgColor: 'bg-gray-500/10', name: 'General User', isDefault: false }
+};
+
+export default function FormListApp({ onCreateForm, onEditForm, onViewSubmissions, onFormView }) {
+  const [forms, setForms] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Role helper functions from version 0.1.5
+  const getRoleByName = (roleName) => {
+    return Object.values(USER_ROLES).find(role => role.name === roleName);
+  };
+
+  const getRoleById = (roleId) => {
+    return Object.values(USER_ROLES).find(role => role.id === roleId);
+  };
+
+  const getRoleColor = (role) => {
+    // Handle both role names and role IDs
+    let roleObj;
+    if (typeof role === 'string') {
+      roleObj = getRoleByName(role) || getRoleById(role);
     }
-  ]);
+
+    if (roleObj) {
+      return `${roleObj.bgColor} ${roleObj.color}`;
+    }
+
+    // Fallback for old role names
+    const colors = {
+      'Admin': 'bg-red-500/20 text-red-200',
+      'Manager': 'bg-blue-500/20 text-blue-200',
+      'HR Manager': 'bg-purple-500/20 text-purple-200',
+      'Supervisor': 'bg-green-500/20 text-green-200',
+      'Employee': 'bg-yellow-500/20 text-yellow-200',
+      'Technician': 'bg-orange-500/20 text-orange-200',
+      'All': 'bg-gray-500/20 text-gray-200'
+    };
+    return colors[role] || 'bg-gray-500/20 text-gray-200';
+  };
+
+  const convertRoleIdsToNames = (roleIds) => {
+    if (!Array.isArray(roleIds)) return ['All'];
+    return roleIds.map(roleId => {
+      const role = getRoleById(roleId);
+      return role ? role.name : roleId;
+    });
+  };
+
+  // Load forms from DataService
+  useEffect(() => {
+    loadForms();
+  }, []);
+
+  const loadForms = () => {
+    setLoading(true);
+    try {
+      const formsData = dataService.getFormsArray();
+
+      // Process forms with submission counts and enhanced display data
+      const formsWithStats = formsData.map(form => {
+        const submissions = dataService.getSubmissionsByFormId(form.id);
+        const submissionCount = submissions.length;
+
+        // Extract category from form settings or default
+        const category = form.settings?.category || 'General';
+
+        // Get appropriate icon based on form type or category
+        const icon = getFormIcon(form, category);
+
+        // Format last updated date
+        const formatDate = (dateValue) => {
+          try {
+            const date = new Date(dateValue);
+            if (isNaN(date.getTime())) return 'Invalid Date';
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+          } catch (error) {
+            return 'Invalid Date';
+          }
+        };
+        const lastUpdated = formatDate(form.updatedAt || form.createdAt);
+
+        return {
+          ...form,
+          category,
+          icon,
+          submissions: submissionCount,
+          lastUpdated,
+          status: 'active',
+          // Extract user roles and Telegram settings from form data
+          selectedRoles: form.visibleRoles || ['general_user'],
+          telegramEnabled: form.settings?.telegram?.enabled || false
+        };
+      });
+
+      setForms(formsWithStats);
+    } catch (error) {
+      console.error('Error loading forms:', error);
+      setForms([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get appropriate icon for form based on its content
+  const getFormIcon = (form, category) => {
+    // Check form fields for specific types to suggest icons
+    if (form.fields) {
+      const hasUserFields = form.fields.some(field =>
+        ['email', 'phone'].includes(field.type) ||
+        field.title.toLowerCase().includes('ชื่อ') ||
+        field.title.toLowerCase().includes('name')
+      );
+      if (hasUserFields) return faUsers;
+
+      const hasLocationFields = form.fields.some(field =>
+        ['lat_long', 'province', 'factory'].includes(field.type)
+      );
+      if (hasLocationFields) return faBuilding;
+
+      const hasDateFields = form.fields.some(field =>
+        ['date', 'datetime'].includes(field.type)
+      );
+      if (hasDateFields) return faCalendarAlt;
+    }
+
+    // Default icon
+    return faFileAlt;
+  };
+
+  // Handle form card click - navigate to form view for new submission
+  const handleFormClick = (formId) => {
+    // Navigate to form view for data entry (not submissions list)
+    if (onFormView) {
+      onFormView(formId);
+    }
+  };
 
   const getCategoryColor = (category) => {
     const colors = {
@@ -84,71 +170,116 @@ export default function FormListApp() {
   };
 
   const handleNewForm = () => {
-    console.log('Create new form');
+    if (onCreateForm) {
+      onCreateForm();
+    }
   };
 
   const handleEdit = (formId) => {
-    console.log('Edit form:', formId);
+    if (onEditForm) {
+      onEditForm(formId);
+    }
   };
 
   const handleView = (formId) => {
-    console.log('View form submissions:', formId);
+    if (onViewSubmissions) {
+      onViewSubmissions(formId);
+    }
   };
 
-  const handleDuplicate = (formId) => {
-    console.log('Duplicate form:', formId);
+  const handleDuplicate = async (formId) => {
+    try {
+      const originalForm = dataService.getForm(formId);
+      if (!originalForm) {
+        alert('❌ ไม่พบฟอร์มที่ต้องการทำสำเนา');
+        return;
+      }
+
+      // Create duplicate with new ID and title
+      const duplicateForm = {
+        ...originalForm,
+        title: `${originalForm.title} (สำเนา)`,
+        description: originalForm.description,
+        fields: [...originalForm.fields],
+        subForms: [...originalForm.subForms],
+        settings: { ...originalForm.settings }
+      };
+
+      // Remove ID so DataService creates a new one
+      delete duplicateForm.id;
+      delete duplicateForm.createdAt;
+      delete duplicateForm.updatedAt;
+
+      const newForm = dataService.createForm(duplicateForm);
+
+      // Reload forms to show the duplicate
+      loadForms();
+
+      alert('✅ ทำสำเนาฟอร์มเรียบร้อยแล้ว');
+    } catch (error) {
+      console.error('Duplicate error:', error);
+      alert('❌ เกิดข้อผิดพลาดในการทำสำเนาฟอร์ม');
+    }
   };
 
-  const handleDelete = (formId) => {
-    console.log('Delete form:', formId);
+  const handleDelete = async (formId) => {
+    const form = dataService.getForm(formId);
+    if (!form) {
+      alert('❌ ไม่พบฟอร์มที่ต้องการลบ');
+      return;
+    }
+
+    const submissions = dataService.getSubmissionsByFormId(formId);
+    const submissionCount = submissions.length;
+
+    let confirmMessage = `⚠️ คุณแน่ใจหรือไม่ที่จะลบฟอร์ม "${form.title}"?\n\nการลบจะไม่สามารถย้อนกลับได้`;
+
+    if (submissionCount > 0) {
+      confirmMessage += `\n\n🚨 ฟอร์มนี้มีข้อมูล ${submissionCount} รายการ ข้อมูลทั้งหมดจะถูกลบด้วย`;
+    }
+
+    const confirmed = window.confirm(confirmMessage);
+    if (confirmed) {
+      try {
+        dataService.deleteForm(formId);
+
+        // Reload forms to reflect deletion
+        loadForms();
+
+        alert('✅ ลบฟอร์มเรียบร้อยแล้ว');
+      } catch (error) {
+        console.error('Delete error:', error);
+        alert('❌ เกิดข้อผิดพลาดในการลบฟอร์ม');
+      }
+    }
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <motion.header
-        className="glass-nav sticky top-0 z-50 border-b border-border/40"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <div className="container-responsive">
-          <div className="flex items-center justify-between h-16 lg:h-20">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                <FontAwesomeIcon icon={faFileAlt} className="text-primary text-lg" />
-              </div>
-              <div>
-                <h1 className="text-xl lg:text-2xl font-bold text-foreground">
-                  จัดการฟอร์ม
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  รายการฟอร์มทั้งหมดในระบบ
-                </p>
-              </div>
-            </div>
-
-            <GlassButton
-              onClick={handleNewForm}
-              className="gap-2"
-            >
-              <FontAwesomeIcon icon={faPlus} />
-              สร้างฟอร์มใหม่
-            </GlassButton>
-          </div>
-        </div>
-      </motion.header>
 
       {/* Form List Content */}
       <main className="container-responsive py-8">
-        <motion.div
-          className="form-list-grid-container"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <div className="animated-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {forms.map((form, index) => (
+        {loading ? (
+          <motion.div
+            className="flex items-center justify-center py-16"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="text-center">
+              <div className="text-xl font-semibold text-foreground/80 mb-2">กำลังโหลดฟอร์ม...</div>
+              <div className="text-sm text-muted-foreground">โปรดรอสักครู่</div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            className="form-list-grid-container"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <div className="animated-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {forms.map((form, index) => (
               <motion.div
                 key={form.id}
                 className="animated-grid-item"
@@ -160,107 +291,149 @@ export default function FormListApp() {
                   ease: [0.4, 0, 0.2, 1]
                 }}
               >
-                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out h-full flex flex-col">
-                  <GlassCardHeader className="flex-1">
-                    {/* Category Badge */}
-                    <div className="flex items-center justify-between mb-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r ${getCategoryColor(form.category)} text-foreground/80 border border-border/30`}>
-                        {form.category}
-                      </span>
-                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getCategoryColor(form.category)} flex items-center justify-center`}>
-                        <FontAwesomeIcon icon={form.icon} className="text-sm text-foreground/70" />
-                      </div>
-                    </div>
-
-                    {/* Form Title & Description */}
-                    <GlassCardTitle className="text-lg font-semibold leading-tight mb-2 group-hover:text-primary/90 transition-colors">
-                      {form.title}
+                <GlassCard
+                  className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out h-full flex flex-col cursor-pointer"
+                  onClick={() => handleFormClick(form.id)}
+                >
+                  {/* Content Area - Expandable */}
+                  <div className="flex-1 p-4">
+                    {/* Form Title with Telegram Icon */}
+                    <GlassCardTitle className="form-card-title mb-2 group-hover:text-primary/90 transition-colors text-left flex items-center gap-2">
+                      <span>{form.title}</span>
+                      {form.telegramEnabled && (
+                        <FontAwesomeIcon
+                          icon={faBell}
+                          className="text-sm text-blue-400 flex-shrink-0"
+                          title="มีการแจ้งเตือน Telegram"
+                        />
+                      )}
                     </GlassCardTitle>
 
-                    <GlassCardDescription className="text-sm text-muted-foreground/80 line-clamp-3 mb-4 group-hover:text-muted-foreground transition-colors">
+                    {/* Form Description */}
+                    <GlassCardDescription className="form-card-description line-clamp-2 mb-3 group-hover:text-muted-foreground transition-colors text-left">
                       {form.description}
                     </GlassCardDescription>
 
-                    {/* Stats */}
-                    <div className="flex items-center justify-between text-xs text-muted-foreground/60 mb-4">
-                      <span>{form.submissions} submissions</span>
-                      <span>อัพเดต: {form.lastUpdated}</span>
+                    {/* Role Tags Section */}
+                    <div className="flex flex-wrap gap-1 justify-start mb-3">
+                      {/* Role Tags */}
+                      {convertRoleIdsToNames(form.selectedRoles)?.map((roleName, index) => (
+                        <span
+                          key={index}
+                          className={`form-card-tag inline-flex items-center ${getRoleColor(roleName)}`}
+                        >
+                          {roleName}
+                        </span>
+                      ))}
                     </div>
-                  </GlassCardHeader>
+                  </div>
 
-                  {/* Action Buttons */}
-                  <div className="px-6 pb-6">
-                    <div className="flex items-center gap-2">
-                      <GlassButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleView(form.id)}
-                        className="flex-1 gap-2 hover:bg-primary/10"
-                        tooltip="ดู Submissions"
-                      >
-                        <FontAwesomeIcon icon={faEye} className="text-xs" />
-                        ดู
-                      </GlassButton>
+                  {/* Footer Area - Fixed at Bottom */}
+                  <div className="mt-auto p-4 pt-0">
+                    {/* Stats with Action Icons */}
+                    <div className="form-card-stats flex items-center justify-between border-t border-border/20 pt-3">
+                      {/* Left side - Submissions and Update date as tags */}
+                      <div className="flex items-center gap-2 text-left">
+                        <span
+                          className="form-card-tag inline-flex items-center justify-center border border-muted-foreground/30 text-muted-foreground/60"
+                          title="จำนวนข้อมูล"
+                        >
+                          {form.submissions}
+                        </span>
+                        <span
+                          className="form-card-tag inline-flex items-center justify-center border border-muted-foreground/30 text-muted-foreground/60"
+                          title="Updated date"
+                        >
+                          {form.lastUpdated}
+                        </span>
+                      </div>
 
-                      <GlassButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(form.id)}
-                        className="flex-1 gap-2 hover:bg-blue-500/10"
-                        tooltip="แก้ไขฟอร์ม"
-                      >
-                        <FontAwesomeIcon icon={faEdit} className="text-xs" />
-                        แก้ไข
-                      </GlassButton>
+                      {/* Right side - Action Icons with touch-friendly areas */}
+                      <div className="flex items-center gap-6">
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleView(form.id);
+                          }}
+                          className="flex items-center justify-center w-8 h-8 transition-all duration-300 cursor-pointer group"
+                          title="ดูข้อมูล"
+                          style={{
+                            borderRadius: '50%',
+                            background: 'transparent',
+                            clipPath: 'circle(50% at center)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = 'radial-gradient(circle, rgba(249, 115, 22, 0.1) 0%, rgba(234, 88, 12, 0.05) 70%, transparent 70%)';
+                            e.target.style.boxShadow = '0 0 15px rgba(249, 115, 22, 0.2)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = 'transparent';
+                            e.target.style.boxShadow = 'none';
+                          }}
+                        >
+                          <FontAwesomeIcon
+                            icon={faEye}
+                            className="text-sm text-muted-foreground/60 group-hover:text-primary transition-colors"
+                          />
+                        </div>
 
-                      <GlassButton
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDuplicate(form.id)}
-                        className="hover:bg-green-500/10"
-                        tooltip="ทำสำเนา"
-                      >
-                        <FontAwesomeIcon icon={faCopy} className="text-xs" />
-                      </GlassButton>
-
-                      <GlassButton
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(form.id)}
-                        className="hover:bg-red-500/10 text-red-400/70 hover:text-red-400"
-                        tooltip="ลบฟอร์ม"
-                      >
-                        <FontAwesomeIcon icon={faTrashAlt} className="text-xs" />
-                      </GlassButton>
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(form.id);
+                          }}
+                          className="flex items-center justify-center w-8 h-8 transition-all duration-300 cursor-pointer group"
+                          title="แก้ไขฟอร์ม"
+                          style={{
+                            borderRadius: '50%',
+                            background: 'transparent',
+                            clipPath: 'circle(50% at center)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = 'radial-gradient(circle, rgba(249, 115, 22, 0.1) 0%, rgba(234, 88, 12, 0.05) 70%, transparent 70%)';
+                            e.target.style.boxShadow = '0 0 15px rgba(249, 115, 22, 0.2)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = 'transparent';
+                            e.target.style.boxShadow = 'none';
+                          }}
+                        >
+                          <FontAwesomeIcon
+                            icon={faEdit}
+                            className="text-sm text-muted-foreground/60 group-hover:text-primary transition-colors"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </GlassCard>
               </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Empty State (if no forms) */}
-        {forms.length === 0 && (
-          <motion.div
-            className="text-center py-16"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-muted/20 to-muted/40 flex items-center justify-center">
-              <FontAwesomeIcon icon={faFileAlt} className="text-4xl text-muted-foreground/50" />
+              ))}
             </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">
-              ยังไม่มีฟอร์ม
-            </h3>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              เริ่มต้นสร้างฟอร์มแรกของคุณเพื่อจัดเก็บและจัดการข้อมูล
-            </p>
-            <GlassButton onClick={handleNewForm} className="gap-2">
-              <FontAwesomeIcon icon={faPlus} />
-              สร้างฟอร์มใหม่
-            </GlassButton>
+
+            {/* Empty State (if no forms) */}
+            {forms.length === 0 && (
+              <motion.div
+                className="text-center py-16"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6 }}
+              >
+                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-muted/20 to-muted/40 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faFileAlt} className="text-4xl text-muted-foreground/50" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">
+                  ยังไม่มีฟอร์ม
+                </h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  เริ่มต้นสร้างฟอร์มแรกของคุณเพื่อจัดเก็บและจัดการข้อมูล
+                </p>
+                <GlassButton onClick={handleNewForm} className="gap-2">
+                  <FontAwesomeIcon icon={faPlus} />
+                  สร้างฟอร์มใหม่
+                </GlassButton>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </main>

@@ -585,7 +585,7 @@
   .form-input {
     @apply flex w-full rounded-xl border border-input bg-background ring-offset-background file:border-0 file:bg-transparent file:font-medium placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 touch-target-min;
     padding: 12px 16px;                     /* Enhanced: more padding */
-    font-size: 16px;                        /* Enhanced: larger, more readable text */
+    font-size: 14px;                        /* Reduced font size to 14px */
     line-height: 1.5;
     min-height: 48px;                       /* Enhanced: larger touch target */
     transition: all 200ms ease-out;
@@ -637,8 +637,8 @@
   .orange-neon-focus::before {
     content: '';
     position: absolute;
-    inset: -4px;
-    border-radius: 28px !important;
+    inset: -2px;
+    border-radius: inherit !important;
     background: linear-gradient(135deg,
       rgba(249, 115, 22, 0.3) 0%,
       rgba(249, 115, 22, 0.1) 50%,
@@ -660,8 +660,8 @@
   .orange-neon-hover::before {
     content: '';
     position: absolute;
-    inset: -4px;
-    border-radius: 28px !important;
+    inset: -2px;
+    border-radius: inherit !important;
     background: linear-gradient(135deg,
       rgba(249, 115, 22, 0.4) 0%,
       rgba(249, 115, 22, 0.2) 50%,
@@ -703,6 +703,28 @@
     @apply orange-neon-hover;
   }
 
+  /* Factory Button Orange Neon Effects - Border Radius Fix */
+  .factory-button-rounded.hover-orange-neon:hover::before,
+  .factory-button-rounded.focus-orange-neon:focus::before {
+    border-radius: 0.5rem !important;
+  }
+
+  .factory-button-rounded.blur-edge::before,
+  .factory-button-rounded.blur-edge-intense::before {
+    border-radius: 0.5rem !important;
+  }
+
+  /* Override any existing orange neon effects for factory buttons */
+  .factory-button-rounded::before {
+    border-radius: 0.5rem !important;
+  }
+
+  /* Ensure all pseudo-elements respect the button's border radius */
+  .factory-button-rounded:hover::before,
+  .factory-button-rounded:focus::before {
+    border-radius: 0.5rem !important;
+  }
+
   /* Enhanced Date/Time Input Styling */
   input[type="date"]::-webkit-calendar-picker-indicator,
   input[type="time"]::-webkit-calendar-picker-indicator,
@@ -739,7 +761,7 @@
   input[type="date"]::-webkit-datetime-edit-text,
   input[type="time"]::-webkit-datetime-edit-text,
   input[type="datetime-local"]::-webkit-datetime-edit-text {
-    color: rgba(var(--muted-foreground), 0.7);
+    color: hsl(var(--muted-foreground) / 0.8) !important;
     padding: 0 2px;
   }
 
@@ -1276,14 +1298,15 @@
 
   /* Enhanced Glass Inputs with Orange Neon Effects */
   .input-glass {
-    @apply w-full px-4 py-3 rounded-xl transition-all duration-300 ease-out;
+    @apply w-full px-4 py-3 transition-all duration-300 ease-out;
     @apply text-foreground placeholder:text-muted-foreground/80;
     @apply focus:outline-none;
     background: rgba(30, 30, 30, 0.8) !important;      /* Semi-transparent background */
     backdrop-filter: blur(8px) saturate(120%);
     border: none !important;                            /* Remove all borders */
+    border-radius: 0.75rem !important;                 /* Force rounded corners always */
     color: #ffffff !important;                          /* White text */
-    font-size: 16px !important;                        /* Larger text */
+    font-size: 14px !important;                        /* Reduced font size to 14px */
     font-weight: 500 !important;                       /* Better visibility */
     min-height: 48px !important;                       /* Larger touch target */
     line-height: 1.4 !important;                       /* Better line spacing */
@@ -1299,6 +1322,7 @@
     background: rgba(42, 42, 42, 0.9) !important;      /* Lighter background on hover */
     color: #ff6600 !important;                          /* Orange text on hover */
     transform: translateY(-1px);
+    border-radius: 0.75rem !important;                  /* Force rounded corners on hover */
     /* Apply orange neon hover effect */
     box-shadow:
       0 0 20px rgba(249, 115, 22, 0.5),
@@ -1312,6 +1336,7 @@
     color: #ffffff !important;                          /* White text on focus */
     transform: translateY(-1px);
     outline: none !important;
+    border-radius: 0.75rem !important;                  /* Force rounded corners on focus */
     /* Apply orange neon focus effect */
     box-shadow:
       0 0 25px rgba(249, 115, 22, 0.6),
@@ -1325,7 +1350,7 @@
     backdrop-filter: blur(8px) saturate(120%);
     border: none !important;                                /* Remove border */
     color: #ffffff !important;                              /* White text in dark mode */
-    font-size: 16px !important;                            /* Enhanced: larger text */
+    font-size: 14px !important;                            /* Reduced font size to 14px */
     font-weight: 500 !important;                           /* Enhanced: better visibility */
     color-scheme: dark;
     box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
@@ -1334,6 +1359,7 @@
   .dark .input-glass:hover {
     background: rgba(42, 42, 42, 0.9) !important;        /* Lighter background on hover */
     color: #ff6600 !important;                            /* Orange text on hover */
+    border-radius: 0.75rem !important;                    /* Force rounded corners on hover */
     /* Apply orange neon hover effect */
     box-shadow:
       0 0 20px rgba(249, 115, 22, 0.5),
@@ -1347,6 +1373,7 @@
     color: #ffffff !important;                            /* White text on focus */
     transform: translateY(-1px);
     outline: none !important;
+    border-radius: 0.75rem !important;                    /* Force rounded corners on focus */
     /* Apply orange neon focus effect */
     box-shadow:
       0 0 25px rgba(249, 115, 22, 0.6),
@@ -1377,7 +1404,7 @@
     appearance: none !important;
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
-    font-size: 16px !important;                        /* Larger text for better readability */
+    font-size: 14px !important;                        /* Reduced font size to 14px */
     font-weight: 500 !important;                       /* Medium weight for better visibility */
     line-height: 1.5;
     min-height: 52px;                                  /* Larger touch target */
@@ -1420,28 +1447,88 @@
       inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
   }
 
-  /* Enhanced dropdown options */
+  /* Enhanced dropdown options with glass morphism theme */
   select.input-glass option {
-    padding: 8px 12px !important;       /* Reduced padding for compact options */
-    font-size: 14px !important;         /* Smaller font size as requested */
-    font-weight: 400 !important;        /* Normal weight for better readability */
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
     line-height: 1.4;
-    min-height: 36px;                    /* Reduced height for compact appearance */
-    background-color: hsl(var(--background)) !important; /* Theme-aware background */
-    color: hsl(var(--foreground)) !important;           /* Theme-aware text color */
-    border: none !important;             /* Remove any borders */
+    min-height: 36px;
+    background-color: rgba(10, 10, 10, 0.98) !important; /* Darker black background */
+    color: #ffffff !important; /* White text for contrast */
+    border: none !important;
+    backdrop-filter: blur(8px) !important;
+    transition: all 0.2s ease !important;
   }
 
   .dark select.input-glass option {
-    background-color: hsl(var(--background)) !important; /* Theme-aware dark background */
-    color: hsl(var(--foreground)) !important;           /* Theme-aware text color */
-    font-weight: 400 !important;         /* Normal weight for consistency */
+    background-color: rgba(10, 10, 10, 0.98) !important; /* Darker black background */
+    color: #ffffff !important; /* White text for contrast */
+    font-weight: 400 !important;
+  }
+
+  /* Light mode dropdown options */
+  :not(.dark) select.input-glass option {
+    background-color: rgba(30, 30, 30, 0.95) !important; /* Dark background even in light mode */
+    color: #ffffff !important; /* White text for readability */
   }
 
   select.input-glass option:hover,
-  select.input-glass option:focus {
-    background-color: hsl(var(--accent)) !important; /* Theme-aware hover background */
-    color: hsl(var(--primary)) !important;          /* Orange theme color on hover */
+  select.input-glass option:focus,
+  select.input-glass option:active,
+  select.input-glass option:checked,
+  select.input-glass option[selected] {
+    background-color: rgba(249, 115, 22, 0.8) !important; /* Orange glass hover */
+    color: #ffffff !important; /* White text on orange background */
+    transform: scale(1.02) !important; /* Subtle scale effect */
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3) !important; /* Orange glow */
+  }
+
+  /* Additional styling for active/selected states */
+  select.input-glass option:active,
+  select.input-glass option[selected] {
+    background-color: rgba(249, 115, 22, 0.9) !important; /* Stronger orange for selected */
+    color: #ffffff !important;
+    font-weight: 600 !important; /* Bold text for selected option */
+  }
+
+  /* Highlighted option during keyboard navigation */
+  select.input-glass option[aria-selected="true"],
+  select.input-glass option.highlighted {
+    background-color: rgba(249, 115, 22, 0.7) !important; /* Orange highlight */
+    color: #f97316 !important; /* Orange text color */
+    font-weight: 500 !important;
+    outline: 2px solid rgba(249, 115, 22, 0.5) !important;
+    outline-offset: -2px !important;
+  }
+
+  /* Enhanced dropdown container with glass effects */
+  select.input-glass {
+    background: rgba(var(--card), 0.8) !important;
+    backdrop-filter: blur(12px) saturate(120%) !important;
+    border: 1px solid rgba(var(--border), 0.3) !important;
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Dark mode specific adjustments */
+  .dark select.input-glass {
+    background: rgba(30, 30, 30, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Ensure placeholder text is also 14px */
+  .input-glass::placeholder,
+  .input-glass::-webkit-input-placeholder,
+  .input-glass::-moz-placeholder,
+  .input-glass:-ms-input-placeholder {
+    font-size: 14px !important;
+  }
+
+  select.input-glass::placeholder,
+  select.input-glass::-webkit-input-placeholder {
+    font-size: 14px !important;
   }
 
   /* Enhanced full-width layout for form fields */
@@ -2083,11 +2170,81 @@
     background: rgba(255, 0, 0, 0.05);
   }
 
+  /* Additional button and div focus overrides */
+  div[title]:focus,
+  div[title]:focus-visible,
+  div[title]:hover,
+  div[title]:active,
+  div[onclick]:focus,
+  div[onclick]:focus-visible,
+  div[onclick]:hover,
+  div[onclick]:active,
+  *:focus,
+  *:focus-visible,
+  *:active,
+  *:focus:not(:focus-visible) {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Prevent any webkit focus rings */
+  * {
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-focus-ring-color: transparent !important;
+  }
+
+  /* Override focus for any interactive element */
+  [tabindex]:focus,
+  [tabindex]:focus-visible,
+  [tabindex]:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Force remove all focus/active effects on buttons and divs */
+  button,
+  div[onclick],
+  div[title],
+  [role="button"] {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  button:focus,
+  button:focus-visible,
+  button:active,
+  div[onclick]:focus,
+  div[onclick]:focus-visible,
+  div[onclick]:active,
+  div[title]:focus,
+  div[title]:focus-visible,
+  div[title]:active,
+  [role="button"]:focus,
+  [role="button"]:focus-visible,
+  [role="button"]:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
   /* Blur Edge Effects System - Fixed for Rounded Corners */
   .blur-edge {
     position: relative;
     overflow: visible;
     border-radius: 24px !important;
+  }
+
+  /* Special handling for input-glass with blur-edge */
+  .input-glass.blur-edge {
+    border-radius: 0.75rem !important;
+  }
+
+  .input-glass.blur-edge::before {
+    border-radius: 0.75rem !important;
   }
 
   .blur-edge::before {
@@ -2104,6 +2261,29 @@
     position: relative;
     overflow: visible;
     border-radius: 24px !important;
+  }
+
+  .input-glass.blur-edge-intense {
+    border-radius: 0.75rem !important;
+  }
+
+  .input-glass.blur-edge-intense::before {
+    border-radius: 0.75rem !important;
+  }
+
+  /* Ensure input-glass maintains rounded corners in all states */
+  .input-glass:hover.blur-edge,
+  .input-glass:focus.blur-edge,
+  .input-glass:hover.blur-edge-intense,
+  .input-glass:focus.blur-edge-intense {
+    border-radius: 0.75rem !important;
+  }
+
+  .input-glass:hover.blur-edge::before,
+  .input-glass:focus.blur-edge::before,
+  .input-glass:hover.blur-edge-intense::before,
+  .input-glass:focus.blur-edge-intense::before {
+    border-radius: 0.75rem !important;
   }
 
   .blur-edge-intense::before {
@@ -2400,5 +2580,99 @@
   .settings-button-text {
     @apply font-medium;
     font-size: calc(var(--font-size-detail) * var(--font-scale));
+  }
+
+  /* Enhanced Red Neon Effects System for Validation Errors */
+  .red-neon-focus {
+    position: relative;
+    border: none !important; /* Remove double borders */
+    backdrop-filter: blur(8px);
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    /* Remove box-shadow to prevent square glow */
+  }
+
+  .red-neon-focus::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    background: linear-gradient(
+      135deg,
+      rgba(239, 68, 68, 0.4) 0%,
+      rgba(220, 38, 38, 0.3) 25%,
+      rgba(239, 68, 68, 0.4) 50%,
+      rgba(220, 38, 38, 0.3) 75%,
+      rgba(239, 68, 68, 0.4) 100%
+    );
+    border-radius: inherit;
+    z-index: -1;
+    opacity: 0.9;
+  }
+
+  .red-neon-hover {
+    position: relative;
+    border: none !important;
+    backdrop-filter: blur(12px);
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(-1px);
+    /* Remove box-shadow to prevent square glow */
+  }
+
+  .red-neon-hover::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    background: linear-gradient(
+      135deg,
+      rgba(239, 68, 68, 0.5) 0%,
+      rgba(220, 38, 38, 0.4) 25%,
+      rgba(239, 68, 68, 0.5) 50%,
+      rgba(220, 38, 38, 0.4) 75%,
+      rgba(239, 68, 68, 0.5) 100%
+    );
+    border-radius: inherit;
+    z-index: -1;
+    opacity: 0.8;
+  }
+
+  .red-neon-active {
+    box-shadow:
+      0 0 30px rgba(239, 68, 68, 0.6),
+      0 0 60px rgba(239, 68, 68, 0.4),
+      inset 0 0 20px rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    backdrop-filter: blur(16px);
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .red-neon-permanent {
+    box-shadow:
+      0 0 15px rgba(239, 68, 68, 0.3),
+      0 0 30px rgba(239, 68, 68, 0.15),
+      inset 0 0 15px rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    backdrop-filter: blur(12px);
+  }
+
+  /* Red Neon Interactive Element Utilities */
+  .focus-red-neon:focus {
+    @apply red-neon-focus;
+  }
+
+  .hover-red-neon:hover {
+    @apply red-neon-hover;
+  }
+
+  .active-red-neon.active,
+  .active-red-neon:active {
+    @apply red-neon-active;
+  }
+
+  /* Field Error Container with Red Neon Effect */
+  .field-error-container {
+    @apply red-neon-permanent;
+  }
+
+  .field-error-container.focus-within {
+    @apply red-neon-active;
   }
 }

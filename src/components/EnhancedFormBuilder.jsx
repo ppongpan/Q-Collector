@@ -1,4 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+
+// Data services
+import dataService from '../services/DataService.js';
 
 // Drag and Drop imports
 import {
@@ -152,7 +155,7 @@ function InlineEdit({ value, onChange, placeholder, className = "", isTitle = fa
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className={`input-glass glass-interactive blur-edge rounded-xl text-xl font-semibold focus-orange-neon hover-orange-neon transition-all duration-300 ease-out w-full ${className}`}
+          className={`input-glass glass-interactive blur-edge rounded-xl text-xl font-semibold focus-orange-neon hover-orange-neon transition-all duration-300 ease-out w-full text-left ${className}`}
         />
       );
     } else {
@@ -164,7 +167,7 @@ function InlineEdit({ value, onChange, placeholder, className = "", isTitle = fa
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className={`input-glass glass-interactive blur-edge rounded-xl text-base min-h-[80px] resize-none focus-orange-neon hover-orange-neon transition-all duration-300 ease-out w-full ${className}`}
+          className={`input-glass glass-interactive blur-edge rounded-xl text-base min-h-[80px] resize-none focus-orange-neon hover-orange-neon transition-all duration-300 ease-out w-full text-left ${className}`}
           rows={2}
         />
       );
@@ -178,7 +181,7 @@ function InlineEdit({ value, onChange, placeholder, className = "", isTitle = fa
     return (
       <h1
         onClick={() => setIsEditing(true)}
-        className={`text-xl font-semibold cursor-pointer transition-all duration-300 ease-out px-3 py-2 hover:text-primary/80 ${isEmpty ? 'text-muted-foreground/60 italic' : 'text-foreground/90'} ${className}`}
+        className={`text-xl font-semibold cursor-pointer transition-all duration-300 ease-out px-3 py-2 hover:text-primary/80 text-left ${isEmpty ? 'text-muted-foreground/60 italic' : 'text-foreground/90'} ${className}`}
         title="คลิกเพื่อแก้ไข"
       >
         {displayValue}
@@ -188,7 +191,7 @@ function InlineEdit({ value, onChange, placeholder, className = "", isTitle = fa
     return (
       <p
         onClick={() => setIsEditing(true)}
-        className={`text-base cursor-pointer transition-all duration-300 ease-out px-3 py-2 hover:text-primary/70 ${isEmpty ? 'text-muted-foreground/60 italic' : 'text-muted-foreground'} ${className}`}
+        className={`text-base cursor-pointer transition-all duration-300 ease-out px-3 py-2 hover:text-primary/70 text-left ${isEmpty ? 'text-muted-foreground/60 italic' : 'text-muted-foreground'} ${className}`}
         title="คลิกเพื่อแก้ไข"
       >
         {displayValue}
@@ -281,10 +284,22 @@ function FieldEditor({
   return (
     <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out shadow-lg hover:shadow-xl hover:border-primary/30 hover:scale-[1.01]">
       {/* Field Header - Responsive Visual Hierarchy */}
-      <GlassCardHeader className="pb-3 sm:pb-4 lg:pb-6">
-        <div className="flex items-center gap-3 sm:gap-4 lg:gap-6">
+      <GlassCardHeader
+        className="pb-3 sm:pb-4 lg:pb-6 cursor-pointer"
+        onClick={(e) => {
+          // Don't expand/collapse if clicking on interactive elements
+          const isInteractiveElement = e.target.closest(
+            'input, button, select, textarea, [role="button"], [data-interactive="true"]'
+          );
+
+          if (!isInteractiveElement) {
+            setIsExpanded(!isExpanded);
+          }
+        }}
+      >
+        <div className="flex items-center gap-2 px-2">
           {/* Drag Handle - Accessible Touch Target */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 ml-1">
             <div
               {...dragHandleProps}
               className="flex items-center justify-center min-w-12 min-h-12 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full hover:bg-background/50 focus:bg-background/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200 cursor-grab active:cursor-grabbing opacity-50 group-hover:opacity-100 touch-target-min"
@@ -293,6 +308,7 @@ function FieldEditor({
               tabIndex="0"
               role="button"
               aria-label="เลื่อนเพื่อย้ายฟิลด์"
+              data-interactive="true"
             >
               <FontAwesomeIcon icon={faGripVertical} className="w-3 h-3 text-muted-foreground" />
             </div>
@@ -321,44 +337,13 @@ function FieldEditor({
           )}
 
           {/* Field Preview - Flexible */}
-          <div
-            className="flex-1 min-w-0 cursor-pointer"
-            onClick={(e) => {
-              // Don't expand/collapse if clicking on interactive elements
-              const isInteractiveElement = e.target.closest(
-                'input, button, select, textarea, [role="button"], [data-interactive="true"]'
-              );
-
-              if (!isInteractiveElement) {
-                setIsExpanded(!isExpanded);
-              }
-            }}
-          >
+          <div className="flex-1 min-w-0">
             {getFieldPreview()}
           </div>
 
           {/* Action Icons - Accessible Touch Targets */}
-          <div className="flex-shrink-0">
-            <div className="inline-flex items-center gap-1 xs:gap-2 rounded-xl px-1 xs:px-2 py-1 xs:py-2">
-              {/* Expand/Collapse */}
-              <div
-                onClick={() => setIsExpanded(!isExpanded)}
-                title={isExpanded ? "ย่อ" : "ขยาย"}
-                className="flex items-center justify-center opacity-70 hover:opacity-100 focus:opacity-100 min-w-12 min-h-12 w-6 xs:w-7 sm:w-8 md:w-9 lg:w-10 h-6 xs:h-7 sm:h-8 md:h-9 lg:h-10 touch-target-min cursor-pointer transition-all duration-300"
-                style={{
-                  background: 'transparent',
-                  border: 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                }}
-              >
-                <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="w-3 h-3" />
-              </div>
-
+          <div className="flex-shrink-0 mr-1">
+            <div className="inline-flex items-center">
               {/* Optimized Field Options Menu */}
               <FieldOptionsMenu
                 field={field}
@@ -939,7 +924,7 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
 
 
 // Main Enhanced Form Builder Component
-export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
+export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onSaveHandlerReady }) {
   const [form, setForm] = useState({
     id: initialForm?.id || generateFormId(),
     title: initialForm?.title || '',
@@ -957,6 +942,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
     ],
     subForms: initialForm?.subForms || [],
     visibleRoles: initialForm?.visibleRoles || DEFAULT_VISIBLE_ROLES,
+    userRoles: initialForm?.userRoles || initialForm?.visibleRoles || DEFAULT_VISIBLE_ROLES,
     settings: initialForm?.settings || {
       telegram: {
         enabled: false,
@@ -968,7 +954,12 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
         enabled: false,
         prefix: 'DOC',
         format: 'prefix-number/year',
-        yearFormat: 'buddhist'
+        yearFormat: 'buddhist',
+        initialNumber: 1
+      },
+      dateFormat: {
+        yearFormat: 'christian', // 'buddhist' or 'christian'
+        format: 'dd/mm/yyyy'     // Default to dd/mm/yyyy CE
       }
     }
   });
@@ -1116,21 +1107,68 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
     }
   };
 
-  const handleSave = () => {
-    // ตรวจสอบว่ามีการเลือกฟิลด์สำหรับแสดงในตารางหรือไม่
-    const tableFields = form.fields.filter(field => field.showInTable);
+  const handleSave = useCallback(async () => {
+    try {
+      // ตรวจสอบว่ามีการเลือกฟิลด์สำหรับแสดงในตารางหรือไม่ (หลังจากกดปุ่ม save)
+      const tableFields = form.fields.filter(field => field.showInTable);
 
-    if (tableFields.length === 0) {
-      alert('⚠️ กรุณาเลือกฟิลด์อย่างน้อย 1 ฟิลด์เพื่อแสดงในตาราง Submission\n\nไปที่การตั้งค่าฟิลด์แต่ละฟิลด์ แล้วเลือก "แสดงในตาราง Submission"');
-      return;
+      if (tableFields.length === 0) {
+        alert('⚠️ กรุณาเลือกฟิลด์อย่างน้อย 1 ฟิลด์เพื่อแสดงในตาราง Submission\n\nไปที่การตั้งค่าฟิลด์แต่ละฟิลด์ แล้วเลือก "แสดงในตาราง Submission"');
+        return;
+      }
+
+      // ตรวจสอบว่าเป็นการแก้ไขหรือสร้างใหม่
+      let savedForm;
+      if (initialForm?.id) {
+        // แก้ไขฟอร์มที่มีอยู่
+        savedForm = dataService.updateForm(initialForm.id, {
+          title: form.title,
+          description: form.description,
+          fields: form.fields,
+          subForms: form.subForms,
+          settings: form.settings,
+          visibleRoles: form.visibleRoles
+        });
+        alert('✅ ฟอร์มถูกอัพเดทเรียบร้อยแล้ว');
+      } else {
+        // สร้างฟอร์มใหม่
+        savedForm = dataService.createForm({
+          title: form.title,
+          description: form.description,
+          fields: form.fields,
+          subForms: form.subForms,
+          settings: form.settings,
+          visibleRoles: form.visibleRoles
+        });
+        alert('✅ ฟอร์มถูกบันทึกเรียบร้อยแล้ว');
+      }
+
+      // เรียก onSave callback ถ้ามี (สำหรับ navigation หรือ actions อื่น ๆ)
+      if (onSave) {
+        onSave(savedForm, initialForm?.id);
+      }
+
+    } catch (error) {
+      console.error('Form save error:', error);
+      alert('❌ เกิดข้อผิดพลาดในการบันทึกฟอร์ม: ' + error.message);
     }
-
-    onSave(form, initialForm?.id);
-  };
+  }, [form, initialForm, onSave]);
 
   const isFormValid = () => {
     return form.title.trim() !== '' && form.fields.some(field => field.title.trim() !== '');
   };
+
+  // Send save handler to parent component
+  useEffect(() => {
+    if (onSaveHandlerReady) {
+      onSaveHandlerReady(handleSave);
+    }
+    return () => {
+      if (onSaveHandlerReady) {
+        onSaveHandlerReady(null);
+      }
+    };
+  }, [onSaveHandlerReady, handleSave]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90">
@@ -1207,33 +1245,30 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
 
               {/* Action Buttons - Enhanced Responsive */}
               <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                <GlassButton
-                  variant="primary"
-                  onClick={handleSave}
-                  disabled={!isFormValid()}
-                  tooltip={isFormValid() ? "บันทึกฟอร์ม" : "กรอกข้อมูลให้ครบถ้วน"}
-                  className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out flex items-center justify-center gap-2 h-10 sm:h-12 px-3 sm:px-4 text-xs sm:text-sm touch-target-comfortable"
-                  style={{
-                    borderRadius: '16px',
-                    overflow: 'visible'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.boxShadow = '0 0 20px 4px rgba(249,115,22,0.6), 0 0 40px 8px rgba(249,115,22,0.4), 0 0 60px 12px rgba(249,115,22,0.25)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.boxShadow = '';
-                  }}
-                >
-                  <FontAwesomeIcon icon={faSave} className="w-3 h-3" />
-                  <span className="hidden sm:inline">บันทึก</span>
-                </GlassButton>
 
                 {/* Delete Button - Only show in edit mode */}
                 {initialForm && (
                   <div
-                    onClick={() => {
-                      if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบฟอร์มนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) {
-                        onCancel(initialForm.id, 'delete');
+                    onClick={async () => {
+                      const submissions = dataService.getSubmissionsByFormId(initialForm.id);
+                      const submissionCount = submissions.length;
+
+                      let confirmMessage = `⚠️ คุณแน่ใจหรือไม่ที่จะลบฟอร์ม "${form.title}"?\n\nการลบจะไม่สามารถย้อนกลับได้`;
+
+                      if (submissionCount > 0) {
+                        confirmMessage += `\n\n🚨 ฟอร์มนี้มีข้อมูล ${submissionCount} รายการ ข้อมูลทั้งหมดจะถูกลบด้วย`;
+                      }
+
+                      if (window.confirm(confirmMessage)) {
+                        try {
+                          dataService.deleteForm(initialForm.id);
+                          alert('✅ ลบฟอร์มเรียบร้อยแล้ว');
+                          // Navigate back to form list
+                          onCancel();
+                        } catch (error) {
+                          console.error('Delete error:', error);
+                          alert('❌ เกิดข้อผิดพลาดในการลบฟอร์ม');
+                        }
                       }
                     }}
                     title="ลบฟอร์ม"
@@ -1421,7 +1456,9 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                               const newVisibleRoles = isVisible
                                 ? form.visibleRoles.filter(id => id !== role.id)
                                 : [...form.visibleRoles, role.id];
-                              updateForm({ visibleRoles: newVisibleRoles });
+                              updateForm({
+                                visibleRoles: newVisibleRoles
+                              });
                             }}
                             title={isDisabled ? `${role.name} • Always selected (cannot be changed)` : `Toggle ${role.name} access`}
                             className={`
@@ -1444,6 +1481,91 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                           </button>
                         );
                       })}
+                    </div>
+                  </GlassCardContent>
+                </GlassCard>
+
+                {/* Date Format Settings - 8px Grid */}
+                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
+                  <GlassCardHeader>
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center"
+                        style={{ clipPath: 'circle(50% at center)' }}
+                      >
+                        <FontAwesomeIcon icon={faCalendarAlt} className="text-purple-600 w-4 h-4" />
+                      </div>
+                      <div>
+                        <GlassCardTitle className="form-card-title">รูปแบบวันที่</GlassCardTitle>
+                        <GlassCardDescription className="form-card-description">
+                          กำหนดรูปแบบการแสดงวันที่ในฟอร์มและการแสดงผล
+                        </GlassCardDescription>
+                      </div>
+                    </div>
+                  </GlassCardHeader>
+                  <GlassCardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <label className="text-sm font-medium text-foreground/80">ประเภทปี</label>
+                        <div className="flex gap-3">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="yearFormat"
+                              value="christian"
+                              checked={form.settings.dateFormat?.yearFormat === 'christian'}
+                              onChange={(e) => updateForm({
+                                settings: {
+                                  ...form.settings,
+                                  dateFormat: { ...(form.settings.dateFormat || { format: 'dd/mm/yyyy' }), yearFormat: e.target.value }
+                                }
+                              })}
+                              className="w-4 h-4 text-primary focus:ring-primary/20 focus:ring-2"
+                            />
+                            <span className="text-sm text-foreground/80">ค.ศ. (2024)</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="yearFormat"
+                              value="buddhist"
+                              checked={form.settings.dateFormat?.yearFormat === 'buddhist'}
+                              onChange={(e) => updateForm({
+                                settings: {
+                                  ...form.settings,
+                                  dateFormat: { ...(form.settings.dateFormat || { format: 'dd/mm/yyyy' }), yearFormat: e.target.value }
+                                }
+                              })}
+                              className="w-4 h-4 text-primary focus:ring-primary/20 focus:ring-2"
+                            />
+                            <span className="text-sm text-foreground/80">พ.ศ. (2567)</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-sm font-medium text-foreground/80">รูปแบบการแสดงผล</label>
+                        <div className="p-3 bg-muted/20 rounded-lg border border-border/30">
+                          <div className="text-sm text-foreground/80">
+                            <div className="font-medium">ตัวอย่าง:
+                              <span className="ml-2 font-mono text-primary">
+                                {(() => {
+                                  const now = new Date();
+                                  const day = now.getDate().toString().padStart(2, '0');
+                                  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+                                  const year = form.settings.dateFormat?.yearFormat === 'buddhist'
+                                    ? now.getFullYear() + 543
+                                    : now.getFullYear();
+                                  return `${day}/${month}/${year}`;
+                                })()}
+                              </span>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              รูปแบบ: dd/mm/yyyy ({form.settings.dateFormat?.yearFormat === 'buddhist' ? 'พ.ศ.' : 'ค.ศ.'})
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </GlassCardContent>
                 </GlassCard>
@@ -1556,7 +1678,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
 
                     {form.settings.documentNumber.enabled && (
                       <div className="space-y-6 pt-3">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                           <GlassInput
                             label="คำนำหน้า"
                             value={form.settings.documentNumber.prefix}
@@ -1568,6 +1690,22 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                             })}
                             placeholder="DOC"
                             tooltip="คำนำหน้าหมายเลขเอกสาร"
+                            minimal
+                          />
+
+                          <GlassInput
+                            label="เลขเริ่มต้น"
+                            type="number"
+                            min="1"
+                            value={form.settings.documentNumber.initialNumber || 1}
+                            onChange={(e) => updateForm({
+                              settings: {
+                                ...form.settings,
+                                documentNumber: { ...form.settings.documentNumber, initialNumber: parseInt(e.target.value) || 1 }
+                              }
+                            })}
+                            placeholder="1"
+                            tooltip="หมายเลขเริ่มต้นของเอกสารแรก"
                             minimal
                           />
 
@@ -1605,9 +1743,21 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel }) {
                         <div className="p-6 bg-muted/10 rounded-xl">
                           <p className="text-sm text-muted-foreground mb-2">ตัวอย่าง:</p>
                           <code className="text-sm font-mono text-foreground/80">
-                            {form.settings.documentNumber.prefix}-
-                            {form.settings.documentNumber.format === 'prefix-number/year' ? '0001/2567' : '2567/0001'}
+                            {(() => {
+                              const currentYear = new Date().getFullYear();
+                              const displayYear = form.settings.documentNumber.yearFormat === 'buddhist'
+                                ? currentYear + 543
+                                : currentYear;
+                              const paddedNumber = (form.settings.documentNumber.initialNumber || 1).toString().padStart(4, '0');
+
+                              return form.settings.documentNumber.format === 'prefix-number/year'
+                                ? `${form.settings.documentNumber.prefix}-${paddedNumber}/${displayYear}`
+                                : `${form.settings.documentNumber.prefix}-${displayYear}/${paddedNumber}`;
+                            })()}
                           </code>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            หมายเลขจะเริ่มต้นที่ {(form.settings.documentNumber.initialNumber || 1).toString().padStart(4, '0')} และรีเซ็ตเป็น 0001 ทุกปีใหม่
+                          </p>
                         </div>
                       </div>
                     )}

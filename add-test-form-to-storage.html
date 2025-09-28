@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เพิ่มฟอร์มทดสอบ</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            color: #ffffff;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #f97316;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .btn {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: block;
+            margin: 20px auto;
+            min-width: 200px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(249, 115, 22, 0.4);
+        }
+        .status {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #f97316;
+        }
+        .field-list {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .field-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .field-item:last-child {
+            border-bottom: none;
+        }
+        .field-type {
+            background: rgba(249, 115, 22, 0.2);
+            color: #f97316;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 เพิ่มฟอร์มทดสอบ</h1>
+
+        <div class="status">
+            <h3>📋 รายละเอียดฟอร์มทดสอบ</h3>
+            <p><strong>ชื่อฟอร์ม:</strong> ฟอร์มทดสอบระบบ - ครบทุก Field Types</p>
+            <p><strong>จำนวน Field Types:</strong> 17 ประเภทครบถ้วน</p>
+            <p><strong>Sub Forms:</strong> 2 ฟอร์มย่อย (ประสบการณ์ทำงาน, การอบรม)</p>
+            <p><strong>Telegram:</strong> เปิดใช้งาน</p>
+            <p><strong>Document Numbering:</strong> TEST-FORM-XXXX/พ.ศ.</p>
+        </div>
+
+        <div class="field-list">
+            <h3>🔧 Field Types ที่รวมอยู่</h3>
+            <div class="field-item">
+                <span>1. ชื่อ-นามสกุล</span>
+                <span class="field-type">short_answer</span>
+            </div>
+            <div class="field-item">
+                <span>2. รายละเอียดเพิ่มเติม</span>
+                <span class="field-type">paragraph</span>
+            </div>
+            <div class="field-item">
+                <span>3. อีเมล</span>
+                <span class="field-type">email</span>
+            </div>
+            <div class="field-item">
+                <span>4. เบอร์โทรศัพท์</span>
+                <span class="field-type">phone</span>
+            </div>
+            <div class="field-item">
+                <span>5. เว็บไซต์ส่วนตัว</span>
+                <span class="field-type">url</span>
+            </div>
+            <div class="field-item">
+                <span>6. อายุ</span>
+                <span class="field-type">number</span>
+            </div>
+            <div class="field-item">
+                <span>7. เอกสารแนบ</span>
+                <span class="field-type">file_upload</span>
+            </div>
+            <div class="field-item">
+                <span>8. รูปภาพ</span>
+                <span class="field-type">image_upload</span>
+            </div>
+            <div class="field-item">
+                <span>9. วันเกิด</span>
+                <span class="field-type">date</span>
+            </div>
+            <div class="field-item">
+                <span>10. เวลาที่สะดวก</span>
+                <span class="field-type">time</span>
+            </div>
+            <div class="field-item">
+                <span>11. วันเวลานัดหมาย</span>
+                <span class="field-type">datetime</span>
+            </div>
+            <div class="field-item">
+                <span>12. ระดับการศึกษา (Radio)</span>
+                <span class="field-type">multiple_choice</span>
+            </div>
+            <div class="field-item">
+                <span>13. ทักษะที่มี (Buttons)</span>
+                <span class="field-type">multiple_choice</span>
+            </div>
+            <div class="field-item">
+                <span>14. ความพึงพอใจ</span>
+                <span class="field-type">rating</span>
+            </div>
+            <div class="field-item">
+                <span>15. ประสบการณ์ทำงาน</span>
+                <span class="field-type">slider</span>
+            </div>
+            <div class="field-item">
+                <span>16. พิกัดที่อยู่</span>
+                <span class="field-type">lat_long</span>
+            </div>
+            <div class="field-item">
+                <span>17. จังหวัด</span>
+                <span class="field-type">province</span>
+            </div>
+            <div class="field-item">
+                <span>18. สาขาที่สนใจ</span>
+                <span class="field-type">factory</span>
+            </div>
+        </div>
+
+        <button class="btn" onclick="createTestForm()">🚀 สร้างฟอร์มทดสอบ</button>
+
+        <div id="result" class="status" style="display: none;">
+            <h3>✅ ผลลัพธ์</h3>
+            <p id="resultText"></p>
+        </div>
+    </div>
+
+    <script>
+        // Test Form Data
+        const testFormData = {
+            title: "ฟอร์มทดสอบระบบ - ครบทุก Field Types",
+            description: "ฟอร์มสำหรับทดสอบการแสดงผลและการทำงานของ field types ทั้ง 17 ประเภท รวมถึง sub forms และระบบต่างๆ",
+            userRoles: ['super_admin', 'admin', 'general_user'],
+            settings: {
+                telegram: {
+                    enabled: true,
+                    botToken: "123456789:AAEhBOweik9aj8e-FMmy2XGa8b4Oqvr1m8o",
+                    groupId: "-1001234567890"
+                },
+                documentNumbering: {
+                    enabled: true,
+                    prefix: "TEST-FORM",
+                    yearFormat: "buddhist",
+                    format: "prefix-number-year",
+                    currentNumber: 0
+                }
+            },
+            fields: [
+                // 1-6: Text and Contact Fields
+                {
+                    id: "field-1", type: "short_answer", title: "ชื่อ-นามสกุล",
+                    description: "กรุณากรอกชื่อและนามสกุล", required: true, showInTable: true, sendToTelegram: true,
+                    validation: { minLength: 2, maxLength: 100 }
+                },
+                {
+                    id: "field-2", type: "paragraph", title: "รายละเอียดเพิ่มเติม",
+                    description: "อธิบายรายละเอียดเพิ่มเติม หรือข้อคิดเห็น", required: false, showInTable: false, sendToTelegram: true,
+                    validation: { maxLength: 500 }
+                },
+                {
+                    id: "field-3", type: "email", title: "อีเมล",
+                    description: "ที่อยู่อีเมลสำหรับติดต่อ", required: true, showInTable: true, sendToTelegram: true
+                },
+                {
+                    id: "field-4", type: "phone", title: "เบอร์โทรศัพท์",
+                    description: "หมายเลขโทรศัพท์มือถือ", required: true, showInTable: true, sendToTelegram: true
+                },
+                {
+                    id: "field-5", type: "url", title: "เว็บไซต์ส่วนตัว",
+                    description: "ลิงก์เว็บไซต์หรือ Social Media", required: false, showInTable: false, sendToTelegram: false
+                },
+                {
+                    id: "field-6", type: "number", title: "อายุ",
+                    description: "อายุเป็นปี", required: true, showInTable: true, sendToTelegram: true,
+                    validation: { min: 15, max: 80 }
+                },
+
+                // 7-8: File Upload Fields
+                {
+                    id: "field-7", type: "file_upload", title: "เอกสารแนบ",
+                    description: "แนบไฟล์เอกสาร (PDF, DOC, XLS)", required: false, showInTable: false, sendToTelegram: false,
+                    validation: { acceptedTypes: [".pdf", ".doc", ".docx", ".xls", ".xlsx"], maxSize: "10MB" }
+                },
+                {
+                    id: "field-8", type: "image_upload", title: "รูปภาพ",
+                    description: "แนบรูปภาพประกอบ", required: false, showInTable: false, sendToTelegram: false,
+                    validation: { acceptedTypes: [".jpg", ".jpeg", ".png", ".gif"], maxSize: "5MB" }
+                },
+
+                // 9-11: Date & Time Fields
+                {
+                    id: "field-9", type: "date", title: "วันเกิด",
+                    description: "วันเดือนปีเกิด", required: true, showInTable: false, sendToTelegram: true
+                },
+                {
+                    id: "field-10", type: "time", title: "เวลาที่สะดวก",
+                    description: "เวลาที่สะดวกติดต่อ", required: false, showInTable: false, sendToTelegram: false
+                },
+                {
+                    id: "field-11", type: "datetime", title: "วันเวลานัดหมาย",
+                    description: "กำหนดวันเวลานัดหมาย", required: false, showInTable: false, sendToTelegram: true
+                },
+
+                // 12-13: Multiple Choice Fields
+                {
+                    id: "field-12", type: "multiple_choice", title: "ระดับการศึกษา",
+                    description: "เลือกระดับการศึกษาสูงสุด", required: true, showInTable: true, sendToTelegram: true,
+                    options: {
+                        displayStyle: "radio", allowMultiple: false,
+                        choices: [
+                            { id: "edu-1", text: "มัธยมศึกษา", value: "มัธยมศึกษา" },
+                            { id: "edu-2", text: "ประกาศนียบัตรวิชาชีพ", value: "ประกาศนียบัตรวิชาชีพ" },
+                            { id: "edu-3", text: "ปริญญาตรี", value: "ปริญญาตรี" },
+                            { id: "edu-4", text: "ปริญญาโท", value: "ปริญญาโท" },
+                            { id: "edu-5", text: "ปริญญาเอก", value: "ปริญญาเอก" }
+                        ]
+                    }
+                },
+                {
+                    id: "field-13", type: "multiple_choice", title: "ทักษะที่มี",
+                    description: "เลือกทักษะที่คุณมี (เลือกได้หลายข้อ)", required: false, showInTable: false, sendToTelegram: true,
+                    options: {
+                        displayStyle: "buttons", allowMultiple: true,
+                        choices: [
+                            { id: "skill-1", text: "การเขียนโปรแกรม", value: "การเขียนโปรแกรม" },
+                            { id: "skill-2", text: "การออกแบบ", value: "การออกแบบ" },
+                            { id: "skill-3", text: "การตลาด", value: "การตลาด" },
+                            { id: "skill-4", text: "การบัญชี", value: "การบัญชี" },
+                            { id: "skill-5", text: "ภาษาต่างประเทศ", value: "ภาษาต่างประเทศ" }
+                        ]
+                    }
+                },
+
+                // 14-15: Interactive Fields
+                {
+                    id: "field-14", type: "rating", title: "ความพึงพอใจ",
+                    description: "ให้คะแนนความพึงพอใจ (1-5 ดาว)", required: false, showInTable: false, sendToTelegram: true,
+                    options: { maxRating: 5, style: "stars" }
+                },
+                {
+                    id: "field-15", type: "slider", title: "ประสบการณ์ทำงาน",
+                    description: "จำนวนปีประสบการณ์ทำงาน", required: false, showInTable: false, sendToTelegram: true,
+                    options: { min: 0, max: 30, step: 1, unit: "ปี" }
+                },
+
+                // 16-18: Location Fields
+                {
+                    id: "field-16", type: "lat_long", title: "พิกัดที่อยู่",
+                    description: "ระบุพิกัดสถานที่อยู่", required: false, showInTable: false, sendToTelegram: false
+                },
+                {
+                    id: "field-17", type: "province", title: "จังหวัด",
+                    description: "เลือกจังหวัดที่อยู่", required: true, showInTable: false, sendToTelegram: true
+                },
+                {
+                    id: "field-18", type: "factory", title: "สาขาที่สนใจ",
+                    description: "เลือกสาขาโรงงานที่สนใจ", required: false, showInTable: false, sendToTelegram: true,
+                    options: { allowMultiple: true }
+                }
+            ],
+
+            // Sub Forms
+            subForms: [
+                {
+                    id: "subform-1", title: "ประสบการณ์ทำงาน",
+                    description: "รายละเอียดประสบการณ์ทำงานแต่ละแห่ง",
+                    fields: [
+                        { id: "exp-1", type: "short_answer", title: "ชื่อบริษัท", required: true, showInTable: true, sendToTelegram: false },
+                        { id: "exp-2", type: "short_answer", title: "ตำแหน่งงาน", required: true, showInTable: true, sendToTelegram: false },
+                        { id: "exp-3", type: "date", title: "วันที่เริ่มงาน", required: true, showInTable: true, sendToTelegram: false },
+                        { id: "exp-4", type: "date", title: "วันที่ลาออก", required: false, showInTable: true, sendToTelegram: false },
+                        { id: "exp-5", type: "paragraph", title: "รายละเอียดงาน", required: false, showInTable: false, sendToTelegram: false }
+                    ]
+                },
+                {
+                    id: "subform-2", title: "การอบรม/ใบประกาศนียบัตร",
+                    description: "หลักสูตรอบรมหรือใบประกาศนียบัตรที่ได้รับ",
+                    fields: [
+                        { id: "cert-1", type: "short_answer", title: "ชื่อหลักสูตร", required: true, showInTable: true, sendToTelegram: false },
+                        { id: "cert-2", type: "short_answer", title: "สถาบันที่จัดอบรม", required: true, showInTable: true, sendToTelegram: false },
+                        { id: "cert-3", type: "date", title: "วันที่อบรม", required: true, showInTable: true, sendToTelegram: false },
+                        { id: "cert-4", type: "file_upload", title: "ไฟล์ใบประกาศนียบัตร", required: false, showInTable: false, sendToTelegram: false }
+                    ]
+                }
+            ]
+        };
+
+        function createTestForm() {
+            try {
+                // Add directly to localStorage
+                const formsKey = 'qcollector_forms';
+                const forms = JSON.parse(localStorage.getItem(formsKey) || '{}');
+
+                // Generate unique ID
+                const formId = 'form-test-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                const timestamp = new Date().toISOString();
+
+                // Create form with metadata
+                const newForm = {
+                    ...testFormData,
+                    id: formId,
+                    createdAt: timestamp,
+                    updatedAt: timestamp
+                };
+
+                // Save to localStorage
+                forms[formId] = newForm;
+                localStorage.setItem(formsKey, JSON.stringify(forms));
+
+                // Show success message
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('resultText').innerHTML = `
+                    <strong>✅ สร้างฟอร์มทดสอบสำเร็จ!</strong><br>
+                    <strong>ID:</strong> ${formId}<br>
+                    <strong>ชื่อ:</strong> ${testFormData.title}<br>
+                    <strong>Fields:</strong> ${testFormData.fields.length} ฟิลด์<br>
+                    <strong>Sub Forms:</strong> ${testFormData.subForms.length} ฟอร์ม<br><br>
+                    <em>กรุณารีเฟรชหน้าเว็บเพื่อดูฟอร์มใหม่ในรายการ</em>
+                `;
+
+                console.log('✅ Test form created:', newForm);
+
+            } catch (error) {
+                console.error('❌ Error creating test form:', error);
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('resultText').innerHTML = `
+                    <strong>❌ เกิดข้อผิดพลาด!</strong><br>
+                    ${error.message}
+                `;
+            }
+        }
+
+        // Auto-load if localStorage is available
+        window.addEventListener('load', function() {
+            if (typeof(Storage) !== "undefined") {
+                console.log('✅ LocalStorage พร้อมใช้งาน');
+            } else {
+                alert('❌ เบราว์เซอร์ไม่รองรับ LocalStorage');
+            }
+        });
+    </script>
+</body>
+</html>
