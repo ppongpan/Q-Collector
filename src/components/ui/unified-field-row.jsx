@@ -109,6 +109,7 @@ export const UnifiedFieldPreview = ({
   inputElement,
   statusTags = [],
   actions = [],
+  toggleButtons = null,
   onClick,
   className = '',
   ...props
@@ -133,7 +134,7 @@ export const UnifiedFieldPreview = ({
 
   // Create standardized label with line-clamp support
   const standardLabel = (
-    <h3 className="text-base font-semibold text-foreground/90 line-clamp-2 leading-tight text-left">
+    <h3 className="text-[14px] font-semibold text-foreground/90 line-clamp-2 leading-tight text-left">
       {field.title || fieldType?.label || 'Untitled Field'}
     </h3>
   );
@@ -171,7 +172,7 @@ export const UnifiedFieldPreview = ({
       icon={standardIcon}
       label={standardLabel}
       inputElement={standardInput}
-      tags={standardTags}
+      tags={toggleButtons || standardTags}
       actions={actions}
       onClick={onClick}
       className={className}

@@ -52,7 +52,7 @@ const EnhancedSlider = ({
             </label>
           )}
           {description && (
-            <p className="text-sm text-gray-500">{description}</p>
+            <p className="text-[12px] text-gray-500">{description}</p>
           )}
         </div>
       )}

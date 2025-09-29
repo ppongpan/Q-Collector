@@ -216,7 +216,7 @@ const FieldPreviewCard = ({
 
           {description && (
             <p className="
-              text-sm
+              text-[12px]
               text-gray-400
               leading-relaxed
               group-hover:text-gray-300

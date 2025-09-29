@@ -53,7 +53,7 @@ const MultiChoiceButtons = ({
 
   if (!options.length) {
     return (
-      <div className="text-sm text-muted-foreground italic p-4 text-center">
+      <div className="text-[12px] text-muted-foreground italic p-4 text-center">
         No options available
       </div>
     );

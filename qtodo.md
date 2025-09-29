@@ -1,364 +1,289 @@
-# Q-Collector Frontend Bug Fix - Todo List
+# Q-Collector Framework v0.4 Development Plan
 
-## 🚀 Phase 1: Core Frontend Bug Fix (Target: 1 hour)
+## ✅ Phase 0: Conditional Field Visibility System (COMPLETED)
 
-### ✅ วิเคราะห์สาเหตุที่แท้จริงของปัญหา Detail View ไม่อัพเดทไฟล์หลัง edit
-**Status**: ✅ COMPLETED
-**สาเหตุหลัก**: FormView.jsx ไม่ส่ง files parameter ให้ SubmissionService.updateSubmission()
-**ข้อมูล**: Data flow ขาดหาย - Form Edit → Save Files ✅ → SubmissionService (ไม่มี files) ❌
+### 0.1 Show/Hide Field with Formula Conditions ✅
+- [x] **Integrate Formula Engine & Conditional Visibility**
+  - Formula engine already implemented (formulaEngine.js)
+  - useConditionalVisibility hook already available
+  - Supports Google Sheets-compatible formulas
 
-### 🔧 ตรวจสอบการบันทึกข้อมูลไฟล์ใน localStorage และ submission data
-**Status**: ✅ COMPLETED
-**งาน**: ตรวจสอบ FormView.jsx และ SubmissionService.js - เสร็จสิ้น
+- [x] **Add Show Checkbox in Field Settings**
+  - Added checkbox in field-options-menu.jsx kebab menu
+  - Default state: checked (always show)
+  - Unchecked state: show formula input section
+  - Visual indicator when field has conditional visibility
 
-### 🔨 แก้ไข FormView.jsx ให้ส่ง uploadedFiles ไปให้ updateSubmission
-**Status**: ✅ COMPLETED
-**งาน**: เพิ่ม flatFiles parameter ใน updateSubmission call ที่บรรทัด 551-554 - เสร็จสิ้น
+- [x] **Connect Checkbox with Formula Builder**
+  - When checkbox is checked: field always visible
+  - When checkbox is unchecked: formula editor appears
+  - Real-time formula validation
+  - Field reference helper with available fields
+  - Formula examples in Thai language
 
-### 🔨 แก้ไข SubmissionService.updateSubmission ให้รับและจัดการ files parameter
-**Status**: ✅ COMPLETED
-**งาน**: ตรวจสอบพบว่ามี files handling อยู่แล้วอย่างสมบูรณ์ - เสร็จสิ้น
+- [x] **Update FormView.jsx for Runtime Evaluation**
+  - Connected updateFieldVisibility() to formulaEngine
+  - Logic: showCondition.enabled === false means formula is active
+  - Real-time field visibility evaluation on form data changes
+  - Skip validation for hidden fields
 
----
+- [x] **Fix Syntax Errors**
+  - Escaped HTML entities in JSX (&lt;, &gt;, &amp;)
+  - Fixed compilation errors in EnhancedFormBuilder.jsx
+  - Application compiles successfully
 
-## 🧪 Phase 2: Testing & Verification (Target: 30 minutes)
+### 0.2 Features Implemented
+- ✅ Show checkbox in field kebab menu (3-dot menu)
+- ✅ Formula input with validation and syntax highlighting
+- ✅ Field reference picker with grouped fields
+- ✅ Formula examples in Thai
+- ✅ Real-time formula evaluation in FormView
+- ✅ Error handling for invalid formulas
+- ✅ Conditional field visibility based on form data
 
-### 🧪 ทดสอบการแก้ไขหลังจากแก้ไข data flow
-**Status**: ✅ COMPLETED
-**งาน**: แก้ไข data flow เสร็จ - dev server ทำงานปกติ
-
-### ✅ ทดสอบหน้า Detail View แสดงไฟล์ใหม่อย่างถูกต้อง
-**Status**: ✅ READY FOR USER TESTING
-**งาน**: พร้อมทดสอบ - FormView.jsx ส่ง files ไปให้ SubmissionService แล้ว
-
-### ✅ ทดสอบการ download ไฟล์ในหน้า Detail View
-**Status**: ✅ READY FOR USER TESTING
-**งาน**: พร้อมทดสอบ - FileGallery และ FileDisplay มี download handlers แล้ว
-
-### 📝 อัพเดท documentation และ status
-**Status**: ✅ COMPLETED
-**งาน**: อัพเดท qtodo.md เสร็จสิ้น
-
----
-
-## 🎯 Technical Analysis Summary
-
-### 🐛 **Root Cause Analysis (COMPLETED)**
+### 0.3 Supported Formula Syntax
 ```javascript
-// ปัญหาที่พบ: FormView.jsx บรรทัด ~380
-const result = await SubmissionService.updateSubmission(submissionId, formData);
-// ❌ ขาด uploadedFiles parameter
+// Field References
+[FieldName] - Reference any form field
 
-// ควรจะเป็น:
-const result = await SubmissionService.updateSubmission(submissionId, formData, uploadedFiles);
+// Comparison Operators
+=, <>, <, >, <=, >=
+
+// Logical Functions
+AND(), OR(), NOT(), IF()
+
+// Text Functions
+CONTAINS(), ISBLANK(), ISNOTBLANK()
+
+// Examples
+AND([Status] = "Complete", [Amount] > 100)
+IF([Priority] = "High", NOT(ISBLANK([Comments])), TRUE)
+CONTAINS([Description], "urgent")
 ```
 
-### 🔧 **Fix Plan**
-1. **FormView.jsx**: เพิ่ม uploadedFiles parameter ใน updateSubmission call
-2. **SubmissionService.js**: ปรับปรุง updateSubmission method ให้รับ files parameter
-3. **ตรวจสอบ**: FileService integration และ localStorage update
-
-### 📁 **Files to Modify**
-- `src/components/FormView.jsx` (updateSubmission call)
-- `src/services/SubmissionService.js` (updateSubmission method)
+### 0.4 Testing Status
+- ✅ Dev server running successfully on port 3000
+- ✅ No compilation errors
+- ✅ Formula engine tested and working
+- ⏳ Manual UI testing pending
 
 ---
 
-## 🏁 Success Criteria
+## Phase 1: Enhanced Telegram Notification System (Next Priority)
 
-### Phase 1 Complete When:
-- [ ] FormView.jsx ส่ง files parameter ได้
-- [ ] SubmissionService.updateSubmission รับ files parameter ได้
-- [ ] ไม่มี console errors
+### 1.1 Remove Legacy Telegram System
+- [x] **Remove Telegram settings from kebab menu**
+  - Remove telegram configuration options from field-options-menu.jsx
+  - Clean up related imports and functions
+  - Test kebab menu functionality
 
-### Phase 2 Complete When:
-- [ ] Edit ไฟล์แล้ว Detail View อัพเดทตาม
-- [ ] Download ไฟล์ใน Detail View ทำงาน
-- [ ] ทุก use case ทำงานปกติ
+- [ ] **Simplify Field Toggle System**
+  - Remove telegram order numbering from field-toggle-buttons.jsx
+  - Keep only the toggle functionality for enabling/disabling telegram notifications
+  - Remove order display badges and related logic
+  - Update EnhancedFormBuilder.jsx telegram field management
 
----
+### 1.2 Advanced Telegram Configuration in Settings
+- [ ] **Create TelegramNotificationSettings component**
+  - Add to form settings page as new section
+  - Implement with ShadCN UI components
+  - Responsive design for all screen sizes
 
-**Created**: 2025-09-29
-**Framework**: Q-Collector Frontend v0.2
-**Priority**: HIGH - Critical bug affecting file management
-**Estimated Time**: 1.5 hours total
+- [ ] **Message Prefix Input System**
+  - Add GlassInput for custom message prefix
+  - Default: "ข้อมูลใหม่จาก [FormName] [DateTime]"
+  - Real-time preview of message format
+  - Validation and character limits
 
----
+- [ ] **Dual-Panel Field Ordering System**
+  - Left Panel: Available telegram-enabled fields
+  - Right Panel: Selected fields in notification order
+  - Drag-and-drop reordering with @dnd-kit
+  - Click to move between panels
+  - "Reset All" and "Select All" buttons
 
-## 🎨 Phase 3: Detail View UI/UX Enhancement (Target: 45 minutes)
+### 1.3 Interactive UI Components
+- [ ] **Field Tag Components**
+  - Custom tags with field type icons and colors
+  - Smooth hover and selection animations
+  - Drag handles and visual feedback
+  - Responsive tag sizing
 
-### 🎯 **ปัญหาที่ต้องแก้ไข**
-1. **สีชื่อฟิลด์**: ต้องการให้เป็นสีส้มตลอดเวลา (ไม่ใช่ hover)
-2. **Hover Effect**: ย้ายจากชื่อฟิลด์ไปที่ข้อมูลฟิลด์ (data value)
-3. **กรอบฟิลด์**: ลดกรอบลิออมรอบให้เหลือแค่ที่จำเป็น
-4. **ไฟล์ Download**: ปุ่ม download ยังไม่ทำงาน
-5. **แสดงภาพ**: ไฟล์ภาพแสดงแค่ icon ต้องการเห็นภาพจริง
+- [ ] **Drag & Drop System**
+  - Implement with existing @dnd-kit setup
+  - Visual drop zones and feedback
+  - Snap-to-position animations
+  - Error handling for invalid drops
 
-### 🔨 **แผนการแก้ไข**
+- [ ] **Motion Effects & Animations**
+  - Smooth slide transitions between panels
+  - Scale and fade effects on hover
+  - Spring physics for reordering
+  - Loading states and success feedback
 
-#### Step 1: ปรับ Field Label Styling ✅
-**Status**: ✅ COMPLETED
-**งาน**: เปลี่ยนสีชื่อฟิลด์เป็นส้ม (text-primary) ตลอดเวลา - เสร็จสิ้น
-**ไฟล์**: SubmissionDetail.jsx line ~497-502
+### 1.4 Message Preview & Testing System
+- [ ] **Live Message Preview Component**
+  - Real-time preview of telegram message format
+  - Show actual field data from form
+  - Preview with custom prefix
+  - Character count and telegram limits
 
-#### Step 2: ย้าย Hover Effect ไปที่ Data Value ✅
-**Status**: ✅ COMPLETED
-**งาน**: ปรับ hover effect จากชื่อฟิลด์ไปที่ข้อมูลฟิลด์ - เสร็จสิ้น
-**ไฟล์**: SubmissionDetail.jsx line ~504-510
+- [ ] **Message Format Structure**
+  ```
+  [Custom Prefix] [DateTime]
+  [Field1 Name]: [Field1 Value]
+  [Field2 Name]: [Field2 Value]
+  ...
+  ```
 
-#### Step 3: ลดกรอบฟิลด์ ✅
-**Status**: ✅ COMPLETED
-**งาน**: ลบ border และ background เหลือแค่ padding - เสร็จสิ้น
-**ไฟล์**: SubmissionDetail.jsx line ~496
+- [ ] **Testing & Validation System**
+  - "Test Message" button to send preview
+  - Connection status indicator
+  - Test message success/failure feedback
+  - Bot token and group ID validation
 
-#### Step 4: แก้ไขปัญหาไฟล์ Download ✅
-**Status**: ✅ COMPLETED (via general-purpose agent)
-**งาน**: เพิ่ม download handlers และแก้ไข file processing - เสร็จสิ้น
-**ไฟล์**: file-display.jsx, SubmissionDetail.jsx
+## Phase 2: Data Structure & State Management
 
-#### Step 5: แก้ไขการแสดงภาพจริง ✅
-**Status**: ✅ COMPLETED (via component-upgrade agent)
-**งาน**: ปรับ ImageThumbnail ให้แสดง thumbnails จริง - เสร็จสิ้น
-**ไฟล์**: image-thumbnail.jsx, SubmissionDetail.jsx
-
-### 📁 **Files to Modify**
-- `src/components/SubmissionDetail.jsx` (หลัก)
-- `src/components/ui/image-thumbnail.jsx` (file download & thumbnails)
-- `src/components/ui/file-display.jsx` (file download)
-- `src/services/FileService.js` (download logic)
-
----
-
-## 🧩 Technical Implementation Plan
-
-### Agent Strategy:
-1. **component-upgrade** - ปรับ SubmissionDetail.jsx styling
-2. **general-purpose** - ตรวจสอบและแก้ไข file download issues
-3. **component-upgrade** - ปรับ image thumbnail display
-
-### Expected Outcome:
-```jsx
-// Target Layout:
-<div className="space-y-2">
-  <div className="flex items-center gap-3">
-    <label className="text-primary font-medium">ชื่อฟิลด์ :</label>
-    <div className="text-foreground hover:text-primary transition-colors">
-      ข้อมูลฟิลด์
-    </div>
-  </div>
-</div>
+### 2.1 Updated Telegram Settings Structure
+```javascript
+telegramSettings: {
+  enabled: boolean,
+  botToken: string,
+  groupId: string,
+  messagePrefix: string,           // New: Custom message prefix
+  selectedFields: string[],        // New: Ordered array of field IDs
+  availableFields: string[]        // New: Fields enabled for telegram but not selected
+}
 ```
 
-**Created**: 2025-09-29
-**Framework**: Q-Collector Frontend v0.2
-**Priority**: HIGH - Critical bug affecting file management
-**Estimated Time**: 1.5 hours total (Phase 1-2) + 45 minutes (Phase 3)
-
----
-
-## 🆘 Phase 4: Critical UI/UX Issues (Target: 1 hour) - CURRENT PHASE
-
-**CTO Analysis Date**: 2025-09-29
-**Status**: 🔴 CRITICAL ISSUES IDENTIFIED
-
-### 🔍 **CRITICAL ISSUES ANALYSIS**
-
-#### **Issue #1: Toast Notification Flicker & Disappear** ⚡
-**Problem**: Toast กระพริบแล้วหายไปเมื่อผู้ใช้อยู่ด้านล่างหน้าจอ
-**Severity**: 🔴 HIGH
-**Root Cause**:
-- Fixed positioning calculation ผิด
-- AnimatePresence conflicts
-- Toast duration/dismiss logic issues
-
-**Current Code**:
-```jsx
-// enhanced-toast.jsx line 277
-<div className="fixed right-2 sm:right-4 top-[4.5rem] lg:top-[5.5rem] z-[9999]">
+### 2.2 Component Architecture
+```
+EnhancedFormBuilder.jsx
+├── Settings Tab
+    ├── TelegramNotificationSettings.jsx (New)
+        ├── MessagePrefixInput.jsx
+        ├── FieldOrderingPanel.jsx
+        │   ├── AvailableFieldsPanel.jsx
+        │   ├── SelectedFieldsPanel.jsx
+        │   └── FieldTag.jsx
+        ├── MessagePreview.jsx
+        └── TestNotificationButton.jsx
 ```
 
-**Analysis**:
-- `top-[4.5rem]` = 72px อาจไม่ตรงกับ header height จริง
-- Z-index อาจ conflict กับ animations
-- Position อาจ offset ผิด
+### 2.3 State Management Strategy
+- Use existing form state structure
+- Add telegram settings to form.settings.telegram
+- Implement optimistic updates for better UX
+- Add loading states for async operations
+
+## Phase 3: ShadCN UI Integration & Motion Design
+
+### 3.1 Required ShadCN Components
+- **Drag & Drop**: @dnd-kit (already integrated)
+- **Cards**: Existing glass-card components
+- **Inputs**: Existing glass-input components
+- **Buttons**: Existing glass-button components
+- **Badges/Tags**: Custom field tags with ShadCN styling
+- **Preview**: code-block component for message preview
+
+### 3.2 Motion Effects Implementation
+- **Tag Movement**: Smooth slide transitions between panels
+- **Hover Effects**: Scale and fade animations
+- **Drag Operations**: Visual feedback and drop zones
+- **Reordering**: Spring physics animations
+- **State Changes**: Color transitions and loading indicators
+
+### 3.3 Responsive Design Considerations
+- Mobile-first approach
+- Touch-friendly drag operations
+- Collapsible panels on small screens
+- Adaptive grid layouts
+
+## Phase 4: Advanced Features & Integration
+
+### 4.1 Field Type Enhancements
+- [ ] **Custom Display Formats**
+  - Different formatting for field types
+  - File/image handling in notifications
+  - Date/time formatting options
+  - Multi-choice field formatting
+
+### 4.2 Message Optimization
+- [ ] **Smart Message Building**
+  - Message length optimization
+  - Conditional field inclusion
+  - Template system for common formats
+  - Emoji and formatting support
+
+### 4.3 Performance & Accessibility
+- [ ] **Performance Optimizations**
+  - Virtualization for large field lists
+  - Debounced search and filter
+  - Optimized drag-and-drop rendering
+  - Lazy loading for heavy components
+
+- [ ] **Accessibility Compliance**
+  - WCAG 2.1 AA compliance
+  - Keyboard navigation for drag-and-drop
+  - Screen reader support
+  - Focus management
+
+## Phase 5: Testing & Deployment
+
+### 5.1 Data Migration
+- [ ] **Migration Strategy**
+  - Convert existing telegram order system
+  - Preserve user configurations
+  - Backup and restore functionality
+  - Gradual rollout with feature flags
+
+### 5.2 Comprehensive Testing
+- [ ] **Testing Framework**
+  - Unit tests for telegram functionality
+  - Integration tests for drag-and-drop
+  - User experience testing
+  - Performance testing for large forms
+
+### 5.3 Documentation & Cleanup
+- [ ] **Code Cleanup**
+  - Remove unused telegram-related code
+  - Optimize bundle size
+  - Update TypeScript definitions
+  - Component documentation updates
+
+## Implementation Strategy
+
+### Development Approach
+1. **Phase 1**: Start with removing legacy system
+2. **Phase 2**: Build core components with basic functionality
+3. **Phase 3**: Add advanced UI and animations
+4. **Phase 4**: Implement testing and optimization
+5. **Phase 5**: Documentation and deployment
+
+### Specialized Agents Utilization
+- **component-upgrade**: For modernizing telegram settings UI
+- **motion-effects**: For drag-and-drop animations
+- **responsive-layout**: For mobile-responsive design
+- **navigation-system**: For settings page integration
+
+### Risk Mitigation
+- Comprehensive backup before major changes
+- Feature flags for gradual rollout
+- Fallback to simple toggle if drag-and-drop fails
+- Progressive enhancement approach
+- Extensive testing on different screen sizes
+
+## Success Metrics
+- [ ] Intuitive drag-and-drop field ordering
+- [ ] Smooth 60fps animations and transitions
+- [ ] Mobile-responsive design
+- [ ] Zero breaking changes to existing forms
+- [ ] Improved telegram notification customization
+- [ ] Enhanced user experience with visual feedback
 
 ---
 
-#### **Issue #2: Email/Phone Links Not Working** 📧📞
-**Problem**: Email/Phone ในหน้า detail view ไม่สามารถคลิกได้
-**Severity**: 🟡 MEDIUM
-**Root Cause**:
-- มี code แต่ไม่ทำงาน
-- CSS pointer-events conflicts
-- Event propagation issues
-
-**Current Implementation**: SubmissionDetail.jsx:442-490
-**Analysis**: Code มี email/phone handling แต่ยังไม่ clickable
-
----
-
-#### **Issue #3: Field Label Colors** 🎨
-**Problem**: ต้องการชื่อฟิลด์เป็นสีส้ม static ไม่ใช่สีขาว
-**Severity**: 🟢 LOW
-**Current State**: `text-orange-400` (ถูกต้องแล้ว)
-**Analysis**: อาจมี CSS override หรือ dynamic changes
-
----
-
-### 🛠️ **IMMEDIATE ACTION PLAN**
-
-#### **Step 4.1: Fix Toast Positioning** ⚡
-- [ ] Calculate precise header height
-- [ ] Fix top positioning calculation
-- [ ] Test z-index hierarchy
-- [ ] Verify AnimatePresence settings
-
-**Target Fix**:
-```jsx
-// Calculate exact header position
-const headerHeight = 'calc(4rem)'; // 64px base
-const lgHeaderHeight = 'calc(5rem)'; // 80px lg
-const spacing = '0.5rem'; // 8px spacing
-
-<div className="fixed right-2 sm:right-4 z-[9999]"
-     style={{ top: `calc(${headerHeight} + ${spacing})` }}>
-```
-
-#### **Step 4.2: Fix Email/Phone Links** 📧📞
-- [ ] Test current email validation
-- [ ] Fix click event propagation
-- [ ] Verify pointer-events CSS
-- [ ] Test tel: and mailto: links
-
-#### **Step 4.3: Audit Field Label Colors** 🎨
-- [ ] Search for all label colors
-- [ ] Remove dynamic color changes
-- [ ] Ensure static orange theme
-
----
-
-### 🧪 **TESTING PROTOCOL**
-
-#### **Toast Tests**:
-- [ ] Test from form top
-- [ ] Test from form bottom
-- [ ] Test during scroll
-- [ ] Test auto-dismiss timing
-- [ ] Test on mobile/desktop
-
-#### **Link Tests**:
-- [ ] Click email → email client opens
-- [ ] Click phone → dialer opens (mobile)
-- [ ] Hover effects work
-- [ ] Visual feedback present
-
-#### **Color Tests**:
-- [ ] All labels are orange
-- [ ] No white labels
-- [ ] Consistent across field types
-
----
-
-### 📊 **PROGRESS TRACKING**
-
-| Issue | Status | Priority | Result |
-|-------|--------|----------|--------|
-| Toast Positioning | ✅ COMPLETED | HIGH | Fixed calc() positioning + media queries |
-| Email/Phone Links | ✅ COMPLETED | MED | Removed stopPropagation + added target="_blank" |
-| Label Colors | ✅ COMPLETED | LOW | Verified all labels are text-orange-400 |
-
----
-
-### ✅ **FIXES IMPLEMENTED**
-
-#### **Issue #1: Toast Positioning** ⚡
-**Status**: ✅ FIXED
-**Solution**:
-```jsx
-// enhanced-toast.jsx - Updated positioning
-<div
-  className="fixed right-2 sm:right-4 z-[9999]"
-  style={{ top: 'calc(4rem + 0.5rem)' }}
->
-  <style>{`
-    @media (min-width: 1024px) {
-      .fixed.right-2.sm\\:right-4 {
-        top: calc(5rem + 0.5rem) !important;
-      }
-    }
-  `}</style>
-  <AnimatePresence mode="sync" initial={false}>
-```
-
-**Changes Made**:
-- Fixed calc() positioning for exact header height
-- Added media query for lg screens
-- Changed AnimatePresence to `mode="sync"` and `initial={false}`
-- Ensures toast stays below header at all screen sizes
-
-#### **Issue #2: Email/Phone Links** 📧📞
-**Status**: ✅ FIXED
-**Solution**:
-```jsx
-// SubmissionDetail.jsx - Removed all stopPropagation
-<a
-  href={`mailto:${value}`}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="text-primary hover:text-primary/80 hover:underline..."
->
-```
-
-**Changes Made**:
-- Removed all `onClick={(e) => e.stopPropagation()}` calls
-- Added `target="_blank"` and `rel="noopener noreferrer"`
-- Email links now open email client
-- Phone links now trigger dialer on mobile
-
-#### **Issue #3: Field Label Colors** 🎨
-**Status**: ✅ VERIFIED
-**Analysis**:
-- All labels already use `text-orange-400` consistently
-- No white labels found
-- No dynamic color changes
-- Static orange color maintained across all field types
-
----
-
-### 🧪 **TESTING RESULTS**
-
-#### **Toast Tests**: ✅ PASS
-- [x] Fixed positioning calculation
-- [x] Media queries for responsive design
-- [x] AnimatePresence mode optimized
-- [x] Z-index hierarchy correct
-
-#### **Link Tests**: ✅ PASS
-- [x] Email links generate mailto: URLs
-- [x] Phone links generate tel: URLs
-- [x] Click events no longer blocked
-- [x] Target="_blank" for external handling
-
-#### **Color Tests**: ✅ PASS
-- [x] All labels are orange (#f97316)
-- [x] No white label text found
-- [x] Consistent across all field types
-- [x] Static colors without dynamic effects
-
----
-
-### 📝 **IMPLEMENTATION NOTES**
-
-**All Critical Issues Resolved**:
-- ✅ Toast notifications will now stay visible at top-right
-- ✅ Email/phone fields are now fully clickable
-- ✅ Field labels maintain consistent orange color
-- ✅ All fixes are mobile-responsive
-- ✅ Existing functionality preserved
-
-**Files Modified**:
-- `src/components/ui/enhanced-toast.jsx` (toast positioning)
-- `src/components/SubmissionDetail.jsx` (email/phone links)
-
-**Next Action**: Ready for user testing
-**Total Time**: 45 minutes (ahead of 1-hour estimate)
+**Target Completion**: v0.4.0 by Current Session
+**Priority**: High - User experience improvement
+**Dependencies**: @dnd-kit, ShadCN UI components, existing form structure
+**Estimated Development Time**: 2-3 development sessions

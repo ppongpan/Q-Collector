@@ -5,7 +5,6 @@
       "Bash(grep:*)",
       "Bash(cat:*)",
       "Bash(cp:*)",
-      "mcp__shadcn__getComponents",
       "Bash(npx shadcn@latest add:*)",
       "Bash(npm run build:*)",
       "Bash(find:*)",

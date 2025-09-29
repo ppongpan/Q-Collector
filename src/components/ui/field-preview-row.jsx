@@ -2,6 +2,7 @@ import React from 'react';
 import { faTable, faComments } from '@fortawesome/free-solid-svg-icons';
 import FieldInlinePreview from '../FieldInlinePreview';
 import { UnifiedFieldPreview } from './unified-field-row';
+import FieldToggleButtons from './field-toggle-buttons';
 
 /**
  * FieldPreviewRow - Perfectly aligned collapsed field preview component
@@ -21,38 +22,39 @@ import { UnifiedFieldPreview } from './unified-field-row';
  * @param {Object} props.field - Field configuration object
  * @param {Object} props.fieldType - Field type info with icon and color
  * @param {boolean} props.isExpanded - Whether field is expanded
+ * @param {Function} props.onUpdate - Update callback function
+ * @param {boolean} props.isSubForm - Whether this is a sub form field
+ * @param {number} props.tableFieldCount - Current count of fields showing in table
+ * @param {number} props.maxTableFields - Maximum allowed table fields
+ * @param {Array} props.allFields - All fields in the form for ordering
+ * @param {string} props.formTitle - Form title for Telegram prefix
  */
-const FieldPreviewRow = ({ field, fieldType, isExpanded = false, showFieldTypeIcon = true }) => {
+const FieldPreviewRow = ({
+  field,
+  fieldType,
+  isExpanded = false,
+  showFieldTypeIcon = true,
+  onUpdate,
+  isSubForm = false,
+  tableFieldCount = 0,
+  maxTableFields = 5,
+  allFields = [],
+  formTitle = ''
+}) => {
   if (!fieldType) return null;
 
-  // Status tags configuration
-  const statusTags = [];
-
-  if (field.required) {
-    statusTags.push({
-      text: 'จำเป็น',
-      variant: 'destructive',
-      key: 'required'
-    });
-  }
-
-  if (field.showInTable) {
-    statusTags.push({
-      text: 'ตาราง',
-      variant: 'secondary',
-      icon: faTable,
-      key: 'table'
-    });
-  }
-
-  if (field.sendTelegram) {
-    statusTags.push({
-      text: 'แจ้งเตือน',
-      variant: 'default',
-      icon: faComments,
-      key: 'telegram'
-    });
-  }
+  // Create FieldToggleButtons component instead of status tags
+  const toggleButtonsElement = onUpdate ? (
+    <FieldToggleButtons
+      field={field}
+      onUpdate={onUpdate}
+      isSubForm={isSubForm}
+      tableFieldCount={tableFieldCount}
+      maxTableFields={maxTableFields}
+      allFields={allFields}
+      formTitle={formTitle}
+    />
+  ) : null;
 
   // Only render if not expanded
   if (isExpanded) return null;
@@ -74,7 +76,8 @@ const FieldPreviewRow = ({ field, fieldType, isExpanded = false, showFieldTypeIc
       fieldType={showFieldTypeIcon ? fieldType : null}
       field={field}
       inputElement={inputElement}
-      statusTags={statusTags}
+      statusTags={[]}
+      toggleButtons={toggleButtonsElement}
     />
   );
 };

@@ -20,6 +20,8 @@ import FileService from '../services/FileService.js';
 
 // Utilities
 import { formatNumberInput, parseNumberInput, isValidNumber } from '../utils/numberFormatter.js';
+import { formulaEngine } from '../utils/formulaEngine.js';
+import { useConditionalVisibility } from '../hooks/useConditionalVisibility.js';
 
 const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) => {
   const [form, setForm] = useState(null);
@@ -32,6 +34,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   const [fieldTouched, setFieldTouched] = useState({});
   const [hasSubmissionAttempt, setHasSubmissionAttempt] = useState(false);
   const [storageUsage, setStorageUsage] = useState(null);
+  const [fieldVisibility, setFieldVisibility] = useState({});
 
   // Enhanced toast notifications
   const toast = useEnhancedToast();
@@ -218,10 +221,9 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   };
 
   const handleInputChange = useCallback((fieldId, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldId]: value
-    }));
+    const newFormData = { ...formData, [fieldId]: value };
+
+    setFormData(newFormData);
 
     // Mark field as touched
     setFieldTouched(prev => ({
@@ -238,7 +240,10 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         [fieldId]: error
       }));
     }
-  }, [form]);
+
+    // Update conditional field visibility after data change
+    updateFieldVisibility(newFormData);
+  }, [form, formData, updateFieldVisibility]);
 
   // Special handler for number fields with live formatting
   const handleNumberInputChange = useCallback((fieldId, inputValue, previousValue) => {
@@ -267,8 +272,12 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
       }));
     }
 
+    // Update conditional field visibility after data change
+    const newFormData = { ...formData, [fieldId]: cleanValue };
+    updateFieldVisibility(newFormData);
+
     return formattedValue;
-  }, [form]);
+  }, [form, formData, updateFieldVisibility]);
 
   // Factory button click handler
   const handleFactoryClick = useCallback((fieldId, factory, allowMultiple, currentValue) => {
@@ -277,11 +286,99 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
       const newSelection = selectedFactories.includes(factory)
         ? selectedFactories.filter(f => f !== factory)
         : [...selectedFactories, factory];
-      handleInputChange(fieldId, newSelection);
+      const newFormData = { ...formData, [fieldId]: newSelection };
+
+      setFormData(newFormData);
+
+      // Mark field as touched
+      setFieldTouched(prev => ({
+        ...prev,
+        [fieldId]: true
+      }));
+
+      // Validate field
+      const field = form?.fields.find(f => f.id === fieldId);
+      if (field) {
+        const error = validateField(field, newSelection);
+        setFieldErrors(prev => ({
+          ...prev,
+          [fieldId]: error
+        }));
+      }
+
+      // Update conditional field visibility after data change
+      updateFieldVisibility(newFormData);
     } else {
-      handleInputChange(fieldId, factory);
+      const newFormData = { ...formData, [fieldId]: factory };
+
+      setFormData(newFormData);
+
+      // Mark field as touched
+      setFieldTouched(prev => ({
+        ...prev,
+        [fieldId]: true
+      }));
+
+      // Validate field
+      const field = form?.fields.find(f => f.id === fieldId);
+      if (field) {
+        const error = validateField(field, factory);
+        setFieldErrors(prev => ({
+          ...prev,
+          [fieldId]: error
+        }));
+      }
+
+      // Update conditional field visibility after data change
+      updateFieldVisibility(newFormData);
     }
-  }, [handleInputChange]);
+  }, [form, formData, updateFieldVisibility]);
+
+  // Calculate field visibility based on conditional formulas
+  const updateFieldVisibility = useCallback((currentFormData) => {
+    if (!form?.fields) return;
+
+    const newVisibility = {};
+    const fieldMap = {};
+
+    // Create field map for formula evaluation
+    form.fields.forEach(field => {
+      fieldMap[field.id] = field;
+    });
+
+    form.fields.forEach(field => {
+      // Default visibility is true
+      let isVisible = true;
+
+      // Check if field has conditional visibility
+      // showCondition.enabled === false means formula is active (unchecked checkbox)
+      // showCondition.enabled === true or undefined means always show (checked checkbox)
+      if (field.showCondition?.enabled === false && field.showCondition?.formula) {
+        try {
+          // Evaluate the formula with current form data
+          isVisible = formulaEngine.evaluate(
+            field.showCondition.formula,
+            currentFormData,
+            fieldMap
+          );
+        } catch (error) {
+          console.warn(`Error evaluating show condition for field ${field.title}:`, error);
+          // Default to visible on error
+          isVisible = true;
+        }
+      }
+      // If showCondition.enabled is true or undefined, field is always visible
+
+      newVisibility[field.id] = isVisible;
+    });
+
+    setFieldVisibility(newVisibility);
+  }, [form]);
+
+  // Update field visibility when form data changes
+  useEffect(() => {
+    updateFieldVisibility(formData);
+  }, [formData, updateFieldVisibility]);
 
   const handleFileChange = async (fieldId, files) => {
     if (!files || files.length === 0) return;
@@ -467,8 +564,14 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     console.log('Form fields:', form.fields);
     console.log('Form data:', formData);
     console.log('Uploaded files:', uploadedFiles);
+    console.log('Field visibility:', fieldVisibility);
 
     form.fields.forEach(field => {
+      // Skip validation for hidden fields
+      if (fieldVisibility[field.id] === false) {
+        console.log(`Skipping validation for hidden field: ${field.title}`);
+        return;
+      }
       let error = '';
 
       // Special handling for file upload fields
@@ -678,6 +781,12 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   };
 
   const renderField = (field) => {
+    // Check if field should be visible based on conditional formulas
+    const isFieldVisible = fieldVisibility[field.id] !== false;
+    if (!isFieldVisible) {
+      return null; // Don't render hidden fields
+    }
+
     const rawFieldValue = formData[field.id];
 
     // Defensive conversion for objects to prevent React rendering errors
@@ -1314,7 +1423,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
                 {field.required && <span className="text-destructive ml-1">*</span>}
               </label>
               {field.description && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-[12px] text-muted-foreground">
                   เลือกโรงงานที่ต้องการ
                 </p>
               )}

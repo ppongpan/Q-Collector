@@ -683,31 +683,12 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
                     ? 'วางไฟล์ที่นี่'
                     : fileName
                       ? 'เลือกไฟล์แล้ว'
-                      : 'คลิกเพื่อเลือกไฟล์'
+                      : 'เลือกไฟล์'
                   }
                 </div>
 
-                {!fileName && !isFileDragOver && (
-                  <div className="text-xs text-muted-foreground">
-                    หรือลากไฟล์มาวางที่นี่
-                  </div>
-                )}
               </div>
 
-              {/* Enhanced upload button */}
-              {!fileName && !isFileDragOver && (
-                <button
-                  type="button"
-                  className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500/50 shadow-lg shadow-orange-500/25 transition-all duration-200 hover:scale-105"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fileInputRef.current?.click();
-                  }}
-                >
-                  <span>📁</span>
-                  <span>เลือกไฟล์</span>
-                </button>
-              )}
             </div>
           </div>
 
@@ -753,15 +734,8 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
           )}
 
           {/* File type and size information */}
-          <div className="text-xs text-muted-foreground space-y-1 bg-background/50 rounded-lg p-2">
-            <div><strong>ประเภทไฟล์ที่รองรับ:</strong></div>
-            <div className="grid grid-cols-2 gap-1 text-xs">
-              <div>• เอกสาร: PDF, DOC, DOCX</div>
-              <div>• สเปรดชีต: XLS, XLSX</div>
-              <div>• นำเสนอ: PPT, PPTX</div>
-              <div>• ไฟล์บีบอัด: ZIP, RAR, 7Z</div>
-            </div>
-            <div><strong>ขนาดสูงสุด:</strong> {Math.round(maxFileSize / 1024 / 1024)}MB</div>
+          <div className="text-xs text-muted-foreground bg-background/50 rounded-lg p-2 text-center">
+            <div><strong>ประเภทเอกสาร ขนาดสูงสุด 10MB</strong></div>
           </div>
         </div>
       );
@@ -924,31 +898,12 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
                     ? 'วางรูปภาพที่นี่'
                     : imageName
                       ? 'เลือกรูปภาพแล้ว'
-                      : 'คลิกเพื่อเลือกรูปภาพ'
+                      : 'เลือกรูปภาพ'
                   }
                 </div>
 
-                {!imageName && !isImageDragOver && (
-                  <div className="text-xs text-muted-foreground">
-                    หรือลากรูปภาพมาวางที่นี่
-                  </div>
-                )}
               </div>
 
-              {/* Enhanced upload button */}
-              {!imageName && !isImageDragOver && (
-                <button
-                  type="button"
-                  className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500/50 shadow-lg shadow-orange-500/25 transition-all duration-200 hover:scale-105"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    imageInputRef.current?.click();
-                  }}
-                >
-                  <span>🖼️</span>
-                  <span>เลือกรูปภาพ</span>
-                </button>
-              )}
             </div>
           </div>
 
@@ -1013,14 +968,8 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
           )}
 
           {/* Image type and size information */}
-          <div className="text-xs text-muted-foreground space-y-1 bg-background/50 rounded-lg p-2">
-            <div><strong>ประเภทรูปภาพที่รองรับ:</strong></div>
-            <div className="grid grid-cols-2 gap-1 text-xs">
-              <div>• รูปภาพ: JPG, JPEG, PNG</div>
-              <div>• ภาพเคลื่อนไหว: GIF, WebP</div>
-              <div>• เวกเตอร์: SVG</div>
-              <div>• ขนาดสูงสุด: {Math.round(maxImageSize / 1024 / 1024)}MB</div>
-            </div>
+          <div className="text-xs text-muted-foreground bg-background/50 rounded-lg p-2 text-center">
+            <div><strong>JPG, PNG, GIF, SVG, WebP ขนาดสูงสุด 5MB</strong></div>
           </div>
         </div>
       );

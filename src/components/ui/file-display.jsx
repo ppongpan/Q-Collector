@@ -178,7 +178,7 @@ const FileItem = ({ file, onClick, className }) => {
 const FileList = ({ files, onFileClick, className, maxDisplay = 5 }) => {
   if (!files || files.length === 0) {
     return (
-      <div className="text-sm text-muted-foreground italic">
+      <div className="text-[12px] text-muted-foreground italic">
         ไม่มีไฟล์
       </div>
     );
@@ -226,7 +226,7 @@ const FileDisplay = ({
   // Handle different value formats
   if (!value) {
     return (
-      <div className="text-sm text-muted-foreground italic">
+      <div className="text-[12px] text-muted-foreground italic">
         ไม่มีไฟล์
       </div>
     );
@@ -268,7 +268,7 @@ const FileDisplay = ({
 
   // Fallback for unknown format
   return (
-    <div className="text-sm text-muted-foreground italic">
+    <div className="text-[12px] text-muted-foreground italic">
       รูปแบบไฟล์ไม่ถูกต้อง
     </div>
   );

@@ -27,8 +27,10 @@ import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription, Glass
 import { GlassInput, GlassTextarea, GlassSelect } from "./ui/glass-input";
 import FieldPreviewRow from "./ui/field-preview-row";
 import FieldOptionsMenu from "./ui/field-options-menu";
+import FieldToggleButtons from "./ui/field-toggle-buttons";
 import { useEnhancedToast } from './ui/enhanced-toast';
 import AnimatedAddButton from './ui/animated-add-button';
+import TelegramNotificationSettings from './ui/telegram-notification-settings';
 // import EnhancedSlider from "./ui/enhanced-slider"; // Commented out - not used
 
 // ShadCN UI components
@@ -253,7 +255,8 @@ function FieldEditor({
   isDragging,
   isSubForm = false,
   allFields = [],
-  maxTableFields = 5
+  maxTableFields = 5,
+  formTitle = ''
 }) {
   const [isExpanded, setIsExpanded] = useState(false); // Default to collapsed for better overview
   const fieldType = FIELD_TYPES.find(type => type.value === field.type);
@@ -278,6 +281,12 @@ function FieldEditor({
           fieldType={fieldType}
           isExpanded={isExpanded}
           showFieldTypeIcon={isExpanded}
+          onUpdate={updateField}
+          isSubForm={isSubForm}
+          tableFieldCount={tableFieldCount}
+          maxTableFields={maxTableFields}
+          allFields={allFields}
+          formTitle={formTitle || (isSubForm ? 'ฟอร์มย่อย' : 'ฟอร์มหลัก')}
         />
       </div>
     );
@@ -338,6 +347,7 @@ function FieldEditor({
             </div>
           )}
 
+
           {/* Field Preview - Flexible */}
           <div className="flex-1 min-w-0">
             {getFieldPreview()}
@@ -359,6 +369,8 @@ function FieldEditor({
                 isSubForm={isSubForm}
                 tableFieldCount={tableFieldCount}
                 maxTableFields={maxTableFields}
+                allFields={allFields}
+                formTitle={formTitle || (isSubForm ? 'ฟอร์มย่อย' : 'ฟอร์มหลัก')}
               />
             </div>
           </div>
@@ -417,6 +429,72 @@ function FieldEditor({
               />
             </div>
           )}
+
+          {/* Field Visibility Settings */}
+          <div className="space-y-4 p-4 bg-gradient-to-r from-purple-500/5 to-blue-500/5 border border-purple-200/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faQuestionCircle} className="w-4 h-4 text-purple-600" />
+              <label className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                การแสดงฟิลด์
+              </label>
+            </div>
+
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={field.showCondition?.enabled !== true}
+                  onChange={(e) => {
+                    const isAlwaysVisible = e.target.checked;
+                    updateField({
+                      showCondition: {
+                        enabled: !isAlwaysVisible,
+                        formula: isAlwaysVisible ? '' : (field.showCondition?.formula || '')
+                      }
+                    });
+                  }}
+                  className="w-4 h-4 text-primary focus:ring-primary/20 focus:ring-2 rounded"
+                />
+                <span className="text-sm text-foreground/80">
+                  แสดง <span className="text-xs text-muted-foreground ml-1">(แสดงฟิลด์นี้เสมอ)</span>
+                </span>
+              </label>
+
+              {/* Conditional Formula Input - Only show when checkbox is unchecked */}
+              {field.showCondition?.enabled === true && (
+                <div className="space-y-3 pl-7 animate-in slide-in-from-top-2 duration-300">
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCog} className="w-3 h-3 text-orange-600" />
+                    <label className="text-xs font-medium text-orange-800 dark:text-orange-200">
+                      เงื่อนไขการแสดงฟิลด์
+                    </label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <GlassTextarea
+                      value={field.showCondition?.formula || ''}
+                      onChange={(e) => updateField({
+                        showCondition: {
+                          ...field.showCondition,
+                          formula: e.target.value
+                        }
+                      })}
+                      placeholder="เช่น: field_1 == 'value' หรือ field_2 > 10"
+                      className="min-h-20 font-mono text-xs bg-orange-500/5 border-orange-200/30"
+                      minimal
+                    />
+
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>• ใช้ชื่อฟิลด์: field_1, field_2, ...</p>
+                      <p>• เปรียบเทียบ: ==, !=, &gt;, &lt;, &gt;=, &lt;=</p>
+                      <p>• ตรรกะ: &amp;&amp; (และ), || (หรือ), ! (ไม่)</p>
+                      <p>• ตัวอย่าง: field_1 == 'ใช่' &amp;&amp; field_2 &gt; 5</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Field Options */}
           {renderFieldSpecificOptions()}
@@ -644,6 +722,8 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
       required: false,
       showInTable: false,
       sendTelegram: false,
+      telegramPrefix: '',
+      telegramOrder: 0,
       options: {}
     };
     updateSubForm({
@@ -862,6 +942,7 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
                             isSubForm={true}
                             allFields={subForm.fields}
                             maxTableFields={5}
+                            formTitle={subForm.title}
                           />
                         ))}
                       </div>
@@ -932,6 +1013,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
         required: false,
         showInTable: false,
         sendTelegram: false,
+        telegramPrefix: '',
+        telegramOrder: 0,
         options: {}
       }
     ],
@@ -956,6 +1039,14 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
         yearFormat: 'christian', // 'buddhist' or 'christian'
         format: 'dd/mm/yyyy'     // Default to dd/mm/yyyy CE
       }
+    },
+    // New telegram settings structure for enhanced component
+    telegramSettings: initialForm?.telegramSettings || {
+      enabled: false,
+      botToken: '',
+      groupId: '',
+      messagePrefix: 'ข้อมูลใหม่จาก [FormName] [DateTime]',
+      selectedFields: []
     }
   });
 
@@ -968,6 +1059,11 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
     setForm(prev => ({ ...prev, ...updates }));
   };
 
+  // Calculate available fields for telegram notifications
+  const getAvailableFields = () => {
+    return form.fields.filter(field => field.sendTelegram);
+  };
+
   const addField = () => {
     const newField = {
       id: generateId(),
@@ -976,22 +1072,60 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       required: false,
       showInTable: false,
       sendTelegram: false,
+      telegramPrefix: '',
+      telegramOrder: 0,
       options: {}
     };
     updateForm({ fields: [...form.fields, newField] });
   };
 
+  // Helper function to reorder telegram fields sequentially
+  const reorderTelegramFields = (fieldsArray) => {
+    const telegramFields = fieldsArray.filter(f => f.sendTelegram);
+    const nonTelegramFields = fieldsArray.filter(f => !f.sendTelegram);
+
+    // Sort telegram fields by their current order, then assign sequential numbers
+    const orderedTelegramFields = telegramFields
+      .sort((a, b) => (a.telegramOrder || 0) - (b.telegramOrder || 0))
+      .map((field, index) => ({
+        ...field,
+        telegramOrder: index + 1
+      }));
+
+    // Reset non-telegram fields order to 0
+    const resetNonTelegramFields = nonTelegramFields.map(field => ({
+      ...field,
+      telegramOrder: 0
+    }));
+
+    return [...orderedTelegramFields, ...resetNonTelegramFields];
+  };
+
   const updateField = (fieldId, fieldData) => {
+    const updatedFields = form.fields.map(field =>
+      field.id === fieldId ? fieldData : field
+    );
+
+    // If telegram setting was changed, reorder all telegram fields
+    const originalField = form.fields.find(f => f.id === fieldId);
+    const telegramChanged = originalField && (
+      originalField.sendTelegram !== fieldData.sendTelegram
+    );
+
     updateForm({
-      fields: form.fields.map(field =>
-        field.id === fieldId ? fieldData : field
-      )
+      fields: telegramChanged ? reorderTelegramFields(updatedFields) : updatedFields
     });
   };
 
   const removeField = (fieldId) => {
+    const remainingFields = form.fields.filter(field => field.id !== fieldId);
+    const removedField = form.fields.find(field => field.id === fieldId);
+
+    // If the removed field had telegram enabled, reorder remaining telegram fields
+    const shouldReorder = removedField && removedField.sendTelegram;
+
     updateForm({
-      fields: form.fields.filter(field => field.id !== fieldId)
+      fields: shouldReorder ? reorderTelegramFields(remainingFields) : remainingFields
     });
   };
 
@@ -1015,8 +1149,13 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       const oldIndex = form.fields.findIndex((field) => field.id === active.id);
       const newIndex = form.fields.findIndex((field) => field.id === over.id);
 
+      const reorderedFields = arrayMove(form.fields, oldIndex, newIndex);
+
+      // Check if any telegram fields were moved, if so reorder telegram numbers
+      const hasTelegramFields = reorderedFields.some(f => f.sendTelegram);
+
       updateForm({
-        fields: arrayMove(form.fields, oldIndex, newIndex),
+        fields: hasTelegramFields ? reorderTelegramFields(reorderedFields) : reorderedFields,
       });
     }
   };
@@ -1031,7 +1170,12 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
     const newFields = [...form.fields];
     [newFields[currentIndex], newFields[newIndex]] = [newFields[newIndex], newFields[currentIndex]];
 
-    updateForm({ fields: newFields });
+    // Check if any telegram fields were moved, if so reorder telegram numbers
+    const hasTelegramFields = newFields.some(f => f.sendTelegram);
+
+    updateForm({
+      fields: hasTelegramFields ? reorderTelegramFields(newFields) : newFields
+    });
   };
 
   const duplicateField = (fieldId) => {
@@ -1138,6 +1282,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
           fields: form.fields,
           subForms: form.subForms,
           settings: form.settings,
+          telegramSettings: form.telegramSettings,
           visibleRoles: form.visibleRoles
         });
         toast.success('ฟอร์มถูกอัพเดทเรียบร้อยแล้ว', {
@@ -1152,6 +1297,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
           fields: form.fields,
           subForms: form.subForms,
           settings: form.settings,
+          telegramSettings: form.telegramSettings,
           visibleRoles: form.visibleRoles
         });
         toast.success('ฟอร์มถูกบันทึกเรียบร้อยแล้ว', {
@@ -1377,6 +1523,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                           isSubForm={false}
                           allFields={form.fields}
                           maxTableFields={5}
+                          formTitle={form.title}
                         />
                       ))}
                     </div>
@@ -1602,74 +1749,13 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                   </GlassCardContent>
                 </GlassCard>
 
-                {/* Telegram Settings - 8px Grid */}
-                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
-                  <GlassCardHeader>
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center"
-                        style={{ clipPath: 'circle(50% at center)' }}
-                      >
-                        <FontAwesomeIcon icon={faComments} className="text-blue-600 w-4 h-4" />
-                      </div>
-                      <div>
-                        <GlassCardTitle className="form-card-title">การแจ้งเตือน Telegram</GlassCardTitle>
-                        <GlassCardDescription className="form-card-description">
-                          ส่งการแจ้งเตือนไปยัง Telegram เมื่อมีการส่งฟอร์ม
-                        </GlassCardDescription>
-                      </div>
-                    </div>
-                  </GlassCardHeader>
-                  <GlassCardContent className="space-y-6">
-                    <label className="flex items-center gap-4 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={form.settings.telegram.enabled}
-                        onChange={(e) => updateForm({
-                          settings: {
-                            ...form.settings,
-                            telegram: { ...form.settings.telegram, enabled: e.target.checked }
-                          }
-                        })}
-                        className="w-4 h-4 text-primary focus:ring-primary/20 focus:ring-2 rounded"
-                      />
-                      <span className="text-sm text-foreground/80 group-hover:text-foreground/90">
-                        เปิดใช้งานการแจ้งเตือน Telegram
-                      </span>
-                    </label>
-
-                    {form.settings.telegram.enabled && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-3">
-                        <GlassInput
-                          label="Bot Token"
-                          value={form.settings.telegram.botToken}
-                          onChange={(e) => updateForm({
-                            settings: {
-                              ...form.settings,
-                              telegram: { ...form.settings.telegram, botToken: e.target.value }
-                            }
-                          })}
-                          placeholder="1234567890:ABC..."
-                          tooltip="Token ของ Telegram Bot"
-                          minimal
-                        />
-                        <GlassInput
-                          label="Group ID"
-                          value={form.settings.telegram.groupId}
-                          onChange={(e) => updateForm({
-                            settings: {
-                              ...form.settings,
-                              telegram: { ...form.settings.telegram, groupId: e.target.value }
-                            }
-                          })}
-                          placeholder="-1001234567890"
-                          tooltip="ID ของกลุ่ม Telegram"
-                          minimal
-                        />
-                      </div>
-                    )}
-                  </GlassCardContent>
-                </GlassCard>
+                {/* Enhanced Telegram Notification Settings */}
+                <TelegramNotificationSettings
+                  form={form}
+                  onUpdate={(updatedForm) => updateForm(updatedForm)}
+                  availableFields={getAvailableFields()}
+                  className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out"
+                />
 
 
                 {/* Document Number Settings - 8px Grid */}

@@ -12,6 +12,7 @@
  */
 
 import dataService from './DataService.js';
+import telegramService from './TelegramService.js';
 
 class SubmissionService {
   constructor() {
@@ -85,7 +86,7 @@ class SubmissionService {
       const submission = dataService.createSubmission(formId, completeData);
 
       // Send Telegram notification if configured
-      this.sendTelegramNotification(form, submission);
+      await this.sendTelegramNotification(form, submission);
 
       return {
         success: true,
@@ -757,101 +758,80 @@ class SubmissionService {
   // ========== TELEGRAM NOTIFICATIONS ==========
 
   /**
-   * Send Telegram notification if configured
+   * Send Telegram notification if configured using TelegramService
    * @param {Object} form - Form configuration
    * @param {Object} submission - Submission data
    */
   async sendTelegramNotification(form, submission) {
-    const telegramSettings = form.settings?.telegram;
-    if (!telegramSettings?.enabled || !telegramSettings.botToken || !telegramSettings.groupId) {
-      return;
-    }
-
     try {
-      const message = this.formatTelegramMessage(form, submission);
-      await this.sendTelegramMessage(telegramSettings.botToken, telegramSettings.groupId, message);
+      const telegramSettings = form.settings?.telegram;
+
+      // Check if telegram is configured
+      if (!telegramSettings?.enabled) {
+        return;
+      }
+
+      // Send notification using TelegramService
+      const result = await telegramService.sendFormSubmissionNotification(
+        form,
+        submission,
+        telegramSettings
+      );
+
+      if (result.success) {
+        console.log('Telegram notification sent successfully:', {
+          formId: form.id,
+          submissionId: submission.id,
+          messageId: result.messageId,
+          skipped: result.skipped
+        });
+      } else {
+        console.error('Telegram notification failed:', {
+          formId: form.id,
+          submissionId: submission.id,
+          error: result.error
+        });
+      }
+
+      return result;
+
     } catch (error) {
-      console.error('Telegram notification failed:', error);
-    }
-  }
-
-  /**
-   * Format Telegram message
-   * @param {Object} form - Form configuration
-   * @param {Object} submission - Submission data
-   * @returns {string} Formatted message
-   */
-  formatTelegramMessage(form, submission) {
-    let message = `📋 *${form.title}*\n\n`;
-
-    // Add document number if available
-    if (submission.data.documentNumber) {
-      message += `📄 เลขที่เอกสาร: ${submission.data.documentNumber}\n\n`;
-    }
-
-    // Add configured fields
-    form.fields
-      .filter(field => field.telegramNotification)
-      .forEach(field => {
-        const value = submission.data[field.id];
-        if (value !== null && value !== undefined && value !== '') {
-          message += `*${field.title}:* ${this.formatValueForTelegram(value, field.type)}\n`;
-        }
+      console.error('Telegram notification error:', {
+        formId: form?.id,
+        submissionId: submission?.id,
+        error: error.message
       });
 
-    message += `\n⏰ ${new Date(submission.submittedAt).toLocaleString('th-TH')}`;
-
-    return message;
-  }
-
-  /**
-   * Format value for Telegram display
-   * @param {*} value - Field value
-   * @param {string} fieldType - Field type
-   * @returns {string} Formatted value
-   */
-  formatValueForTelegram(value, fieldType) {
-    switch (fieldType) {
-      case this.FIELD_TYPES.LAT_LONG:
-        return `${value.lat}, ${value.lng}`;
-      case this.FIELD_TYPES.MULTIPLE_CHOICE:
-        return Array.isArray(value) ? value.join(', ') : value;
-      case this.FIELD_TYPES.RATING:
-        return `${value}/5 ⭐`;
-      case this.FIELD_TYPES.FILE_UPLOAD:
-      case this.FIELD_TYPES.IMAGE_UPLOAD:
-        return value.fileName || 'ไฟล์ที่แนบ';
-      default:
-        return String(value);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 
   /**
-   * Send message to Telegram
-   * @param {string} botToken - Bot token
-   * @param {string} chatId - Chat ID
-   * @param {string} message - Message text
-   * @returns {Promise<Object>} Response
+   * Test telegram configuration
+   * @param {Object} telegramSettings - Telegram settings to test
+   * @returns {Promise<Object>} Test result
    */
-  async sendTelegramMessage(botToken, chatId, message) {
-    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown'
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Telegram API error: ${response.status}`);
+  async testTelegramConfiguration(telegramSettings) {
+    try {
+      return await telegramService.testTelegramConfiguration(telegramSettings);
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
     }
+  }
 
-    return response.json();
+  /**
+   * Get user-friendly telegram error message
+   * @param {Error} error - Error object
+   * @returns {string} User-friendly message
+   */
+  getTelegramErrorMessage(error) {
+    return telegramService.getUserFriendlyErrorMessage(error);
   }
 
   // ========== UTILITY METHODS ==========

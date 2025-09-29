@@ -1,12 +1,12 @@
-# Q-Collector Frontend Framework v0.3
+# Q-Collector Frontend Framework v0.4
 
-**Modern React Form Builder Framework with Advanced UI Components**
+**Modern React Form Builder Framework with Advanced Features**
 
 ## Version Information
 
-- **Version**: 0.3.0
-- **Release Date**: 2025-01-21
-- **Framework**: React 18 + ShadCN UI + Tailwind CSS + Framer Motion
+- **Version**: 0.4.0
+- **Release Date**: 2025-09-30
+- **Framework**: React 18 + ShadCN UI + Tailwind CSS + Framer Motion + @dnd-kit
 - **Target**: Thai Business Forms & Data Collection
 
 ## Core Features
@@ -16,6 +16,8 @@
 ✅ **Circular Animation Buttons** - Beautiful motion effects with AnimatedAddButton
 ✅ **Advanced Toast System** - Portal-based notifications outside containers
 ✅ **Sub-Form Management** - Default empty sub-forms with dynamic field addition
+✅ **Conditional Field Visibility** - Formula-based field show/hide with AppSheet-compatible syntax
+✅ **Advanced Telegram Notifications** - Dual-panel field ordering with drag-and-drop
 ✅ **Responsive Design** - Mobile-first with container-responsive patterns
 ✅ **Thai Localization** - Province selector, phone formatting, date formats
 
@@ -97,13 +99,26 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 **Mobile-First Design:** Responsive breakpoints, touch targets (44px min)
 **Accessibility:** WCAG 2.1 AA compliance, ARIA labels, keyboard navigation
 
-## Recent Updates (v0.3)
+## Recent Updates (v0.4)
 
-**Circular Animation Buttons:** All add buttons now use AnimatedAddButton with motion effects
-**Enhanced Toast System:** Portal-based rendering outside containers for persistent notifications
-**Sub-Form Improvements:** Default empty sub-form always visible, becomes real when fields added
-**UI Refinements:** Form list tags show "ALL" when all roles selected, larger icons without neon effects
-**Motion Effects:** Pulsing glow, rotating rings, sparkle effects, hover ripples
+**Conditional Field Visibility System:**
+- Formula engine with Google Sheets-compatible syntax
+- Real-time field visibility evaluation based on form data
+- Formula builder with field reference picker and validation
+- Support for AND(), OR(), NOT(), IF(), CONTAINS(), ISBLANK() functions
+
+**Advanced Telegram Notification System:**
+- Dual-panel drag-and-drop field ordering interface
+- Custom message prefix with real-time preview
+- Checkbox-based notification enable/disable
+- Enhanced drag animations with visual feedback (opacity, scale, shadows)
+- Field ordering with automatic numbering
+
+**Previous Features (v0.3):**
+- Circular Animation Buttons with motion effects
+- Enhanced Toast System with portal-based rendering
+- Sub-Form Management with default empty templates
+- Glass morphism UI with backdrop blur effects
 
 ## Future Development
 
@@ -113,6 +128,6 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 
 ---
 
-**Framework Status:** ✅ Production-ready v0.3 with advanced UI components and animation system
+**Framework Status:** ✅ Production-ready v0.4 with conditional visibility and advanced telegram integration
 
-**License:** Internal use - Q-Collector Form Builder Framework v0.3
+**License:** Internal use - Q-Collector Form Builder Framework v0.4
