@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Image Gallery Fix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">การแก้ไขปัญหาการแสดงภาพใน Detail View</h1>
+
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">สิ่งที่แก้ไข:</h2>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>ImageContent Component</strong>: แยก local state สำหรับ imageLoaded และ imageError</li>
+                <li><strong>File Processing</strong>: ทำให้ง่ายขึ้นในการดึงข้อมูลไฟล์จาก FileService</li>
+                <li><strong>Loading States</strong>: ปรับปรุงการแสดง loading skeleton และ error states</li>
+                <li><strong>Debug Removal</strong>: ลบ console.log ที่ไม่จำเป็นออก</li>
+            </ul>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">การเปลี่ยนแปลงหลัก:</h2>
+
+            <div class="space-y-4">
+                <div class="border-l-4 border-blue-500 pl-4">
+                    <h3 class="font-medium">1. ImageContent Component</h3>
+                    <p class="text-sm text-gray-600">เพิ่ม local state เพื่อจัดการ loading และ error ภายใน component</p>
+                    <code class="text-xs bg-gray-100 p-2 block mt-2">
+const [localImageLoaded, setLocalImageLoaded] = React.useState(false);
+const [localImageError, setLocalImageError] = React.useState(false);
+                    </code>
+                </div>
+
+                <div class="border-l-4 border-green-500 pl-4">
+                    <h3 class="font-medium">2. File Data Processing</h3>
+                    <p class="text-sm text-gray-600">ทำให้การดึงข้อมูลไฟล์จาก FileService เรียบง่ายขึ้น</p>
+                    <code class="text-xs bg-gray-100 p-2 block mt-2">
+// ลดความซับซ้อนในการจัดการไฟล์ object และ string ID
+if (typeof item === 'string') {
+  fileData = FileService.getFile(item);
+}
+                    </code>
+                </div>
+
+                <div class="border-l-4 border-orange-500 pl-4">
+                    <h3 class="font-medium">3. Error Handling</h3>
+                    <p class="text-sm text-gray-600">ปรับปรุงการแสดง error state ให้ชัดเจนขึ้น</p>
+                    <code class="text-xs bg-gray-100 p-2 block mt-2">
+// แสดง error overlay แทนการซ่อนภาพ
+{imageError && (
+  &lt;div className="absolute inset-0 ..."&gt;
+    ไม่สามารถโหลดภาพได้
+  &lt;/div&gt;
+)}
+                    </code>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold mb-4">ผลลัพธ์ที่คาดหวัง:</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="border rounded p-4">
+                    <h3 class="font-medium text-green-600 mb-2">✅ ภาพแสดงถูกต้อง</h3>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>• แสดง thumbnail ภาพจริงแทน icon</li>
+                        <li>• Loading state ทำงานถูกต้อง</li>
+                        <li>• Modal ขยายภาพได้</li>
+                        <li>• Download ไฟล์ได้</li>
+                    </ul>
+                </div>
+                <div class="border rounded p-4">
+                    <h3 class="font-medium text-blue-600 mb-2">🔧 การจัดการ Error</h3>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>• แสดง error message ชัดเจน</li>
+                        <li>• Fallback UI ที่เหมาะสม</li>
+                        <li>• ไม่มี console errors</li>
+                        <li>• Loading skeleton ราบรื่น</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 text-center">
+            <p class="text-sm text-gray-500">
+                กรุณาทดสอบโดยเปิดแอพพลิเคชันและไปที่หน้า Detail View ของ submission ที่มีไฟล์รูปภาพ
+            </p>
+        </div>
+    </div>
+</body>
+</html>

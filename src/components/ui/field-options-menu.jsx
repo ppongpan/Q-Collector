@@ -123,24 +123,24 @@ const FieldOptionsMenu = React.memo(({
         </div>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="glass-container w-56">
+      <DropdownMenuContent align="end" className="glass-container w-48">
         {/* Move Up/Down Options */}
         {canMoveUp && (
           <DropdownMenuItem onClick={onMoveUp}>
-            <FontAwesomeIcon icon={faArrowUp} className="mr-2 w-3 h-3" />
+            <FontAwesomeIcon icon={faArrowUp} className="mr-2 w-5 h-5" />
             ย้ายขึ้น
           </DropdownMenuItem>
         )}
 
         {canMoveDown && (
           <DropdownMenuItem onClick={onMoveDown}>
-            <FontAwesomeIcon icon={faArrowDown} className="mr-2 w-3 h-3" />
+            <FontAwesomeIcon icon={faArrowDown} className="mr-2 w-5 h-5" />
             ย้ายลง
           </DropdownMenuItem>
         )}
 
         <DropdownMenuItem onClick={onDuplicate}>
-          <FontAwesomeIcon icon={faCopy} className="mr-2 w-3 h-3" />
+          <FontAwesomeIcon icon={faCopy} className="mr-2 w-5 h-5" />
           ทำสำเนา
         </DropdownMenuItem>
 
@@ -149,7 +149,7 @@ const FieldOptionsMenu = React.memo(({
         {/* Field Settings with Local State for Instant Feedback */}
         <DropdownMenuItem onClick={(e) => e.preventDefault()}>
           <label
-            className="flex items-center gap-2 cursor-pointer w-full"
+            className="flex items-center gap-1.5 cursor-pointer w-full"
             onClick={(e) => e.stopPropagation()}
           >
             <input
@@ -157,9 +157,9 @@ const FieldOptionsMenu = React.memo(({
               type="checkbox"
               checked={localSettings.required} // Use local state for immediate feedback
               onChange={handleRequiredChange}
-              className="w-4 h-4 text-primary focus:ring-primary/30 focus:ring-2 rounded border-2 transition-all duration-150"
+              className="w-5 h-5 text-primary focus:ring-primary/30 focus:ring-2 rounded border-2 transition-all duration-150"
             />
-            <span className="text-sm text-foreground/80 font-medium flex items-center gap-1">
+            <span className="text-xs text-foreground/80 font-medium flex items-center gap-1">
               <span className="text-red-500">•</span> จำเป็น
             </span>
           </label>
@@ -170,7 +170,7 @@ const FieldOptionsMenu = React.memo(({
           <>
             <DropdownMenuItem onClick={(e) => e.preventDefault()}>
               <label
-                className={`flex items-center gap-2 w-full ${
+                className={`flex items-center gap-1.5 w-full ${
                   tableFieldCount >= maxTableFields && !localSettings.showInTable
                     ? 'cursor-not-allowed opacity-50'
                     : 'cursor-pointer'
@@ -183,19 +183,12 @@ const FieldOptionsMenu = React.memo(({
                   checked={localSettings.showInTable} // Use local state for immediate feedback
                   onChange={handleShowInTableChange}
                   disabled={tableFieldCount >= maxTableFields && !localSettings.showInTable}
-                  className="w-4 h-4 text-primary focus:ring-primary/30 focus:ring-2 rounded border-2 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-5 h-5 text-primary focus:ring-primary/30 focus:ring-2 rounded border-2 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <div className="flex flex-col">
-                  <span className="text-sm text-foreground/80 font-medium flex items-center gap-1">
-                    <span className="text-blue-500">•</span> แสดงในตาราง
-                    <span className="text-xs text-muted-foreground">({tableFieldCount}/{maxTableFields})</span>
-                  </span>
-                  {tableFieldCount >= maxTableFields && !localSettings.showInTable && (
-                    <span className="text-xs text-red-600 dark:text-red-400">
-                      เกินจำนวนสูงสุด {maxTableFields} ฟิลด์
-                    </span>
-                  )}
-                </div>
+                <span className="text-xs text-foreground/80 font-medium flex items-center gap-1">
+                  <span className="text-blue-500">•</span> แสดงในตาราง
+                  <span className="text-xs text-muted-foreground">({tableFieldCount}/{maxTableFields})</span>
+                </span>
               </label>
             </DropdownMenuItem>
 
@@ -203,7 +196,7 @@ const FieldOptionsMenu = React.memo(({
             {!isSubForm && (
               <DropdownMenuItem onClick={(e) => e.preventDefault()}>
                 <label
-                  className="flex items-center gap-2 cursor-pointer w-full"
+                  className="flex items-center gap-1.5 cursor-pointer w-full"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <input
@@ -211,9 +204,9 @@ const FieldOptionsMenu = React.memo(({
                     type="checkbox"
                     checked={localSettings.sendTelegram} // Use local state for immediate feedback
                     onChange={handleSendTelegramChange}
-                    className="w-4 h-4 text-primary focus:ring-primary/30 focus:ring-2 rounded border-2 transition-all duration-150"
+                    className="w-5 h-5 text-primary focus:ring-primary/30 focus:ring-2 rounded border-2 transition-all duration-150"
                   />
-                  <span className="text-sm text-foreground/80 font-medium flex items-center gap-1">
+                  <span className="text-xs text-foreground/80 font-medium flex items-center gap-1">
                     <span className="text-green-500">•</span> แจ้งเตือน Telegram
                   </span>
                 </label>
@@ -225,7 +218,7 @@ const FieldOptionsMenu = React.memo(({
         <DropdownMenuSeparator />
 
         <DropdownMenuItem onClick={onRemove} className="text-destructive">
-          <FontAwesomeIcon icon={faTrashAlt} className="mr-2 w-3 h-3" />
+          <FontAwesomeIcon icon={faTrashAlt} className="mr-2 w-5 h-5" />
           ลบ
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -27,6 +27,8 @@ import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription, Glass
 import { GlassInput, GlassTextarea, GlassSelect } from "./ui/glass-input";
 import FieldPreviewRow from "./ui/field-preview-row";
 import FieldOptionsMenu from "./ui/field-options-menu";
+import { useEnhancedToast } from './ui/enhanced-toast';
+import AnimatedAddButton from './ui/animated-add-button';
 // import EnhancedSlider from "./ui/enhanced-slider"; // Commented out - not used
 
 // ShadCN UI components
@@ -600,7 +602,7 @@ function MultipleChoiceOptions({ options = [], onChange }) {
 }
 
 // Enhanced Sub Form Builder with Main Form Structure
-function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, onMoveUp, onMoveDown, onDuplicate }) {
+function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, onMoveUp, onMoveDown, onDuplicate, isDefaultEmpty = false }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentTab, setCurrentTab] = useState('fields'); // 'fields' or 'settings'
 
@@ -768,10 +770,12 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
                     <FontAwesomeIcon icon={faCopy} className="mr-2" />
                     ทำสำเนา
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onRemove} className="text-destructive">
-                    <FontAwesomeIcon icon={faTrashAlt} className="mr-2" />
-                    ลบ
-                  </DropdownMenuItem>
+                  {!isDefaultEmpty && (
+                    <DropdownMenuItem onClick={onRemove} className="text-destructive">
+                      <FontAwesomeIcon icon={faTrashAlt} className="mr-2" />
+                      ลบ
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -868,30 +872,21 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
                 {/* Add Field Button - Always visible, positioned after fields or as standalone - 8px Grid */}
                 <div className="pt-8 flex justify-center">
                   {subForm.fields && subForm.fields.length > 0 ? (
-                    <GlassButton
-                      variant="primary"
+                    <AnimatedAddButton
                       onClick={addField}
                       tooltip="เพิ่มฟิลด์ใหม่"
-                      className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out flex items-center gap-4 h-14 px-8 touch-target-comfortable"
-                    >
-                      <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-                      <span className="form-card-button">เพิ่มฟิลด์</span>
-                    </GlassButton>
+                    />
                   ) : (
-                    <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out text-center py-12 border-2 border-dashed border-muted-foreground/30 w-full">
-                      <GlassCardContent>
-                        <div className="text-4xl mb-4 opacity-50">📝</div>
-                        <p className="form-card-description mb-6">ยังไม่มีฟิลด์ในฟอร์มย่อย</p>
-                        <GlassButton
-                          variant="primary"
+                    <div className="text-center py-8">
+                      <div className="text-4xl mb-4 opacity-50">📝</div>
+                      <p className="form-card-description mb-6 text-muted-foreground">ยังไม่มีฟิลด์ในฟอร์มย่อย</p>
+                      <div className="flex justify-center">
+                        <AnimatedAddButton
                           onClick={addField}
-                          className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out h-14 px-8 touch-target-comfortable"
-                        >
-                          <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                          <span className="form-card-button">สร้างฟิลด์แรก</span>
-                        </GlassButton>
-                      </GlassCardContent>
-                    </GlassCard>
+                          tooltip="สร้างฟิลด์แรก"
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -965,6 +960,9 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   });
 
   const [activeSection, setActiveSection] = useState('main');
+
+  // Enhanced toast notifications
+  const toast = useEnhancedToast();
 
   const updateForm = (updates) => {
     setForm(prev => ({ ...prev, ...updates }));
@@ -1113,7 +1111,20 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       const tableFields = form.fields.filter(field => field.showInTable);
 
       if (tableFields.length === 0) {
-        alert('⚠️ กรุณาเลือกฟิลด์อย่างน้อย 1 ฟิลด์เพื่อแสดงในตาราง Submission\n\nไปที่การตั้งค่าฟิลด์แต่ละฟิลด์ แล้วเลือก "แสดงในตาราง Submission"');
+        toast.error('กรุณาเลือกฟิลด์อย่างน้อย 1 ฟิลด์เพื่อแสดงในตาราง Submission', {
+          title: "ข้อมูลไม่ครบถ้วน",
+          duration: 8000,
+          action: {
+            label: "ไปที่การตั้งค่า",
+            onClick: () => {
+              // ค้นหาฟิลด์แรกและเปิดการตั้งค่า
+              const firstFieldElement = document.querySelector('[data-field-id]');
+              if (firstFieldElement) {
+                firstFieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }
+          }
+        });
         return;
       }
 
@@ -1129,7 +1140,10 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
           settings: form.settings,
           visibleRoles: form.visibleRoles
         });
-        alert('✅ ฟอร์มถูกอัพเดทเรียบร้อยแล้ว');
+        toast.success('ฟอร์มถูกอัพเดทเรียบร้อยแล้ว', {
+          title: "อัพเดทสำเร็จ",
+          duration: 5000
+        });
       } else {
         // สร้างฟอร์มใหม่
         savedForm = dataService.createForm({
@@ -1140,7 +1154,10 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
           settings: form.settings,
           visibleRoles: form.visibleRoles
         });
-        alert('✅ ฟอร์มถูกบันทึกเรียบร้อยแล้ว');
+        toast.success('ฟอร์มถูกบันทึกเรียบร้อยแล้ว', {
+          title: "บันทึกสำเร็จ",
+          duration: 5000
+        });
       }
 
       // เรียก onSave callback ถ้ามี (สำหรับ navigation หรือ actions อื่น ๆ)
@@ -1150,7 +1167,14 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
 
     } catch (error) {
       console.error('Form save error:', error);
-      alert('❌ เกิดข้อผิดพลาดในการบันทึกฟอร์ม: ' + error.message);
+      toast.error(`เกิดข้อผิดพลาดในการบันทึกฟอร์ม: ${error.message}`, {
+        title: "บันทึกไม่สำเร็จ",
+        duration: 8000,
+        action: {
+          label: "ลองอีกครั้ง",
+          onClick: () => handleSave()
+        }
+      });
     }
   }, [form, initialForm, onSave]);
 
@@ -1253,23 +1277,38 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                       const submissions = dataService.getSubmissionsByFormId(initialForm.id);
                       const submissionCount = submissions.length;
 
-                      let confirmMessage = `⚠️ คุณแน่ใจหรือไม่ที่จะลบฟอร์ม "${form.title}"?\n\nการลบจะไม่สามารถย้อนกลับได้`;
+                      let confirmMessage = `คุณแน่ใจหรือไม่ที่จะลบฟอร์ม "${form.title}"?`;
+                      let warningMessage = "การลบจะไม่สามารถย้อนกลับได้";
 
                       if (submissionCount > 0) {
-                        confirmMessage += `\n\n🚨 ฟอร์มนี้มีข้อมูล ${submissionCount} รายการ ข้อมูลทั้งหมดจะถูกลบด้วย`;
+                        warningMessage += ` ฟอร์มนี้มีข้อมูล ${submissionCount} รายการ ข้อมูลทั้งหมดจะถูกลบด้วย`;
                       }
 
-                      if (window.confirm(confirmMessage)) {
-                        try {
-                          dataService.deleteForm(initialForm.id);
-                          alert('✅ ลบฟอร์มเรียบร้อยแล้ว');
-                          // Navigate back to form list
-                          onCancel();
-                        } catch (error) {
-                          console.error('Delete error:', error);
-                          alert('❌ เกิดข้อผิดพลาดในการลบฟอร์ม');
+                      // Show confirmation toast with action buttons
+                      toast.error(warningMessage, {
+                        title: confirmMessage,
+                        duration: 10000,
+                        action: {
+                          label: "ยืนยันการลบ",
+                          onClick: async () => {
+                            try {
+                              dataService.deleteForm(initialForm.id);
+                              toast.success('ลบฟอร์มเรียบร้อยแล้ว', {
+                                title: "ลบสำเร็จ",
+                                duration: 3000
+                              });
+                              // Navigate back to form list
+                              onCancel();
+                            } catch (error) {
+                              console.error('Delete error:', error);
+                              toast.error('เกิดข้อผิดพลาดในการลบฟอร์ม', {
+                                title: "ลบไม่สำเร็จ",
+                                duration: 5000
+                              });
+                            }
+                          }
                         }
-                      }
+                      });
                     }}
                     title="ลบฟอร์ม"
                     className="p-2 text-red-500 hover:text-red-400 transition-all duration-300 touch-target-comfortable cursor-pointer"
@@ -1344,17 +1383,12 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                   </SortableContext>
                 </DndContext>
 
-                {/* Add Field Button - Full Responsive */}
+                {/* Add Field Button - Animated Circular */}
                 <div className="pt-4 sm:pt-6 md:pt-8 lg:pt-10 flex justify-center">
-                  <GlassButton
-                    variant="primary"
+                  <AnimatedAddButton
                     onClick={addField}
                     tooltip="เพิ่มฟิลด์ใหม่"
-                    className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out flex items-center gap-2 sm:gap-3 md:gap-4 h-10 xs:h-11 sm:h-12 md:h-14 lg:h-16 xl:h-18 px-4 xs:px-5 sm:px-6 md:px-8 lg:px-10 xl:px-12 text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl touch-target-comfortable hover:shadow-[0_0_20px_rgba(249,115,22,0.6),0_0_40px_rgba(249,115,22,0.4)]"
-                  >
-                    <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-                    <span className="form-card-button">เพิ่มฟิลด์</span>
-                  </GlassButton>
+                  />
                 </div>
               </div>
             )}
@@ -1362,55 +1396,53 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
             {/* Sub Forms - 8px Grid */}
             {activeSection === 'sub' && (
               <div className="space-y-6">
+                {(() => {
+                  // Always ensure there's at least one empty subForm
+                  const subFormsToShow = form.subForms.length > 0 ? form.subForms : [{
+                    id: generateId(),
+                    title: "",
+                    description: "",
+                    fields: []
+                  }];
 
-                {form.subForms.length > 0 ? (
-                  <div className="space-y-6">
-                    {form.subForms.map((subForm, index) => (
-                      <SubFormBuilder
-                        key={subForm.id}
-                        subForm={subForm}
-                        onChange={(subFormData) => updateSubForm(subForm.id, subFormData)}
-                        onRemove={() => removeSubForm(subForm.id)}
-                        canMoveUp={index > 0}
-                        canMoveDown={index < form.subForms.length - 1}
-                        onMoveUp={() => moveSubForm(subForm.id, 'up')}
-                        onMoveDown={() => moveSubForm(subForm.id, 'down')}
-                        onDuplicate={() => duplicateSubForm(subForm.id)}
-                      />
-                    ))}
+                  return (
+                    <div className="space-y-6">
+                      {subFormsToShow.map((subForm, index) => (
+                        <SubFormBuilder
+                          key={subForm.id}
+                          subForm={subForm}
+                          onChange={(subFormData) => {
+                            if (form.subForms.length === 0) {
+                              // If this is the default empty subForm, add it to the form
+                              updateForm({ subForms: [subFormData] });
+                            } else {
+                              updateSubForm(subForm.id, subFormData);
+                            }
+                          }}
+                          onRemove={() => {
+                            if (form.subForms.length > 0) {
+                              removeSubForm(subForm.id);
+                            }
+                          }}
+                          canMoveUp={index > 0}
+                          canMoveDown={index < subFormsToShow.length - 1}
+                          onMoveUp={() => moveSubForm(subForm.id, 'up')}
+                          onMoveDown={() => moveSubForm(subForm.id, 'down')}
+                          onDuplicate={() => duplicateSubForm(subForm.id)}
+                          isDefaultEmpty={form.subForms.length === 0 && index === 0}
+                        />
+                      ))}
 
-                    {/* Add SubForm Button - Positioned after all subforms - 8px Grid */}
-                    <div className="pt-8 flex justify-center">
-                      <GlassButton
-                        variant="primary"
-                        onClick={addSubForm}
-                        tooltip="เพิ่มฟอร์มย่อย"
-                        className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out flex items-center gap-4 h-14 px-8 touch-target-comfortable hover:shadow-[0_0_20px_rgba(249,115,22,0.6),0_0_40px_rgba(249,115,22,0.4)]"
-                      >
-                        <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-                        <span className="form-card-button">เพิ่มฟอร์มย่อย</span>
-                      </GlassButton>
+                      {/* Add SubForm Button - Positioned after all subforms - 8px Grid */}
+                      <div className="pt-8 flex justify-center">
+                        <AnimatedAddButton
+                          onClick={addSubForm}
+                          tooltip="เพิ่มฟอร์มย่อย"
+                        />
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out text-center py-16 border-2 border-dashed border-muted-foreground/30">
-                    <GlassCardContent>
-                      <div className="text-6xl mb-6 opacity-50">📄</div>
-                      <GlassCardTitle className="form-card-title mb-3">ยังไม่มีฟอร์มย่อย</GlassCardTitle>
-                      <GlassCardDescription className="form-card-description mb-6">
-                        ฟอร์มย่อยใช้สำหรับเก็บข้อมูลเพิ่มเติมหลังจากบันทึกฟอร์มหลักแล้ว
-                      </GlassCardDescription>
-                      <GlassButton
-                        variant="primary"
-                        onClick={addSubForm}
-                        className="form-card-glow form-card-animate motion-container animation-optimized group transition-all duration-400 ease-out h-14 px-8 touch-target-comfortable"
-                      >
-                        <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                        <span className="form-card-button">สร้างฟอร์มย่อยแรก</span>
-                      </GlassButton>
-                    </GlassCardContent>
-                  </GlassCard>
-                )}
+                  );
+                })()}
               </div>
             )}
 

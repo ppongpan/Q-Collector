@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription, GlassCardContent } from './ui/glass-card';
+import { GlassCard, GlassCardContent } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faFileAlt, faCalendarAlt, faEdit, faTrashAlt, faLayerGroup
+  faCalendarAlt
 } from '@fortawesome/free-solid-svg-icons';
+import { FileDisplay } from './ui/file-display';
+import { FileGallery } from './ui/image-thumbnail';
+import { PhoneIcon } from './ui/phone-icon';
+import { LocationMap } from './ui/location-map';
 
 // Data services
 import dataService from '../services/DataService.js';
+import FileService from '../services/FileService.js';
+
+// Utilities
+import { formatNumberByContext } from '../utils/numberFormatter.js';
+import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../utils/phoneFormatter.js';
 
 export default function SubFormDetail({
   formId,
@@ -23,10 +32,6 @@ export default function SubFormDetail({
   const [subForm, setSubForm] = useState(null);
   const [subSubmission, setSubSubmission] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [fieldOrder, setFieldOrder] = useState([]);
-  const [draggedField, setDraggedField] = useState(null);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editedData, setEditedData] = useState({});
 
   // Load subform submission data
   useEffect(() => {
@@ -52,16 +57,6 @@ export default function SubFormDetail({
       }
       setSubForm(subFormData);
 
-      // Load field order from localStorage or use default
-      const savedOrder = localStorage.getItem(`subFieldOrder_${subFormId}`);
-      if (savedOrder) {
-        const orderIds = JSON.parse(savedOrder);
-        const orderedFields = orderIds.map(id => subFormData.fields?.find(f => f.id === id)).filter(Boolean);
-        const newFields = subFormData.fields?.filter(f => !orderIds.includes(f.id)) || [];
-        setFieldOrder([...orderedFields, ...newFields]);
-      } else {
-        setFieldOrder(subFormData.fields || []);
-      }
 
       // Load sub submission
       const subSubmissionData = dataService.getSubSubmission(subSubmissionId);
@@ -70,7 +65,6 @@ export default function SubFormDetail({
         return;
       }
       setSubSubmission(subSubmissionData);
-      setEditedData(subSubmissionData.data || {});
 
     } catch (error) {
       console.error('Error loading sub submission data:', error);
@@ -79,56 +73,7 @@ export default function SubFormDetail({
     }
   };
 
-  const handleEdit = () => {
-    if (onEdit) {
-      onEdit(subSubmissionId);
-    }
-  };
 
-  const handleDelete = async () => {
-    const confirmed = window.confirm('⚠️ คุณแน่ใจหรือไม่ที่จะลบข้อมูลนี้?\n\nการลบจะไม่สามารถย้อนกลับได้');
-    if (confirmed) {
-      try {
-        await dataService.deleteSubSubmission(subSubmissionId);
-        alert('✅ ลบข้อมูลเรียบร้อยแล้ว');
-        if (onDelete) {
-          onDelete(subSubmissionId);
-        }
-      } catch (error) {
-        console.error('Delete error:', error);
-        alert('❌ เกิดข้อผิดพลาดในการลบข้อมูล');
-      }
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      // Update sub submission data
-      const updatedSubSubmission = {
-        ...subSubmission,
-        data: editedData,
-        updatedAt: new Date().toISOString()
-      };
-
-      // Save to dataService
-      dataService.updateSubSubmission(subSubmissionId, updatedSubSubmission);
-
-      // Save field order
-      const orderIds = fieldOrder.map(f => f.id);
-      localStorage.setItem(`subFieldOrder_${subFormId}`, JSON.stringify(orderIds));
-
-      // Update local state
-      setSubSubmission(updatedSubSubmission);
-      setIsEditMode(false);
-
-      // Show success message
-      alert('บันทึกข้อมูลเรียบร้อยแล้ว');
-
-    } catch (error) {
-      console.error('Error saving data:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-    }
-  };
 
   const formatFieldValue = (field, value) => {
     if (!value && value !== 0) return '-';
@@ -185,60 +130,270 @@ export default function SubFormDetail({
       case 'slider':
         const unit = field.options?.unit || '';
         return `${value} ${unit}`;
+      case 'number':
+        return formatNumberByContext(value, 'display');
+      case 'phone':
+        // Return raw value for phone fields - formatting will be handled in render
+        return value;
+      case 'url':
+        // Return raw value for URL fields - formatting will be handled in render
+        return value;
       default:
         return value;
     }
   };
 
   const renderFieldValue = (field, value) => {
-    const displayValue = isEditMode ? (editedData[field.id] || '') : value;
-    const formattedValue = isEditMode ? displayValue : formatFieldValue(field, value);
-    const isEmpty = !displayValue && displayValue !== 0;
+    const isEmpty = !value && value !== 0;
 
-    if (isEditMode) {
+    // Special handling for file upload fields
+    if (field.type === 'file_upload' || field.type === 'image_upload') {
+      // Debug log to see the raw value
+      console.log(`File field ${field.title} (${field.id}):`, {
+        fieldType: field.type,
+        rawValue: value,
+        valueType: typeof value,
+        isEmpty: isEmpty
+      });
+
+      // Get actual files from FileService
+      const fileIds = Array.isArray(value) ? value : (value ? [value] : []);
+      console.log('File IDs extracted:', fileIds);
+
+      const files = fileIds
+        .filter(item => item) // Remove empty items
+        .map(item => {
+          // Check if item is already a file object or needs to be fetched
+          if (typeof item === 'object' && item !== null) {
+            console.log(`File item is already an object:`, item);
+            // If it's already a file object, use it directly
+            if (item.name || item.fileName) {
+              return {
+                id: item.id || 'temp-' + Date.now(),
+                name: item.name || item.fileName,
+                type: item.type,
+                size: item.size,
+                uploadedAt: item.uploadedAt || new Date().toISOString(),
+                isImage: item.isImage || (item.type && item.type.startsWith('image/'))
+              };
+            }
+          } else if (typeof item === 'string') {
+            // If it's a string ID, try to get from FileService
+            const file = FileService.getFile(item);
+            console.log(`Getting file for ID "${item}":`, file);
+            return file ? {
+              id: file.id,
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              uploadedAt: file.uploadedAt,
+              isImage: file.isImage
+            } : null;
+          }
+          return null;
+        })
+        .filter(file => file); // Remove null/undefined files
+
+      console.log('Final processed files:', files);
+
       return (
-        <div
-          key={field.id}
-          className="space-y-2 p-3 bg-muted/10 rounded-lg border-2 border-dashed border-orange-300/50 hover:bg-muted/20 hover:border-orange-400/70 transition-all duration-200"
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData('text/plain', field.id);
-            e.dataTransfer.effectAllowed = 'move';
-            setDraggedField(field);
-          }}
-          onDragEnter={(e) => {
-            e.preventDefault();
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <label className="block text-sm font-medium text-foreground/80">
-              {field.title}
-              {field.required && <span className="text-destructive ml-1">*</span>}
-            </label>
-            <div className="w-4 h-4 text-orange-500 cursor-move flex-shrink-0">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 6h2v2H8V6zm6 0h2v2h-2V6zM8 10h2v2H8v-2zm6 0h2v2h-2v-2zM8 14h2v2H8v-2zm6 0h2v2h-2v-2z"/>
-              </svg>
-            </div>
+        <div key={field.id} className="space-y-2 sm:space-y-3">
+          <label className="block text-sm font-medium text-foreground/80">
+            {field.title}
+            {field.required && <span className="text-destructive ml-1">*</span>}
+          </label>
+          <div className={`w-full border border-border/50 rounded-lg p-2 sm:p-3 backdrop-blur-sm ${
+            isEmpty || files.length === 0
+              ? 'bg-muted/40'
+              : 'bg-background/50'
+          }`}>
+            {files.length > 0 ? (
+              <FileGallery
+                files={files}
+                maxDisplay={6}
+                size="sm"
+                showFileNames={true}
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3"
+              />
+            ) : (
+              <div className="text-center py-3 sm:py-4 text-muted-foreground text-sm">
+                ไม่มีไฟล์
+              </div>
+            )}
           </div>
-          <input
-            type="text"
-            value={displayValue}
-            onChange={(e) => {
-              setEditedData(prev => ({
-                ...prev,
-                [field.id]: e.target.value
-              }));
-            }}
-            className="w-full border border-border/50 rounded-lg px-3 py-2 text-sm backdrop-blur-sm bg-background/50 text-foreground focus:outline-none focus:ring-2 focus:ring-orange-500/50"
-            placeholder={field.title}
-          />
         </div>
       );
     }
+
+    // Special handling for LatLong fields
+    if (field.type === 'lat_long') {
+      const hasValidCoordinates = value && typeof value === 'object' && value.lat && value.lng;
+      const lat = hasValidCoordinates ? parseFloat(value.lat) : null;
+      const lng = hasValidCoordinates ? parseFloat(value.lng) : null;
+      const isValidCoordinates = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng);
+
+      return (
+        <div key={field.id} className="space-y-2 sm:space-y-3">
+          <label className="block text-sm font-medium text-foreground/80">
+            {field.title}
+            {field.required && <span className="text-destructive ml-1">*</span>}
+          </label>
+          <div className={`w-full border border-border/50 rounded-lg backdrop-blur-sm ${
+            isEmpty || !isValidCoordinates
+              ? 'bg-muted/40'
+              : 'bg-background/50'
+          }`}>
+            {isValidCoordinates ? (
+              <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
+                {/* Map Display */}
+                <LocationMap
+                  latitude={lat}
+                  longitude={lng}
+                  responsive={true}
+                  showCoordinates={true}
+                  className="w-full"
+                  height="180px"
+                />
+              </div>
+            ) : (
+              <div className="p-2 sm:p-3 text-center text-muted-foreground text-sm">
+                {isEmpty ? 'ไม่มีพิกัด' : 'พิกัดไม่ถูกต้อง'}
+                {value && !isValidCoordinates && (
+                  <div className="text-xs mt-1 text-muted-foreground/70">
+                    ข้อมูล: {typeof value === 'object' ? JSON.stringify(value) : value}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Special handling for URL fields
+    if (field.type === 'url') {
+      // Helper function to validate and format URL
+      const formatUrlForDisplay = (url) => {
+        if (!url || typeof url !== 'string') return null;
+
+        const trimmedUrl = url.trim();
+        if (!trimmedUrl) return null;
+
+        // Check if it's a valid URL pattern
+        const urlPattern = /^(https?:\/\/|ftp:\/\/|www\.)/i;
+        const domainPattern = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}/;
+
+        let formattedUrl = trimmedUrl;
+
+        // If it doesn't start with protocol, add https://
+        if (!urlPattern.test(trimmedUrl)) {
+          // Check if it looks like a domain
+          if (domainPattern.test(trimmedUrl)) {
+            formattedUrl = `https://${trimmedUrl}`;
+          } else {
+            return null; // Invalid URL
+          }
+        }
+
+        // Additional validation
+        try {
+          new URL(formattedUrl);
+          return formattedUrl;
+        } catch {
+          return null;
+        }
+      };
+
+      const validUrl = formatUrlForDisplay(value);
+      const displayText = value && value.length > 30 ? `${value.substring(0, 30)}...` : value;
+
+      return (
+        <div key={field.id} className="space-y-2">
+          <label className="block text-sm font-medium text-foreground/80">
+            {field.title}
+            {field.required && <span className="text-destructive ml-1">*</span>}
+          </label>
+          <div className={`w-full border border-border/50 rounded-lg px-2 sm:px-3 py-2 text-sm backdrop-blur-sm ${
+            isEmpty
+              ? 'bg-muted/40 text-muted-foreground/50'
+              : 'bg-background/50 text-foreground'
+          }`}>
+            {validUrl ? (
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                  />
+                </svg>
+                <a
+                  href={validUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:text-primary/80 hover:underline transition-colors duration-200 break-all text-xs sm:text-sm"
+                  title={value}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {displayText}
+                </a>
+              </div>
+            ) : (
+              <span className="text-foreground break-all text-xs sm:text-sm">{value || '-'}</span>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Special handling for phone fields
+    if (field.type === 'phone' || shouldFormatAsPhone(value, field.type)) {
+      const phoneProps = createPhoneLink(value, {
+        includeIcon: true,
+        size: 'md',
+        showTooltip: true
+      });
+
+      return (
+        <div key={field.id} className="space-y-2">
+          <label className="block text-sm font-medium text-foreground/80">
+            {field.title}
+            {field.required && <span className="text-destructive ml-1">*</span>}
+          </label>
+          <div className={`w-full border border-border/50 rounded-lg px-2 sm:px-3 py-2 text-sm backdrop-blur-sm ${
+            isEmpty
+              ? 'bg-muted/40 text-muted-foreground/50'
+              : 'bg-background/50 text-foreground'
+          }`}>
+            {phoneProps.isClickable ? (
+              <div className="flex items-center gap-2">
+                <PhoneIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                <a
+                  href={phoneProps.telLink}
+                  className={`${phoneProps.className} text-xs sm:text-sm`}
+                  title={phoneProps.title}
+                  aria-label={phoneProps.ariaLabel}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {phoneProps.display}
+                </a>
+              </div>
+            ) : (
+              <span className="text-foreground break-all text-xs sm:text-sm">{formatPhoneDisplay(value) || value || '-'}</span>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Standard handling for other field types
+    const formattedValue = formatFieldValue(field, value);
 
     return (
       <div key={field.id} className="space-y-2">
@@ -246,12 +401,12 @@ export default function SubFormDetail({
           {field.title}
           {field.required && <span className="text-destructive ml-1">*</span>}
         </label>
-        <div className={`w-full border border-border/50 rounded-lg px-3 py-2 text-sm backdrop-blur-sm ${
+        <div className={`w-full border border-border/50 rounded-lg px-2 sm:px-3 py-2 text-sm backdrop-blur-sm ${
           isEmpty
             ? 'bg-muted/40 text-muted-foreground/50'
             : 'bg-background/50 text-foreground'
         }`}>
-          {formattedValue}
+          <span className="text-xs sm:text-sm break-words">{formattedValue}</span>
         </div>
       </div>
     );
@@ -288,68 +443,36 @@ export default function SubFormDetail({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90">
-      <div className="container-responsive px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-2 sm:py-3">
+      <div className="container-responsive px-3 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-2 sm:py-3">
 
-        {/* SubForm Title and Description with Edit Controls */}
+        {/* SubForm Title and Description */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="max-w-3xl mx-auto mb-6"
+          className="max-w-3xl mx-auto mb-4 sm:mb-6"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 text-left">
-              <h1 className="text-xl font-bold text-primary mb-4 text-left" style={{ fontSize: '20px' }}>
+              <h1 className="text-lg sm:text-xl font-bold text-primary mb-3 sm:mb-4 text-left leading-tight">
                 {subForm.title}
               </h1>
               {subForm.description && (
-                <div className="mb-4">
+                <div className="mb-3 sm:mb-4">
                   <p className="text-sm sm:text-base text-muted-foreground leading-relaxed text-left">
                     {subForm.description}
                   </p>
                 </div>
               )}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground text-left">
-                <FontAwesomeIcon icon={faCalendarAlt} className="w-4 h-4" />
-                บันทึกเมื่อ {new Date(subSubmission.submittedAt).toLocaleDateString('th-TH', {
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground text-left">
+                <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="break-all">บันทึกเมื่อ {new Date(subSubmission.submittedAt).toLocaleDateString('th-TH', {
                   year: 'numeric', month: 'long', day: 'numeric',
                   hour: '2-digit', minute: '2-digit'
-                })}
+                })}</span>
               </div>
             </div>
 
-            {/* Edit Controls */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {!isEditMode ? (
-                <GlassButton
-                  onClick={() => setIsEditMode(true)}
-                  className="orange-neon-button"
-                  size="sm"
-                >
-                  แก้ไข
-                </GlassButton>
-              ) : (
-                <>
-                  <GlassButton
-                    onClick={() => {
-                      setIsEditMode(false);
-                      setEditedData(subSubmission.data || {});
-                    }}
-                    variant="outline"
-                    size="sm"
-                  >
-                    ยกเลิก
-                  </GlassButton>
-                  <GlassButton
-                    onClick={handleSave}
-                    className="orange-neon-button"
-                    size="sm"
-                  >
-                    บันทึก
-                  </GlassButton>
-                </>
-              )}
-            </div>
           </div>
         </motion.div>
 
@@ -358,47 +481,21 @@ export default function SubFormDetail({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="max-w-3xl mx-auto mb-8"
+          className="max-w-3xl mx-auto mb-6 sm:mb-8"
         >
           <GlassCard className="glass-container">
-            <div className="p-4">
-              <div
-                className="space-y-4 sm:space-y-6"
-                onDragOver={(e) => {
-                  if (!isEditMode) return;
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
-                }}
-                onDrop={(e) => {
-                  if (!isEditMode) return;
-                  e.preventDefault();
-                  const draggedFieldId = e.dataTransfer.getData('text/plain');
-
-                  if (draggedFieldId && draggedField) {
-                    const newOrder = [...fieldOrder];
-                    const draggedIndex = newOrder.findIndex(f => f.id === draggedFieldId);
-                    const targetIndex = newOrder.findIndex(f => f.id === draggedField.id);
-
-                    if (draggedIndex !== -1 && targetIndex !== -1) {
-                      const [draggedItem] = newOrder.splice(draggedIndex, 1);
-                      newOrder.splice(targetIndex, 0, draggedItem);
-
-                      setFieldOrder(newOrder);
-                    }
-                  }
-                  setDraggedField(null);
-                }}
-              >
-                {fieldOrder.map(field => {
+            <div className="p-3 sm:p-4">
+              <div className="space-y-3 sm:space-y-4 lg:space-y-6">
+                {(subForm.fields || []).map(field => {
                   const value = subSubmission.data[field.id];
                   return renderFieldValue(field, value);
                 })}
               </div>
 
               {(!subForm.fields || subForm.fields.length === 0) && (
-                <div className="text-center py-8">
-                  <div className="text-4xl mb-4 opacity-50">📝</div>
-                  <p className="text-muted-foreground">ฟอร์มย่อยนี้ไม่มีฟิลด์</p>
+                <div className="text-center py-6 sm:py-8">
+                  <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 opacity-50">📝</div>
+                  <p className="text-sm sm:text-base text-muted-foreground">ฟอร์มย่อยนี้ไม่มีฟิลด์</p>
                 </div>
               )}
             </div>

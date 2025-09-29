@@ -10,10 +10,16 @@ import ThaiDateInput from './ui/thai-date-input';
 import ThaiDateTimeInput from './ui/thai-datetime-input';
 import ThaiPhoneInput from './ui/thai-phone-input';
 import { FieldErrorAlert } from './ui/alert';
+import { Slider } from './ui/slider';
+import EnhancedFormSlider from './ui/enhanced-form-slider';
 
 // Data services
 import dataService from '../services/DataService.js';
 import submissionService from '../services/SubmissionService.js';
+import FileService from '../services/FileService.js';
+
+// Utilities
+import { formatNumberInput, parseNumberInput, isValidNumber } from '../utils/numberFormatter.js';
 
 const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) => {
   const [form, setForm] = useState(null);
@@ -21,12 +27,20 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [fileUploadProgress, setFileUploadProgress] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [fieldTouched, setFieldTouched] = useState({});
   const [hasSubmissionAttempt, setHasSubmissionAttempt] = useState(false);
+  const [storageUsage, setStorageUsage] = useState(null);
 
   // Enhanced toast notifications
   const toast = useEnhancedToast();
+
+  // Update storage usage
+  const updateStorageUsage = useCallback(() => {
+    const usage = FileService.getStorageUsage();
+    setStorageUsage(usage);
+  }, []);
 
   // Date formatting utilities
   const formatDateForInput = (dateValue) => {
@@ -57,7 +71,8 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   // Load form and submission data
   useEffect(() => {
     loadFormData();
-  }, [formId, submissionId]); // eslint-disable-line react-hooks/exhaustive-deps
+    updateStorageUsage();
+  }, [formId, submissionId, updateStorageUsage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Expose handleSubmit function to parent component via ref
   useImperativeHandle(ref, () => ({
@@ -80,6 +95,30 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         const submission = dataService.getSubmission(submissionId);
         if (submission) {
           setFormData(submission.data || {});
+
+          // Load existing files
+          const existingFiles = FileService.getSubmissionFiles(submissionId);
+          const filesByField = {};
+          existingFiles.forEach(file => {
+            if (!filesByField[file.fieldId]) {
+              filesByField[file.fieldId] = [];
+            }
+            filesByField[file.fieldId].push({
+              id: file.id,
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              uploadedAt: file.uploadedAt,
+              isImage: file.isImage
+            });
+          });
+
+          // Convert to uploadedFiles format
+          const uploadedFilesData = Object.keys(filesByField).map(fieldId => ({
+            fieldId,
+            files: filesByField[fieldId]
+          }));
+          setUploadedFiles(uploadedFilesData);
         }
       }
     } catch (error) {
@@ -146,7 +185,8 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
           }
           break;
         case 'number':
-          if (isNaN(value) || value === '') {
+          const cleanValue = parseNumberInput(value);
+          if (!isValidNumber(cleanValue)) {
             return 'กรุณากรอกตัวเลขที่ถูกต้อง';
           }
           break;
@@ -200,6 +240,36 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     }
   }, [form]);
 
+  // Special handler for number fields with live formatting
+  const handleNumberInputChange = useCallback((fieldId, inputValue, previousValue) => {
+    const { formattedValue } = formatNumberInput(inputValue, previousValue);
+
+    // Store the clean value (without commas) in form data
+    const cleanValue = parseNumberInput(formattedValue);
+    setFormData(prev => ({
+      ...prev,
+      [fieldId]: cleanValue
+    }));
+
+    // Mark field as touched
+    setFieldTouched(prev => ({
+      ...prev,
+      [fieldId]: true
+    }));
+
+    // Validate field with clean value
+    const field = form?.fields.find(f => f.id === fieldId);
+    if (field) {
+      const error = validateField(field, cleanValue);
+      setFieldErrors(prev => ({
+        ...prev,
+        [fieldId]: error
+      }));
+    }
+
+    return formattedValue;
+  }, [form]);
+
   // Factory button click handler
   const handleFactoryClick = useCallback((fieldId, factory, allowMultiple, currentValue) => {
     if (allowMultiple) {
@@ -213,17 +283,138 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     }
   }, [handleInputChange]);
 
-  const handleFileChange = (fieldId, files) => {
-    const updatedFiles = [...uploadedFiles];
-    const existingIndex = updatedFiles.findIndex(f => f.fieldId === fieldId);
+  const handleFileChange = async (fieldId, files) => {
+    if (!files || files.length === 0) return;
 
-    if (existingIndex >= 0) {
-      updatedFiles[existingIndex] = { fieldId, files: Array.from(files) };
-    } else {
-      updatedFiles.push({ fieldId, files: Array.from(files) });
+    // Show progress for this field
+    setFileUploadProgress(prev => ({ ...prev, [fieldId]: 0 }));
+
+    try {
+      const fileArray = Array.from(files);
+      const currentSubmissionId = submissionId || `temp_${Date.now()}`;
+
+      // Upload files using FileService
+      const results = await FileService.saveMultipleFiles(
+        fileArray,
+        fieldId,
+        currentSubmissionId,
+        (progress) => {
+          setFileUploadProgress(prev => ({ ...prev, [fieldId]: progress }));
+        }
+      );
+
+      // Process successful uploads
+      const successfulFiles = results
+        .filter(result => result.success)
+        .map(result => result.fileInfo);
+
+      // Process failed uploads
+      const failedFiles = results
+        .filter(result => !result.success)
+        .map(result => result.error);
+
+      if (failedFiles.length > 0) {
+        toast.error(`ไม่สามารถอัปโหลดไฟล์บางไฟล์ได้: ${failedFiles.join(', ')}`, {
+          title: "อัปโหลดไฟล์ไม่สำเร็จ",
+          duration: 8000
+        });
+      }
+
+      if (successfulFiles.length > 0) {
+        // Update uploadedFiles state
+        const updatedFiles = [...uploadedFiles];
+        const existingIndex = updatedFiles.findIndex(f => f.fieldId === fieldId);
+
+        if (existingIndex >= 0) {
+          // Merge with existing files
+          const existingFiles = updatedFiles[existingIndex].files || [];
+          updatedFiles[existingIndex] = {
+            fieldId,
+            files: [...existingFiles, ...successfulFiles]
+          };
+        } else {
+          updatedFiles.push({ fieldId, files: successfulFiles });
+        }
+
+        setUploadedFiles(updatedFiles);
+
+        // Update form data for validation
+        const fieldFiles = updatedFiles.find(f => f.fieldId === fieldId);
+        const allFileIds = fieldFiles ? fieldFiles.files.map(f => f.id) : [];
+        handleInputChange(fieldId, allFileIds);
+
+        toast.success(`อัปโหลด ${successfulFiles.length} ไฟล์เรียบร้อยแล้ว`, {
+          title: "อัปโหลดสำเร็จ",
+          duration: 3000
+        });
+
+        // Update storage usage after upload
+        updateStorageUsage();
+      }
+
+    } catch (error) {
+      console.error('File upload error:', error);
+      toast.error(error.message || 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์', {
+        title: "อัปโหลดไฟล์ไม่สำเร็จ",
+        duration: 8000
+      });
+    } finally {
+      // Hide progress
+      setFileUploadProgress(prev => {
+        const updated = { ...prev };
+        delete updated[fieldId];
+        return updated;
+      });
     }
+  };
 
-    setUploadedFiles(updatedFiles);
+  const handleFileRemove = async (fieldId, fileId) => {
+    try {
+      // Remove file from FileService
+      const success = FileService.deleteFile(fileId);
+
+      if (success) {
+        // Update uploadedFiles state
+        const updatedFiles = uploadedFiles.map(field => {
+          if (field.fieldId === fieldId) {
+            const updatedFieldFiles = field.files.filter(file => file.id !== fileId);
+            return { ...field, files: updatedFieldFiles };
+          }
+          return field;
+        }).filter(field => field.files.length > 0); // Remove empty field entries
+
+        setUploadedFiles(updatedFiles);
+
+        // Update form data
+        const fieldFiles = updatedFiles.find(f => f.fieldId === fieldId);
+        const fileIds = fieldFiles ? fieldFiles.files.map(f => f.id) : [];
+        handleInputChange(fieldId, fileIds);
+
+        toast.success('ลบไฟล์เรียบร้อยแล้ว', {
+          title: "ลบไฟล์สำเร็จ",
+          duration: 2000
+        });
+
+        // Update storage usage after deletion
+        updateStorageUsage();
+      } else {
+        throw new Error('ไม่สามารถลบไฟล์ได้');
+      }
+    } catch (error) {
+      console.error('File removal error:', error);
+      toast.error(error.message || 'เกิดข้อผิดพลาดในการลบไฟล์', {
+        title: "ลบไฟล์ไม่สำเร็จ",
+        duration: 5000
+      });
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const handleGPSLocation = async (fieldId) => {
@@ -374,16 +565,58 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
       let result;
       if (submissionId) {
         // Update existing submission
-        result = await submissionService.updateSubmission(formId, submissionId, formData);
+        const flatFiles = uploadedFiles.flatMap(uf =>
+          uf.files.map(file => {
+            // Get full file data from FileService
+            const fileData = FileService.getFile(file.id);
+            return {
+              ...file,
+              fieldId: uf.fieldId,
+              // Include the full file data for processing
+              ...fileData
+            };
+          })
+        );
+        result = await submissionService.updateSubmission(formId, submissionId, formData, flatFiles);
       } else {
         // Create new submission
         const flatFiles = uploadedFiles.flatMap(uf =>
-          uf.files.map(file => ({ ...file, fieldId: uf.fieldId }))
+          uf.files.map(file => {
+            // Get full file data from FileService
+            const fileData = FileService.getFile(file.id);
+            return {
+              ...file,
+              fieldId: uf.fieldId,
+              // Include the full file data for processing
+              ...fileData
+            };
+          })
         );
         result = await submissionService.submitForm(formId, formData, flatFiles);
       }
 
       if (result.success) {
+        // If this was a new submission (not editing), update file submission IDs
+        if (!submissionId && result.submission) {
+          const newSubmissionId = result.submission.id;
+
+          // Find all files that were uploaded with temporary IDs during this session
+          uploadedFiles.forEach(fieldFiles => {
+            fieldFiles.files.forEach(file => {
+              // Check if this file has a temporary submission ID
+              const storedFile = FileService.getFile(file.id);
+              if (storedFile && storedFile.submissionId.startsWith('temp_')) {
+                // Update the file's submission ID to the real one
+                const updatedFileInfo = {
+                  ...storedFile,
+                  submissionId: newSubmissionId
+                };
+                FileService.storeFileInfo(updatedFileInfo);
+              }
+            });
+          });
+        }
+
         toast.success(result.message || 'บันทึกข้อมูลเรียบร้อยแล้ว', {
           title: submissionId ? "อัพเดทข้อมูลสำเร็จ" : "บันทึกข้อมูลสำเร็จ",
           duration: 5000
@@ -445,10 +678,32 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   };
 
   const renderField = (field) => {
-    const fieldValue = formData[field.id];
+    const rawFieldValue = formData[field.id];
+
+    // Defensive conversion for objects to prevent React rendering errors
+    const fieldValue = (() => {
+      if (rawFieldValue && typeof rawFieldValue === 'object' && !Array.isArray(rawFieldValue)) {
+        // Special handling for lat_long fields - preserve object structure
+        if (field.type === 'lat_long' && (rawFieldValue.lat !== undefined || rawFieldValue.lng !== undefined)) {
+          return rawFieldValue;
+        }
+        // If it's an object with toString method, use it
+        if (typeof rawFieldValue.toString === 'function' && rawFieldValue.toString !== Object.prototype.toString) {
+          return rawFieldValue.toString();
+        }
+        // If it's a file object with fileName, use that
+        if (rawFieldValue.fileName) {
+          return rawFieldValue.fileName;
+        }
+        // Otherwise convert to JSON string to prevent React error
+        return JSON.stringify(rawFieldValue);
+      }
+      // Arrays should be preserved for multiple_choice fields
+      return rawFieldValue;
+    })();
 
     // Check if field has validation error and user has attempted to submit
-    const hasError = hasSubmissionAttempt && field.required && validateField(field, fieldValue);
+    const hasError = hasSubmissionAttempt && field.required && validateField(field, rawFieldValue);
     const fieldError = fieldErrors[field.id];
     const isFieldTouched = fieldTouched[field.id];
 
@@ -457,7 +712,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
       case 'email':
       case 'url':
         return (
-          <div key={field.id} data-field-id={field.id} className="space-y-1">
+          <div key={field.id} data-field-id={field.id} className="space-y-1 sm:space-y-2">
             <GlassInput
               label={field.title}
               type={field.type === 'email' ? 'email' : field.type === 'url' ? 'url' : 'text'}
@@ -466,6 +721,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
               value={fieldValue || ''}
               onChange={(e) => handleInputChange(field.id, e.target.value)}
               hasValidationError={hasError || (isFieldTouched && fieldError)}
+              className="text-sm sm:text-base"
             />
             <FieldErrorAlert error={isFieldTouched && fieldError ? fieldError : null} />
           </div>
@@ -833,47 +1089,142 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         const min = field.options?.min || 0;
         const max = field.options?.max || 100;
         const step = field.options?.step || 1;
+        const currentValue = fieldValue !== undefined && fieldValue !== null ? Number(fieldValue) : min;
 
         return (
-          <div key={field.id} className="space-y-2">
-            <label className="block text-sm font-medium text-foreground/80">
-              {field.title}
-              {field.required && <span className="text-destructive ml-1">*</span>}
-            </label>
-            <div className="space-y-2">
-              <input
-                type="range"
-                min={min}
-                max={max}
-                step={step}
-                value={fieldValue || min}
-                onChange={(e) => handleInputChange(field.id, e.target.value)}
-                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{min}</span>
-                <span className="font-semibold text-foreground">ค่าที่เลือก: {fieldValue || min}</span>
-                <span>{max}</span>
-              </div>
-            </div>
+          <div key={field.id}>
+            <EnhancedFormSlider
+              value={currentValue}
+              onValueChange={(value) => handleInputChange(field.id, value[0])}
+              min={min}
+              max={max}
+              step={step}
+              label={field.title}
+              required={field.required}
+              description={field.description}
+              disabled={submitting}
+            />
           </div>
         );
 
       case 'file_upload':
       case 'image_upload':
+        const fieldFiles = uploadedFiles.find(f => f.fieldId === field.id)?.files || [];
+        const uploadProgress = fileUploadProgress[field.id];
+
         return (
-          <div key={field.id} className="space-y-2">
+          <div key={field.id} data-field-id={field.id} className="space-y-3">
             <label className="block text-sm font-medium text-foreground/80">
               {field.title}
               {field.required && <span className="text-destructive ml-1">*</span>}
             </label>
+
+            {/* File Input */}
             <input
               type="file"
               accept={field.type === 'image_upload' ? 'image/*' : undefined}
               multiple={field.options?.allowMultiple}
               onChange={(e) => handleFileChange(field.id, e.target.files)}
               className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 transition-colors"
+              disabled={uploadProgress !== undefined}
             />
+
+            {/* Upload Progress */}
+            {uploadProgress !== undefined && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>กำลังอัปโหลด...</span>
+                  <span>{Math.round(uploadProgress)}%</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div
+                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Uploaded Files List */}
+            {fieldFiles.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs text-muted-foreground">
+                  ไฟล์ที่อัปโหลดแล้ว ({fieldFiles.length} ไฟล์)
+                </div>
+                <div className="space-y-1 sm:space-y-2 max-h-40 sm:max-h-48 overflow-y-auto">
+                  {fieldFiles.map((file, index) => (
+                    <div
+                      key={file.id || index}
+                      className="flex items-center justify-between p-2 sm:p-3 bg-muted/20 rounded-lg border border-border/40"
+                    >
+                      <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+                        {/* File Icon/Preview */}
+                        <div className="flex-shrink-0">
+                          {file.isImage ? (
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                              <svg className="w-4 h-4 sm:w-6 sm:h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted/40 rounded-lg flex items-center justify-center">
+                              <svg className="w-4 h-4 sm:w-6 sm:h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* File Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs sm:text-sm font-medium text-foreground truncate">
+                            {file.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatFileSize(file.size)} • {file.type}
+                          </div>
+                          {file.uploadedAt && (
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(file.uploadedAt).toLocaleString('th-TH')}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                        {/* Download Button */}
+                        <button
+                          type="button"
+                          onClick={() => FileService.downloadFile(file.id)}
+                          className="p-1 sm:p-2 text-muted-foreground hover:text-primary transition-colors"
+                          title="ดาวน์โหลด"
+                        >
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </button>
+
+                        {/* Remove Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleFileRemove(field.id, file.id)}
+                          className="p-1 sm:p-2 text-muted-foreground hover:text-destructive transition-colors"
+                          title="ลบไฟล์"
+                        >
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Validation Error */}
+            <FieldErrorAlert error={isFieldTouched && fieldError ? fieldError : null} />
           </div>
         );
 
@@ -884,16 +1235,17 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
               {field.title}
               {field.required && <span className="text-destructive ml-1">*</span>}
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
               <GlassInput
                 type="number"
                 step="any"
                 placeholder="ละติจูด"
                 value={fieldValue?.lat || ''}
                 onChange={(e) => handleInputChange(field.id, {
-                  ...fieldValue,
+                  ...rawFieldValue,
                   lat: e.target.value
                 })}
+                className="text-sm sm:text-base"
               />
               <GlassInput
                 type="number"
@@ -901,9 +1253,10 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
                 placeholder="ลองจิจูด"
                 value={fieldValue?.lng || ''}
                 onChange={(e) => handleInputChange(field.id, {
-                  ...fieldValue,
+                  ...rawFieldValue,
                   lng: e.target.value
                 })}
+                className="text-sm sm:text-base"
               />
             </div>
             <GlassButton
@@ -967,7 +1320,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               {factories.map((factory, idx) => {
                 const isSelected = allowMultipleFactory ? selectedFactories.includes(factory) : fieldValue === factory;
 
@@ -982,10 +1335,10 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
                       handleFactoryClick(field.id, factory, allowMultipleFactory, fieldValue);
                     }}
                     className={`
-                      inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium
+                      inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs sm:text-sm font-medium
                       ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2
                       focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none
-                      disabled:opacity-50 h-10 px-4 py-2 w-full min-h-[3rem] relative overflow-hidden
+                      disabled:opacity-50 h-8 sm:h-10 px-2 sm:px-4 py-1 sm:py-2 w-full min-h-[2.5rem] sm:min-h-[3rem] relative overflow-hidden
                       border-2
                       ${isSelected
                         ? 'bg-white text-orange-600 border-orange-600 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-700 shadow-lg shadow-orange-500/25'
@@ -994,10 +1347,10 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
                     `}
                     aria-pressed={isSelected}
                   >
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-1 sm:gap-2">
                       {isSelected && (
                         <svg
-                          className="w-4 h-4 text-orange-600"
+                          className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600"
                           fill="none"
                           strokeWidth="2"
                           stroke="currentColor"
@@ -1006,7 +1359,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
                           <polyline points="20,6 9,17 4,12"></polyline>
                         </svg>
                       )}
-                      <span className="font-medium">{factory}</span>
+                      <span className="font-medium text-center">{factory}</span>
                     </div>
                   </button>
                 );
@@ -1014,9 +1367,9 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
             </div>
 
             {allowMultipleFactory && selectedFactories.length > 0 && (
-              <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 border">
+              <div className="flex items-center gap-2 p-2 sm:p-3 rounded-md bg-muted/50 border">
                 <svg
-                  className="w-4 h-4 text-muted-foreground flex-shrink-0"
+                  className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0"
                   fill="none"
                   strokeWidth="2"
                   stroke="currentColor"
@@ -1026,8 +1379,8 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
                   <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"></path>
                 </svg>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">เลือกแล้ว {selectedFactories.length} โรงงาน</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs sm:text-sm font-medium">เลือกแล้ว {selectedFactories.length} โรงงาน</p>
+                  <p className="text-xs text-muted-foreground break-words">
                     {selectedFactories.join(', ')}
                   </p>
                 </div>
@@ -1078,21 +1431,21 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90">
-      <div className="container-responsive px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-2 sm:py-3">
+      <div className="container-responsive px-3 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-2 sm:py-3">
 
         {/* Form Header - Outside Container */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="max-w-3xl mx-auto mb-6"
+          className="max-w-3xl mx-auto mb-4 sm:mb-6"
         >
           <div className="text-left">
-            <h1 className="text-xl font-bold text-primary mb-4" style={{ fontSize: '20px' }}>
+            <h1 className="text-lg sm:text-xl font-bold text-primary mb-3 sm:mb-4 leading-tight">
               {form.title}
             </h1>
             {form.description && (
-              <div className="mb-4">
+              <div className="mb-3 sm:mb-4">
                 <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                   {form.description}
                 </p>
@@ -1106,15 +1459,46 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="max-w-3xl mx-auto mb-8"
+          className="max-w-3xl mx-auto mb-6 sm:mb-8"
         >
           <GlassCard className="glass-container">
-            <div className="p-4">
+            <div className="p-3 sm:p-4">
 
-              <div className="space-y-4 sm:space-y-6">
+              <div className="space-y-3 sm:space-y-4 lg:space-y-6">
                 {/* Main Form Fields */}
                 {form.fields?.map(field => renderField(field))}
               </div>
+
+              {/* Storage Usage Indicator */}
+              {storageUsage && (
+                <div className="mt-4 pt-4 border-t border-border/20">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>การใช้งานพื้นที่จัดเก็บ:</span>
+                    <span className={`font-medium ${storageUsage.isNearLimit ? 'text-orange-500' : 'text-foreground'}`}>
+                      {storageUsage.totalSizeMB}MB / 8MB
+                      {storageUsage.totalFiles > 0 && (
+                        <span className="ml-2">({storageUsage.totalFiles} ไฟล์)</span>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 ${
+                        storageUsage.isNearLimit ? 'bg-orange-500' : 'bg-primary'
+                      }`}
+                      style={{ width: `${Math.min((parseFloat(storageUsage.totalSizeMB) / 8) * 100, 100)}%` }}
+                    />
+                  </div>
+
+                  {storageUsage.isNearLimit && (
+                    <div className="mt-2 text-xs text-orange-500">
+                      เตือน: พื้นที่จัดเก็บใกล้เต็ม ไฟล์ขนาดใหญ่อาจอัปโหลดไม่ได้
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </GlassCard>
         </motion.div>

@@ -8,6 +8,7 @@ import {
   faFileAlt, faUsers, faCalendarAlt, faBuilding, faBell
 } from '@fortawesome/free-solid-svg-icons';
 import dataService from '../services/DataService.js';
+import { useEnhancedToast } from './ui/enhanced-toast';
 
 // USER_ROLES from version 0.1.5
 const USER_ROLES = {
@@ -25,6 +26,9 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
   const [forms, setForms] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Enhanced toast notifications
+  const toast = useEnhancedToast();
+
   // Role helper functions from version 0.1.5
   const getRoleByName = (roleName) => {
     return Object.values(USER_ROLES).find(role => role.name === roleName);
@@ -35,6 +39,11 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
   };
 
   const getRoleColor = (role) => {
+    // Special handling for "ALL" tag
+    if (role === 'ALL') {
+      return 'bg-black text-white';
+    }
+
     // Handle both role names and role IDs
     let roleObj;
     if (typeof role === 'string') {
@@ -60,6 +69,15 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
 
   const convertRoleIdsToNames = (roleIds) => {
     if (!Array.isArray(roleIds)) return ['All'];
+
+    // Check if all user roles are selected
+    const allRoleIds = Object.values(USER_ROLES).map(role => role.id);
+    const hasAllRoles = allRoleIds.length > 0 && allRoleIds.every(roleId => roleIds.includes(roleId));
+
+    if (hasAllRoles) {
+      return ['ALL'];
+    }
+
     return roleIds.map(roleId => {
       const role = getRoleById(roleId);
       return role ? role.name : roleId;
@@ -191,7 +209,10 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
     try {
       const originalForm = dataService.getForm(formId);
       if (!originalForm) {
-        alert('❌ ไม่พบฟอร์มที่ต้องการทำสำเนา');
+        toast.error('ไม่พบฟอร์มที่ต้องการทำสำเนา', {
+          title: "ไม่พบฟอร์ม",
+          duration: 5000
+        });
         return;
       }
 
@@ -215,43 +236,66 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
       // Reload forms to show the duplicate
       loadForms();
 
-      alert('✅ ทำสำเนาฟอร์มเรียบร้อยแล้ว');
+      toast.success('ทำสำเนาฟอร์มเรียบร้อยแล้ว', {
+        title: "ทำสำเนาสำเร็จ",
+        duration: 3000
+      });
     } catch (error) {
       console.error('Duplicate error:', error);
-      alert('❌ เกิดข้อผิดพลาดในการทำสำเนาฟอร์ม');
+      toast.error('เกิดข้อผิดพลาดในการทำสำเนาฟอร์ม', {
+        title: "ทำสำเนาไม่สำเร็จ",
+        duration: 5000
+      });
     }
   };
 
   const handleDelete = async (formId) => {
     const form = dataService.getForm(formId);
     if (!form) {
-      alert('❌ ไม่พบฟอร์มที่ต้องการลบ');
+      toast.error('ไม่พบฟอร์มที่ต้องการลบ', {
+        title: "ไม่พบฟอร์ม",
+        duration: 5000
+      });
       return;
     }
 
     const submissions = dataService.getSubmissionsByFormId(formId);
     const submissionCount = submissions.length;
 
-    let confirmMessage = `⚠️ คุณแน่ใจหรือไม่ที่จะลบฟอร์ม "${form.title}"?\n\nการลบจะไม่สามารถย้อนกลับได้`;
+    let confirmMessage = `คุณแน่ใจหรือไม่ที่จะลบฟอร์ม "${form.title}"?`;
+    let warningMessage = "การลบจะไม่สามารถย้อนกลับได้";
 
     if (submissionCount > 0) {
-      confirmMessage += `\n\n🚨 ฟอร์มนี้มีข้อมูล ${submissionCount} รายการ ข้อมูลทั้งหมดจะถูกลบด้วย`;
+      warningMessage += ` ฟอร์มนี้มีข้อมูล ${submissionCount} รายการ ข้อมูลทั้งหมดจะถูกลบด้วย`;
     }
 
-    const confirmed = window.confirm(confirmMessage);
-    if (confirmed) {
-      try {
-        dataService.deleteForm(formId);
+    // Show confirmation toast with action buttons
+    toast.error(warningMessage, {
+      title: confirmMessage,
+      duration: 10000,
+      action: {
+        label: "ยืนยันการลบ",
+        onClick: async () => {
+          try {
+            dataService.deleteForm(formId);
 
-        // Reload forms to reflect deletion
-        loadForms();
+            // Reload forms to reflect deletion
+            loadForms();
 
-        alert('✅ ลบฟอร์มเรียบร้อยแล้ว');
-      } catch (error) {
-        console.error('Delete error:', error);
-        alert('❌ เกิดข้อผิดพลาดในการลบฟอร์ม');
+            toast.success('ลบฟอร์มเรียบร้อยแล้ว', {
+              title: "ลบสำเร็จ",
+              duration: 3000
+            });
+          } catch (error) {
+            console.error('Delete error:', error);
+            toast.error('เกิดข้อผิดพลาดในการลบฟอร์ม', {
+              title: "ลบไม่สำเร็จ",
+              duration: 5000
+            });
+          }
+        }
       }
-    }
+    });
   };
 
   return (
@@ -349,31 +393,19 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
                       </div>
 
                       {/* Right side - Action Icons with touch-friendly areas */}
-                      <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-8">
                         <div
                           onClick={(e) => {
                             e.stopPropagation();
                             handleView(form.id);
                           }}
-                          className="flex items-center justify-center w-8 h-8 transition-all duration-300 cursor-pointer group"
+                          className="flex items-center justify-center cursor-pointer group"
                           title="ดูข้อมูล"
-                          style={{
-                            borderRadius: '50%',
-                            background: 'transparent',
-                            clipPath: 'circle(50% at center)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.target.style.background = 'radial-gradient(circle, rgba(249, 115, 22, 0.1) 0%, rgba(234, 88, 12, 0.05) 70%, transparent 70%)';
-                            e.target.style.boxShadow = '0 0 15px rgba(249, 115, 22, 0.2)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.target.style.background = 'transparent';
-                            e.target.style.boxShadow = 'none';
-                          }}
+                          style={{ background: 'transparent' }}
                         >
                           <FontAwesomeIcon
                             icon={faEye}
-                            className="text-sm text-muted-foreground/60 group-hover:text-primary transition-colors"
+                            className="text-lg text-muted-foreground/60 group-hover:text-orange-500 transition-colors duration-200"
                           />
                         </div>
 
@@ -382,25 +414,13 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
                             e.stopPropagation();
                             handleEdit(form.id);
                           }}
-                          className="flex items-center justify-center w-8 h-8 transition-all duration-300 cursor-pointer group"
+                          className="flex items-center justify-center cursor-pointer group"
                           title="แก้ไขฟอร์ม"
-                          style={{
-                            borderRadius: '50%',
-                            background: 'transparent',
-                            clipPath: 'circle(50% at center)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.target.style.background = 'radial-gradient(circle, rgba(249, 115, 22, 0.1) 0%, rgba(234, 88, 12, 0.05) 70%, transparent 70%)';
-                            e.target.style.boxShadow = '0 0 15px rgba(249, 115, 22, 0.2)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.target.style.background = 'transparent';
-                            e.target.style.boxShadow = 'none';
-                          }}
+                          style={{ background: 'transparent' }}
                         >
                           <FontAwesomeIcon
                             icon={faEdit}
-                            className="text-sm text-muted-foreground/60 group-hover:text-primary transition-colors"
+                            className="text-lg text-muted-foreground/60 group-hover:text-orange-500 transition-colors duration-200"
                           />
                         </div>
                       </div>
@@ -426,12 +446,9 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
                   ยังไม่มีฟอร์ม
                 </h3>
                 <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  เริ่มต้นสร้างฟอร์มแรกของคุณเพื่อจัดเก็บและจัดการข้อมูล
+                  เริ่มต้นสร้างฟอร์มแรกของคุณเพื่อจัดเก็บและจัดการข้อมูล<br/>
+                  ใช้ปุ่ม + ด้านบนขวาเพื่อสร้างฟอร์มใหม่
                 </p>
-                <GlassButton onClick={handleNewForm} className="gap-2">
-                  <FontAwesomeIcon icon={faPlus} />
-                  สร้างฟอร์มใหม่
-                </GlassButton>
               </motion.div>
             )}
           </motion.div>

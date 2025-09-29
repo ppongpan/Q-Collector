@@ -427,9 +427,7 @@ function MainFormAppContent() {
             initialForm={form}
             onSave={(savedForm) => {
               console.log('Form saved successfully:', savedForm);
-              toast.success('บันทึกฟอร์มเรียบร้อยแล้ว', {
-                title: '✅ สำเร็จ'
-              });
+              // Toast notification is already handled in EnhancedFormBuilder.jsx, no need to duplicate
               handleNavigate('form-list');
             }}
             onCancel={() => handleNavigate('form-list')}
@@ -456,9 +454,7 @@ function MainFormAppContent() {
             submissionId={currentSubmissionId}
             onSave={(submission, isEdit) => {
               console.log('Form submitted successfully:', submission);
-              toast.success(isEdit ? 'แก้ไขข้อมูลเรียบร้อยแล้ว' : 'บันทึกข้อมูลเรียบร้อยแล้ว', {
-                title: '✅ สำเร็จ'
-              });
+              // Toast notification is already handled in FormView.jsx, no need to duplicate
               if (isEdit) {
                 // If editing, go back to submission detail
                 handleNavigate('submission-detail', currentFormId, false, currentSubmissionId);

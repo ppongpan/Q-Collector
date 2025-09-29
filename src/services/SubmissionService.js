@@ -130,8 +130,8 @@ class SubmissionService {
         throw new Error(`Submission with ID ${submissionId} not found`);
       }
 
-      // Validate form data including files
-      const validationResult = this.validateFormData(form, formData, files);
+      // Validate form data including files and existing submission data
+      const validationResult = this.validateFormData(form, formData, files, existingSubmission.data);
       if (!validationResult.isValid) {
         throw new Error(`Validation failed: ${validationResult.errors.join(', ')}`);
       }
@@ -145,16 +145,28 @@ class SubmissionService {
       // Merge file data, preserving existing files if no new files for a field
       const existingFiles = {};
       form.fields.forEach(field => {
-        if ((field.type === this.FIELD_TYPES.FILE_UPLOAD || field.type === this.FIELD_TYPES.IMAGE_UPLOAD) &&
-            existingSubmission.data[field.id] && !processedFiles[field.id]) {
-          existingFiles[field.id] = existingSubmission.data[field.id];
+        if (field.type === this.FIELD_TYPES.FILE_UPLOAD || field.type === this.FIELD_TYPES.IMAGE_UPLOAD) {
+          const hasExistingFile = existingSubmission.data[field.id];
+          const hasNewFile = processedFiles[field.id];
+
+          // Keep existing files if no new files uploaded for this field
+          if (hasExistingFile && !hasNewFile) {
+            existingFiles[field.id] = existingSubmission.data[field.id];
+          }
+        }
+      });
+
+      // Merge file data properly - only use new files if they exist, otherwise keep existing files
+      const mergedFileData = { ...existingFiles };
+      Object.keys(processedFiles).forEach(fieldId => {
+        if (processedFiles[fieldId] && processedFiles[fieldId] !== undefined) {
+          mergedFileData[fieldId] = processedFiles[fieldId];
         }
       });
 
       const completeData = {
         ...processedData,
-        ...existingFiles,
-        ...processedFiles,
+        ...mergedFileData,
         // Preserve document number from original submission
         documentNumber: existingSubmission.data.documentNumber
       };
@@ -334,14 +346,15 @@ class SubmissionService {
    * @param {Object} form - Form configuration
    * @param {Object} formData - Form data to validate
    * @param {Array} files - Uploaded files
+   * @param {Object} existingData - Existing submission data (for updates)
    * @returns {Object} Validation result
    */
-  validateFormData(form, formData, files = []) {
+  validateFormData(form, formData, files = [], existingData = null) {
     const errors = [];
 
     form.fields.forEach(field => {
       const value = formData[field.id];
-      const fieldErrors = this.validateField(field, value, files);
+      const fieldErrors = this.validateField(field, value, files, existingData);
       errors.push(...fieldErrors);
     });
 
@@ -377,16 +390,23 @@ class SubmissionService {
    * @param {Object} field - Field configuration
    * @param {*} value - Field value
    * @param {Array} files - Uploaded files (for file upload validation)
+   * @param {Object} existingData - Existing submission data (for updates)
    * @returns {Array} Array of error messages
    */
-  validateField(field, value, files = []) {
+  validateField(field, value, files = [], existingData = null) {
     const errors = [];
 
     // Special handling for file upload fields
     if (field.type === this.FIELD_TYPES.FILE_UPLOAD || field.type === this.FIELD_TYPES.IMAGE_UPLOAD) {
       // For file fields, check if files are uploaded for this field
       const fieldFiles = files.filter(file => file.fieldId === field.id);
-      if (field.required && fieldFiles.length === 0) {
+
+      // Check if there are existing files for this field
+      const hasExistingFiles = existingData && existingData[field.id] &&
+        (Array.isArray(existingData[field.id]) ? existingData[field.id].length > 0 : existingData[field.id]);
+
+      // Field is valid if it has new files OR existing files (for updates)
+      if (field.required && fieldFiles.length === 0 && !hasExistingFiles) {
         errors.push(`${field.title}: ต้องการข้อมูลในฟิลด์นี้`);
         return errors;
       }
@@ -515,24 +535,58 @@ class SubmissionService {
 
   /**
    * Process uploaded files
-   * @param {Array} files - Array of File objects
+   * @param {Array} files - Array of file info objects from FileService
    * @returns {Promise<Object>} Processed file data
    */
   async processUploadedFiles(files) {
     const processedFiles = {};
 
-    for (const file of files) {
+    for (const fileInfo of files) {
       try {
-        const fileData = await this.processFile(file);
-        processedFiles[file.fieldId] = fileData;
+        // If this is already processed file data from FileService, use it directly
+        if (fileInfo.data && fileInfo.uploadedAt) {
+          // Group files by fieldId
+          if (!processedFiles[fileInfo.fieldId]) {
+            processedFiles[fileInfo.fieldId] = [];
+          }
+
+          // Convert file info to the expected format for storage
+          const processedFile = {
+            id: fileInfo.id,
+            name: fileInfo.name,
+            type: fileInfo.type,
+            size: fileInfo.size,
+            data: fileInfo.data,
+            uploadedAt: fileInfo.uploadedAt,
+            isImage: fileInfo.isImage || fileInfo.type?.startsWith('image/')
+          };
+
+          processedFiles[fileInfo.fieldId].push(processedFile);
+        } else {
+          // If this is a raw File object, process it normally
+          const fileData = await this.processFile(fileInfo);
+          processedFiles[fileInfo.fieldId] = fileData;
+        }
       } catch (error) {
-        console.error(`Error processing file for field ${file.fieldId}:`, error);
-        processedFiles[file.fieldId] = {
+        console.error(`Error processing file for field ${fileInfo.fieldId}:`, error);
+        if (!processedFiles[fileInfo.fieldId]) {
+          processedFiles[fileInfo.fieldId] = [];
+        }
+        processedFiles[fileInfo.fieldId].push({
           error: 'File processing failed',
-          fileName: file.name
-        };
+          fileName: fileInfo.name || 'Unknown file'
+        });
       }
     }
+
+    // Convert arrays to single values for single-file fields
+    Object.keys(processedFiles).forEach(fieldId => {
+      const files = processedFiles[fieldId];
+      if (Array.isArray(files) && files.length === 1) {
+        // For single file fields, store as single object instead of array
+        processedFiles[fieldId] = files[0];
+      }
+    });
 
     return processedFiles;
   }
@@ -544,6 +598,20 @@ class SubmissionService {
    */
   async processFile(file) {
     return new Promise((resolve, reject) => {
+      // Validate that file is actually a File or Blob instance
+      if (!file || !(file instanceof File) && !(file instanceof Blob)) {
+        console.error('Invalid file object:', file);
+        reject(new Error('Invalid file object provided'));
+        return;
+      }
+
+      // Check file size limit (10MB)
+      const maxFileSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxFileSize) {
+        reject(new Error('ไฟล์ใหญ่เกินไป ขนาดสูงสุด 10MB'));
+        return;
+      }
+
       const reader = new FileReader();
 
       reader.onload = (e) => {
@@ -552,7 +620,10 @@ class SubmissionService {
           fileSize: file.size,
           fileType: file.type,
           data: e.target.result, // Base64 data
-          uploadedAt: new Date().toISOString()
+          uploadedAt: new Date().toISOString(),
+          toString: function() {
+            return this.fileName || 'Unknown file';
+          }
         });
       };
 
@@ -573,7 +644,10 @@ class SubmissionService {
           fileType: file.type,
           data: null,
           uploadedAt: new Date().toISOString(),
-          note: 'Large file - data not stored in browser storage'
+          note: 'Large file - data not stored in browser storage',
+          toString: function() {
+            return this.fileName || 'Unknown file';
+          }
         });
       }
     });

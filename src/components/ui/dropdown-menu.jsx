@@ -50,7 +50,7 @@ const DropdownMenuContent = React.forwardRef(({ className, sideOffset = 8, ...pr
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        "z-50 max-h-[400px] min-w-[14rem] overflow-y-auto overflow-x-hidden rounded-2xl bg-popover p-3 text-popover-foreground shadow-[0_0_0_1px_rgba(148,163,184,0.2),0_8px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)] scrollbar-glass backdrop-blur-md glass-elevated blur-edge-intense data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-dropdown-menu-content-transform-origin]",
+        "z-50 max-h-[350px] min-w-[12rem] overflow-y-auto overflow-x-hidden rounded-xl bg-popover p-2 text-popover-foreground shadow-[0_0_0_1px_rgba(148,163,184,0.2),0_8px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)] scrollbar-glass backdrop-blur-md glass-elevated blur-edge-intense data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-dropdown-menu-content-transform-origin]",
         className
       )}
       {...props} />
@@ -62,7 +62,7 @@ const DropdownMenuItem = React.forwardRef(({ className, inset, ...props }, ref) 
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer select-none items-center gap-3 rounded-lg px-3 py-3 text-base outline-none transition-all duration-300 ease-out glass-interactive hover-orange-neon focus-orange-neon hover:bg-accent/80 hover:text-accent-foreground hover:scale-[1.02] focus:bg-accent focus:text-accent-foreground focus:scale-[1.02] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 min-h-[44px] touch-target-min [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0",
+      "relative flex cursor-pointer select-none items-center gap-2 px-2 py-1 text-xs outline-none transition-all duration-300 ease-out hover:bg-accent/80 hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0",
       inset && "pl-10",
       className
     )}

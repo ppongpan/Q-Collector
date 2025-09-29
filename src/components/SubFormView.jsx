@@ -8,6 +8,7 @@ import { faSave, faFileAlt, faMapMarkerAlt, faStar } from '@fortawesome/free-sol
 import ThaiDateInput from './ui/thai-date-input';
 import ThaiDateTimeInput from './ui/thai-datetime-input';
 import ThaiPhoneInput from './ui/thai-phone-input';
+import { useEnhancedToast } from './ui/enhanced-toast';
 
 // Data services
 import dataService from '../services/DataService.js';
@@ -27,6 +28,9 @@ export default function SubFormView({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+
+  // Enhanced toast notifications
+  const toast = useEnhancedToast();
 
   // Date formatting utilities
   const formatDateForInput = (dateValue) => {
@@ -121,10 +125,20 @@ export default function SubFormView({
         accuracy: position.accuracy,
         timestamp: position.timestamp
       });
-      alert('✅ ได้รับตำแหน่งปัจจุบันแล้ว');
+      toast.success('ได้รับตำแหน่งปัจจุบันแล้ว', {
+        title: "GPS สำเร็จ",
+        duration: 3000
+      });
     } catch (error) {
       console.error('GPS error:', error);
-      alert('❌ ไม่สามารถรับตำแหน่งปัจจุบันได้: ' + error.message);
+      toast.error(`ไม่สามารถรับตำแหน่งปัจจุบันได้: ${error.message}`, {
+        title: "ไม่สามารถรับตำแหน่ง GPS ได้",
+        duration: 8000,
+        action: {
+          label: "ลองอีกครั้ง",
+          onClick: () => handleGPSLocation(fieldId)
+        }
+      });
     }
   };
 
@@ -142,7 +156,10 @@ export default function SubFormView({
         result = dataService.createSubSubmission(submissionId, subFormId, formData);
       }
 
-      alert('✅ บันทึกข้อมูลเรียบร้อยแล้ว');
+      toast.success('บันทึกข้อมูลเรียบร้อยแล้ว', {
+        title: "บันทึกสำเร็จ",
+        duration: 3000
+      });
 
       // Call onSave callback
       if (onSave) {
@@ -151,7 +168,14 @@ export default function SubFormView({
 
     } catch (error) {
       console.error('Submission error:', error);
-      alert('❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message);
+      toast.error(`เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${error.message}`, {
+        title: "บันทึกไม่สำเร็จ",
+        duration: 8000,
+        action: {
+          label: "ลองอีกครั้ง",
+          onClick: () => handleSubmit()
+        }
+      });
     } finally {
       setSubmitting(false);
     }

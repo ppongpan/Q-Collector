@@ -1,5 +1,91 @@
+version: '3.8'
+
 services:
-  # Development service
+  # PostgreSQL Database
+  postgresql:
+    image: postgres:15-alpine
+    container_name: q-collector-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: q_collector
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: secure_q_collector_2024
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - q-collector-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d q_collector"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: q-collector-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: q_collector_admin
+      MINIO_ROOT_PASSWORD: secure_minio_password_2024
+      MINIO_DEFAULT_BUCKETS: "forms,submissions,uploads"
+    ports:
+      - "9000:9000"    # API port
+      - "9001:9001"    # Console port
+    volumes:
+      - minio_data:/data
+    networks:
+      - q-collector-network
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # Redis Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: q-collector-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - q-collector-network
+    command: redis-server --appendonly yes --requirepass redis_q_collector_2024
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # PgAdmin for Database Management (Development)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: q-collector-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@q-collector.local
+      PGADMIN_DEFAULT_PASSWORD: pgadmin_q_collector_2024
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgladmin
+    networks:
+      - q-collector-network
+    depends_on:
+      - postgresql
+    profiles:
+      - development
+
+  # Frontend Development service
   form-builder-dev:
     build:
       context: .
@@ -14,25 +100,39 @@ services:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
       - FAST_REFRESH=true
+      - DATABASE_URL=postgresql://app_user:secure_q_collector_2024@postgresql:5432/q_collector
+      - REDIS_URL=redis://:redis_q_collector_2024@redis:6379
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=q_collector_admin
+      - MINIO_SECRET_KEY=secure_minio_password_2024
     profiles:
       - dev
     networks:
-      - form-builder-network
+      - q-collector-network
     restart: unless-stopped
+    depends_on:
+      - postgresql
+      - redis
+      - minio
 
-  # Production service
+  # Frontend Production service
   form-builder-prod:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:80"
+      - "3001:80"
     environment:
       - NODE_ENV=production
+      - DATABASE_URL=postgresql://app_user:secure_q_collector_2024@postgresql:5432/q_collector
+      - REDIS_URL=redis://:redis_q_collector_2024@redis:6379
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=q_collector_admin
+      - MINIO_SECRET_KEY=secure_minio_password_2024
     profiles:
       - prod
     networks:
-      - form-builder-network
+      - q-collector-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/"]
@@ -40,11 +140,26 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    depends_on:
+      - postgresql
+      - redis
+      - minio
 
 networks:
-  form-builder-network:
+  q-collector-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
 
 volumes:
+  postgres_data:
+    driver: local
+  minio_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
   node_modules_cache:
     driver: local

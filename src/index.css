@@ -269,6 +269,11 @@
       transform: none;
     }
 
+    /* Allow scale for clickable fields on mobile */
+    .hover\:scale-\[1\.2\]:hover {
+      transform: scale(1.2);
+    }
+
     /* Enhanced tap targets on mobile */
     .btn, .glass-button, [role="button"], button {
       min-height: var(--touch-target-comfortable);
@@ -289,6 +294,11 @@
 
     .hover\:scale-\[1\.02\]:hover {
       transform: scale(1.02);
+    }
+
+    /* Allow scale for clickable fields on desktop */
+    .hover\:scale-\[1\.2\]:hover {
+      transform: scale(1.2);
     }
   }
 
@@ -1545,20 +1555,10 @@
     width: 100% !important;
   }
 
-  /* Enhanced label synchronization with input hover/focus states - more specific targeting */
-  /* Target specific group types to avoid global hover effects */
-  .group-fieldtype:hover label,
-  .group-fieldtype:focus-within label,
-  .glass-input-group:hover label,
-  .glass-input-group:focus-within label {
-    color: hsl(var(--primary)) !important;
-    font-weight: 600 !important;
-    transform: translateY(-1px);
-    transition: all 0.2s ease;
-  }
+  /* Removed label hover effects - labels now stay static orange */
 
   .group label {
-    transition: all 0.2s ease !important;
+    /* Removed transition for static appearance */
     margin-bottom: 8px !important;
   }
 
@@ -1757,9 +1757,9 @@
   label {
     font-size: 16px !important;          /* Enhanced: minimum readable size */
     font-weight: 600 !important;         /* Enhanced: bold for better visibility */
-    color: #ffffff !important;           /* CRITICAL FIX: Force white text */
+    color: #fdba74 !important;           /* CRITICAL FIX: Force orange text (text-orange-300) */
     cursor: pointer;
-    transition: all 200ms ease-out;
+    /* Removed transition for static appearance */
     display: flex !important;            /* CRITICAL FIX: Better alignment */
     align-items: center !important;     /* CRITICAL FIX: Center alignment */
     gap: 8px !important;                 /* CRITICAL FIX: Consistent spacing */
@@ -1767,9 +1767,7 @@
     line-height: 1.4 !important;        /* Enhanced: better line spacing */
   }
 
-  label:hover {
-    color: #ff6600 !important;          /* CRITICAL FIX: Orange text on hover */
-  }
+  /* Removed hover effect - labels now stay static orange */
 
   /* Special styling for labels with checkboxes */
   label:has(input[type="checkbox"]),

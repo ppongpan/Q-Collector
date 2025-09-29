@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileDisplay Component Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .demo-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            margin: 8px 0;
+            transition: all 0.2s ease;
+        }
+        .file-item:hover {
+            border-color: #f97316;
+            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.1);
+            transform: translateY(-1px);
+        }
+        .file-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .file-name {
+            font-weight: 500;
+            color: #1f2937;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .file-size {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .download-icon {
+            color: #f97316;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .file-item:hover .download-icon {
+            opacity: 1;
+        }
+        .compact-display {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+        }
+        h2 {
+            color: #f97316;
+            border-bottom: 2px solid #f97316;
+            padding-bottom: 8px;
+        }
+        h3 {
+            color: #374151;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center; color: #f97316;">FileDisplay Component Demo</h1>
+        <p style="text-align: center; color: #6b7280;">การแสดงผลฟิลด์แนบไฟล์ในระบบ Q-Collector</p>
+
+        <div class="demo-section">
+            <h2>📄 Single File Display</h2>
+            <p>การแสดงผลไฟล์เดี่ยวในหน้ารายละเอียด</p>
+
+            <h3>PDF Document</h3>
+            <div class="file-item">
+                <div class="file-icon">📄</div>
+                <div class="file-info">
+                    <div class="file-name">รายงานประจำเดือน.pdf</div>
+                    <div class="file-size">2.4 MB</div>
+                </div>
+                <div class="download-icon">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <h3>Word Document</h3>
+            <div class="file-item">
+                <div class="file-icon">📝</div>
+                <div class="file-info">
+                    <div class="file-name">แบบฟอร์มใบสมัคร.docx</div>
+                    <div class="file-size">1.2 MB</div>
+                </div>
+                <div class="download-icon">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <h3>Excel Spreadsheet</h3>
+            <div class="file-item">
+                <div class="file-icon">📊</div>
+                <div class="file-info">
+                    <div class="file-name">ข้อมูลยอดขาย_Q1_2025.xlsx</div>
+                    <div class="file-size">856.3 KB</div>
+                </div>
+                <div class="download-icon">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>📁 Multiple Files Display</h2>
+            <p>การแสดงผลหลายไฟล์ในหน้ารายละเอียด</p>
+
+            <div class="file-item">
+                <div class="file-icon">🖼️</div>
+                <div class="file-info">
+                    <div class="file-name">รูปภาพโรงงาน_001.jpg</div>
+                    <div class="file-size">3.2 MB</div>
+                </div>
+                <div class="download-icon">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="file-item">
+                <div class="file-icon">🖼️</div>
+                <div class="file-info">
+                    <div class="file-name">รูปภาพโรงงาน_002.jpg</div>
+                    <div class="file-size">2.8 MB</div>
+                </div>
+                <div class="download-icon">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="file-item">
+                <div class="file-icon">📦</div>
+                <div class="file-info">
+                    <div class="file-name">เอกสารแนบทั้งหมด.zip</div>
+                    <div class="file-size">15.7 MB</div>
+                </div>
+                <div class="download-icon">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div style="text-align: center; padding: 12px; border: 1px dashed #dee2e6; border-radius: 8px; background: #f8f9fa; color: #6b7280; font-size: 12px; margin-top: 8px;">
+                และอีก 5 ไฟล์
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>📋 Table Display (Compact)</h2>
+            <p>การแสดงผลแบบย่อในตาราง</p>
+
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                <thead>
+                    <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                        <th style="padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280;">#</th>
+                        <th style="padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280;">ชื่อผู้ส่ง</th>
+                        <th style="padding: 12px; text-align: center; font-size: 12px; font-weight: 600; color: #6b7280;">เอกสารแนบ</th>
+                        <th style="padding: 12px; text-align: center; font-size: 12px; font-weight: 600; color: #6b7280;">วันที่ส่ง</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 12px; font-size: 12px;">1</td>
+                        <td style="padding: 12px; font-size: 12px;">นายสมชาย ใจดี</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <div class="compact-display" style="justify-content: center;">
+                                <span style="font-size: 14px;">📄</span>
+                                <span style="font-size: 10px; color: #6b7280;">รายงาน.pdf</span>
+                            </div>
+                        </td>
+                        <td style="padding: 12px; font-size: 12px; text-align: center;">28/09/2568</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 12px; font-size: 12px;">2</td>
+                        <td style="padding: 12px; font-size: 12px;">นางสาวสุดา มีใจ</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <div class="compact-display" style="justify-content: center;">
+                                <span style="font-size: 14px;">📁</span>
+                                <span style="font-size: 10px; color: #6b7280;">3 ไฟล์</span>
+                            </div>
+                        </td>
+                        <td style="padding: 12px; font-size: 12px; text-align: center;">27/09/2568</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 12px; font-size: 12px;">3</td>
+                        <td style="padding: 12px; font-size: 12px;">นายประจ สำคัญ</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <div class="compact-display" style="justify-content: center;">
+                                <span style="font-size: 14px;">📊</span>
+                                <span style="font-size: 10px; color: #6b7280; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">ข้อมูลยอดขาย.xlsx</span>
+                            </div>
+                        </td>
+                        <td style="padding: 12px; font-size: 12px; text-align: center;">26/09/2568</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 12px; font-size: 12px;">4</td>
+                        <td style="padding: 12px; font-size: 12px;">นางเรณู ดีงาม</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <div class="compact-display" style="justify-content: center;">
+                                <span style="font-size: 10px; color: #9ca3af;">-</span>
+                            </div>
+                        </td>
+                        <td style="padding: 12px; font-size: 12px; text-align: center;">25/09/2568</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="demo-section">
+            <h2>📱 Mobile Responsive</h2>
+            <p>การแสดงผลในหน้าจอมือถือ</p>
+
+            <div style="max-width: 320px; margin: 0 auto; border: 2px solid #dee2e6; border-radius: 12px; padding: 16px; background: white;">
+                <h4 style="margin: 0 0 16px 0; color: #374151;">เอกสารแนบ</h4>
+
+                <div class="file-item" style="margin: 8px 0;">
+                    <div class="file-icon" style="font-size: 20px;">📄</div>
+                    <div class="file-info">
+                        <div class="file-name" style="font-size: 13px;">รายงาน.pdf</div>
+                        <div class="file-size" style="font-size: 11px;">2.4 MB</div>
+                    </div>
+                    <div class="download-icon">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="file-item" style="margin: 8px 0;">
+                    <div class="file-icon" style="font-size: 20px;">🖼️</div>
+                    <div class="file-info">
+                        <div class="file-name" style="font-size: 13px;">รูปภาพ.jpg</div>
+                        <div class="file-size" style="font-size: 11px;">1.8 MB</div>
+                    </div>
+                    <div class="download-icon">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding: 20px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #0ea5e9;">
+            <h3 style="color: #0369a1; margin: 0 0 8px 0;">✅ การปรับปรุงเสร็จสิ้น</h3>
+            <p style="margin: 0; color: #0c4a6e;">
+                FileDisplay Component ถูกนำไปใช้ในไฟล์:<br>
+                • <strong>SubmissionDetail.jsx</strong> - หน้ารายละเอียดฟอร์มหลัก<br>
+                • <strong>SubFormDetail.jsx</strong> - หน้ารายละเอียดฟอร์มย่อย<br>
+                • <strong>FormSubmissionList.jsx</strong> - ตารางแสดงรายการส่งฟอร์ม
+            </p>
+        </div>
+    </div>
+</body>
+</html>

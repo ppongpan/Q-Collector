@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/cn';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -24,8 +25,46 @@ export const useEnhancedToast = () => {
 // Toast Provider Component
 export const EnhancedToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
+  const [recentToasts, setRecentToasts] = useState(new Map()); // Track recent toasts for debouncing
 
   const addToast = (message, type = 'info', options = {}) => {
+    // Debouncing: Check for duplicate toast with same message, type, and title
+    const isDuplicate = toasts.some(existingToast =>
+      existingToast.message === message &&
+      existingToast.type === type &&
+      existingToast.title === options.title
+    );
+
+    if (isDuplicate) {
+      console.log('Duplicate toast prevented (active):', { message, type, title: options.title });
+      return null; // Don't add duplicate toast
+    }
+
+    // Time-based debouncing: Prevent same message within 2 seconds
+    const toastKey = `${type}_${message}_${options.title || ''}`;
+    const now = Date.now();
+    const lastShown = recentToasts.get(toastKey);
+
+    if (lastShown && (now - lastShown) < 2000) {
+      console.log('Duplicate toast prevented (recent):', { message, type, title: options.title });
+      return null; // Don't add recent duplicate
+    }
+
+    // Update recent toasts map
+    setRecentToasts(prev => {
+      const updated = new Map(prev);
+      updated.set(toastKey, now);
+
+      // Clean up old entries (older than 5 seconds)
+      for (const [key, timestamp] of updated.entries()) {
+        if (now - timestamp > 5000) {
+          updated.delete(key);
+        }
+      }
+
+      return updated;
+    });
+
     const id = Date.now() + Math.random();
     const duration = options.duration || (type === 'error' ? 8000 : 5000);
 
@@ -232,18 +271,47 @@ const EnhancedToast = ({ toast, onDismiss }) => {
   );
 };
 
-// Toast Container Component
+// Toast Container Component with Portal for maximum z-index
+// Floating overlay that stays at top-right corner, above everything
+// Fixed positioning to ensure visibility from any scroll position
 const ToastContainer = ({ toasts, onDismiss }) => {
-  return (
-    <div className="fixed top-4 right-4 z-50 space-y-3 pointer-events-none">
-      <AnimatePresence mode="popLayout">
+  const [portalElement, setPortalElement] = useState(null);
+
+  useEffect(() => {
+    // Create portal element for toasts
+    const element = document.createElement('div');
+    element.id = 'toast-portal';
+    element.style.cssText = `
+      position: fixed !important;
+      top: 24px !important;
+      right: 24px !important;
+      z-index: 2147483646 !important;
+      pointer-events: none !important;
+      max-width: 384px !important;
+    `;
+    document.body.appendChild(element);
+    setPortalElement(element);
+
+    return () => {
+      if (document.body.contains(element)) {
+        document.body.removeChild(element);
+      }
+    };
+  }, []);
+
+  if (!portalElement) return null;
+
+  return createPortal(
+    <div className="space-y-3 pointer-events-none">
+      <AnimatePresence mode="sync" initial={false}>
         {toasts.map(toast => (
           <div key={toast.id} className="pointer-events-auto">
             <EnhancedToast toast={toast} onDismiss={onDismiss} />
           </div>
         ))}
       </AnimatePresence>
-    </div>
+    </div>,
+    portalElement
   );
 };
 

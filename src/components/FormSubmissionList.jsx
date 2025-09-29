@@ -6,10 +6,17 @@ import { GlassInput } from './ui/glass-input';
 import SubmissionActionMenu, { useSubmissionActionMenu } from './ui/submission-action-menu';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch } from '@fortawesome/free-solid-svg-icons';
+import { FileDisplayCompact } from './ui/file-display';
+import { useEnhancedToast } from './ui/enhanced-toast';
+import { PhoneIcon } from './ui/phone-icon';
 
 // Data services
 import dataService from '../services/DataService.js';
 import submissionService from '../services/SubmissionService.js';
+
+// Utilities
+import { formatNumberByContext } from '../utils/numberFormatter.js';
+import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../utils/phoneFormatter.js';
 
 export default function FormSubmissionList({ formId, onNewSubmission, onViewSubmission, onEditSubmission, onBack }) {
   const [submissions, setSubmissions] = useState([]);
@@ -20,6 +27,9 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
   // Action menu state
   const { isOpen, position, openMenu, closeMenu } = useSubmissionActionMenu();
+
+  // Enhanced toast notifications
+  const toast = useEnhancedToast();
 
   const loadData = useCallback(() => {
     setLoading(true);
@@ -113,17 +123,30 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
   };
 
   const handleDeleteSubmission = async (submissionId) => {
-    const confirmed = window.confirm('⚠️ คุณแน่ใจหรือไม่ที่จะลบข้อมูลนี้?\n\nการลบจะไม่สามารถย้อนกลับได้');
-    if (confirmed) {
-      try {
-        dataService.deleteSubmission(submissionId);
-        setSubmissions(prev => prev.filter(sub => sub.id !== submissionId));
-        alert('✅ ลบข้อมูลเรียบร้อยแล้ว');
-      } catch (error) {
-        console.error('Delete error:', error);
-        alert('❌ เกิดข้อผิดพลาดในการลบข้อมูล');
+    // Show confirmation toast with action buttons
+    toast.error('การลบจะไม่สามารถย้อนกลับได้', {
+      title: "คุณแน่ใจหรือไม่ที่จะลบข้อมูลนี้?",
+      duration: 10000,
+      action: {
+        label: "ยืนยันการลบ",
+        onClick: async () => {
+          try {
+            dataService.deleteSubmission(submissionId);
+            setSubmissions(prev => prev.filter(sub => sub.id !== submissionId));
+            toast.success('ลบข้อมูลเรียบร้อยแล้ว', {
+              title: "ลบสำเร็จ",
+              duration: 3000
+            });
+          } catch (error) {
+            console.error('Delete error:', error);
+            toast.error('เกิดข้อผิดพลาดในการลบข้อมูล', {
+              title: "ลบไม่สำเร็จ",
+              duration: 5000
+            });
+          }
+        }
       }
-    }
+    });
   };
 
   // Menu action handlers
@@ -268,7 +291,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           return (
             <div className="flex flex-wrap gap-1 justify-center">
               {value.slice(0, 2).map((item, index) => (
-                <span key={index} className="inline-block px-2 py-1 bg-primary/10 text-primary text-[12px] rounded">
+                <span key={index} className="inline-block text-primary text-[12px]">
                   {item}
                 </span>
               ))}
@@ -280,7 +303,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         }
         return (
           <div className="text-center">
-            <span className="inline-block px-2 py-1 bg-primary/10 text-primary text-[12px] rounded">
+            <span className="inline-block text-primary text-[12px]">
               {value}
             </span>
           </div>
@@ -290,7 +313,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
       case 'factory':
         return (
           <div className="text-center">
-            <span className="inline-block px-2 py-1 bg-accent/10 text-accent text-[12px] rounded">
+            <span className="inline-block text-primary text-[12px]">
               {value}
             </span>
           </div>
@@ -298,34 +321,18 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
       case 'file_upload':
       case 'image_upload':
-        // Check for files - check rawValue first, then formatted value
-        let hasFiles = false;
-        const checkValue = fieldData.rawValue || value;
-
-        if (Array.isArray(checkValue)) {
-          hasFiles = checkValue.length > 0;
-        } else if (typeof checkValue === 'object' && checkValue !== null) {
-          hasFiles = !!(checkValue.fileName || checkValue.name || checkValue.file);
-        } else if (typeof checkValue === 'string') {
-          hasFiles = checkValue !== '' && checkValue !== '-' && checkValue !== 'ไฟล์ที่แนบ';
-        } else if (checkValue) {
-          hasFiles = true;
-        }
-
+        // Use FileDisplayCompact for better file display in table
+        const fileValue = fieldData.rawValue || value;
         return (
           <div className="flex items-center justify-center">
-            {hasFiles ? (
-              <span className="text-green-500 font-semibold text-[12px]">✓</span>
-            ) : (
-              <span className="text-muted-foreground font-semibold text-[12px]">✗</span>
-            )}
+            <FileDisplayCompact value={fileValue} maxDisplay={1} />
           </div>
         );
 
       case 'number':
         return (
           <span className="text-[12px] text-foreground/80 font-mono text-center block">
-            {parseFloat(value).toLocaleString('th-TH')}
+            {formatNumberByContext(value, 'table')}
           </span>
         );
 
@@ -339,31 +346,121 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         );
 
       case 'phone':
-        // Format phone number for display
-        const formatPhoneDisplay = (phoneValue) => {
-          if (!phoneValue) return phoneValue;
-          const digits = phoneValue.toString().replace(/\D/g, '');
-          if (digits.length === 10) {
-            return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-          }
-          return phoneValue;
-        };
+        // Check if this should be treated as a phone field based on comprehensive detection
+        const isPhoneFieldFormSubmission = type === 'phone' ||
+                                          shouldFormatAsPhone(value, type) ||
+                                          field?.title?.toLowerCase().includes('เบอร์') ||
+                                          field?.title?.toLowerCase().includes('โทร') ||
+                                          field?.title?.toLowerCase().includes('phone') ||
+                                          field?.title?.toLowerCase().includes('tel') ||
+                                          field?.title?.toLowerCase().includes('mobile') ||
+                                          field?.title?.toLowerCase().includes('contact');
 
-        const formattedPhone = formatPhoneDisplay(value);
+        if (isPhoneFieldFormSubmission) {
+          const phoneProps = createPhoneLink(value, {
+            includeIcon: true,
+            size: 'xs',
+            showTooltip: true,
+            className: 'text-[12px]'
+          });
+
+          return (
+            <div className="text-center">
+              {phoneProps.isClickable ? (
+                <div className="flex items-center justify-center gap-1">
+                  <PhoneIcon />
+                  <a
+                    href={phoneProps.telLink}
+                    className={phoneProps.className}
+                    title={phoneProps.title}
+                    aria-label={phoneProps.ariaLabel}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {phoneProps.display}
+                  </a>
+                </div>
+              ) : (
+                <span className="text-[12px] text-foreground/80">
+                  {formatPhoneDisplay(value) || value || '-'}
+                </span>
+              )}
+            </div>
+          );
+        }
+
+        // Fallback for standard phone display
         return (
           <div className="text-center">
-            <a href={`tel:${value}`} className="text-[12px] text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
-              {formattedPhone}
-            </a>
+            <span className="text-[12px] text-foreground/80">
+              {formatPhoneDisplay(value) || value || '-'}
+            </span>
           </div>
         );
 
       case 'url':
+        // Check if this should be treated as a URL field based on comprehensive detection
+        const isUrlFieldFormSubmission = type === 'url' ||
+                                        field?.title?.toLowerCase().includes('url') ||
+                                        field?.title?.toLowerCase().includes('link') ||
+                                        field?.title?.toLowerCase().includes('เว็บ') ||
+                                        field?.title?.toLowerCase().includes('website') ||
+                                        field?.title?.toLowerCase().includes('web') ||
+                                        field?.title?.toLowerCase().includes('site') ||
+                                        (value && typeof value === 'string' &&
+                                         (/^https?:\/\//i.test(value.trim()) ||
+                                          /^www\./i.test(value.trim()) ||
+                                          /\.(com|net|org|co|th|io|edu|gov|mil|int|biz|info|pro|name|museum|coop|aero|asia|cat|jobs|mobi|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|za|zm|zw)$/.test(value.trim())));
+
+        if (isUrlFieldFormSubmission && value) {
+          // Format URL for linking
+          const formatUrlForLinking = (url) => {
+            if (!url || typeof url !== 'string') return null;
+            const trimmedUrl = url.trim();
+            if (!trimmedUrl) return null;
+
+            const urlPattern = /^(https?:\/\/|ftp:\/\/)/i;
+            let formattedUrl = trimmedUrl;
+
+            if (!urlPattern.test(trimmedUrl)) {
+              formattedUrl = `https://${trimmedUrl}`;
+            }
+
+            try {
+              new URL(formattedUrl);
+              return formattedUrl;
+            } catch {
+              return null;
+            }
+          };
+
+          const validUrl = formatUrlForLinking(value);
+          const displayText = value.length > 30 ? `${value.substring(0, 30)}...` : value;
+
+          return (
+            <div className="text-center">
+              {validUrl ? (
+                <a
+                  href={validUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[12px] text-primary hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {displayText}
+                </a>
+              ) : (
+                <span className="text-[12px] text-foreground/80">{displayText}</span>
+              )}
+            </div>
+          );
+        }
+
+        // Fallback for standard URL display
         return (
           <div className="text-center">
-            <a href={value} target="_blank" rel="noopener noreferrer" className="text-[12px] text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
-              {value.length > 30 ? `${value.substring(0, 30)}...` : value}
-            </a>
+            <span className="text-[12px] text-foreground/80">
+              {value?.length > 30 ? `${value.substring(0, 30)}...` : value}
+            </span>
           </div>
         );
 
@@ -372,9 +469,9 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         const unit = field.options?.unit || '';
         return (
           <div className="flex items-center gap-2 justify-center">
-            <div className="flex-1 bg-muted/30 rounded-full h-1 max-w-16">
+            <div className="flex-1 bg-muted/30 h-1 max-w-16">
               <div
-                className="bg-primary h-1 rounded-full"
+                className="bg-primary h-1"
                 style={{ width: `${(sliderValue / (field.options?.max || 100)) * 100}%` }}
               />
             </div>
@@ -383,19 +480,26 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         );
 
       case 'auto_date':
-        // Auto date column - show submission date
+        // Auto date column - show submission date (simplified structure)
         if (!value || value === '' || value === 'undefined' || value === 'null') {
           return <span className="text-muted-foreground text-[12px]">-</span>;
         }
         const formattedDate = formatDate(value);
         return (
-          <div className="text-[12px] text-foreground/80 text-center">
-            <div className="font-medium">{formattedDate === '-' ? '-' : formattedDate}</div>
-          </div>
+          <span className="text-[12px] text-foreground/80 font-medium" style={{
+            background: 'transparent !important',
+            backgroundColor: 'transparent !important',
+            border: 'none !important',
+            borderRadius: '0 !important',
+            boxShadow: 'none !important',
+            outline: 'none !important'
+          }}>
+            {formattedDate === '-' ? '-' : formattedDate}
+          </span>
         );
 
       case 'auto_time':
-        // Auto time column - show submission time
+        // Auto time column - show submission time (simplified structure)
         if (!value || value === '' || value === 'undefined' || value === 'null') {
           return <span className="text-muted-foreground text-[12px]">-</span>;
         }
@@ -404,13 +508,143 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           return <span className="text-muted-foreground text-[12px]">-</span>;
         }
         return (
-          <div className="text-[12px] text-foreground/80 text-center font-mono">
+          <span className="text-[12px] text-foreground/80 font-mono" style={{
+            background: 'transparent !important',
+            backgroundColor: 'transparent !important',
+            border: 'none !important',
+            borderRadius: '0 !important',
+            boxShadow: 'none !important',
+            outline: 'none !important'
+          }}>
             {timeDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
-          </div>
+          </span>
         );
 
       default:
-        // For text fields and others
+        // Check if this should be treated as phone or URL field even if not explicitly typed
+        const isPhoneFromTitle = field?.title?.toLowerCase().includes('เบอร์') ||
+                                field?.title?.toLowerCase().includes('โทร') ||
+                                field?.title?.toLowerCase().includes('phone') ||
+                                field?.title?.toLowerCase().includes('tel') ||
+                                field?.title?.toLowerCase().includes('mobile') ||
+                                field?.title?.toLowerCase().includes('contact');
+
+        const isUrlFromTitle = field?.title?.toLowerCase().includes('url') ||
+                              field?.title?.toLowerCase().includes('link') ||
+                              field?.title?.toLowerCase().includes('เว็บ') ||
+                              field?.title?.toLowerCase().includes('website') ||
+                              field?.title?.toLowerCase().includes('web') ||
+                              field?.title?.toLowerCase().includes('site');
+
+        const isEmailFromTitle = field?.title?.toLowerCase().includes('email') ||
+                                field?.title?.toLowerCase().includes('อีเมล') ||
+                                field?.title?.toLowerCase().includes('e-mail');
+
+        const isPhoneFromValue = value && typeof value === 'string' &&
+                               (/^\d{3}-\d{3}-\d{4}$/.test(value.trim()) ||
+                                /^\d{10}$/.test(value.replace(/\D/g, '')));
+
+        const isUrlFromValue = value && typeof value === 'string' &&
+                             (/^https?:\/\//i.test(value.trim()) ||
+                              /^www\./i.test(value.trim()) ||
+                              /\.(com|net|org|co|th|io|edu|gov|mil|int|biz|info|pro|name|museum|coop|aero|asia|cat|jobs|mobi|tel|travel|xxx)$/.test(value.trim()));
+
+        const isEmailFromValue = value && typeof value === 'string' &&
+                                /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+        // Handle phone field
+        if (isPhoneFromTitle || isPhoneFromValue) {
+          const phoneProps = createPhoneLink(value, {
+            includeIcon: true,
+            size: 'xs',
+            showTooltip: true,
+            className: 'text-[12px]'
+          });
+
+          return (
+            <div className="text-center">
+              {phoneProps.isClickable ? (
+                <div className="flex items-center justify-center gap-1">
+                  <PhoneIcon />
+                  <a
+                    href={phoneProps.telLink}
+                    className={phoneProps.className}
+                    title={phoneProps.title}
+                    aria-label={phoneProps.ariaLabel}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {phoneProps.display}
+                  </a>
+                </div>
+              ) : (
+                <span className="text-[12px] text-foreground/80">
+                  {formatPhoneDisplay(value) || value || '-'}
+                </span>
+              )}
+            </div>
+          );
+        }
+
+        // Handle URL field
+        if (isUrlFromTitle || isUrlFromValue) {
+          const formatUrlForLinking = (url) => {
+            if (!url || typeof url !== 'string') return null;
+            const trimmedUrl = url.trim();
+            if (!trimmedUrl) return null;
+
+            const urlPattern = /^(https?:\/\/|ftp:\/\/)/i;
+            let formattedUrl = trimmedUrl;
+
+            if (!urlPattern.test(trimmedUrl)) {
+              formattedUrl = `https://${trimmedUrl}`;
+            }
+
+            try {
+              new URL(formattedUrl);
+              return formattedUrl;
+            } catch {
+              return null;
+            }
+          };
+
+          const validUrl = formatUrlForLinking(value);
+          const displayText = value && value.length > 30 ? `${value.substring(0, 30)}...` : value;
+
+          return (
+            <div className="text-center">
+              {validUrl ? (
+                <a
+                  href={validUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[12px] text-primary hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {displayText}
+                </a>
+              ) : (
+                <span className="text-[12px] text-foreground/80">{displayText}</span>
+              )}
+            </div>
+          );
+        }
+
+        // Handle email field
+        if (isEmailFromTitle || isEmailFromValue) {
+          return (
+            <div className="text-center">
+              <a
+                href={`mailto:${value}`}
+                className="text-[12px] text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {value}
+              </a>
+            </div>
+          );
+        }
+
+        // For other text fields
         const text = String(value);
         return (
           <div className="text-[12px] text-foreground/80 max-w-[180px] text-center">
@@ -520,9 +754,125 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <GlassCard className="glass-container overflow-hidden">
+            <GlassCard className="glass-container">
+              <style>{`
+                .submission-table-override tbody tr {
+                  background: transparent !important;
+                }
+                /* Disable all transitions and animations globally in table */
+                .submission-table-override,
+                .submission-table-override *,
+                .submission-table-override *::before,
+                .submission-table-override *::after {
+                  transition: none !important;
+                  animation: none !important;
+                  transform: none !important;
+                }
+                .submission-table-override tbody tr:hover {
+                  background: rgb(229 231 235) !important;
+                  border-radius: 0 !important;
+                }
+                .submission-table-override tbody tr:hover td,
+                .submission-table-override tbody tr:hover td *,
+                .submission-table-override tbody tr:hover td div,
+                .submission-table-override tbody tr:hover td span,
+                .submission-table-override tbody tr:hover td a,
+                .submission-table-override tbody tr:hover td div *,
+                .submission-table-override tbody tr:hover td span *,
+                .submission-table-override tbody tr:hover td a * {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  border: none !important;
+                  border-radius: 0 !important;
+                  box-shadow: none !important;
+                  outline: none !important;
+                }
+                .dark .submission-table-override tbody tr:hover {
+                  background: rgb(55 65 81) !important;
+                }
+                .submission-table-override tbody td *,
+                .submission-table-override tbody td div,
+                .submission-table-override tbody td span,
+                .submission-table-override tbody td a {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  border: none !important;
+                  border-radius: 0 !important;
+                  box-shadow: none !important;
+                  outline: none !important;
+                  transition: none !important;
+                  animation: none !important;
+                }
+                /* Specific override for ALL date field containers including auto_date */
+                .submission-table-override tbody td div.text-center,
+                .submission-table-override tbody td div.text-\\[12px\\],
+                .submission-table-override tbody td div.font-medium,
+                .submission-table-override tbody td div.text-foreground\\/80 {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  border: none !important;
+                  border-radius: 0 !important;
+                  box-shadow: none !important;
+                  outline: none !important;
+                  transition: none !important;
+                  animation: none !important;
+                }
+                /* Nuclear option: Override ALL divs in table cells */
+                .submission-table-override tbody td div {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  border: none !important;
+                  border-radius: 0 !important;
+                  box-shadow: none !important;
+                  outline: none !important;
+                  transition: none !important;
+                  animation: none !important;
+                  transform: none !important;
+                  filter: none !important;
+                  backdrop-filter: none !important;
+                }
+                /* Override any glass effects or backdrop filters */
+                .submission-table-override tbody td *::before,
+                .submission-table-override tbody td *::after {
+                  display: none !important;
+                  content: none !important;
+                  background: transparent !important;
+                  backdrop-filter: none !important;
+                  filter: none !important;
+                }
+                /* Force remove any hover states on individual elements */
+                .submission-table-override tbody td:hover *,
+                .submission-table-override tbody td *:hover,
+                .submission-table-override tbody td:hover div,
+                .submission-table-override tbody td div:hover {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  border: none !important;
+                  border-radius: 0 !important;
+                  box-shadow: none !important;
+                  outline: none !important;
+                  transform: none !important;
+                  filter: none !important;
+                  backdrop-filter: none !important;
+                }
+                /* Specific override for auto date fields on hover */
+                .submission-table-override tbody td:hover div.text-center,
+                .submission-table-override tbody td:hover div.font-medium,
+                .submission-table-override tbody td:hover div.text-\\[12px\\],
+                .submission-table-override tbody td:hover div.text-foreground\\/80 {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  border: none !important;
+                  border-radius: 0 !important;
+                  box-shadow: none !important;
+                  outline: none !important;
+                  transform: none !important;
+                  filter: none !important;
+                  backdrop-filter: none !important;
+                }
+              `}</style>
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full submission-table-override">
                   <thead>
                     <tr className="border-b border-border/30 bg-muted/20">
                       {tableFields.map(field => (
@@ -542,12 +892,43 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.3, delay: index * 0.05 }}
-                          className={`border-b border-border/20 hover:bg-gradient-to-r hover:from-orange-50/30 hover:to-orange-100/20 hover:shadow-lg hover:scale-[1.02] hover:z-10 transition-all duration-300 cursor-pointer group relative ${
+                          className={`border-b border-border/20 transition-all duration-300 cursor-pointer group relative ${
                             selectedSubmissionId === submission.id && isOpen
-                              ? 'bg-gradient-to-r from-orange-50/30 to-orange-100/20 shadow-lg scale-[1.02] z-10'
+                              ? 'bg-gray-100/50 dark:bg-gray-800/30'
                               : ''
                           }`}
                           onClick={(e) => handleMenuOpen(e, submission.id)}
+                          onMouseEnter={(e) => {
+                            // Force clean styling with JavaScript
+                            const row = e.currentTarget;
+                            const allElements = row.querySelectorAll('*');
+
+                            allElements.forEach(element => {
+                              // Remove all computed styles
+                              element.style.cssText = '';
+                              // Force specific overrides
+                              element.style.setProperty('background', 'transparent', 'important');
+                              element.style.setProperty('background-color', 'transparent', 'important');
+                              element.style.setProperty('border', 'none', 'important');
+                              element.style.setProperty('border-radius', '0', 'important');
+                              element.style.setProperty('box-shadow', 'none', 'important');
+                              element.style.setProperty('outline', 'none', 'important');
+                              element.style.setProperty('transform', 'none', 'important');
+                              element.style.setProperty('filter', 'none', 'important');
+                              element.style.setProperty('backdrop-filter', 'none', 'important');
+                              element.style.setProperty('transition', 'none', 'important');
+                              element.style.setProperty('animation', 'none', 'important');
+                            });
+
+                            // Set row background to darker gray for better readability
+                            const isDarkMode = document.documentElement.classList.contains('dark');
+                            const hoverColor = isDarkMode ? 'rgb(55, 65, 81)' : 'rgb(229, 231, 235)';
+                            row.style.setProperty('background-color', hoverColor, 'important');
+                          }}
+                          onMouseLeave={(e) => {
+                            const row = e.currentTarget;
+                            row.style.removeProperty('background-color');
+                          }}
                         >
                           {tableFields.map((field, fieldIndex) => {
                             let fieldData;
@@ -569,11 +950,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                             return (
                               <td
                                 key={field.id}
-                                className={`p-2 text-[12px] text-center group-hover:text-orange-600 transition-colors duration-300 ${
-                                  selectedSubmissionId === submission.id && isOpen
-                                    ? 'text-orange-600'
-                                    : ''
-                                }`}
+                                className={`p-3 text-[12px] text-center transition-colors duration-300 [&_*]:!bg-transparent [&_*]:!border-none [&_*]:!rounded-none [&_*]:!shadow-none`}
                               >
                                 {renderFieldValue(fieldData, field)}
                               </td>
