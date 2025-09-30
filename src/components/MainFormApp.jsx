@@ -523,28 +523,54 @@ function MainFormAppContent() {
     </main>
   );
 
-  const renderSubmissionDetail = () => (
-    <SubmissionDetail
-      formId={currentFormId}
-      submissionId={currentSubmissionId}
-      onEdit={(submissionId) => handleNavigate('form-view', currentFormId, false, submissionId)}
-      onDelete={(submissionId) => {
-        // After delete, go back to submission list
-        handleNavigate('submission-list', currentFormId);
-      }}
-      onBack={() => handleNavigate('submission-list', currentFormId)}
-      onAddSubForm={(formId, submissionId, subFormId) => {
-        handleViewSubFormView(formId, submissionId, subFormId);
-      }}
-      onViewSubFormDetail={(formId, submissionId, subFormId, subSubmissionId) => {
-        handleViewSubFormDetail(formId, submissionId, subFormId, subSubmissionId);
-      }}
-      onAddNew={(formId) => {
-        console.log('Add new submission for form:', formId);
-        handleNavigate('form-view', formId);
-      }}
-    />
-  );
+  const renderSubmissionDetail = () => {
+    // Get all submissions for this form to determine navigation
+    const allSubmissions = dataService.getSubmissionsByFormId(currentFormId);
+    const currentIndex = allSubmissions.findIndex(sub => sub.id === currentSubmissionId);
+    const hasPrevious = currentIndex > 0;
+    const hasNext = currentIndex < allSubmissions.length - 1;
+
+    const handleNavigatePrevious = () => {
+      if (hasPrevious) {
+        const previousSubmission = allSubmissions[currentIndex - 1];
+        handleNavigate('submission-detail', currentFormId, false, previousSubmission.id);
+      }
+    };
+
+    const handleNavigateNext = () => {
+      if (hasNext) {
+        const nextSubmission = allSubmissions[currentIndex + 1];
+        handleNavigate('submission-detail', currentFormId, false, nextSubmission.id);
+      }
+    };
+
+    return (
+      <SubmissionDetail
+        formId={currentFormId}
+        submissionId={currentSubmissionId}
+        onEdit={(submissionId) => handleNavigate('form-view', currentFormId, false, submissionId)}
+        onDelete={(submissionId) => {
+          // After delete, go back to submission list
+          handleNavigate('submission-list', currentFormId);
+        }}
+        onBack={() => handleNavigate('submission-list', currentFormId)}
+        onAddSubForm={(formId, submissionId, subFormId) => {
+          handleViewSubFormView(formId, submissionId, subFormId);
+        }}
+        onViewSubFormDetail={(formId, submissionId, subFormId, subSubmissionId) => {
+          handleViewSubFormDetail(formId, submissionId, subFormId, subSubmissionId);
+        }}
+        onAddNew={(formId) => {
+          console.log('Add new submission for form:', formId);
+          handleNavigate('form-view', formId);
+        }}
+        onNavigatePrevious={handleNavigatePrevious}
+        onNavigateNext={handleNavigateNext}
+        hasPrevious={hasPrevious}
+        hasNext={hasNext}
+      />
+    );
+  };
 
   const renderSubFormView = () => (
     <SubFormView
@@ -560,22 +586,49 @@ function MainFormAppContent() {
     />
   );
 
-  const renderSubFormDetail = () => (
-    <SubFormDetail
-      formId={currentFormId}
-      submissionId={currentSubmissionId}
-      subFormId={currentSubFormId}
-      subSubmissionId={currentSubSubmissionId}
-      onEdit={(subSubmissionId) => {
-        handleNavigate('subform-view', currentFormId, false, currentSubmissionId, currentSubFormId, subSubmissionId);
-      }}
-      onDelete={(subSubmissionId) => {
-        // After delete, go back to submission detail
-        handleNavigate('submission-detail', currentFormId, false, currentSubmissionId);
-      }}
-      onBack={() => handleNavigate('submission-detail', currentFormId, false, currentSubmissionId)}
-    />
-  );
+  const renderSubFormDetail = () => {
+    // Get all sub-form submissions for this parent submission to determine navigation
+    const allSubSubmissions = dataService.getSubSubmissionsByParentId(currentSubmissionId)
+      .filter(sub => sub.subFormId === currentSubFormId);
+    const currentIndex = allSubSubmissions.findIndex(sub => sub.id === currentSubSubmissionId);
+    const hasPrevious = currentIndex > 0;
+    const hasNext = currentIndex < allSubSubmissions.length - 1;
+
+    const handleNavigatePrevious = () => {
+      if (hasPrevious) {
+        const previousSubSubmission = allSubSubmissions[currentIndex - 1];
+        handleNavigate('subform-detail', currentFormId, false, currentSubmissionId, currentSubFormId, previousSubSubmission.id);
+      }
+    };
+
+    const handleNavigateNext = () => {
+      if (hasNext) {
+        const nextSubSubmission = allSubSubmissions[currentIndex + 1];
+        handleNavigate('subform-detail', currentFormId, false, currentSubmissionId, currentSubFormId, nextSubSubmission.id);
+      }
+    };
+
+    return (
+      <SubFormDetail
+        formId={currentFormId}
+        submissionId={currentSubmissionId}
+        subFormId={currentSubFormId}
+        subSubmissionId={currentSubSubmissionId}
+        onEdit={(subSubmissionId) => {
+          handleNavigate('subform-view', currentFormId, false, currentSubmissionId, currentSubFormId, subSubmissionId);
+        }}
+        onDelete={(subSubmissionId) => {
+          // After delete, go back to submission detail
+          handleNavigate('submission-detail', currentFormId, false, currentSubmissionId);
+        }}
+        onBack={() => handleNavigate('submission-detail', currentFormId, false, currentSubmissionId)}
+        onNavigatePrevious={handleNavigatePrevious}
+        onNavigateNext={handleNavigateNext}
+        hasPrevious={hasPrevious}
+        hasNext={hasNext}
+      />
+    );
+  };
 
 
 

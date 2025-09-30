@@ -4,7 +4,7 @@
 
 ## Version Information
 
-- **Version**: 0.5.0
+- **Version**: 0.5.1
 - **Release Date**: 2025-09-30
 - **Framework**: React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 - **Target**: Thai Business Forms & Data Collection
@@ -102,6 +102,27 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 
 ## Version History
 
+### v0.5.1 (2025-09-30) - Previous/Next Navigation in Detail Views
+
+**Major Updates:**
+- ✅ **Responsive Navigation System** - Previous/Next navigation for browsing submissions
+- ✅ **Detail View Navigation** - Main form and sub-form detail view navigation
+- ✅ **Touch Gesture Support** - Swipe left/right on mobile devices
+- ✅ **Adaptive UI Design** - Different behaviors for large/medium/mobile screens
+
+**Navigation Features:**
+- **Large Screens (≥1024px)**: Arrow buttons outside form box with glass morphism styling
+- **Medium Screens (768px-1023px)**: Hidden arrows, visible on hover with gradient effects
+- **Mobile Screens (<768px)**: Swipe gestures (50px minimum distance)
+- **Smart Navigation**: Automatically determines if previous/next submissions exist
+- **Seamless UX**: Smooth transitions with Framer Motion animations
+
+**Implementation Details:**
+- Touch event handlers: onTouchStart, onTouchMove, onTouchEnd
+- Navigation props: onNavigatePrevious, onNavigateNext, hasPrevious, hasNext
+- Responsive classes: `hidden lg:flex`, `lg:hidden`, `hidden md:block`
+- Components updated: SubmissionDetail.jsx, SubFormDetail.jsx, MainFormApp.jsx
+
 ### v0.5.0 (2025-09-30) - Complete Backend Integration & Documentation
 
 **Major Updates:**
@@ -172,8 +193,8 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 
 ---
 
-**Application Status:** ✅ Production-ready v0.5.0 - Complete Full-Stack Enterprise System
+**Application Status:** ✅ Production-ready v0.5.1 - Complete Full-Stack Enterprise System with Navigation
 
-**License:** Internal use - Q-Collector Enterprise Form Builder v0.5.0
+**License:** Internal use - Q-Collector Enterprise Form Builder v0.5.1
 - BOT TOKEN FOR TELEGRAM TESTING 7794493324:AAHlxtpYenok1kwyo88ns5R4rivWWXcqmE0   AND GROUP ID = -4847325737  record in .env
 - สร้าง Super Admin Account  โดยใช้ User Name : pongpanp  ชื่อ : Pongpan Peerawanichkul  email: pongpanp@qcon.co.th  Department : Technic  Role : Super Admin

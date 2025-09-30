@@ -26,12 +26,45 @@ export default function SubFormDetail({
   subSubmissionId,
   onEdit,
   onDelete,
-  onBack
+  onBack,
+  onNavigatePrevious,
+  onNavigateNext,
+  hasPrevious,
+  hasNext
 }) {
   const [form, setForm] = useState(null);
   const [subForm, setSubForm] = useState(null);
   const [subSubmission, setSubSubmission] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && hasNext && onNavigateNext) {
+      onNavigateNext();
+    }
+    if (isRightSwipe && hasPrevious && onNavigatePrevious) {
+      onNavigatePrevious();
+    }
+  };
 
   // Load subform submission data
   useEffect(() => {
@@ -476,14 +509,81 @@ export default function SubFormDetail({
           </div>
         </motion.div>
 
-        {/* SubForm Data Container */}
+        {/* SubForm Data Container with Navigation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="max-w-3xl mx-auto mb-6 sm:mb-8"
+          className="max-w-3xl mx-auto mb-6 sm:mb-8 relative"
         >
-          <GlassCard className="glass-container">
+          {/* Previous Arrow - Outside on large screens, hidden on mobile */}
+          {hasPrevious && onNavigatePrevious && (
+            <div
+              onClick={onNavigatePrevious}
+              className="hidden lg:flex absolute -left-20 top-1/2 -translate-y-1/2 w-16 h-16 cursor-pointer group items-center justify-center"
+              title="คลิกเพื่อดูข้อมูลก่อนหน้า"
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-md border border-orange-500/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-orange-500/30 shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-400 group-hover:text-orange-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </div>
+            </div>
+          )}
+
+          {/* Next Arrow - Outside on large screens, hidden on mobile */}
+          {hasNext && onNavigateNext && (
+            <div
+              onClick={onNavigateNext}
+              className="hidden lg:flex absolute -right-20 top-1/2 -translate-y-1/2 w-16 h-16 cursor-pointer group items-center justify-center"
+              title="คลิกเพื่อดูข้อมูลถัดไป"
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-md border border-orange-500/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-orange-500/30 shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-400 group-hover:text-orange-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          )}
+
+          {/* Previous Click Area - Hidden arrows on medium screens */}
+          {hasPrevious && onNavigatePrevious && (
+            <div
+              onClick={onNavigatePrevious}
+              className="lg:hidden absolute left-0 top-0 bottom-0 w-16 z-10 cursor-pointer group"
+              title="คลิกเพื่อดูข้อมูลก่อนหน้า"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="hidden md:block absolute left-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:left-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-orange-400 drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </div>
+            </div>
+          )}
+
+          {/* Next Click Area - Hidden arrows on medium screens */}
+          {hasNext && onNavigateNext && (
+            <div
+              onClick={onNavigateNext}
+              className="lg:hidden absolute right-0 top-0 bottom-0 w-16 z-10 cursor-pointer group"
+              title="คลิกเพื่อดูข้อมูลถัดไป"
+            >
+              <div className="absolute inset-0 bg-gradient-to-l from-orange-500/0 via-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="hidden md:block absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:right-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-orange-400 drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          )}
+
+          <GlassCard
+            className="glass-container"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
             <div className="p-3 sm:p-4">
               <div className="space-y-3 sm:space-y-4 lg:space-y-6">
                 {(subForm.fields || []).map(field => {

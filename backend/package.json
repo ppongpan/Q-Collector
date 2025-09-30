@@ -1,6 +1,6 @@
 {
   "name": "qcollector-backend",
-  "version": "0.4.1",
+  "version": "0.5.1",
   "description": "Q-Collector Backend API Server - Enterprise Form Builder & Data Collection System",
   "main": "api/server.js",
   "scripts": {
