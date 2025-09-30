@@ -1,6 +1,6 @@
 {
   "name": "qcollector-backend",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Q-Collector Backend API Server - Enterprise Form Builder & Data Collection System",
   "main": "api/server.js",
   "scripts": {
@@ -41,8 +41,10 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "express-rate-limit": "^7.4.1",
+    "express-validator": "^7.2.1",
     "helmet": "^8.0.0",
     "joi": "^17.13.3",
+    "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.2",
     "minio": "^8.0.2",
     "morgan": "^1.10.0",

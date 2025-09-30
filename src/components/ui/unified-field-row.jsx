@@ -132,12 +132,6 @@ export const UnifiedFieldPreview = ({
     </div>
   ) : null;
 
-  // Create standardized label with line-clamp support
-  const standardLabel = (
-    <h3 className="text-[14px] font-semibold text-foreground/90 line-clamp-2 leading-tight text-left">
-      {field.title || fieldType?.label || 'Untitled Field'}
-    </h3>
-  );
 
   // Wrap input element with consistent styling
   const standardInput = inputElement ? (
@@ -167,12 +161,26 @@ export const UnifiedFieldPreview = ({
     ))
   ) : null;
 
+  // Create modified label with toggleButtons
+  const labelWithToggles = (
+    <div className="flex items-center justify-between w-full gap-2">
+      <h3 className="text-[14px] font-semibold text-foreground/90 line-clamp-2 leading-tight text-left flex-1 min-w-0">
+        {field.title || fieldType?.label || 'Untitled Field'}
+      </h3>
+      {toggleButtons && (
+        <div className="flex-shrink-0">
+          {toggleButtons}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <UnifiedFieldRow
       icon={standardIcon}
-      label={standardLabel}
+      label={labelWithToggles}
       inputElement={standardInput}
-      tags={toggleButtons || standardTags}
+      tags={standardTags}
       actions={actions}
       onClick={onClick}
       className={className}

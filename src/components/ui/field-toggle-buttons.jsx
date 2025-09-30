@@ -1,8 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faExclamationTriangle, faTable, faComments,
-  faQuestionCircle
+  faExclamationTriangle, faTable, faComments
 } from '@fortawesome/free-solid-svg-icons';
 
 /**
@@ -160,8 +159,8 @@ const FieldToggleButtons = ({
         </button>
       )}
 
-      {/* Telegram Toggle - only for main form and when required */}
-      {!isSubForm && localSettings.required && (
+      {/* Telegram Toggle - always visible for main form */}
+      {!isSubForm && (
         <button
           type="button"
           onClick={handleTelegramToggle}
@@ -179,16 +178,6 @@ const FieldToggleButtons = ({
           )}
         </button>
       )}
-
-
-      {/* Help indicator */}
-      <div className="flex items-center justify-center w-6 h-6 text-muted-foreground/60">
-        <FontAwesomeIcon
-          icon={faQuestionCircle}
-          className="w-3 h-3"
-          title="ปุ่มด่วน: จำเป็น | ตาราง | Telegram"
-        />
-      </div>
     </div>
   );
 };

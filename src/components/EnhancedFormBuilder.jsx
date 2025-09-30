@@ -231,7 +231,7 @@ function SortableFieldEditor(props) {
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} data-field-id={props.field.id}>
       <FieldEditor
         {...props}
         dragHandleProps={{ ...attributes, ...listeners }}
@@ -259,7 +259,24 @@ function FieldEditor({
   formTitle = ''
 }) {
   const [isExpanded, setIsExpanded] = useState(false); // Default to collapsed for better overview
+  const fieldCardRef = useRef(null);
   const fieldType = FIELD_TYPES.find(type => type.value === field.type);
+
+  // Auto-scroll when expanding the field
+  useEffect(() => {
+    if (isExpanded && fieldCardRef.current) {
+      setTimeout(() => {
+        const topMenuHeight = 80; // Approximate height of top menu
+        const elementTop = fieldCardRef.current.getBoundingClientRect().top;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+        window.scrollTo({
+          top: scrollTop + elementTop - topMenuHeight,
+          behavior: 'smooth'
+        });
+      }, 100);
+    }
+  }, [isExpanded]);
 
   // Check if field title is too long (roughly 50 characters for single line)
   const isTitleTooLong = (field.title || '').length > 50;
@@ -293,10 +310,11 @@ function FieldEditor({
   };
 
   return (
-    <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out shadow-lg hover:shadow-xl hover:border-primary/30 hover:scale-[1.01]">
-      {/* Field Header - Responsive Visual Hierarchy */}
+    <GlassCard ref={fieldCardRef} className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out shadow-lg hover:shadow-xl hover:border-primary/30 hover:scale-[1.01]">
+      {/* Field Header - Compact and Minimal */}
       <GlassCardHeader
-        className="pb-3 sm:pb-4 lg:pb-6 cursor-pointer"
+        className="py-1 cursor-pointer border-b-0"
+        style={{ paddingLeft: '5px', paddingRight: '5px' }}
         onClick={(e) => {
           // Don't expand/collapse if clicking on interactive elements
           const isInteractiveElement = e.target.closest(
@@ -308,12 +326,12 @@ function FieldEditor({
           }
         }}
       >
-        <div className="flex items-center gap-2 px-2">
+        <div className={`flex items-center gap-2 ${isExpanded ? 'pl-0 pr-1' : 'px-0'}`}>
           {/* Drag Handle - Accessible Touch Target */}
-          <div className="flex-shrink-0 ml-1">
+          <div className="flex-shrink-0">
             <div
               {...dragHandleProps}
-              className="flex items-center justify-center min-w-12 min-h-12 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full hover:bg-background/50 focus:bg-background/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200 cursor-grab active:cursor-grabbing opacity-50 group-hover:opacity-100 touch-target-min"
+              className="flex items-center justify-center min-w-12 min-h-12 w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full hover:bg-background/50 focus:bg-background/70 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200 cursor-grab active:cursor-grabbing opacity-50 group-hover:opacity-100 touch-target-min"
               style={{ clipPath: 'circle(50% at center)' }}
               title="ลากเพื่อเรียงลำดับ"
               tabIndex="0"
@@ -354,7 +372,7 @@ function FieldEditor({
           </div>
 
           {/* Action Icons - Accessible Touch Targets */}
-          <div className="flex-shrink-0 mr-1">
+          <div className={`flex-shrink-0 ${isExpanded ? 'mr-1' : 'mr-0'}`}>
             <div className="inline-flex items-center">
               {/* Optimized Field Options Menu */}
               <FieldOptionsMenu
@@ -683,6 +701,23 @@ function MultipleChoiceOptions({ options = [], onChange }) {
 function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, onMoveUp, onMoveDown, onDuplicate, isDefaultEmpty = false }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentTab, setCurrentTab] = useState('fields'); // 'fields' or 'settings'
+  const subFormCardRef = useRef(null);
+
+  // Auto-scroll when expanding the sub-form
+  useEffect(() => {
+    if (isExpanded && subFormCardRef.current) {
+      setTimeout(() => {
+        const topMenuHeight = 80; // Approximate height of top menu
+        const elementTop = subFormCardRef.current.getBoundingClientRect().top;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+        window.scrollTo({
+          top: scrollTop + elementTop - topMenuHeight,
+          behavior: 'smooth'
+        });
+      }, 100);
+    }
+  }, [isExpanded]);
 
   // Drag and drop sensors for subform fields
   const subFormSensors = useSensors(
@@ -729,6 +764,18 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
     updateSubForm({
       fields: [...(subForm.fields || []), newField]
     });
+
+    // Scroll to the new field after a short delay to ensure DOM is updated
+    setTimeout(() => {
+      const fieldElements = document.querySelectorAll(`[data-field-id="${newField.id}"]`);
+      if (fieldElements.length > 0) {
+        fieldElements[0].scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest'
+        });
+      }
+    }, 100);
   };
 
   const updateField = (fieldId, fieldData) => {
@@ -774,7 +821,7 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
   };
 
   return (
-    <GlassCard variant="elevated" className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out border-2 border-dashed border-accent/30 shadow-lg hover:shadow-xl hover:border-accent/50">
+    <GlassCard ref={subFormCardRef} variant="elevated" className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out border-2 border-dashed border-accent/30 shadow-lg hover:shadow-xl hover:border-accent/50">
       <GlassCardHeader>
         <div className="flex items-center gap-4">
           <div
@@ -1077,6 +1124,18 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       options: {}
     };
     updateForm({ fields: [...form.fields, newField] });
+
+    // Scroll to the new field after a short delay to ensure DOM is updated
+    setTimeout(() => {
+      const fieldElements = document.querySelectorAll(`[data-field-id="${newField.id}"]`);
+      if (fieldElements.length > 0) {
+        fieldElements[0].scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest'
+        });
+      }
+    }, 100);
   };
 
   // Helper function to reorder telegram fields sequentially
@@ -1201,6 +1260,18 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       fields: []
     };
     updateForm({ subForms: [...form.subForms, newSubForm] });
+
+    // Scroll to the new sub-form after a short delay to ensure DOM is updated
+    setTimeout(() => {
+      const subFormElements = document.querySelectorAll(`[data-subform-id="${newSubForm.id}"]`);
+      if (subFormElements.length > 0) {
+        subFormElements[0].scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest'
+        });
+      }
+    }, 100);
   };
 
   const updateSubForm = (subFormId, subFormData) => {
@@ -1555,9 +1626,9 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                   return (
                     <div className="space-y-6">
                       {subFormsToShow.map((subForm, index) => (
-                        <SubFormBuilder
-                          key={subForm.id}
-                          subForm={subForm}
+                        <div key={subForm.id} data-subform-id={subForm.id}>
+                          <SubFormBuilder
+                            subForm={subForm}
                           onChange={(subFormData) => {
                             if (form.subForms.length === 0) {
                               // If this is the default empty subForm, add it to the form
@@ -1577,7 +1648,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                           onMoveDown={() => moveSubForm(subForm.id, 'down')}
                           onDuplicate={() => duplicateSubForm(subForm.id)}
                           isDefaultEmpty={form.subForms.length === 0 && index === 0}
-                        />
+                          />
+                        </div>
                       ))}
 
                       {/* Add SubForm Button - Positioned after all subforms - 8px Grid */}

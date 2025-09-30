@@ -3,6 +3,9 @@
  * Sequelize ORM setup for PostgreSQL
  */
 
+// Load environment variables
+require('dotenv').config();
+
 const { Sequelize } = require('sequelize');
 const logger = require('../utils/logger.util');
 

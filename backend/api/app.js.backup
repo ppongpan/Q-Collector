@@ -18,8 +18,8 @@ const logger = require('../utils/logger.util');
 const errorMiddleware = require('../middleware/error.middleware');
 const { requestLogger } = require('../middleware/logging.middleware');
 
-// Import routes
-const routes = require('./routes');
+// Import routes (will be created in Phase 2)
+// const routes = require('./routes');
 
 // Create Express application
 const app = express();
@@ -147,10 +147,23 @@ app.get('/', (req, res) => {
 // API version prefix
 const API_PREFIX = `/api/${process.env.API_VERSION || 'v1'}`;
 
-// Mount API routes
-app.use(API_PREFIX, routes);
+// Placeholder for routes (will be implemented in Phase 2)
+app.get(API_PREFIX, (req, res) => {
+  res.status(200).json({
+    message: 'Q-Collector API v1',
+    endpoints: {
+      auth: `${API_PREFIX}/auth`,
+      users: `${API_PREFIX}/users`,
+      forms: `${API_PREFIX}/forms`,
+      submissions: `${API_PREFIX}/submissions`,
+      files: `${API_PREFIX}/files`,
+      audit: `${API_PREFIX}/audit`,
+    },
+  });
+});
 
-logger.info(`API routes mounted at ${API_PREFIX}`);
+// Mount API routes (uncomment when routes are created)
+// app.use(API_PREFIX, routes);
 
 // ============================================
 // 404 Handler

@@ -1155,7 +1155,7 @@
 
   .dark .glass-container {
     background: rgba(0, 0, 0, 0.5);       /* Darker background for better contrast */
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 0.5px solid rgba(255, 255, 255, 0.08);
     color: hsl(var(--foreground));        /* Ensure light text */
   }
 

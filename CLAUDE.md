@@ -4,7 +4,7 @@
 
 ## Version Information
 
-- **Version**: 0.4.0
+- **Version**: 0.4.1
 - **Release Date**: 2025-09-30
 - **Framework**: React 18 + ShadCN UI + Tailwind CSS + Framer Motion + @dnd-kit
 - **Target**: Thai Business Forms & Data Collection
@@ -99,20 +99,23 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 **Mobile-First Design:** Responsive breakpoints, touch targets (44px min)
 **Accessibility:** WCAG 2.1 AA compliance, ARIA labels, keyboard navigation
 
-## Recent Updates (v0.4)
+## Recent Updates (v0.4.1)
 
-**Conditional Field Visibility System:**
-- Formula engine with Google Sheets-compatible syntax
-- Real-time field visibility evaluation based on form data
-- Formula builder with field reference picker and validation
-- Support for AND(), OR(), NOT(), IF(), CONTAINS(), ISBLANK() functions
+**UI/UX Improvements & Auto-Scroll Enhancement:**
+- Telegram notification toggle always visible (no longer requires required field first)
+- Removed conditional visibility options from field settings menu
+- Toggle buttons repositioned to field title row (right-aligned)
+- Reduced field card padding for more compact appearance
+- Thinner borders (0.5px) for cleaner look
+- Auto-scroll to new fields when added (main form and sub-form)
+- Auto-scroll to expanded field settings aligned with top menu
+- Drag handle positioned at left edge with minimal padding
+- Optimized spacing for better visual density
 
-**Advanced Telegram Notification System:**
-- Dual-panel drag-and-drop field ordering interface
-- Custom message prefix with real-time preview
-- Checkbox-based notification enable/disable
-- Enhanced drag animations with visual feedback (opacity, scale, shadows)
-- Field ordering with automatic numbering
+**Previous Updates (v0.4.0):**
+- Conditional Field Visibility System with formula engine
+- Advanced Telegram Notification System with dual-panel drag-and-drop
+- Field ordering with automatic numbering and custom prefixes
 
 **Previous Features (v0.3):**
 - Circular Animation Buttons with motion effects
@@ -128,6 +131,6 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 
 ---
 
-**Framework Status:** ✅ Production-ready v0.4 with conditional visibility and advanced telegram integration
+**Framework Status:** ✅ Production-ready v0.4.1 with enhanced UI/UX and auto-scroll features
 
-**License:** Internal use - Q-Collector Form Builder Framework v0.4
+**License:** Internal use - Q-Collector Form Builder Framework v0.4.1
