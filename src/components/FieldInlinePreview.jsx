@@ -60,7 +60,7 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
   // Enhanced input styling with orange neon focus effects - matching glass-input pattern
   const inputBaseClasses = "w-full max-w-md input-glass border-0 bg-transparent placeholder:text-muted-foreground/50 glass-interactive blur-edge focus-orange-neon hover-orange-neon transition-all duration-300 ease-out";
   const textareaClasses = "w-full max-w-md min-h-[80px] input-glass border-0 bg-transparent placeholder:text-muted-foreground/50 glass-interactive blur-edge focus-orange-neon hover-orange-neon transition-all duration-300 ease-out resize-none";
-  const selectClasses = "w-full max-w-md input-glass border-0 bg-transparent glass-interactive blur-edge focus-orange-neon hover-orange-neon transition-all duration-300 ease-out [&>option]:bg-background [&>option]:text-foreground [&>option]:dark:bg-slate-800 [&>option]:dark:text-slate-200";
+  const selectClasses = "w-full max-w-md input-glass border-0 bg-transparent glass-interactive blur-edge focus-orange-neon hover-orange-neon transition-all duration-300 ease-out [&>option]:bg-background [&>option]:text-foreground";
 
   // Helper function to wrap element with tooltip if description exists
   const withTooltip = (element) => {
@@ -939,7 +939,7 @@ export default function FieldInlinePreview({ field, collapsed = true, onTempChan
 
               {/* Image preview */}
               {imagePreview && (
-                <div className="relative overflow-hidden rounded-lg border border-green-300 dark:border-green-700 bg-white dark:bg-gray-800">
+                <div className="relative overflow-hidden rounded-lg border border-green-300 dark:border-green-700 bg-background">
                   <img
                     src={imagePreview}
                     alt="ตัวอย่างรูปภาพ"

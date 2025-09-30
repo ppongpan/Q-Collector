@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Telegram Notification - Q-Collector</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 600;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+      box-sizing: border-box;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 14px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      display: none;
+    }
+    .result.success {
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+      display: block;
+    }
+    .result.error {
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+      display: block;
+    }
+    .loading {
+      display: none;
+      text-align: center;
+      margin-top: 20px;
+    }
+    .loading.active {
+      display: block;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .config-info {
+      background: #e7f3ff;
+      border-left: 4px solid #2196F3;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+    }
+    .config-info h3 {
+      margin-top: 0;
+      color: #1976D2;
+    }
+    .config-info code {
+      background: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🤖 ทดสอบการแจ้งเตือน Telegram</h1>
+    <p class="subtitle">ทดสอบส่งข้อความไปยัง Telegram Bot ของ Q-Collector</p>
+
+    <div class="config-info">
+      <h3>📋 ข้อมูลการตั้งค่า</h3>
+      <p><strong>Bot Token:</strong> <code id="botToken">กำลังโหลด...</code></p>
+      <p><strong>Group ID:</strong> <code id="groupId">กำลังโหลด...</code></p>
+    </div>
+
+    <form id="testForm">
+      <div class="form-group">
+        <label for="message">ข้อความที่ต้องการส่ง:</label>
+        <textarea
+          id="message"
+          name="message"
+          placeholder="พิมพ์ข้อความที่ต้องการทดสอบ..."
+          required
+        >🎉 *ทดสอบการแจ้งเตือน Q-Collector*
+
+📝 *ชื่อฟอร์ม:* ฟอร์มทดสอบ
+👤 *ผู้กรอก:* ทดสอบระบบ
+📅 *วันที่:* ${new Date().toLocaleString('th-TH')}
+
+✅ ระบบแจ้งเตือน Telegram ทำงานปกติ!</textarea>
+      </div>
+
+      <button type="submit">📤 ส่งข้อความทดสอบ</button>
+    </form>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>กำลังส่งข้อความ...</p>
+    </div>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script type="module">
+    // Load environment variables
+    const BOT_TOKEN = '7794493324:AAHlxtpYenok1kwyo88ns5R4rivWWXcqmE0';
+    const GROUP_ID = '-4847325737';
+
+    // Display config
+    document.getElementById('botToken').textContent = BOT_TOKEN.substring(0, 20) + '...';
+    document.getElementById('groupId').textContent = GROUP_ID;
+
+    // Handle form submission
+    document.getElementById('testForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const message = document.getElementById('message').value;
+      const loading = document.getElementById('loading');
+      const result = document.getElementById('result');
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+
+      // Show loading
+      loading.classList.add('active');
+      result.style.display = 'none';
+      submitBtn.disabled = true;
+
+      try {
+        // Test with TelegramService logic
+        const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+
+        const payload = {
+          chat_id: GROUP_ID,
+          text: message,
+          parse_mode: 'Markdown',
+          disable_web_page_preview: true
+        };
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        // Hide loading
+        loading.classList.remove('active');
+        submitBtn.disabled = false;
+
+        if (response.ok && data.ok) {
+          // Success
+          result.className = 'result success';
+          result.innerHTML = `
+            <strong>✅ ส่งข้อความสำเร็จ!</strong><br><br>
+            <strong>Message ID:</strong> ${data.result.message_id}<br>
+            <strong>Chat ID:</strong> ${data.result.chat.id}<br>
+            <strong>Chat Type:</strong> ${data.result.chat.type}<br>
+            <strong>Date:</strong> ${new Date(data.result.date * 1000).toLocaleString('th-TH')}<br><br>
+            กรุณาตรวจสอบข้อความใน Telegram Group ของคุณ
+          `;
+        } else {
+          // API returned error
+          result.className = 'result error';
+          result.innerHTML = `
+            <strong>❌ เกิดข้อผิดพลาด!</strong><br><br>
+            <strong>Error:</strong> ${data.description || 'Unknown error'}<br>
+            <strong>Error Code:</strong> ${data.error_code || 'N/A'}<br><br>
+            กรุณาตรวจสอบ Bot Token และ Group ID
+          `;
+        }
+      } catch (error) {
+        // Network or other error
+        loading.classList.remove('active');
+        submitBtn.disabled = false;
+
+        result.className = 'result error';
+        result.innerHTML = `
+          <strong>❌ เกิดข้อผิดพลาดในการส่งข้อความ!</strong><br><br>
+          <strong>Error:</strong> ${error.message}<br><br>
+          <strong>สาเหตุที่อาจเป็นไปได้:</strong>
+          <ul>
+            <li>Bot Token ไม่ถูกต้อง</li>
+            <li>Group ID ไม่ถูกต้อง</li>
+            <li>Bot ยังไม่ได้เพิ่มเข้า Group</li>
+            <li>ปัญหาการเชื่อมต่ออินเทอร์เน็ต</li>
+          </ul>
+        `;
+      }
+    });
+
+    // Update message with current time
+    const messageTextarea = document.getElementById('message');
+    messageTextarea.value = messageTextarea.value.replace('${new Date().toLocaleString(\'th-TH\')}', new Date().toLocaleString('th-TH'));
+  </script>
+</body>
+</html>

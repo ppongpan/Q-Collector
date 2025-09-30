@@ -1,6 +1,11 @@
 /**
  * Authentication Routes
  * Endpoints for user registration, login, token refresh, and profile management
+ *
+ * @swagger
+ * tags:
+ *   name: Authentication
+ *   description: User authentication and session management
  */
 
 const express = require('express');
@@ -28,8 +33,118 @@ function validate(req, res, next) {
 }
 
 /**
- * POST /api/v1/auth/register
- * Register a new user
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     description: Create a new user account with email verification and role assignment
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - email
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 minLength: 3
+ *                 maxLength: 50
+ *                 pattern: '^[a-zA-Z0-9_]+$'
+ *                 description: Unique username (alphanumeric and underscore only)
+ *                 example: "pongpanp"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Valid email address
+ *                 example: "pongpanp@qcon.co.th"
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)'
+ *                 description: Password with uppercase, lowercase, and number
+ *                 example: "SecurePassword123"
+ *               full_name:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 255
+ *                 description: User's full name
+ *                 example: "Pongpan Peerawanichkul"
+ *               phone:
+ *                 type: string
+ *                 pattern: '^[0-9+\-\s()]+$'
+ *                 description: Phone number
+ *                 example: "+66-81-234-5678"
+ *               role:
+ *                 type: string
+ *                 enum: [customer_service, sales, marketing, technic, general_user]
+ *                 description: User role (defaults to general_user)
+ *                 example: "technic"
+ *           example:
+ *             username: "pongpanp"
+ *             email: "pongpanp@qcon.co.th"
+ *             password: "SecurePassword123"
+ *             full_name: "Pongpan Peerawanichkul"
+ *             phone: "+66-81-234-5678"
+ *             role: "technic"
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User registered successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     tokens:
+ *                       type: object
+ *                       properties:
+ *                         accessToken:
+ *                           type: string
+ *                           description: JWT access token
+ *                         refreshToken:
+ *                           type: string
+ *                           description: JWT refresh token
+ *                         expiresIn:
+ *                           type: integer
+ *                           description: Token expiration time in seconds
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       409:
+ *         description: Username or email already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "CONFLICT"
+ *                 message: "Username or email already exists"
+ *                 timestamp: "2025-09-30T12:00:00.000Z"
+ *       429:
+ *         description: Too many registration attempts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
  */
 router.post(
   '/register',
@@ -64,15 +179,15 @@ router.post(
       .withMessage('Invalid phone number format'),
     body('role')
       .optional()
-      .isIn(['user', 'manager'])
-      .withMessage('Invalid role (only user/manager allowed for registration)'),
+      .isIn(['customer_service', 'sales', 'marketing', 'technic', 'general_user'])
+      .withMessage('Invalid role (only customer_service, sales, marketing, technic, general_user allowed for registration)'),
   ],
   validate,
   asyncHandler(async (req, res) => {
     const { username, email, password, full_name, phone, role } = req.body;
 
     const result = await AuthService.register(
-      { username, email, password, full_name, phone, role: role || 'user' },
+      { username, email, password, full_name, phone, role: role || 'general_user' },
       req.metadata
     );
 
@@ -90,13 +205,85 @@ router.post(
 );
 
 /**
- * POST /api/v1/auth/login
- * User login
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: User login
+ *     description: Authenticate user with username/email and password
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - identifier
+ *               - password
+ *             properties:
+ *               identifier:
+ *                 type: string
+ *                 description: Username or email address
+ *                 example: "pongpanp"
+ *               password:
+ *                 type: string
+ *                 description: User password
+ *                 example: "SecurePassword123"
+ *           example:
+ *             identifier: "pongpanp"
+ *             password: "SecurePassword123"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
+ *             example:
+ *               success: true
+ *               message: "Login successful"
+ *               data:
+ *                 user:
+ *                   id: "123e4567-e89b-12d3-a456-426614174000"
+ *                   username: "pongpanp"
+ *                   email: "pongpanp@qcon.co.th"
+ *                   firstName: "Pongpan"
+ *                   lastName: "Peerawanichkul"
+ *                   department: "Technic"
+ *                   role: "Super Admin"
+ *                   isActive: true
+ *                 tokens:
+ *                   accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                   refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                   expiresIn: 3600
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: "INVALID_CREDENTIALS"
+ *                 message: "Invalid username or password"
+ *                 timestamp: "2025-09-30T12:00:00.000Z"
+ *       429:
+ *         description: Too many login attempts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
  */
 router.post(
   '/login',
   attachMetadata,
-  authRateLimit(10, 15 * 60 * 1000), // 10 attempts per 15 minutes
+  authRateLimit(50, 15 * 60 * 1000), // 50 attempts per 15 minutes (relaxed for development)
   [
     body('identifier')
       .trim()

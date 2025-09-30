@@ -150,22 +150,61 @@ const GlassSelect = React.forwardRef(({
   children,
   ...props
 }, ref) => {
+  // State for dark mode detection with proper updates
+  const [isDarkMode, setIsDarkMode] = React.useState(false);
+
+  React.useEffect(() => {
+    // Initial check
+    const checkDarkMode = () => {
+      const darkMode = document.documentElement.classList.contains('dark') ||
+                      document.body.classList.contains('dark');
+      console.log('[GlassSelect] Dark mode detected:', darkMode);
+      setIsDarkMode(darkMode);
+    };
+
+    checkDarkMode();
+
+    // Watch for changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   const selectClasses = cn(
     'input-glass',
-    'border-0 bg-transparent',
+    'border-0',
     'appearance-none bg-no-repeat bg-right bg-[length:16px_16px] pr-10',
-    'bg-[url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%23f97316\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'m6 8 4 4 4-4\'/%3e%3c/svg%3e")]',
-    'glass-interactive blur-edge',
+    'rounded-xl',
     'focus-orange-neon hover-orange-neon',
     'transition-all duration-300 ease-out',
     error && 'border-destructive focus:border-destructive',
     className
   );
 
+  // Inline styles for dark mode - nuclear option with !important equivalent
+  const inlineStyle = isDarkMode ? {
+    backgroundColor: 'rgb(40, 40, 40)',
+    color: 'rgb(255, 255, 255)',
+    backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%23f97316\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'m6 8 4 4 4-4\'/%3e%3c/svg%3e")'
+  } : {
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%23f97316\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'m6 8 4 4 4-4\'/%3e%3c/svg%3e")'
+  };
+
   const select = (
     <select
       className={selectClasses}
+      style={inlineStyle}
       ref={ref}
+      data-dark-mode={isDarkMode ? 'true' : 'false'}
       {...props}
     >
       {children}

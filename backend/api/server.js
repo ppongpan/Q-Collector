@@ -11,6 +11,12 @@ const { testDatabaseConnection } = require('../config/database.config');
 const { testRedisConnection } = require('../config/redis.config');
 const { testMinIOConnection } = require('../config/minio.config');
 
+// Import WebSocket services
+const webSocketService = require('../services/WebSocketService');
+const notificationService = require('../services/NotificationService');
+const realtimeEventHandlers = require('../services/RealtimeEventHandlers');
+const webSocketIntegration = require('../utils/websocket-integration.util');
+
 // Get port from environment variable or default to 5000
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -59,7 +65,7 @@ async function startServer() {
     }
 
     // Start listening
-    server = app.listen(PORT, () => {
+    server = app.listen(PORT, async () => {
       logger.info('='.repeat(60));
       logger.info(`Q-Collector API Server v${process.env.npm_package_version || '0.4.0'}`);
       logger.info('='.repeat(60));
@@ -67,6 +73,19 @@ async function startServer() {
       logger.info(`Server running on port: ${PORT}`);
       logger.info(`API URL: http://localhost:${PORT}/api/v1`);
       logger.info(`Health check: http://localhost:${PORT}/health`);
+
+      // Initialize WebSocket services
+      try {
+        await webSocketService.initialize(server);
+        notificationService.initialize(webSocketService);
+        realtimeEventHandlers.initialize(webSocketService, notificationService);
+        webSocketIntegration.initialize(webSocketService, notificationService, realtimeEventHandlers);
+        logger.info(`WebSocket server running on port: ${PORT}`);
+        logger.info(`Real-time features: Enabled`);
+      } catch (error) {
+        logger.error('Failed to initialize WebSocket services:', error);
+      }
+
       logger.info('='.repeat(60));
     });
 
@@ -97,6 +116,11 @@ async function gracefulShutdown(signal) {
       logger.info('HTTP server closed');
 
       try {
+        // Shutdown WebSocket services
+        await webSocketService.shutdown();
+        await notificationService.shutdown();
+        logger.info('WebSocket services closed');
+
         // Close database connection
         const { sequelize } = require('../config/database.config');
         await sequelize.close();

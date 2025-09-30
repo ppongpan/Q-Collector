@@ -59,8 +59,8 @@ class TelegramService {
         throw new Error(`Invalid telegram settings: ${validationResult.error}`);
       }
 
-      // Build message from telegram-enabled fields
-      const message = this.buildTelegramMessage(form, submission);
+      // Build message from telegram-enabled fields with settings
+      const message = this.buildTelegramMessage(form, submission, telegramSettings);
 
       if (!message.trim()) {
         console.log('No telegram-enabled fields found, skipping notification');
@@ -79,7 +79,8 @@ class TelegramService {
         formId: form.id,
         submissionId: submission.id,
         messageLength: message.length,
-        chatId: telegramSettings.groupId
+        chatId: telegramSettings.groupId,
+        fieldsCount: this.getTelegramEnabledFields(form, telegramSettings).length
       });
 
       return {
@@ -108,9 +109,10 @@ class TelegramService {
   /**
    * Test telegram configuration by sending a test message
    * @param {Object} telegramSettings - Telegram settings to test
+   * @param {Object} form - Optional form for testing with custom message prefix
    * @returns {Promise<Object>} Test result
    */
-  async testTelegramConfiguration(telegramSettings) {
+  async testTelegramConfiguration(telegramSettings, form = null) {
     try {
       const validationResult = this.validateTelegramSettings(telegramSettings);
       if (!validationResult.isValid) {
@@ -120,12 +122,31 @@ class TelegramService {
         };
       }
 
-      const testMessage = `✅ *การทดสอบการแจ้งเตือน Telegram*\n\n` +
-        `🔧 Q-Collector Form Builder\n` +
-        `📱 Bot Token: ใช้งานได้\n` +
-        `💬 Chat ID: ${telegramSettings.groupId}\n` +
-        `⏰ ${new Date().toLocaleString('th-TH')}\n\n` +
-        `การตั้งค่า Telegram ของคุณทำงานถูกต้อง!`;
+      let testMessage;
+
+      // If form and custom message prefix provided, test with that format
+      if (form && telegramSettings.messagePrefix && telegramSettings.messagePrefix.trim()) {
+        const formTitle = form.title || 'ฟอร์มทดสอบ';
+        const timestamp = new Date().toLocaleString('th-TH');
+
+        testMessage = telegramSettings.messagePrefix
+          .replace(/\[FormName\]/g, formTitle)
+          .replace(/\[DateTime\]/g, timestamp);
+
+        testMessage += '\n\n✅ *การทดสอบการแจ้งเตือน Telegram*\n';
+        testMessage += `🔧 Q-Collector Form Builder\n`;
+        testMessage += `📱 Bot Token: ใช้งานได้\n`;
+        testMessage += `💬 Chat ID: ${telegramSettings.groupId}\n\n`;
+        testMessage += `การตั้งค่า Telegram ของคุณทำงานถูกต้อง!`;
+      } else {
+        // Default test message
+        testMessage = `✅ *การทดสอบการแจ้งเตือน Telegram*\n\n` +
+          `🔧 Q-Collector Form Builder\n` +
+          `📱 Bot Token: ใช้งานได้\n` +
+          `💬 Chat ID: ${telegramSettings.groupId}\n` +
+          `⏰ ${new Date().toLocaleString('th-TH')}\n\n` +
+          `การตั้งค่า Telegram ของคุณทำงานถูกต้อง!`;
+      }
 
       const result = await this.sendMessageWithRetry(
         telegramSettings.botToken,
@@ -155,17 +176,38 @@ class TelegramService {
    * @param {Object} submission - Submission data
    * @returns {string} Formatted message
    */
-  buildTelegramMessage(form, submission) {
-    // Get telegram-enabled fields sorted by telegramOrder
-    const telegramFields = this.getTelegramEnabledFields(form);
+  buildTelegramMessage(form, submission, telegramSettings) {
+    // Get telegram-enabled fields sorted by order from settings
+    const telegramFields = this.getTelegramEnabledFields(form, telegramSettings);
 
     if (telegramFields.length === 0) {
       return '';
     }
 
-    let message = '';
+    // Get message prefix from settings (support both old and new format)
+    const messagePrefix = telegramSettings.messagePrefix || '';
+    const formTitle = form.title || 'ฟอร์มใหม่';
+    const timestamp = new Date(submission.submittedAt).toLocaleString('th-TH');
+
+    // Build header with custom message prefix
+    let header = '';
+    if (messagePrefix && messagePrefix.trim()) {
+      // Replace placeholders in message prefix
+      header = messagePrefix
+        .replace(/\[FormName\]/g, formTitle)
+        .replace(/\[DateTime\]/g, timestamp);
+      header += '\n\n';
+    } else {
+      // Default header
+      header = `📋 *${formTitle}*\n`;
+      if (submission.data.documentNumber) {
+        header += `📄 เลขที่เอกสาร: ${submission.data.documentNumber}\n`;
+      }
+      header += `\n`;
+    }
 
     // Build message from ordered fields
+    let message = '';
     telegramFields.forEach((field, index) => {
       const value = submission.data[field.id];
 
@@ -174,7 +216,7 @@ class TelegramService {
         return;
       }
 
-      // Add custom prefix if specified
+      // Add custom prefix if specified (legacy support)
       if (field.telegramPrefix && field.telegramPrefix.trim()) {
         if (index > 0) message += '\n'; // Add spacing between sections
         message += `${field.telegramPrefix.trim()}\n`;
@@ -187,39 +229,48 @@ class TelegramService {
       message += `*${fieldName}:* ${formattedValue}\n`;
     });
 
-    // Add form metadata
-    if (message.trim()) {
-      const formTitle = form.title || 'ฟอร์มใหม่';
-      const timestamp = new Date(submission.submittedAt).toLocaleString('th-TH');
-
-      // Add document number if available
-      let header = `📋 *${formTitle}*\n`;
-      if (submission.data.documentNumber) {
-        header += `📄 เลขที่เอกสาร: ${submission.data.documentNumber}\n`;
-      }
-      header += `\n`;
-
-      // Add footer
-      const footer = `\n⏰ ${timestamp}`;
-
-      message = header + message + footer;
+    // Add footer with timestamp if not already in custom prefix
+    let footer = '';
+    if (!messagePrefix || !messagePrefix.includes('[DateTime]')) {
+      footer = `\n⏰ ${timestamp}`;
     }
+
+    const fullMessage = header + message + footer;
 
     // Truncate if too long
-    if (message.length > this.MAX_MESSAGE_LENGTH) {
-      const truncated = message.substring(0, this.MAX_MESSAGE_LENGTH - 50);
-      message = truncated + '\n\n... (ข้อความถูกตัดเนื่องจากยาวเกินไป)';
+    if (fullMessage.length > this.MAX_MESSAGE_LENGTH) {
+      const truncated = fullMessage.substring(0, this.MAX_MESSAGE_LENGTH - 50);
+      return truncated + '\n\n... (ข้อความถูกตัดเนื่องจากยาวเกินไป)';
     }
 
-    return message;
+    return fullMessage;
   }
 
   /**
    * Get telegram-enabled fields sorted by telegram order
    * @param {Object} form - Form configuration
+   * @param {Object} telegramSettings - Telegram settings with field ordering
    * @returns {Array} Sorted telegram fields
    */
-  getTelegramEnabledFields(form) {
+  getTelegramEnabledFields(form, telegramSettings) {
+    // Check if using new settings format with selectedFields
+    if (telegramSettings && telegramSettings.selectedFields && telegramSettings.selectedFields.length > 0) {
+      // Use selectedFields from telegramSettings (new format)
+      const selectedFieldIds = telegramSettings.selectedFields.map(sf => sf.id);
+
+      // Get fields in the order specified in selectedFields
+      const orderedFields = [];
+      telegramSettings.selectedFields.forEach(selectedField => {
+        const field = form.fields.find(f => f.id === selectedField.id);
+        if (field) {
+          orderedFields.push(field);
+        }
+      });
+
+      return orderedFields;
+    }
+
+    // Fallback to old format using field.sendTelegram flag
     return form.fields
       .filter(field => field.sendTelegram === true)
       .sort((a, b) => {

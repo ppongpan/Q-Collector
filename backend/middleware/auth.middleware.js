@@ -255,6 +255,30 @@ function requireActiveAccount(req, res, next) {
 }
 
 /**
+ * Require Super Admin role
+ * Only allows super_admin to access the endpoint
+ */
+function requireSuperAdmin(req, res, next) {
+  try {
+    if (!req.user || !req.userRole) {
+      throw new ApiError(401, 'Authentication required', 'AUTH_REQUIRED');
+    }
+
+    if (req.userRole !== 'super_admin') {
+      logger.warn(
+        `Super Admin access denied: ${req.user.username} (${req.userRole}) ` +
+        `attempted to access ${req.method} ${req.path}`
+      );
+      throw new ApiError(403, 'Super Admin access required', 'SUPER_ADMIN_REQUIRED');
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Attach request metadata (IP, user agent) to req
  */
 function attachMetadata(req, res, next) {
@@ -284,6 +308,7 @@ module.exports = {
   checkOwnership,
   authRateLimit,
   requireActiveAccount,
+  requireSuperAdmin,
   attachMetadata,
   extractToken,
 };

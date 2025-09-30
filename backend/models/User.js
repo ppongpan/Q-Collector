@@ -41,9 +41,18 @@ module.exports = (sequelize, DataTypes) => {
       comment: 'Encrypted full name',
     },
     role: {
-      type: DataTypes.ENUM('admin', 'manager', 'user', 'viewer'),
+      type: DataTypes.ENUM(
+        'super_admin',
+        'admin',
+        'moderator',
+        'customer_service',
+        'sales',
+        'marketing',
+        'technic',
+        'general_user'
+      ),
       allowNull: false,
-      defaultValue: 'user',
+      defaultValue: 'general_user',
     },
     phone_enc: {
       type: DataTypes.TEXT,
@@ -58,6 +67,60 @@ module.exports = (sequelize, DataTypes) => {
     last_login_at: {
       type: DataTypes.DATE,
       allowNull: true,
+    },
+    // Two-Factor Authentication Fields
+    twoFactorSecret: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Encrypted TOTP secret',
+    },
+    twoFactorEnabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+      comment: 'Whether 2FA is enabled for this user',
+    },
+    twoFactorBackupCodes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'JSON array of encrypted backup codes',
+    },
+    twoFactorEnabledAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'When 2FA was first enabled',
+    },
+    // Telegram Integration Fields
+    telegramUserId: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Telegram user ID for bot integration',
+    },
+    telegramUsername: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Telegram username',
+    },
+    // Enhanced User Fields
+    firstName: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: 'User first name',
+    },
+    lastName: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: 'User last name',
+    },
+    department: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: 'User department',
+    },
+    notificationPreferences: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'JSON object with notification preferences',
     },
   }, {
     tableName: 'users',
@@ -269,12 +332,23 @@ module.exports = (sequelize, DataTypes) => {
     where: { is_active: true },
   });
 
+  User.addScope('superAdmins', {
+    where: { role: 'super_admin', is_active: true },
+  });
+
   User.addScope('admins', {
     where: { role: 'admin', is_active: true },
   });
 
-  User.addScope('managers', {
-    where: { role: 'manager', is_active: true },
+  User.addScope('moderators', {
+    where: { role: 'moderator', is_active: true },
+  });
+
+  User.addScope('staff', {
+    where: {
+      role: ['customer_service', 'sales', 'marketing', 'technic'],
+      is_active: true,
+    },
   });
 
   User.addScope('withoutPassword', {

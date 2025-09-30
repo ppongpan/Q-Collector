@@ -1,13 +1,14 @@
-# Q-Collector Frontend Framework v0.4
+# Q-Collector Application Framework
 
-**Modern React Form Builder Framework with Advanced Features**
+**Enterprise Form Builder & Data Collection System**
 
 ## Version Information
 
-- **Version**: 0.4.1
+- **Version**: 0.5.0
 - **Release Date**: 2025-09-30
-- **Framework**: React 18 + ShadCN UI + Tailwind CSS + Framer Motion + @dnd-kit
+- **Framework**: React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 - **Target**: Thai Business Forms & Data Collection
+- **Architecture**: Full-Stack Enterprise Application
 
 ## Core Features
 
@@ -99,38 +100,80 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 **Mobile-First Design:** Responsive breakpoints, touch targets (44px min)
 **Accessibility:** WCAG 2.1 AA compliance, ARIA labels, keyboard navigation
 
-## Recent Updates (v0.4.1)
+## Version History
+
+### v0.5.0 (2025-09-30) - Complete Backend Integration & Documentation
+
+**Major Updates:**
+- ✅ **Complete Backend System** - Node.js/Express API with PostgreSQL database
+- ✅ **Real-Time Communication** - WebSocket integration with Socket.IO
+- ✅ **Advanced Caching** - Redis-based caching layer for performance
+- ✅ **File Storage** - MinIO object storage for file uploads
+- ✅ **User Management** - Complete RBAC system with 8 roles
+- ✅ **Two-Factor Authentication** - Enhanced security with 2FA
+- ✅ **Background Processing** - Bull queue for async tasks
+- ✅ **Email Integration** - Notification system with templates
+- ✅ **Analytics System** - Comprehensive data analytics and reporting
+- ✅ **Complete Documentation** - Full application documentation in qcollector.md
+
+**Telegram Integration Enhanced:**
+- Message prefix with placeholder support ([FormName], [DateTime])
+- Field ordering via drag-and-drop interface
+- Real Telegram API testing capability
+- Custom message formatting and templates
+- Backward compatibility with old settings format
+
+**UI/UX Refinements:**
+- Compact field card design with reduced padding
+- Auto-scroll to new fields and expanded settings
+- Optimized spacing and visual density
+- Enhanced toast notification system
+
+### v0.4.1 (2025-09-30) - UI/UX Improvements
 
 **UI/UX Improvements & Auto-Scroll Enhancement:**
-- Telegram notification toggle always visible (no longer requires required field first)
+- Telegram notification toggle always visible
 - Removed conditional visibility options from field settings menu
-- Toggle buttons repositioned to field title row (right-aligned)
-- Reduced field card padding for more compact appearance
+- Toggle buttons repositioned to field title row
+- Reduced field card padding for compact appearance
 - Thinner borders (0.5px) for cleaner look
-- Auto-scroll to new fields when added (main form and sub-form)
-- Auto-scroll to expanded field settings aligned with top menu
-- Drag handle positioned at left edge with minimal padding
+- Auto-scroll to new fields when added
+- Auto-scroll to expanded field settings
+- Drag handle positioning improvements
 - Optimized spacing for better visual density
 
-**Previous Updates (v0.4.0):**
-- Conditional Field Visibility System with formula engine
-- Advanced Telegram Notification System with dual-panel drag-and-drop
-- Field ordering with automatic numbering and custom prefixes
+### v0.4.0 (2025-09-29) - Advanced Features
 
-**Previous Features (v0.3):**
+**Conditional Field Visibility System:**
+- Formula engine with AppSheet-compatible syntax
+- Support for AND, OR, comparison operators
+- Dynamic field show/hide based on form data
+
+**Advanced Telegram Notification System:**
+- Dual-panel drag-and-drop field ordering
+- Field selection and ordering interface
+- Automatic numbering and custom prefixes
+
+### v0.3.0 (2025-09-28) - UI Component Library
+
+**Component Library Enhancements:**
 - Circular Animation Buttons with motion effects
 - Enhanced Toast System with portal-based rendering
 - Sub-Form Management with default empty templates
 - Glass morphism UI with backdrop blur effects
 
-## Future Development
+### v0.2.0 (2025-09-27) - Frontend Framework
 
-**Backend Integration:** PostgreSQL + MinIO + Redis stack ready
-**API Layer:** RESTful endpoints for forms, submissions, file uploads
-**Enhanced Features:** Advanced validation, real-time collaboration, analytics dashboard
+**Complete Frontend Framework:**
+- ShadCN UI integration
+- Form builder with 17 field types
+- Drag-and-drop field management
+- LocalStorage data persistence
 
 ---
 
-**Framework Status:** ✅ Production-ready v0.4.1 with enhanced UI/UX and auto-scroll features
+**Application Status:** ✅ Production-ready v0.5.0 - Complete Full-Stack Enterprise System
 
-**License:** Internal use - Q-Collector Form Builder Framework v0.4.1
+**License:** Internal use - Q-Collector Enterprise Form Builder v0.5.0
+- BOT TOKEN FOR TELEGRAM TESTING 7794493324:AAHlxtpYenok1kwyo88ns5R4rivWWXcqmE0   AND GROUP ID = -4847325737  record in .env
+- สร้าง Super Admin Account  โดยใช้ User Name : pongpanp  ชื่อ : Pongpan Peerawanichkul  email: pongpanp@qcon.co.th  Department : Technic  Role : Super Admin

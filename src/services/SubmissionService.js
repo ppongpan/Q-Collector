@@ -764,11 +764,27 @@ class SubmissionService {
    */
   async sendTelegramNotification(form, submission) {
     try {
-      const telegramSettings = form.settings?.telegram;
+      // Try both settings locations for backward compatibility
+      const telegramSettings = form.telegramSettings || form.settings?.telegram;
 
       // Check if telegram is configured
       if (!telegramSettings?.enabled) {
-        return;
+        console.log('Telegram notification skipped - not enabled');
+        return {
+          success: true,
+          skipped: true,
+          reason: 'Telegram notifications not enabled'
+        };
+      }
+
+      // Validate that bot token and group ID are present
+      if (!telegramSettings.botToken || !telegramSettings.groupId) {
+        console.log('Telegram notification skipped - missing credentials');
+        return {
+          success: true,
+          skipped: true,
+          reason: 'Missing bot token or group ID'
+        };
       }
 
       // Send notification using TelegramService

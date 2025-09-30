@@ -1,6 +1,6 @@
 /**
  * Submission Service
- * Handles form submissions with automatic field encryption
+ * Handles form submissions with automatic field encryption and Redis caching
  */
 
 const { Op } = require('sequelize');
@@ -8,6 +8,8 @@ const { Submission, SubmissionData, Form, Field, User, AuditLog, sequelize } = r
 const logger = require('../utils/logger.util');
 const { ApiError } = require('../middleware/error.middleware');
 const { Parser } = require('json2csv');
+const cacheService = require('./CacheService');
+const { KEYS, POLICIES, INVALIDATION_PATTERNS } = require('../config/cache.config');
 
 class SubmissionService {
   /**

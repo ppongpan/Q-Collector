@@ -124,12 +124,15 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
   const handleDeleteSubmission = async (submissionId) => {
     // Show confirmation toast with action buttons
-    toast.error('การลบจะไม่สามารถย้อนกลับได้', {
+    const toastId = toast.error('การลบจะไม่สามารถย้อนกลับได้', {
       title: "คุณแน่ใจหรือไม่ที่จะลบข้อมูลนี้?",
       duration: 10000,
       action: {
         label: "ยืนยันการลบ",
         onClick: async () => {
+          // Dismiss confirmation toast immediately
+          toast.dismiss(toastId);
+
           try {
             dataService.deleteSubmission(submissionId);
             setSubmissions(prev => prev.filter(sub => sub.id !== submissionId));
@@ -894,7 +897,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                           transition={{ duration: 0.3, delay: index * 0.05 }}
                           className={`border-b border-border/20 transition-all duration-300 cursor-pointer group relative ${
                             selectedSubmissionId === submission.id && isOpen
-                              ? 'bg-gray-100/50 dark:bg-gray-800/30'
+                              ? 'bg-muted/30'
                               : ''
                           }`}
                           onClick={(e) => handleMenuOpen(e, submission.id)}

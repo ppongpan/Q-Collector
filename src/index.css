@@ -1145,15 +1145,15 @@
   /* Enhanced Modern Glass Design System */
 
   /* Enhanced Glass Container Base - Dark Background Focus */
-  .glass-container {
-    background: rgba(255, 255, 255, 0.1);
+  .glass-container:not(select) {
+    background: rgba(255, 255, 255, 0.85);  /* Light background for light theme */
     backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(0, 0, 0, 0.1);    /* Dark border for light theme */
     border-radius: 16px;
     position: relative;
   }
 
-  .dark .glass-container {
+  .dark .glass-container:not(select) {
     background: rgba(0, 0, 0, 0.5);       /* Darker background for better contrast */
     border: 0.5px solid rgba(255, 255, 255, 0.08);
     color: hsl(var(--foreground));        /* Ensure light text */
@@ -1161,13 +1161,13 @@
 
   /* Glass Variants */
   .glass-elevated {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.9);   /* Light background for light theme */
     backdrop-filter: blur(24px) saturate(200%);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(0, 0, 0, 0.08);   /* Dark border for light theme */
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.1),
       0 4px 16px rgba(0, 0, 0, 0.05),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
   }
 
   .dark .glass-elevated {
@@ -1181,13 +1181,13 @@
   }
 
   .glass-floating {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.95);  /* Light background for light theme */
     backdrop-filter: blur(28px) saturate(220%);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0.06);   /* Dark border for light theme */
     box-shadow:
       0 12px 48px rgba(0, 0, 0, 0.15),
       0 6px 24px rgba(0, 0, 0, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+      inset 0 1px 0 rgba(255, 255, 255, 1);
   }
 
   .dark .glass-floating {
@@ -1213,7 +1213,7 @@
 
   /* Glass Navigation */
   .glass-nav {
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.95);  /* Light background for light theme */
     backdrop-filter: blur(32px) saturate(180%);
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   }
@@ -1227,10 +1227,10 @@
   /* Glass Buttons */
   .btn-glass {
     @apply relative overflow-hidden rounded-xl font-medium transition-all duration-200 ease-out;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.8);    /* Light background for light theme */
     backdrop-filter: blur(12px) saturate(120%);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: rgb(var(--foreground));
+    border: 1px solid rgba(0, 0, 0, 0.1);    /* Dark border for light theme */
+    color: hsl(var(--foreground));
     font-size: clamp(14px, calc(16px * var(--font-scale)), 18px);  /* Limit font scaling */
   }
 
@@ -1306,16 +1306,16 @@
     border: 1px solid rgba(255, 255, 255, 0.15);
   }
 
-  /* Enhanced Glass Inputs with Orange Neon Effects */
-  .input-glass {
+  /* Enhanced Glass Inputs with Orange Neon Effects - Light Theme Only */
+  :not(.dark) .input-glass {
     @apply w-full px-4 py-3 transition-all duration-300 ease-out;
     @apply text-foreground placeholder:text-muted-foreground/80;
     @apply focus:outline-none;
-    background: rgba(30, 30, 30, 0.8) !important;      /* Semi-transparent background */
+    background: rgba(255, 255, 255, 0.85) !important;  /* Light background for light theme */
     backdrop-filter: blur(8px) saturate(120%);
-    border: none !important;                            /* Remove all borders */
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;   /* Light border for light theme */
     border-radius: 0.75rem !important;                 /* Force rounded corners always */
-    color: #ffffff !important;                          /* White text */
+    color: hsl(var(--foreground)) !important;          /* Use theme text color */
     font-size: 14px !important;                        /* Reduced font size to 14px */
     font-weight: 500 !important;                       /* Better visibility */
     min-height: 48px !important;                       /* Larger touch target */
@@ -1328,10 +1328,32 @@
     box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
   }
 
+  /* Dark Theme Input Glass - Primary Rule */
+  .dark .input-glass {
+    @apply w-full px-4 py-3 transition-all duration-300 ease-out;
+    @apply focus:outline-none;
+    background: rgb(40, 40, 40) !important;            /* Dark background for dark theme */
+    backdrop-filter: blur(8px) saturate(120%);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;   /* Light border for dark theme */
+    border-radius: 0.75rem !important;                 /* Force rounded corners always */
+    color: rgb(255, 255, 255) !important;              /* White text in dark theme */
+    font-size: 14px !important;                        /* Reduced font size to 14px */
+    font-weight: 500 !important;                       /* Better visibility */
+    min-height: 48px !important;                       /* Larger touch target */
+    line-height: 1.4 !important;                       /* Better line spacing */
+    min-width: 100% !important;                        /* Force full width */
+    box-sizing: border-box !important;                 /* Proper box model */
+    color-scheme: dark;
+
+    /* Glass morphism edge effect */
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  }
+
   .input-glass:hover {
-    background: rgba(42, 42, 42, 0.9) !important;      /* Lighter background on hover */
-    color: #ff6600 !important;                          /* Orange text on hover */
+    background: rgba(249, 115, 22, 0.05) !important;   /* Light orange tint on hover */
+    color: hsl(var(--primary)) !important;             /* Orange text on hover */
     transform: translateY(-1px);
+    border: 1px solid rgba(249, 115, 22, 0.3) !important;  /* Orange border on hover */
     border-radius: 0.75rem !important;                  /* Force rounded corners on hover */
     /* Apply orange neon hover effect */
     box-shadow:
@@ -1342,10 +1364,11 @@
   }
 
   .input-glass:focus {
-    background: rgba(42, 42, 42, 0.9) !important;      /* Lighter background on focus */
-    color: #ffffff !important;                          /* White text on focus */
+    background: rgba(249, 115, 22, 0.08) !important;   /* Light orange tint on focus */
+    color: hsl(var(--foreground)) !important;          /* Theme text color on focus */
     transform: translateY(-1px);
     outline: none !important;
+    border: 1px solid rgba(249, 115, 22, 0.5) !important;  /* Orange border on focus */
     border-radius: 0.75rem !important;                  /* Force rounded corners on focus */
     /* Apply orange neon focus effect */
     box-shadow:
@@ -1355,7 +1378,7 @@
       inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
   }
 
-  .dark .input-glass {
+  .dark .input-glass:not(select) {
     background: rgba(30, 30, 30, 0.8) !important;         /* Semi-transparent background in dark mode */
     backdrop-filter: blur(8px) saturate(120%);
     border: none !important;                                /* Remove border */
@@ -1399,17 +1422,128 @@
   }
 
   .dark select.input-glass option {
-    background: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background: rgb(30, 30, 30) !important;  /* Dark background for dark theme */
+    background-color: rgb(30, 30, 30) !important;  /* Ensure background color is set */
+    color: rgb(255, 255, 255) !important;    /* White text for readability */
   }
 
-  /* Enhanced select styling with orange neon effects */
-  select.input-glass {
+  /* Additional specificity for dropdown options in dark theme */
+  .dark select option,
+  .dark option {
+    background: rgb(30, 30, 30) !important;
+    background-color: rgb(30, 30, 30) !important;
+    color: rgb(255, 255, 255) !important;
+  }
+
+  /* Nuclear option - force all options in dark mode */
+  html.dark select option,
+  html.dark option,
+  body.dark select option,
+  body.dark option,
+  .dark select[class*="input"] option,
+  .dark select[style*="background"] option {
+    background: rgb(30, 30, 30) !important;
+    background-color: rgb(30, 30, 30) !important;
+    color: rgb(255, 255, 255) !important;
+  }
+
+  /* Data attribute selector for dark mode - highest priority */
+  select[data-dark-mode="true"],
+  select.input-glass[data-dark-mode="true"],
+  html select[data-dark-mode="true"],
+  body select[data-dark-mode="true"] {
+    background: rgb(40, 40, 40) !important;
+    background-color: rgb(40, 40, 40) !important;
+    color: rgb(255, 255, 255) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* AGGRESSIVE OPTION STYLING - NUCLEAR APPROACH */
+  select[data-dark-mode="true"] option,
+  select.input-glass[data-dark-mode="true"] option,
+  html select[data-dark-mode="true"] option,
+  body select[data-dark-mode="true"] option,
+  select[data-dark-mode="true"] > option,
+  .dark select option,
+  .dark select.input-glass option {
+    background: rgb(30, 30, 30) !important;
+    background-color: rgb(30, 30, 30) !important;
+    color: rgb(255, 255, 255) !important;
+    padding: 8px 12px !important;
+    font-weight: 400 !important;
+  }
+
+  /* Force override for ALL option states */
+  select[data-dark-mode="true"] option:checked,
+  select[data-dark-mode="true"] option:hover,
+  select[data-dark-mode="true"] option:focus,
+  select[data-dark-mode="true"] option:active,
+  .dark select option:checked,
+  .dark select option:hover {
+    background: rgb(50, 50, 50) !important;
+    background-color: rgb(50, 50, 50) !important;
+    color: rgb(255, 255, 255) !important;
+  }
+
+  /* Chrome/Safari specific fix */
+  select[data-dark-mode="true"]::-webkit-scrollbar-track {
+    background: rgb(30, 30, 30) !important;
+  }
+
+  /* Firefox specific fix */
+  @-moz-document url-prefix() {
+    select[data-dark-mode="true"] option {
+      background-color: rgb(30, 30, 30) !important;
+      color: rgb(255, 255, 255) !important;
+    }
+  }
+
+  /* UNIVERSAL DARK MODE OPTIONS - Catch-all approach */
+  html.dark select option,
+  body.dark select option,
+  .dark select option,
+  [data-theme="dark"] select option {
+    background: rgb(30, 30, 30) !important;
+    background-color: rgb(30, 30, 30) !important;
+    color: rgb(255, 255, 255) !important;
+  }
+
+  /* Browser-specific fixes for select dropdown in dark mode */
+  @supports (-webkit-appearance: none) {
+    .dark select option,
+    select[data-dark-mode="true"] option,
+    html.dark select option {
+      background: rgb(30, 30, 30) !important;
+      background-color: rgb(30, 30, 30) !important;
+      color: rgb(255, 255, 255) !important;
+    }
+  }
+
+  @-moz-document url-prefix() {
+    .dark select option,
+    select[data-dark-mode="true"] option,
+    html.dark select option {
+      background: rgb(30, 30, 30) !important;
+      background-color: rgb(30, 30, 30) !important;
+      color: rgb(255, 255, 255) !important;
+    }
+  }
+
+  /* Edge/IE specific */
+  @media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+    .dark select option {
+      background: rgb(30, 30, 30) !important;
+      color: rgb(255, 255, 255) !important;
+    }
+  }
+
+  /* Enhanced select styling with orange neon effects - Light theme only */
+  :not(.dark) select.input-glass {
     background-image: none !important;   /* Remove all background images */
     background-repeat: no-repeat;
     background-position: right 1rem center;
     background-size: 1rem;
-    background: rgba(30, 30, 30, 0.8) !important;      /* Semi-transparent background */
+    background: rgba(255, 255, 255, 0.85) !important;  /* Light background for light theme */
     backdrop-filter: blur(8px) saturate(120%);
     appearance: none !important;
     -webkit-appearance: none !important;
@@ -1419,25 +1553,51 @@
     line-height: 1.5;
     min-height: 52px;                                  /* Larger touch target */
     padding: 12px 48px 12px 16px;                     /* More padding, room for arrow */
-    border: none !important;                           /* Remove all borders */
-    color: #ffffff !important;                         /* White text */
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;  /* Light border for light theme */
+    color: hsl(var(--foreground)) !important;         /* Theme text color */
     border-radius: 8px !important;                    /* Rounded corners */
     box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
   }
 
-  .dark select.input-glass {
+  /* Dark mode select styling - MUST override light theme */
+  .dark select.input-glass,
+  .dark .input-glass {
     background-image: none !important;                     /* No background images in dark mode */
-    background: rgba(30, 30, 30, 0.8) !important;         /* Semi-transparent background */
+    background: rgb(40, 40, 40) !important;               /* Solid dark gray background */
+    background-color: rgb(40, 40, 40) !important;         /* Ensure background color is set */
     backdrop-filter: blur(8px) saturate(120%);
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    line-height: 1.5;
+    min-height: 52px;
+    padding: 12px 48px 12px 16px;
     color: #ffffff !important;                             /* White text in dark mode */
-    border: none !important;                               /* Remove all borders */
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important; /* Subtle border for definition */
+    border-radius: 8px !important;
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  }
+
+  /* Ensure select element specifically in dark mode has dark background */
+  .dark select.input-glass {
+    background: rgb(40, 40, 40) !important;
+    background-color: rgb(40, 40, 40) !important;
+  }
+
+  /* Override any Tailwind background classes in dark mode */
+  .dark select.bg-orange-500\/10,
+  .dark .bg-orange-500\/10.input-glass {
+    background-color: rgb(40, 40, 40) !important;
+    background: rgb(40, 40, 40) !important;
   }
 
   /* Enhanced select hover and focus states with orange neon */
   select.input-glass:hover {
-    background: rgba(42, 42, 42, 0.9) !important;         /* Lighter background on hover */
-    color: #ff6600 !important;                             /* Orange text on hover */
+    background: rgba(249, 115, 22, 0.05) !important;      /* Light orange tint on hover */
+    color: hsl(var(--primary)) !important;                /* Orange text on hover */
+    border: 1px solid rgba(249, 115, 22, 0.3) !important; /* Orange border on hover */
     /* Apply orange neon hover effect */
     box-shadow:
       0 0 20px rgba(249, 115, 22, 0.5),
@@ -1447,14 +1607,68 @@
   }
 
   select.input-glass:focus {
-    background: rgba(42, 42, 42, 0.9) !important;         /* Lighter background on focus */
+    background: rgba(249, 115, 22, 0.08) !important;      /* Light orange tint on focus */
     outline: none !important;
+    border: 1px solid rgba(249, 115, 22, 0.5) !important; /* Orange border on focus */
     /* Apply orange neon focus effect */
     box-shadow:
       0 0 25px rgba(249, 115, 22, 0.6),
       0 0 50px rgba(249, 115, 22, 0.4),
       inset 0 0 25px rgba(249, 115, 22, 0.2),
       inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
+  }
+
+  /* Dark theme specific hover and focus states */
+  .dark select.input-glass:hover {
+    background: rgb(50, 50, 50) !important;               /* Slightly lighter dark gray on hover */
+    background-color: rgb(50, 50, 50) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(249, 115, 22, 0.5) !important; /* Orange border on hover */
+  }
+
+  .dark select.input-glass:focus {
+    background: rgb(50, 50, 50) !important;               /* Keep dark background on focus */
+    background-color: rgb(50, 50, 50) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(249, 115, 22, 0.7) !important; /* Stronger orange border on focus */
+    outline: none !important;
+  }
+
+
+  /* ULTIMATE FIX - Highest specificity for dark mode select */
+  html.dark body select.input-glass,
+  html.dark select.input-glass,
+  .dark body select.input-glass,
+  .dark select.input-glass,
+  .dark select[class*="input-glass"] {
+    background: rgb(40, 40, 40) !important;
+    background-color: rgb(40, 40, 40) !important;
+    color: rgb(255, 255, 255) !important;
+  }
+
+  /* Override any pseudo-elements that might affect background */
+  .dark select.input-glass::before,
+  .dark select::before {
+    background: transparent !important;
+  }
+
+  /* Force all select elements in dark mode to have dark background */
+  .dark select,
+  .dark select.input-glass {
+    background: rgb(40, 40, 40) !important;
+    background-color: rgb(40, 40, 40) !important;
+    background-image: none !important;
+    color: rgb(255, 255, 255) !important;
+  }
+
+  /* Ensure hover and focus states maintain dark background */
+  .dark select:hover,
+  .dark select:focus,
+  .dark select.input-glass:hover,
+  .dark select.input-glass:focus {
+    background: rgb(50, 50, 50) !important;
+    background-color: rgb(50, 50, 50) !important;
+    color: rgb(255, 255, 255) !important;
   }
 
   /* Enhanced dropdown options with glass morphism theme */
@@ -1464,23 +1678,23 @@
     font-weight: 400 !important;
     line-height: 1.4;
     min-height: 36px;
-    background-color: rgba(10, 10, 10, 0.98) !important; /* Darker black background */
-    color: #ffffff !important; /* White text for contrast */
+    background-color: white !important; /* White background for light theme */
+    color: hsl(var(--foreground)) !important; /* Theme text color */
     border: none !important;
     backdrop-filter: blur(8px) !important;
     transition: all 0.2s ease !important;
   }
 
   .dark select.input-glass option {
-    background-color: rgba(10, 10, 10, 0.98) !important; /* Darker black background */
-    color: #ffffff !important; /* White text for contrast */
+    background-color: rgb(30, 30, 30) !important; /* Dark gray background for better readability */
+    color: rgb(255, 255, 255) !important; /* White text for contrast */
     font-weight: 400 !important;
   }
 
   /* Light mode dropdown options */
   :not(.dark) select.input-glass option {
-    background-color: rgba(30, 30, 30, 0.95) !important; /* Dark background even in light mode */
-    color: #ffffff !important; /* White text for readability */
+    background-color: white !important; /* White background in light mode */
+    color: hsl(var(--foreground)) !important; /* Theme text color */
   }
 
   select.input-glass option:hover,
@@ -1512,21 +1726,8 @@
     outline-offset: -2px !important;
   }
 
-  /* Enhanced dropdown container with glass effects */
-  select.input-glass {
-    background: rgba(var(--card), 0.8) !important;
-    backdrop-filter: blur(12px) saturate(120%) !important;
-    border: 1px solid rgba(var(--border), 0.3) !important;
-    box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.1),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
-  }
-
-  /* Dark mode specific adjustments */
-  .dark select.input-glass {
-    background: rgba(30, 30, 30, 0.8) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  }
+  /* Enhanced dropdown container with glass effects - REMOVED */
+  /* All select.input-glass styles are now consolidated in the main rules above (lines 1409-1455) */
 
   /* Ensure placeholder text is also 14px */
   .input-glass::placeholder,
@@ -2309,7 +2510,7 @@
   }
 
   /* Glass Container Utilities */
-  .glass-container {
+  .glass-container:not(select) {
     @apply blur-edge rounded-2xl;
     background: rgba(var(--card), 0.6);
     backdrop-filter: blur(12px);
@@ -2391,13 +2592,14 @@
     backdrop-filter: none !important;
   }
 
-  .glass-interactive {
+  /* Glass interactive excludes select elements */
+  .glass-interactive:not(select) {
     @apply glass-container blur-edge transition-all duration-300;
     will-change: transform, box-shadow;
     transform: translateZ(0);
   }
 
-  .glass-interactive:hover {
+  .glass-interactive:not(select):hover {
     @apply blur-edge-intense;
     transform: translateY(-2px) translateZ(0);
   }

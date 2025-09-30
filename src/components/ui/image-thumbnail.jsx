@@ -196,7 +196,7 @@ const ImageThumbnail = ({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              className="relative max-w-7xl max-h-full bg-gray-900 backdrop-blur-md rounded-xl border border-gray-600/50 shadow-2xl"
+              className="relative max-w-7xl max-h-full bg-background dark:bg-gray-900 backdrop-blur-md rounded-xl border border-border dark:border-gray-600/50 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}

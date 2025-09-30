@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { motion } from 'framer-motion';
 
 // Data services
 import dataService from '../services/DataService.js';
+
+// Auth context
+import { useAuth } from '../contexts/AuthContext';
 
 // Drag and Drop imports
 import {
@@ -25,6 +29,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { GlassButton } from "./ui/glass-button";
 import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription, GlassCardContent } from "./ui/glass-card";
 import { GlassInput, GlassTextarea, GlassSelect } from "./ui/glass-input";
+import CustomSelect from "./ui/custom-select";
 import FieldPreviewRow from "./ui/field-preview-row";
 import FieldOptionsMenu from "./ui/field-options-menu";
 import FieldToggleButtons from "./ui/field-toggle-buttons";
@@ -346,22 +351,17 @@ function FieldEditor({
           {/* Field Type Selector - Only visible when expanded */}
           {isExpanded && (
             <div className="flex-shrink-0">
-              <GlassSelect
+              <CustomSelect
                 value={field.type}
                 onChange={(e) => updateField({ type: e.target.value })}
-                tooltip="เลือกประเภทฟิลด์"
-                className="h-8 w-36 text-xs border-0 bg-orange-500/10 text-orange-500 orange-neon-permanent"
-                data-interactive="true"
-              >
-                <option value="" disabled className="text-muted-foreground">
-                  เลือกประเภท
-                </option>
-                {FIELD_TYPES.map((type) => (
-                  <option key={type.value} value={type.value} className="text-foreground">
-                    {type.label}
-                  </option>
-                ))}
-              </GlassSelect>
+                options={FIELD_TYPES.map(type => ({
+                  value: type.value,
+                  label: type.label,
+                  disabled: type.value === ''
+                }))}
+                placeholder="เลือกประเภท"
+                className="w-full min-w-[180px]"
+              />
             </div>
           )}
 
@@ -1048,6 +1048,12 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
 
 // Main Enhanced Form Builder Component
 export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onSaveHandlerReady }) {
+  const { userRole } = useAuth();
+  const [showCopied, setShowCopied] = useState(false);
+
+  // Check if user has permission to see PowerBI info
+  const canSeePowerBIInfo = ['super_admin', 'admin', 'moderator'].includes(userRole);
+
   const [form, setForm] = useState({
     id: initialForm?.id || generateFormId(),
     title: initialForm?.title || '',
@@ -1067,7 +1073,6 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
     ],
     subForms: initialForm?.subForms || [],
     visibleRoles: initialForm?.visibleRoles || DEFAULT_VISIBLE_ROLES,
-    userRoles: initialForm?.userRoles || initialForm?.visibleRoles || DEFAULT_VISIBLE_ROLES,
     settings: initialForm?.settings || {
       telegram: {
         enabled: false,
@@ -1104,6 +1109,27 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
 
   const updateForm = (updates) => {
     setForm(prev => ({ ...prev, ...updates }));
+  };
+
+  // Copy to clipboard function
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2000);
+    });
+  };
+
+  // Generate PowerBI connection info
+  const getPowerBIInfo = () => {
+    const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+    const connectionString = `${apiBaseUrl}/forms/${form.id}/submissions`;
+
+    return {
+      apiEndpoint: connectionString,
+      formId: form.id,
+      tableName: `form_${form.id}_submissions`,
+      description: 'Use this endpoint to import form data into PowerBI'
+    };
   };
 
   // Calculate available fields for telegram notifications
@@ -1669,8 +1695,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
             {activeSection === 'settings' && (
               <div className="space-y-8">
                 <div>
-                  <h2 className="form-card-title text-lg font-semibold">ตั้งค่าฟอร์ม</h2>
-                  <p className="form-card-description mt-2 text-xs">
+                  <h2 className="form-card-title text-[14px] font-semibold">ตั้งค่าฟอร์ม</h2>
+                  <p className="form-card-description mt-2 text-[12px]">
                     กำหนดค่าขั้นสูงสำหรับการแจ้งเตือน การจัดการผู้ใช้ และระบบอัตโนมัติ
                   </p>
                 </div>
@@ -1690,9 +1716,9 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                       </div>
                     </div>
                   </GlassCardHeader>
-                  <GlassCardContent className="space-y-6">
+                  <GlassCardContent className="space-y-4">
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-2">
                       {Object.values(USER_ROLES).map((role) => {
                         const isVisible = form.visibleRoles.includes(role.id);
                         const isDisabled = role.isDefault; // Super Admin and Admin are always selected
@@ -1713,7 +1739,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                             }}
                             title={isDisabled ? `${role.name} • Always selected (cannot be changed)` : `Toggle ${role.name} access`}
                             className={`
-                              px-3 py-2 rounded-xl font-medium text-sm transition-all duration-200
+                              px-3 py-2 rounded-xl font-medium text-[12px] transition-all duration-200
                               ${isVisible
                                 ? `${role.bgColor} ${role.color} shadow-sm hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]`
                                 : 'bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:shadow-[0_0_10px_rgba(249,115,22,0.2)]'
@@ -1754,10 +1780,10 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                       </div>
                     </div>
                   </GlassCardHeader>
-                  <GlassCardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <label className="text-sm font-medium text-foreground/80">ประเภทปี</label>
+                  <GlassCardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[14px] font-medium text-foreground/80">ประเภทปี</label>
                         <div className="flex gap-3">
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
@@ -1773,7 +1799,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                               })}
                               className="w-4 h-4 text-primary focus:ring-primary/20 focus:ring-2"
                             />
-                            <span className="text-sm text-foreground/80">ค.ศ. (2024)</span>
+                            <span className="text-[14px] text-foreground/80">ค.ศ. (2024)</span>
                           </label>
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
@@ -1789,15 +1815,15 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                               })}
                               className="w-4 h-4 text-primary focus:ring-primary/20 focus:ring-2"
                             />
-                            <span className="text-sm text-foreground/80">พ.ศ. (2567)</span>
+                            <span className="text-[14px] text-foreground/80">พ.ศ. (2567)</span>
                           </label>
                         </div>
                       </div>
 
-                      <div className="space-y-3">
-                        <label className="text-sm font-medium text-foreground/80">รูปแบบการแสดงผล</label>
-                        <div className="p-3 bg-muted/20 rounded-lg border border-border/30">
-                          <div className="text-sm text-foreground/80">
+                      <div className="space-y-2">
+                        <label className="text-[14px] font-medium text-foreground/80">รูปแบบการแสดงผล</label>
+                        <div className="p-2 bg-muted/20 rounded-lg border border-border/30">
+                          <div className="text-[14px] text-foreground/80">
                             <div className="font-medium">ตัวอย่าง:
                               <span className="ml-2 font-mono text-primary">
                                 {(() => {
@@ -1811,7 +1837,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                                 })()}
                               </span>
                             </div>
-                            <div className="text-xs text-muted-foreground mt-1">
+                            <div className="text-[12px] text-muted-foreground mt-1">
                               รูปแบบ: dd/mm/yyyy ({form.settings.dateFormat?.yearFormat === 'buddhist' ? 'พ.ศ.' : 'ค.ศ.'})
                             </div>
                           </div>
@@ -1848,8 +1874,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                       </div>
                     </div>
                   </GlassCardHeader>
-                  <GlassCardContent className="space-y-6">
-                    <label className="flex items-center gap-4 cursor-pointer group">
+                  <GlassCardContent className="space-y-4">
+                    <label className="flex items-center gap-3 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={form.settings.documentNumber.enabled}
@@ -1861,14 +1887,14 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                         })}
                         className="w-4 h-4 text-primary focus:ring-primary/20 focus:ring-2 rounded"
                       />
-                      <span className="text-sm text-foreground/80 group-hover:text-foreground/90">
+                      <span className="text-[14px] text-foreground/80 group-hover:text-foreground/90">
                         เปิดใช้งานหมายเลขเอกสารอัตโนมัติ
                       </span>
                     </label>
 
                     {form.settings.documentNumber.enabled && (
-                      <div className="space-y-6 pt-3">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <div className="space-y-4 pt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                           <GlassInput
                             label="คำนำหน้า"
                             value={form.settings.documentNumber.prefix}
@@ -1930,9 +1956,9 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                           </GlassSelect>
                         </div>
 
-                        <div className="p-6 bg-muted/10 rounded-xl">
-                          <p className="text-sm text-muted-foreground mb-2">ตัวอย่าง:</p>
-                          <code className="text-sm font-mono text-foreground/80">
+                        <div className="p-4 bg-muted/10 rounded-xl">
+                          <p className="text-[14px] text-muted-foreground mb-1">ตัวอย่าง:</p>
+                          <code className="text-[14px] font-mono text-foreground/80">
                             {(() => {
                               const currentYear = new Date().getFullYear();
                               const displayYear = form.settings.documentNumber.yearFormat === 'buddhist'
@@ -1945,7 +1971,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                                 : `${form.settings.documentNumber.prefix}-${displayYear}/${paddedNumber}`;
                             })()}
                           </code>
-                          <p className="text-xs text-muted-foreground mt-2">
+                          <p className="text-[12px] text-muted-foreground mt-1">
                             หมายเลขจะเริ่มต้นที่ {(form.settings.documentNumber.initialNumber || 1).toString().padStart(4, '0')} และรีเซ็ตเป็น 0001 ทุกปีใหม่
                           </p>
                         </div>
@@ -1953,6 +1979,50 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                     )}
                   </GlassCardContent>
                 </GlassCard>
+
+                {/* PowerBI Connection Info - After Document Number Settings */}
+                {canSeePowerBIInfo && (
+                  <GlassCard className="mt-6">
+                    <GlassCardHeader>
+                      <div className="flex items-start gap-2">
+                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse mt-1.5"></div>
+                        <div className="flex-1">
+                          <GlassCardTitle className="text-sm">PowerBI Connection</GlassCardTitle>
+                          <GlassCardDescription className="text-xs">{getPowerBIInfo().description}</GlassCardDescription>
+                        </div>
+                      </div>
+                    </GlassCardHeader>
+                    <GlassCardContent>
+                      <div className="space-y-3">
+                        <div className="bg-background/50 rounded p-3 border border-border/40">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-foreground/80">API Endpoint:</span>
+                            <button
+                              onClick={() => copyToClipboard(getPowerBIInfo().apiEndpoint)}
+                              className="text-primary hover:text-primary/80 transition-colors text-xs px-3 py-1 rounded bg-primary/10 hover:bg-primary/20"
+                            >
+                              {showCopied ? 'Copied!' : 'Copy'}
+                            </button>
+                          </div>
+                          <code className="text-xs text-foreground/70 break-all block font-mono">
+                            {getPowerBIInfo().apiEndpoint}
+                          </code>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-background/50 rounded p-3 border border-border/40">
+                            <span className="text-xs font-medium text-foreground/80 block mb-2">Form ID:</span>
+                            <code className="text-sm text-primary font-mono">{getPowerBIInfo().formId}</code>
+                          </div>
+                          <div className="bg-background/50 rounded p-3 border border-border/40">
+                            <span className="text-xs font-medium text-foreground/80 block mb-2">Table:</span>
+                            <code className="text-xs text-primary font-mono">{getPowerBIInfo().tableName}</code>
+                          </div>
+                        </div>
+                      </div>
+                    </GlassCardContent>
+                  </GlassCard>
+                )}
               </div>
             )}
         </div>

@@ -1,6 +1,6 @@
 /**
  * Authentication Service
- * Handles user authentication, JWT tokens, and session management
+ * Handles user authentication, JWT tokens, and session management with Redis caching
  */
 
 const jwt = require('jsonwebtoken');
@@ -9,6 +9,8 @@ const { User, Session, AuditLog } = require('../models');
 const logger = require('../utils/logger.util');
 const { ApiError } = require('../middleware/error.middleware');
 const { encrypt, decrypt } = require('../utils/encryption.util');
+const cacheService = require('./CacheService');
+const { KEYS, POLICIES, INVALIDATION_PATTERNS } = require('../config/cache.config');
 
 // JWT configuration
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -138,7 +140,7 @@ class AuthService {
   }
 
   /**
-   * Generate JWT access and refresh tokens
+   * Generate JWT access and refresh tokens with caching
    * @param {User} user - User instance
    * @param {Object} metadata - Request metadata
    * @returns {Promise<Object>} Tokens and session
@@ -173,6 +175,28 @@ class AuthService {
         ipAddress: metadata.ipAddress,
         userAgent: metadata.userAgent,
       });
+
+      // Cache session data
+      const sessionData = {
+        id: session.id,
+        userId: user.id,
+        token: accessToken,
+        refreshToken,
+        expiresAt,
+        ipAddress: metadata.ipAddress,
+        userAgent: metadata.userAgent,
+        createdAt: session.createdAt,
+      };
+
+      await cacheService.set(
+        KEYS.SESSION(session.id),
+        sessionData,
+        POLICIES.session.ttl,
+        { tags: POLICIES.session.tags }
+      );
+
+      // Cache user session list
+      await this.cacheUserSessions(user.id);
 
       return {
         accessToken,
@@ -242,7 +266,7 @@ class AuthService {
   }
 
   /**
-   * Logout user by revoking session
+   * Logout user by revoking session with cache invalidation
    * @param {string} sessionId - Session ID
    * @param {string} userId - User ID
    * @returns {Promise<boolean>}
@@ -258,6 +282,12 @@ class AuthService {
 
       if (session) {
         await session.destroy();
+
+        // Invalidate session cache
+        await cacheService.delete(KEYS.SESSION(sessionId));
+
+        // Invalidate user session list cache
+        await cacheService.delete(KEYS.USER_SESSIONS(userId));
 
         // Create audit log
         await AuditLog.logAction({
@@ -278,7 +308,7 @@ class AuthService {
   }
 
   /**
-   * Verify JWT token and return payload
+   * Verify JWT token and return payload with caching
    * @param {string} token - JWT token
    * @returns {Promise<Object>} Decoded payload
    */
@@ -286,20 +316,53 @@ class AuthService {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
 
-      // Check if session exists
-      const session = await Session.findByToken(token);
-      if (!session) {
-        throw new ApiError(401, 'Session not found', 'SESSION_NOT_FOUND');
-      }
+      // Try to get session from cache first
+      let sessionData = await cacheService.get(KEYS.SESSION(decoded.sessionId || decoded.id));
 
-      // Check if session is expired
-      if (session.isExpired()) {
-        await session.destroy();
-        throw new ApiError(401, 'Session expired', 'SESSION_EXPIRED');
-      }
+      if (!sessionData) {
+        // Cache miss - get from database
+        const session = await Session.findByToken(token);
+        if (!session) {
+          throw new ApiError(401, 'Session not found', 'SESSION_NOT_FOUND');
+        }
 
-      // Update last used timestamp
-      await session.updateLastUsed();
+        // Check if session is expired
+        if (session.isExpired()) {
+          await session.destroy();
+          await cacheService.delete(KEYS.SESSION(session.id));
+          throw new ApiError(401, 'Session expired', 'SESSION_EXPIRED');
+        }
+
+        // Update last used timestamp
+        await session.updateLastUsed();
+
+        // Cache session data
+        sessionData = {
+          id: session.id,
+          userId: session.user_id,
+          token: session.token,
+          refreshToken: session.refresh_token,
+          expiresAt: session.expires_at,
+          ipAddress: session.ip_address,
+          userAgent: session.user_agent,
+          lastUsedAt: session.last_used_at,
+        };
+
+        await cacheService.set(
+          KEYS.SESSION(session.id),
+          sessionData,
+          POLICIES.session.ttl,
+          { tags: POLICIES.session.tags }
+        );
+      } else {
+        // Cache hit - check if expired
+        if (new Date(sessionData.expiresAt) < new Date()) {
+          await cacheService.delete(KEYS.SESSION(sessionData.id));
+          // Also remove from database
+          await Session.destroy({ where: { id: sessionData.id } });
+          throw new ApiError(401, 'Session expired', 'SESSION_EXPIRED');
+        }
+      }
 
       return decoded;
     } catch (error) {
@@ -314,21 +377,41 @@ class AuthService {
   }
 
   /**
-   * Get current user by ID
+   * Get current user by ID with caching
    * @param {string} userId - User ID
    * @returns {Promise<Object>} User object
    */
   static async getCurrentUser(userId) {
     try {
-      const user = await User.findByPk(userId, {
-        attributes: { exclude: ['password_hash'] },
-      });
+      // Try to get from cache first
+      const cacheKey = KEYS.USER(userId);
+      let userData = await cacheService.get(cacheKey);
 
-      if (!user) {
-        throw new ApiError(404, 'User not found', 'USER_NOT_FOUND');
+      if (!userData) {
+        // Cache miss - get from database
+        const user = await User.findByPk(userId, {
+          attributes: { exclude: ['password_hash'] },
+        });
+
+        if (!user) {
+          throw new ApiError(404, 'User not found', 'USER_NOT_FOUND');
+        }
+
+        userData = user.toJSON();
+
+        // Cache user data
+        await cacheService.set(
+          cacheKey,
+          userData,
+          POLICIES.userData.ttl,
+          {
+            tags: POLICIES.userData.tags,
+            compress: POLICIES.userData.compress
+          }
+        );
       }
 
-      return user.toJSON();
+      return userData;
     } catch (error) {
       logger.error('Get current user failed:', error);
       throw error;
@@ -501,6 +584,253 @@ class AuthService {
     };
 
     return value * multipliers[unit];
+  }
+
+  /**
+   * Cache user sessions list
+   * @param {string} userId - User ID
+   * @returns {Promise<void>}
+   */
+  static async cacheUserSessions(userId) {
+    try {
+      const sessions = await Session.findActiveByUser(userId);
+      const sessionData = sessions.map((session) => ({
+        id: session.id,
+        createdAt: session.createdAt,
+        lastUsedAt: session.last_used_at,
+        expiresAt: session.expires_at,
+        ipAddress: session.ip_address,
+        browserInfo: session.getBrowserInfo(),
+      }));
+
+      await cacheService.set(
+        KEYS.USER_SESSIONS(userId),
+        sessionData,
+        POLICIES.session.ttl,
+        { tags: POLICIES.session.tags }
+      );
+    } catch (error) {
+      logger.error(`Failed to cache user sessions for ${userId}:`, error);
+    }
+  }
+
+  /**
+   * Invalidate user-related cache
+   * @param {string} userId - User ID
+   * @returns {Promise<void>}
+   */
+  static async invalidateUserCache(userId) {
+    try {
+      const patterns = INVALIDATION_PATTERNS.userUpdate(userId);
+
+      for (const pattern of patterns) {
+        if (pattern.includes('*')) {
+          await cacheService.deletePattern(pattern);
+        } else {
+          await cacheService.delete(pattern);
+        }
+      }
+
+      logger.debug(`Invalidated user cache for user: ${userId}`);
+    } catch (error) {
+      logger.error(`Failed to invalidate user cache for ${userId}:`, error);
+    }
+  }
+
+  /**
+   * Invalidate authentication-related cache
+   * @param {string} userId - User ID
+   * @returns {Promise<void>}
+   */
+  static async invalidateAuthCache(userId) {
+    try {
+      const patterns = INVALIDATION_PATTERNS.authChange(userId);
+
+      for (const pattern of patterns) {
+        if (pattern.includes('*')) {
+          await cacheService.deletePattern(pattern);
+        } else {
+          await cacheService.delete(pattern);
+        }
+      }
+
+      logger.debug(`Invalidated auth cache for user: ${userId}`);
+    } catch (error) {
+      logger.error(`Failed to invalidate auth cache for ${userId}:`, error);
+    }
+  }
+
+  /**
+   * Get cached user permissions
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} User permissions
+   */
+  static async getCachedUserPermissions(userId) {
+    try {
+      const cacheKey = KEYS.USER_PERMISSIONS(userId);
+      let permissions = await cacheService.get(cacheKey);
+
+      if (!permissions) {
+        // Load permissions from database/service
+        const user = await User.findByPk(userId);
+
+        if (user) {
+          permissions = {
+            role: user.role,
+            department: user.department,
+            permissions: user.getPermissions ? user.getPermissions() : [],
+            isActive: user.is_active,
+          };
+
+          // Cache permissions
+          await cacheService.set(
+            cacheKey,
+            permissions,
+            POLICIES.userData.ttl,
+            { tags: POLICIES.userData.tags }
+          );
+        }
+      }
+
+      return permissions;
+    } catch (error) {
+      logger.error(`Failed to get cached user permissions for ${userId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Update user profile with cache invalidation
+   * @param {string} userId - User ID
+   * @param {Object} updates - Fields to update
+   * @returns {Promise<Object>} Updated user
+   */
+  static async updateProfile(userId, updates) {
+    try {
+      const user = await User.findByPk(userId);
+
+      if (!user) {
+        throw new ApiError(404, 'User not found', 'USER_NOT_FOUND');
+      }
+
+      // Allowed fields for profile update
+      const allowedFields = ['full_name', 'phone'];
+      const oldValue = {};
+
+      // Update allowed fields
+      for (const field of allowedFields) {
+        if (updates[field] !== undefined) {
+          oldValue[field] = user[field];
+          user[field] = updates[field];
+        }
+      }
+
+      await user.save();
+
+      // Invalidate user cache
+      await this.invalidateUserCache(userId);
+
+      // Create audit log
+      await AuditLog.logAction({
+        userId,
+        action: 'update',
+        entityType: 'user',
+        entityId: userId,
+        oldValue,
+        newValue: updates,
+      });
+
+      logger.info(`Profile updated for user: ${user.username}`);
+
+      return user.toJSON();
+    } catch (error) {
+      logger.error('Profile update failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Change user password with cache invalidation
+   * @param {string} userId - User ID
+   * @param {string} oldPassword - Current password
+   * @param {string} newPassword - New password
+   * @returns {Promise<boolean>}
+   */
+  static async changePassword(userId, oldPassword, newPassword) {
+    try {
+      const user = await User.findByPk(userId);
+
+      if (!user) {
+        throw new ApiError(404, 'User not found', 'USER_NOT_FOUND');
+      }
+
+      // Verify old password
+      const isPasswordValid = await user.validatePassword(oldPassword);
+      if (!isPasswordValid) {
+        throw new ApiError(401, 'Current password is incorrect', 'INVALID_PASSWORD');
+      }
+
+      // Validate new password
+      if (newPassword.length < 8) {
+        throw new ApiError(400, 'Password must be at least 8 characters', 'WEAK_PASSWORD');
+      }
+
+      // Update password (will be hashed by beforeUpdate hook)
+      user.password_hash = newPassword;
+      await user.save();
+
+      // Revoke all existing sessions except current
+      await Session.revokeAllByUser(userId);
+
+      // Invalidate all user-related cache
+      await this.invalidateUserCache(userId);
+      await this.invalidateAuthCache(userId);
+
+      // Create audit log
+      await AuditLog.logAction({
+        userId,
+        action: 'update',
+        entityType: 'user',
+        entityId: userId,
+        newValue: { password_changed: true },
+      });
+
+      logger.info(`Password changed for user: ${user.username}`);
+
+      return true;
+    } catch (error) {
+      logger.error('Password change failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Revoke all sessions for a user with cache invalidation
+   * @param {string} userId - User ID
+   * @returns {Promise<number>} Number of sessions revoked
+   */
+  static async revokeAllSessions(userId) {
+    try {
+      const count = await Session.revokeAllByUser(userId);
+
+      // Invalidate auth-related cache
+      await this.invalidateAuthCache(userId);
+
+      // Create audit log
+      await AuditLog.logAction({
+        userId,
+        action: 'delete',
+        entityType: 'session',
+        newValue: { all_sessions_revoked: true, count },
+      });
+
+      logger.info(`All sessions revoked for user: ${userId}`);
+
+      return count;
+    } catch (error) {
+      logger.error('Revoke all sessions failed:', error);
+      throw error;
+    }
   }
 }
 

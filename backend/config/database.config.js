@@ -13,7 +13,7 @@ const logger = require('../utils/logger.util');
 const config = {
   database: process.env.POSTGRES_DB || 'qcollector_db',
   username: process.env.POSTGRES_USER || 'qcollector',
-  password: process.env.POSTGRES_PASSWORD || 'your_secure_password_here',
+  password: process.env.POSTGRES_PASSWORD || 'qcollector_dev_2025',
   host: process.env.POSTGRES_HOST || 'localhost',
   port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
   dialect: 'postgres',

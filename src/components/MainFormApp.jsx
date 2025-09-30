@@ -4,8 +4,10 @@ import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription } from
 import { GlassButton } from './ui/glass-button';
 // import { GlassInput } from './ui/glass-input'; // Unused
 import { EnhancedToastProvider, useEnhancedToast } from './ui/enhanced-toast';
+import { UserMenu } from './ui/user-menu';
 import EnhancedFormBuilder from './EnhancedFormBuilder';
 import SettingsPage from './SettingsPage';
+import UserManagement from './UserManagement';
 import FormView from './FormView';
 import FormListApp from './FormListApp';
 import FormSubmissionList from './FormSubmissionList';
@@ -14,16 +16,17 @@ import SubFormView from './SubFormView';
 import SubFormDetail from './SubFormDetail';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faCog, faArrowLeft, faFileAlt, faPlus, faSave, faEdit, faTrashAlt
+  faCog, faArrowLeft, faFileAlt, faPlus, faSave, faEdit, faTrashAlt, faUsers
 } from '@fortawesome/free-solid-svg-icons';
 
 // Data services
 import dataService from '../services/DataService.js';
+import { useAuth } from '../contexts/AuthContext';
 
 
 // Main App Component with Toast Integration
 function MainFormAppContent() {
-  const [currentPage, setCurrentPage] = useState('form-list'); // 'form-list', 'form-builder', 'settings', 'submission-list', 'submission-detail', 'form-view', 'subform-view', 'subform-detail'
+  const [currentPage, setCurrentPage] = useState('form-list'); // 'form-list', 'form-builder', 'settings', 'user-management', 'submission-list', 'submission-detail', 'form-view', 'subform-view', 'subform-detail'
   const [currentFormId, setCurrentFormId] = useState(null);
   const [currentSubmissionId, setCurrentSubmissionId] = useState(null);
   const [currentSubFormId, setCurrentSubFormId] = useState(null);
@@ -32,6 +35,13 @@ function MainFormAppContent() {
   const formBuilderSaveHandlerRef = useRef(null);
   const formViewSaveHandlerRef = useRef(null);
   const toast = useEnhancedToast();
+  const { user } = useAuth();
+
+  // Helper function to check if user can create/edit forms
+  const canCreateOrEditForms = () => {
+    if (!user || !user.role) return false;
+    return ['super_admin', 'admin', 'moderator'].includes(user.role);
+  };
 
 
 
@@ -47,10 +57,24 @@ function MainFormAppContent() {
   };
 
   const handleNewForm = () => {
+    if (!canCreateOrEditForms()) {
+      toast.error('ไม่มีสิทธิ์สร้างฟอร์มใหม่', {
+        title: 'ไม่มีสิทธิ์เข้าถึง',
+        description: 'เฉพาะผู้ดูแลระบบ, ผู้จัดการ, และผู้ควบคุมเท่านั้นที่สามารถสร้างฟอร์มได้'
+      });
+      return;
+    }
     handleNavigate('form-builder', null, false);
   };
 
   const handleEditForm = (formId) => {
+    if (!canCreateOrEditForms()) {
+      toast.error('ไม่มีสิทธิ์แก้ไขฟอร์ม', {
+        title: 'ไม่มีสิทธิ์เข้าถึง',
+        description: 'เฉพาะผู้ดูแลระบบ, ผู้จัดการ, และผู้ควบคุมเท่านั้นที่สามารถแก้ไขฟอร์มได้'
+      });
+      return;
+    }
     handleNavigate('form-builder', formId, true);
   };
 
@@ -82,6 +106,7 @@ function MainFormAppContent() {
         case 'form-list': return 'จัดการฟอร์ม';
         case 'form-builder': return isEditing ? 'แก้ไขฟอร์ม' : 'สร้างฟอร์มใหม่';
         case 'settings': return 'ตั้งค่าระบบ';
+        case 'user-management': return 'จัดการผู้ใช้งาน';
         case 'submission-list': return 'รายการข้อมูล';
         case 'submission-detail': return 'รายละเอียดข้อมูล';
         case 'form-view': return 'กรอกข้อมูลฟอร์ม';
@@ -145,14 +170,14 @@ function MainFormAppContent() {
                     <FontAwesomeIcon icon={faFileAlt} className="w-5 h-5 text-primary" />
                   </div>
                 )}
-                <h1 className="text-xl lg:text-2xl font-bold text-foreground">
+                <h1 className="text-base font-bold text-foreground">
                   {getPageTitle()}
                 </h1>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              {currentPage === 'form-list' && (
+              {currentPage === 'form-list' && canCreateOrEditForms() && (
                 <div
                   onClick={handleNewForm}
                   title="สร้างฟอร์มใหม่"
@@ -163,7 +188,7 @@ function MainFormAppContent() {
                   }}
                   onMouseEnter={(e) => {
                     e.target.style.transform = 'scale(1.1) rotate(90deg)';
-                    e.target.style.boxShadow = '0 0 20px rgba(249, 115, 22, 0.4), 0 0 40px rgba(249, 115, 22, 0.2)';
+                    e.target.style.boxShadow = '0 0 20px rgba(255, 100, 0, 0.5), 0 0 40px rgba(255, 100, 0, 0.3)';
                   }}
                   onMouseLeave={(e) => {
                     e.target.style.transform = 'scale(1) rotate(0deg)';
@@ -172,7 +197,7 @@ function MainFormAppContent() {
                 >
                   <FontAwesomeIcon
                     icon={faPlus}
-                    className="text-muted-foreground group-hover:text-primary transition-colors duration-300"
+                    className="text-xl text-muted-foreground group-hover:text-[#ff6400] transition-colors duration-300"
                   />
                 </div>
               )}
@@ -248,7 +273,7 @@ function MainFormAppContent() {
                   }}
                   onMouseEnter={(e) => {
                     e.target.style.transform = 'scale(1.1)';
-                    e.target.style.boxShadow = '0 0 20px rgba(249, 115, 22, 0.4), 0 0 40px rgba(249, 115, 22, 0.2)';
+                    e.target.style.boxShadow = '0 0 20px rgba(255, 100, 0, 0.5), 0 0 40px rgba(255, 100, 0, 0.3)';
                   }}
                   onMouseLeave={(e) => {
                     e.target.style.transform = 'scale(1)';
@@ -257,7 +282,7 @@ function MainFormAppContent() {
                 >
                   <FontAwesomeIcon
                     icon={faPlus}
-                    className="text-muted-foreground group-hover:text-primary transition-colors duration-300"
+                    className="text-xl text-muted-foreground group-hover:text-[#ff6400] transition-colors duration-300"
                   />
                 </div>
               )}
@@ -336,26 +361,34 @@ function MainFormAppContent() {
                 </>
               )}
 
-              <div
-                onClick={() => handleNavigate('settings')}
-                title="ตั้งค่า"
-                className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
-                style={{
-                  background: 'transparent',
-                  border: 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.1) rotate(90deg)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1) rotate(0deg)';
-                }}
-              >
-                <FontAwesomeIcon
-                  icon={faCog}
-                  className="text-muted-foreground group-hover:text-primary transition-colors duration-300"
-                />
-              </div>
+              {/* User Management Icon (Super Admin only) */}
+              {currentPage === 'form-list' && (
+                <div
+                  onClick={() => handleNavigate('user-management')}
+                  title="จัดการผู้ใช้งาน"
+                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                  style={{
+                    background: 'transparent',
+                    border: 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'scale(1.1)';
+                    e.target.style.boxShadow = '0 0 20px rgba(249, 115, 22, 0.4), 0 0 40px rgba(249, 115, 22, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.boxShadow = '';
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={faUsers}
+                    className="text-muted-foreground group-hover:text-primary transition-colors duration-300"
+                  />
+                </div>
+              )}
+
+              {/* User Menu */}
+              <UserMenu onSettingsClick={() => handleNavigate('settings')} />
 
               <div
                 onClick={() => handleNavigate('form-list')}
@@ -506,6 +539,10 @@ function MainFormAppContent() {
       onViewSubFormDetail={(formId, submissionId, subFormId, subSubmissionId) => {
         handleViewSubFormDetail(formId, submissionId, subFormId, subSubmissionId);
       }}
+      onAddNew={(formId) => {
+        console.log('Add new submission for form:', formId);
+        handleNavigate('form-view', formId);
+      }}
     />
   );
 
@@ -550,6 +587,8 @@ function MainFormAppContent() {
         return renderFormBuilder();
       case 'settings':
         return renderSettings();
+      case 'user-management':
+        return <UserManagement />;
       case 'submission-list':
         return renderSubmissionList();
       case 'submission-detail':

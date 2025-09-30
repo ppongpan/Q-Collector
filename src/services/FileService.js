@@ -451,9 +451,11 @@ class FileService {
 
   /**
    * ตรวจสอบขนาดการใช้งาน localStorage
+   * @param {number} maxStorageSize - ขนาดพื้นที่สูงสุด (MB) - default 8MB
+   * @param {number} warningThreshold - ขีดเตือน (MB) - default 6MB
    * @returns {Object} ข้อมูลการใช้งาน storage
    */
-  static getStorageUsage() {
+  static getStorageUsage(maxStorageSize = 8, warningThreshold = 6) {
     try {
       const files = this.getAllStoredFiles();
       const dataSize = JSON.stringify(files).length;
@@ -464,8 +466,8 @@ class FileService {
         totalFiles: fileCount,
         totalSizeBytes: dataSize,
         totalSizeMB: dataSizeInMB,
-        availableSpaceMB: (8 - parseFloat(dataSizeInMB)).toFixed(2),
-        isNearLimit: parseFloat(dataSizeInMB) > 6 // เตือนเมื่อใกล้ 6MB
+        availableSpaceMB: (maxStorageSize - parseFloat(dataSizeInMB)).toFixed(2),
+        isNearLimit: parseFloat(dataSizeInMB) > warningThreshold
       };
     } catch (error) {
       console.error('Error getting storage usage:', error);
@@ -473,7 +475,7 @@ class FileService {
         totalFiles: 0,
         totalSizeBytes: 0,
         totalSizeMB: '0.00',
-        availableSpaceMB: '8.00',
+        availableSpaceMB: maxStorageSize.toFixed(2),
         isNearLimit: false
       };
     }

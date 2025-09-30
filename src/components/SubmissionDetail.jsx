@@ -16,12 +16,15 @@ import { LocationMap } from './ui/location-map';
 import dataService from '../services/DataService.js';
 import FileService from '../services/FileService.js';
 
+// Auth context
+import { useAuth } from '../contexts/AuthContext';
+
 // Utilities
 import { formatNumberByContext } from '../utils/numberFormatter.js';
 import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../utils/phoneFormatter.js';
 
 // Floating Button Component using Portal
-const FloatingAddButton = ({ formId }) => {
+const FloatingAddButton = ({ formId, onAddNew }) => {
   const [portalElement, setPortalElement] = useState(null);
 
   useEffect(() => {
@@ -46,14 +49,11 @@ const FloatingAddButton = ({ formId }) => {
   }, []);
 
   const handleClick = () => {
-    console.log('Portal floating button clicked!');
-    if (window.location.pathname.includes('/subform/')) {
-      const pathParts = window.location.pathname.split('/');
-      const mainFormId = pathParts[pathParts.indexOf('forms') + 1];
-      const subFormId = pathParts[pathParts.indexOf('subform') + 1];
-      window.location.href = `/forms/${mainFormId}/subform/${subFormId}`;
+    console.log('Floating button clicked - adding new submission for form:', formId);
+    if (onAddNew) {
+      onAddNew(formId);
     } else {
-      window.location.href = `/forms/${formId}`;
+      console.warn('onAddNew callback not provided to FloatingAddButton');
     }
   };
 
@@ -236,8 +236,10 @@ export default function SubmissionDetail({
   onDelete,
   onBack,
   onAddSubForm,
-  onViewSubFormDetail
+  onViewSubFormDetail,
+  onAddNew
 }) {
+  const { userRole } = useAuth();
   const [form, setForm] = useState(null);
   const [submission, setSubmission] = useState(null);
   const [subSubmissions, setSubSubmissions] = useState({});
@@ -354,7 +356,10 @@ export default function SubmissionDetail({
           return 'Invalid Date';
         }
       case 'rating':
-        return '⭐'.repeat(value) + '☆'.repeat((field.options?.maxRating || 5) - value);
+        const maxRating = field.options?.maxRating || 5;
+        const ratingValue = Math.max(0, Math.min(Number(value) || 0, maxRating));
+        const emptyStars = Math.max(0, maxRating - ratingValue);
+        return '⭐'.repeat(ratingValue) + '☆'.repeat(emptyStars);
       case 'lat_long':
         if (typeof value === 'object' && value.lat && value.lng) {
           return `${value.lat}, ${value.lng}`;
@@ -1053,8 +1058,9 @@ export default function SubmissionDetail({
     );
   }
 
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 relative">
       <div className="container-responsive px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-2 sm:py-3">
 
         {/* Form Title and Description */}
@@ -1127,7 +1133,8 @@ export default function SubmissionDetail({
       </div>
 
       {/* Floating Add Button using Portal */}
-      <FloatingAddButton formId={formId} />
+      <FloatingAddButton formId={formId} onAddNew={onAddNew} />
+
 
     </div>
   );

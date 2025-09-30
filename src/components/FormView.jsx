@@ -22,6 +22,7 @@ import FileService from '../services/FileService.js';
 import { formatNumberInput, parseNumberInput, isValidNumber } from '../utils/numberFormatter.js';
 import { formulaEngine } from '../utils/formulaEngine.js';
 import { useConditionalVisibility } from '../hooks/useConditionalVisibility.js';
+import { useStorage } from '../contexts/StorageContext.jsx';
 
 const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) => {
   const [form, setForm] = useState(null);
@@ -39,11 +40,17 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   // Enhanced toast notifications
   const toast = useEnhancedToast();
 
+  // Storage configuration
+  const { config: storageConfig } = useStorage();
+
   // Update storage usage
   const updateStorageUsage = useCallback(() => {
-    const usage = FileService.getStorageUsage();
-    setStorageUsage(usage);
-  }, []);
+    const usage = FileService.getStorageUsage(storageConfig.maxStorageSize, storageConfig.warningThreshold);
+    setStorageUsage({
+      ...usage,
+      maxStorage: storageConfig.maxStorageSize
+    });
+  }, [storageConfig]);
 
   // Date formatting utilities
   const formatDateForInput = (dateValue) => {
@@ -220,6 +227,47 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     return '';
   };
 
+  // Calculate field visibility based on conditional formulas
+  const updateFieldVisibility = useCallback((currentFormData) => {
+    if (!form?.fields) return;
+
+    const newVisibility = {};
+    const fieldMap = {};
+
+    // Create field map for formula evaluation
+    form.fields.forEach(field => {
+      fieldMap[field.id] = field;
+    });
+
+    form.fields.forEach(field => {
+      // Default visibility is true
+      let isVisible = true;
+
+      // Check if field has conditional visibility
+      // showCondition.enabled === false means formula is active (unchecked checkbox)
+      // showCondition.enabled === true or undefined means always show (checked checkbox)
+      if (field.showCondition?.enabled === false && field.showCondition?.formula) {
+        try {
+          // Evaluate the formula with current form data
+          isVisible = formulaEngine.evaluate(
+            field.showCondition.formula,
+            currentFormData,
+            fieldMap
+          );
+        } catch (error) {
+          console.warn(`Error evaluating show condition for field ${field.title}:`, error);
+          // Default to visible on error
+          isVisible = true;
+        }
+      }
+      // If showCondition.enabled is true or undefined, field is always visible
+
+      newVisibility[field.id] = isVisible;
+    });
+
+    setFieldVisibility(newVisibility);
+  }, [form]);
+
   const handleInputChange = useCallback((fieldId, value) => {
     const newFormData = { ...formData, [fieldId]: value };
 
@@ -333,47 +381,6 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
       updateFieldVisibility(newFormData);
     }
   }, [form, formData, updateFieldVisibility]);
-
-  // Calculate field visibility based on conditional formulas
-  const updateFieldVisibility = useCallback((currentFormData) => {
-    if (!form?.fields) return;
-
-    const newVisibility = {};
-    const fieldMap = {};
-
-    // Create field map for formula evaluation
-    form.fields.forEach(field => {
-      fieldMap[field.id] = field;
-    });
-
-    form.fields.forEach(field => {
-      // Default visibility is true
-      let isVisible = true;
-
-      // Check if field has conditional visibility
-      // showCondition.enabled === false means formula is active (unchecked checkbox)
-      // showCondition.enabled === true or undefined means always show (checked checkbox)
-      if (field.showCondition?.enabled === false && field.showCondition?.formula) {
-        try {
-          // Evaluate the formula with current form data
-          isVisible = formulaEngine.evaluate(
-            field.showCondition.formula,
-            currentFormData,
-            fieldMap
-          );
-        } catch (error) {
-          console.warn(`Error evaluating show condition for field ${field.title}:`, error);
-          // Default to visible on error
-          isVisible = true;
-        }
-      }
-      // If showCondition.enabled is true or undefined, field is always visible
-
-      newVisibility[field.id] = isVisible;
-    });
-
-    setFieldVisibility(newVisibility);
-  }, [form]);
 
   // Update field visibility when form data changes
   useEffect(() => {
@@ -1577,42 +1584,26 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
                 {/* Main Form Fields */}
                 {form.fields?.map(field => renderField(field))}
               </div>
-
-              {/* Storage Usage Indicator */}
-              {storageUsage && (
-                <div className="mt-4 pt-4 border-t border-border/20">
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>การใช้งานพื้นที่จัดเก็บ:</span>
-                    <span className={`font-medium ${storageUsage.isNearLimit ? 'text-orange-500' : 'text-foreground'}`}>
-                      {storageUsage.totalSizeMB}MB / 8MB
-                      {storageUsage.totalFiles > 0 && (
-                        <span className="ml-2">({storageUsage.totalFiles} ไฟล์)</span>
-                      )}
-                    </span>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        storageUsage.isNearLimit ? 'bg-orange-500' : 'bg-primary'
-                      }`}
-                      style={{ width: `${Math.min((parseFloat(storageUsage.totalSizeMB) / 8) * 100, 100)}%` }}
-                    />
-                  </div>
-
-                  {storageUsage.isNearLimit && (
-                    <div className="mt-2 text-xs text-orange-500">
-                      เตือน: พื้นที่จัดเก็บใกล้เต็ม ไฟล์ขนาดใหญ่อาจอัปโหลดไม่ได้
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </GlassCard>
         </motion.div>
 
       </div>
+
+      {/* Storage Usage Footer - Fixed at bottom left */}
+      {storageUsage && (
+        <div className="fixed bottom-4 left-4 z-10">
+          <div className="text-xs text-muted-foreground/70" style={{ fontSize: '12px' }}>
+            <span>การใช้งานพื้นที่จัดเก็บ: </span>
+            <span className={`font-medium ${storageUsage.isNearLimit ? 'text-orange-500' : 'text-muted-foreground'}`}>
+              {storageUsage.totalSizeMB}MB / {storageUsage.maxStorage || 8}MB
+            </span>
+            {storageUsage.totalFiles > 0 && (
+              <span className="ml-1">({storageUsage.totalFiles} ไฟล์)</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 });

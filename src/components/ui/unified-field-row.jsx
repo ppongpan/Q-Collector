@@ -151,7 +151,7 @@ export const UnifiedFieldPreview = ({
           text-xs font-medium
           rounded-md
           ${tag.variant === 'destructive' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : ''}
-          ${tag.variant === 'secondary' ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' : ''}
+          ${tag.variant === 'secondary' ? 'bg-muted text-muted-foreground' : ''}
           ${tag.variant === 'default' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : ''}
         `}
       >

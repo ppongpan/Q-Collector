@@ -9,6 +9,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import dataService from '../services/DataService.js';
 import { useEnhancedToast } from './ui/enhanced-toast';
+import { useAuth } from '../contexts/AuthContext';
 
 // USER_ROLES from version 0.1.5
 const USER_ROLES = {
@@ -28,6 +29,13 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
 
   // Enhanced toast notifications
   const toast = useEnhancedToast();
+  const { user } = useAuth();
+
+  // Helper function to check if user can create/edit forms
+  const canCreateOrEditForms = () => {
+    if (!user || !user.role) return false;
+    return ['super_admin', 'admin', 'moderator'].includes(user.role);
+  };
 
   // Role helper functions from version 0.1.5
   const getRoleByName = (roleName) => {
@@ -194,6 +202,13 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
   };
 
   const handleEdit = (formId) => {
+    if (!canCreateOrEditForms()) {
+      toast.error('ไม่มีสิทธิ์แก้ไขฟอร์ม', {
+        title: 'ไม่มีสิทธิ์เข้าถึง',
+        description: 'เฉพาะผู้ดูแลระบบ, ผู้จัดการ, และผู้ควบคุมเท่านั้นที่สามารถแก้ไขฟอร์มได้'
+      });
+      return;
+    }
     if (onEditForm) {
       onEditForm(formId);
     }
@@ -409,20 +424,22 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
                           />
                         </div>
 
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(form.id);
-                          }}
-                          className="flex items-center justify-center cursor-pointer group"
-                          title="แก้ไขฟอร์ม"
-                          style={{ background: 'transparent' }}
-                        >
-                          <FontAwesomeIcon
-                            icon={faEdit}
-                            className="text-lg text-muted-foreground/60 group-hover:text-orange-500 transition-colors duration-200"
-                          />
-                        </div>
+                        {canCreateOrEditForms() && (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(form.id);
+                            }}
+                            className="flex items-center justify-center cursor-pointer group"
+                            title="แก้ไขฟอร์ม"
+                            style={{ background: 'transparent' }}
+                          >
+                            <FontAwesomeIcon
+                              icon={faEdit}
+                              className="text-lg text-muted-foreground/60 group-hover:text-orange-500 transition-colors duration-200"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

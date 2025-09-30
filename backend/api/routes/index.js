@@ -8,6 +8,13 @@ const authRoutes = require('./auth.routes');
 const formRoutes = require('./form.routes');
 const submissionRoutes = require('./submission.routes');
 const fileRoutes = require('./file.routes');
+const userRoutes = require('./user.routes');
+const cacheRoutes = require('./cache.routes');
+const websocketRoutes = require('./websocket.routes');
+const queueRoutes = require('./queue.routes');
+const analyticsRoutes = require('./analytics.routes');
+const emailRoutes = require('./email.routes');
+const telegramRoutes = require('./telegram.routes');
 
 const router = express.Router();
 
@@ -23,66 +30,10 @@ router.get('/health', (req, res) => {
 });
 
 /**
- * API Documentation Placeholder
+ * API Documentation - Redirects to Swagger UI
  */
 router.get('/docs', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'API Documentation',
-    version: 'v1',
-    endpoints: {
-      auth: {
-        base: '/api/v1/auth',
-        endpoints: [
-          'POST /register - Register new user',
-          'POST /login - User login',
-          'POST /refresh - Refresh access token',
-          'POST /logout - User logout',
-          'GET /me - Get current user',
-          'PUT /profile - Update profile',
-          'PUT /password - Change password',
-          'GET /sessions - List active sessions',
-          'DELETE /sessions - Revoke all sessions',
-        ],
-      },
-      forms: {
-        base: '/api/v1/forms',
-        endpoints: [
-          'GET / - List all forms',
-          'POST / - Create new form',
-          'GET /:id - Get form details',
-          'PUT /:id - Update form',
-          'DELETE /:id - Delete form',
-          'POST /:id/duplicate - Duplicate form',
-          'PATCH /:id/toggle-status - Toggle form status',
-        ],
-      },
-      submissions: {
-        base: '/api/v1/forms/:formId/submissions',
-        endpoints: [
-          'POST /:formId/submissions - Submit form',
-          'GET /:formId/submissions - List submissions',
-          'GET /submissions/:id - Get submission details',
-          'PUT /submissions/:id - Update submission',
-          'DELETE /submissions/:id - Delete submission',
-          'GET /:formId/submissions/export - Export submissions',
-          'PATCH /submissions/:id/status - Update submission status',
-        ],
-      },
-      files: {
-        base: '/api/v1/files',
-        endpoints: [
-          'POST /upload - Upload single file',
-          'POST /upload-multiple - Upload multiple files',
-          'GET /:id - Get file metadata',
-          'GET /:id/download - Download file',
-          'DELETE /:id - Delete file',
-          'GET / - List files',
-          'GET /stats/summary - Get file statistics',
-        ],
-      },
-    },
-  });
+  res.redirect('/api/v1/docs');
 });
 
 /**
@@ -93,6 +44,13 @@ router.use('/forms', formRoutes);
 router.use('/forms', submissionRoutes); // Nested under forms
 router.use('/submissions', submissionRoutes); // Also available at root level
 router.use('/files', fileRoutes);
+router.use('/users', userRoutes);
+router.use('/cache', cacheRoutes);
+router.use('/websocket', websocketRoutes);
+router.use('/queue', queueRoutes);
+router.use('/analytics', analyticsRoutes);
+router.use('/email', emailRoutes);
+router.use('/telegram', telegramRoutes);
 
 /**
  * 404 handler for API routes

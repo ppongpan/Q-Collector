@@ -386,25 +386,24 @@ const TelegramNotificationSettings = ({
     setUiState(prev => ({ ...prev, isTestingConnection: true }));
 
     try {
-      // Simulate API call for testing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Import TelegramService dynamically
+      const TelegramService = (await import('../../services/TelegramService')).default;
 
-      // Mock success/failure based on token format
-      const isValidFormat = localSettings.botToken.includes(':') &&
-                           localSettings.groupId.startsWith('-');
+      // Test connection with actual API call
+      const result = await TelegramService.testTelegramConfiguration(localSettings, form);
 
-      if (isValidFormat) {
+      if (result.success) {
         setUiState(prev => ({
           ...prev,
           isTestingConnection: false,
           lastTestResult: 'success'
         }));
-        toast.success('เชื่อมต่อ Telegram สำเร็จ', {
+        toast.success('เชื่อมต่อ Telegram สำเร็จ และส่งข้อความทดสอบแล้ว', {
           title: 'ทดสอบการเชื่อมต่อ',
           duration: 3000
         });
       } else {
-        throw new Error('Invalid format');
+        throw new Error(result.error || 'Connection failed');
       }
     } catch (error) {
       setUiState(prev => ({
@@ -412,12 +411,12 @@ const TelegramNotificationSettings = ({
         isTestingConnection: false,
         lastTestResult: 'error'
       }));
-      toast.error('ไม่สามารถเชื่อมต่อ Telegram ได้', {
+      toast.error(error.message || 'ไม่สามารถเชื่อมต่อ Telegram ได้', {
         title: 'การทดสอบล้มเหลว',
         duration: 5000
       });
     }
-  }, [localSettings.botToken, localSettings.groupId, toast]);
+  }, [localSettings, form, toast]);
 
   // Enhanced drag and drop handlers
   const handleDragStart = useCallback((event) => {
@@ -659,8 +658,8 @@ const TelegramNotificationSettings = ({
             'transform-gpu will-change-transform',
             'border shadow-sm backdrop-blur-sm',
             isSelected
-              ? 'bg-gray-800/80 border-orange-500/60 text-white shadow-orange-500/20'
-              : 'bg-gray-700/70 border-gray-600/60 hover:border-orange-400/50 hover:shadow-orange-400/20 text-gray-200',
+              ? 'bg-orange-100 dark:bg-gray-800/80 border-orange-500/60 text-orange-900 dark:text-white shadow-orange-500/20'
+              : 'bg-muted/50 dark:bg-gray-700/70 border-border dark:border-gray-600/60 hover:border-orange-400/50 hover:shadow-orange-400/20 text-foreground dark:text-gray-200',
             isSortableDragging && 'shadow-2xl shadow-orange-500/50 ring-2 ring-orange-500/30 scale-105',
             'group-hover:shadow-lg group-active:shadow-xl'
           )}
@@ -668,7 +667,7 @@ const TelegramNotificationSettings = ({
           onClick={() => !isSortableDragging && onClick && onClick(field)}
         >
           {/* Drag handle */}
-          <div className="flex items-center justify-center w-5 h-5 rounded bg-gray-600/50 group-hover:bg-orange-600/50 transition-colors touch-manipulation">
+          <div className="flex items-center justify-center w-5 h-5 rounded bg-muted dark:bg-gray-600/50 group-hover:bg-orange-600/50 transition-colors touch-manipulation">
             <FontAwesomeIcon
               icon={faGripVertical}
               className="w-2 h-2 text-gray-400 group-hover:text-orange-300 transition-colors"
@@ -724,8 +723,8 @@ const TelegramNotificationSettings = ({
           'text-left w-full min-h-[44px] text-[14px]',
           'hover:scale-[1.02] active:scale-[0.98]',
           isSelected
-            ? 'bg-gray-800/80 border border-orange-500/60 text-white shadow-md shadow-orange-500/20'
-            : 'bg-gray-700/70 border border-gray-600/60 hover:bg-gray-600/70 hover:border-orange-400/50 text-gray-200'
+            ? 'bg-orange-100 dark:bg-gray-800/80 border border-orange-500/60 text-orange-900 dark:text-white shadow-md shadow-orange-500/20'
+            : 'bg-muted/50 dark:bg-gray-700/70 border border-border dark:border-gray-600/60 hover:bg-muted/70 dark:hover:bg-gray-600/70 hover:border-orange-400/50 text-foreground dark:text-gray-200'
         )}
         whileHover={{ y: -1 }}
         whileTap={{ y: 0 }}
@@ -947,18 +946,18 @@ const TelegramNotificationSettings = ({
             <FontAwesomeIcon icon={faComments} className="w-5 h-5 text-blue-600" />
           </div>
           <div>
-            <GlassCardTitle className="text-lg">การแจ้งเตือน Telegram</GlassCardTitle>
-            <GlassCardDescription className="text-sm">
+            <GlassCardTitle className="text-[14px]">การแจ้งเตือน Telegram</GlassCardTitle>
+            <GlassCardDescription className="text-[12px]">
               ตั้งค่าการส่งข้อความแจ้งเตือนผ่าน Telegram เมื่อมีการส่งฟอร์ม
             </GlassCardDescription>
           </div>
         </div>
       </GlassCardHeader>
 
-      <GlassCardContent className="space-y-6">
+      <GlassCardContent className="space-y-4">
         {/* Enable/Disable Checkbox */}
-        <div className="p-4 rounded-lg border border-gray-700 bg-gray-800/30">
-          <label className="flex items-center gap-4 cursor-pointer">
+        <div className="p-3 rounded-lg border border-border bg-muted/20">
+          <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={localSettings.enabled}
@@ -988,10 +987,10 @@ const TelegramNotificationSettings = ({
                 )}
               />
               <div>
-                <div className="font-semibold text-white text-base">
+                <div className="font-semibold text-white text-[14px]">
                   เปิดการแจ้งเตือน Telegram
                 </div>
-                <div className="text-sm text-gray-400">
+                <div className="text-[12px] text-gray-400">
                   {localSettings.enabled ? 'ส่งแจ้งเตือนอัตโนมัติเมื่อมีข้อมูลใหม่' : 'การแจ้งเตือนถูกปิดใช้งาน'}
                 </div>
               </div>
@@ -1000,8 +999,8 @@ const TelegramNotificationSettings = ({
         </div>
 
         {/* Basic Settings Section */}
-        <div className="space-y-4">
-          <h3 className="text-base font-semibold text-foreground/90 flex items-center gap-2">
+        <div className="space-y-3">
+          <h3 className="text-[14px] font-semibold text-foreground/90 flex items-center gap-2">
             <FontAwesomeIcon icon={faPlug} className="w-4 h-4 text-orange-600" />
             การตั้งค่าพื้นฐาน
           </h3>
@@ -1090,13 +1089,13 @@ const TelegramNotificationSettings = ({
 
         {/* Message Prefix Section */}
         {localSettings.enabled && (
-          <div className="space-y-4">
-            <h3 className="text-base font-semibold text-foreground/90 flex items-center gap-2">
+          <div className="space-y-3">
+            <h3 className="text-[14px] font-semibold text-foreground/90 flex items-center gap-2">
               <FontAwesomeIcon icon={faComments} className="w-4 h-4 text-orange-600" />
               ข้อความนำหน้า
             </h3>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <GlassInput
                 label="ข้อความนำหน้าการแจ้งเตือน"
                 value={localSettings.messagePrefix}
@@ -1104,7 +1103,7 @@ const TelegramNotificationSettings = ({
                 placeholder="ข้อมูลใหม่จาก [FormName] [DateTime]"
                 tooltip="ใช้ [FormName] และ [DateTime] สำหรับแทนที่ด้วยชื่อฟอร์มและวันเวลาจริง"
               />
-              <div className="flex justify-between items-center text-xs">
+              <div className="flex justify-between items-center text-[12px]">
                 <span className="text-muted-foreground">
                   ใช้ [FormName] และ [DateTime] สำหรับแทนที่อัตโนมัติ
                 </span>
@@ -1121,9 +1120,9 @@ const TelegramNotificationSettings = ({
 
         {/* Field Ordering System */}
         {localSettings.enabled && availableFields.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-foreground/90 flex items-center gap-2">
+              <h3 className="text-[14px] font-semibold text-foreground/90 flex items-center gap-2">
                 <FontAwesomeIcon icon={faListUl} className="w-4 h-4 text-orange-600" />
                 การเรียงลำดับฟิลด์ในการแจ้งเตือน
               </h3>
@@ -1166,7 +1165,7 @@ const TelegramNotificationSettings = ({
                   initial={shouldReduceMotion ? {} : "initial"}
                   animate={shouldReduceMotion ? {} : "animate"}
                 >
-                  <div className="flex items-center gap-2 text-sm font-medium text-gray-300">
+                  <div className="flex items-center gap-2 text-[12px] font-medium text-gray-300">
                     <motion.div
                       className="w-3 h-3 rounded-full bg-blue-500 shadow-sm"
                       animate={shouldReduceMotion ? {} : {
@@ -1244,7 +1243,7 @@ const TelegramNotificationSettings = ({
                   initial={shouldReduceMotion ? {} : "initial"}
                   animate={shouldReduceMotion ? {} : "animate"}
                 >
-                  <div className="flex items-center gap-2 text-sm font-medium text-gray-300">
+                  <div className="flex items-center gap-2 text-[12px] font-medium text-gray-300">
                     <motion.div
                       className="w-3 h-3 rounded-full bg-orange-500 shadow-sm"
                       animate={shouldReduceMotion ? {} : {
@@ -1366,7 +1365,7 @@ const TelegramNotificationSettings = ({
             </DndContext>
 
             {/* Field ordering help text */}
-            <div className="text-xs text-muted-foreground p-3 bg-blue-50/50 rounded-lg border border-blue-200/50">
+            <div className="text-[12px] text-muted-foreground p-2 bg-blue-50/50 rounded-lg border border-blue-200/50">
               <FontAwesomeIcon icon={faInfoCircle} className="w-3 h-3 mr-2 text-blue-500" />
               ฟิลด์ที่เลือกจะแสดงในข้อความ Telegram ตามลำดับที่กำหนด คลิกฟิลด์เพื่อย้ายระหว่างช่อง
             </div>
@@ -1375,10 +1374,10 @@ const TelegramNotificationSettings = ({
 
         {/* No available fields message */}
         {localSettings.enabled && availableFields.length === 0 && (
-          <div className="text-center p-6 bg-yellow-50/50 rounded-xl border border-yellow-200/50">
+          <div className="text-center p-4 bg-yellow-50/50 rounded-xl border border-yellow-200/50">
             <FontAwesomeIcon icon={faInfoCircle} className="w-8 h-8 text-yellow-500 mb-2" />
-            <p className="text-sm text-yellow-700 font-medium">ไม่มีฟิลด์ที่เปิดใช้การแจ้งเตือน Telegram</p>
-            <p className="text-xs text-yellow-600 mt-1">
+            <p className="text-[14px] text-yellow-700 font-medium">ไม่มีฟิลด์ที่เปิดใช้การแจ้งเตือน Telegram</p>
+            <p className="text-[12px] text-yellow-600 mt-1">
               กรุณาเปิดใช้การแจ้งเตือน Telegram ในฟิลด์ที่ต้องการก่อน
             </p>
           </div>

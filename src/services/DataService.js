@@ -60,7 +60,8 @@ class DataService {
       fields: formData.fields || [],
       subForms: formData.subForms || [],
       settings: formData.settings || {},
-      userRoles: formData.userRoles || [],
+      visibleRoles: formData.visibleRoles || formData.userRoles || [],
+      telegramSettings: formData.telegramSettings || {},
       createdAt: timestamp,
       updatedAt: timestamp
     };

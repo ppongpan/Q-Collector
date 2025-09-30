@@ -181,8 +181,8 @@ const FieldPreviewCard = ({
                 className="
                   w-8 h-8
                   rounded-lg
-                  bg-gray-800/60 hover:bg-orange-500/20
-                  border border-gray-600/40 hover:border-orange-500/50
+                  bg-muted/60 dark:bg-gray-800/60 hover:bg-orange-500/20
+                  border border-border dark:border-gray-600/40 hover:border-orange-500/50
                   flex items-center justify-center
                   text-gray-400 hover:text-orange-400
                   transition-all duration-200
@@ -201,8 +201,8 @@ const FieldPreviewCard = ({
                 className="
                   w-8 h-8
                   rounded-lg
-                  bg-gray-800/60 hover:bg-red-500/20
-                  border border-gray-600/40 hover:border-red-500/50
+                  bg-muted/60 dark:bg-gray-800/60 hover:bg-red-500/20
+                  border border-border dark:border-gray-600/40 hover:border-red-500/50
                   flex items-center justify-center
                   text-gray-400 hover:text-red-400
                   transition-all duration-200
@@ -231,12 +231,12 @@ const FieldPreviewCard = ({
         {/* Right: Preview Element */}
         <div className="flex-shrink-0 min-w-0">
           <div className="
-            bg-gray-900/50
-            border border-gray-700/40
+            bg-muted/50 dark:bg-gray-900/50
+            border border-border dark:border-gray-700/40
             rounded-xl
             p-4
-            group-hover:bg-gray-900/70
-            group-hover:border-gray-600/60
+            group-hover:bg-muted/70 dark:group-hover:bg-gray-900/70
+            group-hover:border-border dark:group-hover:border-gray-600/60
             transition-all duration-300
             min-w-[200px] max-w-[280px]
           ">
@@ -280,7 +280,7 @@ export const ExampleFieldCards = () => {
             placeholder="กรอกชื่อผู้ใช้..."
             className="
               w-full px-3 py-2
-              bg-gray-800/60 border border-gray-600/40
+              bg-muted/60 dark:bg-gray-800/60 border border-border dark:border-gray-600/40
               rounded-lg text-sm text-white
               placeholder-gray-500
               focus:outline-none focus:ring-2 focus:ring-orange-500/50

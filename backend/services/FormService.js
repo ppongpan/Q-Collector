@@ -1,12 +1,14 @@
 /**
  * Form Service
- * Handles form CRUD operations with fields and sub-forms
+ * Handles form CRUD operations with fields and sub-forms with Redis caching
  */
 
 const { Op } = require('sequelize');
 const { Form, Field, SubForm, User, AuditLog, sequelize } = require('../models');
 const logger = require('../utils/logger.util');
 const { ApiError } = require('../middleware/error.middleware');
+const cacheService = require('./CacheService');
+const { KEYS, POLICIES, INVALIDATION_PATTERNS } = require('../config/cache.config');
 
 class FormService {
   /**
