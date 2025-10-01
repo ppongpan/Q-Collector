@@ -304,6 +304,8 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 **Application Status:** ✅ Production-ready v0.5.4 - Complete Full-Stack Enterprise System
 
 **License:** Internal use - Q-Collector Enterprise Form Builder v0.5.4
-- BOT TOKEN FOR TELEGRAM TESTING 7794493324:AAHlxtpYenok1kwyo88ns5R4rivWWXcqmE0   AND GROUP ID = -4847325737  record in .env
-- สร้าง Super Admin Account  โดยใช้ User Name : pongpanp  ชื่อ : Pongpan Peerawanichkul  email: pongpanp@qcon.co.th  Department : Technic  Role : Super Admin
-- ตรวจสอบ claude code process  อย่าหยุดการทำงานของ claude code เมื่อต้องการ restart all servers
+
+**Configuration Notes:**
+- Telegram Bot Token และ Group ID ตั้งค่าใน .env (ไม่เปิดเผยใน repository)
+- Super Admin Account: สร้างผ่าน script หรือ seed data
+- Claude Code Process: ตรวจสอบ process ก่อน restart servers
