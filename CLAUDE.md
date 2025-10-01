@@ -4,8 +4,8 @@
 
 ## Version Information
 
-- **Version**: 0.5.4
-- **Release Date**: 2025-10-01
+- **Version**: 0.6.0-dev (In Development)
+- **Release Date**: 2025-10-01 (Planning Phase)
 - **Framework**: React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 - **Target**: Thai Business Forms & Data Collection
 - **Architecture**: Full-Stack Enterprise Application
