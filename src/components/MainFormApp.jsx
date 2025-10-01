@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
@@ -36,6 +36,20 @@ function MainFormAppContent() {
   const formViewSaveHandlerRef = useRef(null);
   const toast = useEnhancedToast();
   const { user } = useAuth();
+
+  // Handle URL parameters for direct links
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const formId = urlParams.get('form');
+    const view = urlParams.get('view');
+
+    if (formId && view === 'submissions') {
+      // Navigate directly to submission list
+      handleNavigate('submission-list', formId);
+      // Clear URL parameters
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   // Helper function to check if user can create/edit forms
   const canCreateOrEditForms = () => {
@@ -177,6 +191,7 @@ function MainFormAppContent() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* New Form button - only for Super Admin, Admin, Moderator */}
               {currentPage === 'form-list' && canCreateOrEditForms() && (
                 <div
                   onClick={handleNewForm}
@@ -361,8 +376,8 @@ function MainFormAppContent() {
                 </>
               )}
 
-              {/* User Management Icon (Super Admin only) */}
-              {currentPage === 'form-list' && (
+              {/* User Management Icon - only for Super Admin, Admin, Moderator */}
+              {currentPage === 'form-list' && canCreateOrEditForms() && (
                 <div
                   onClick={() => handleNavigate('user-management')}
                   title="จัดการผู้ใช้งาน"

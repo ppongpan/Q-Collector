@@ -5,7 +5,7 @@ import { GlassButton } from './ui/glass-button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faPlus, faEdit, faEye, faTrashAlt, faCopy,
-  faFileAlt, faUsers, faCalendarAlt, faBuilding, faBell
+  faFileAlt, faUsers, faCalendarAlt, faBuilding, faBell, faLink
 } from '@fortawesome/free-solid-svg-icons';
 import dataService from '../services/DataService.js';
 import { useEnhancedToast } from './ui/enhanced-toast';
@@ -220,6 +220,28 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
     }
   };
 
+  const handleCopyLink = (formId, formTitle) => {
+    // Create direct link to submission list for this form
+    const baseUrl = window.location.origin;
+    const directLink = `${baseUrl}/?form=${formId}&view=submissions`;
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(directLink).then(() => {
+      toast.success('คัดลอกลิงก์เรียบร้อยแล้ว', {
+        title: '✅ สำเร็จ',
+        description: `ลิงก์สำหรับฟอร์ม "${formTitle}" ถูกคัดลอกไปยังคลิปบอร์ดแล้ว`,
+        duration: 3000
+      });
+    }).catch((error) => {
+      console.error('Copy error:', error);
+      toast.error('ไม่สามารถคัดลอกลิงก์ได้', {
+        title: '❌ ข้อผิดพลาด',
+        description: 'กรุณาลองใหม่อีกครั้ง',
+        duration: 5000
+      });
+    });
+  };
+
   const handleDuplicate = async (formId) => {
     try {
       const originalForm = dataService.getForm(formId);
@@ -408,7 +430,22 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
                       </div>
 
                       {/* Right side - Action Icons with touch-friendly areas */}
-                      <div className="flex items-center gap-8">
+                      <div className="flex items-center gap-6">
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyLink(form.id, form.title);
+                          }}
+                          className="flex items-center justify-center cursor-pointer group"
+                          title="คัดลอกลิงก์"
+                          style={{ background: 'transparent' }}
+                        >
+                          <FontAwesomeIcon
+                            icon={faLink}
+                            className="text-lg text-muted-foreground/60 group-hover:text-blue-500 transition-colors duration-200"
+                          />
+                        </div>
+
                         <div
                           onClick={(e) => {
                             e.stopPropagation();

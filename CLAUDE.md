@@ -4,7 +4,7 @@
 
 ## Version Information
 
-- **Version**: 0.5.2
+- **Version**: 0.5.3
 - **Release Date**: 2025-10-01
 - **Framework**: React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 - **Target**: Thai Business Forms & Data Collection
@@ -101,6 +101,31 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 **Accessibility:** WCAG 2.1 AA compliance, ARIA labels, keyboard navigation
 
 ## Version History
+
+### v0.5.3 (2025-10-01) - Direct Form Link & Navigation Improvements
+
+**Major Updates:**
+- ✅ **Direct Form Link Feature** - Copy shareable link to form submission list
+- ✅ **URL Parameter Navigation** - Deep linking to specific forms
+- ✅ **Role-Based Menu Visibility** - Admin controls properly scoped
+- ✅ **Enhanced Form Cards** - Link icon for easy sharing
+
+**Form Link Features:**
+- **Link Icon:** Blue link icon in form cards
+- **Copy to Clipboard:** One-click copy direct link to submission list
+- **URL Format:** `/?form={formId}&view=submissions`
+- **Auto Navigation:** Opens directly to submission list when logged in
+- **Toast Notifications:** Success/error feedback on copy
+
+**Navigation Enhancements:**
+- Fixed navigation menu visibility for Super Admin, Admin, Moderator
+- Proper role checking with `canCreateOrEditForms()`
+- URL parameter handling in MainFormApp
+- Clean URL after navigation
+
+**Components Updated:**
+- `src/components/FormListApp.jsx` - Added link icon and copy function
+- `src/components/MainFormApp.jsx` - URL parameter handling
 
 ### v0.5.2 (2025-10-01) - Enhanced User Menu & Profile Display
 
@@ -225,8 +250,8 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 
 ---
 
-**Application Status:** ✅ Production-ready v0.5.2 - Complete Full-Stack Enterprise System
+**Application Status:** ✅ Production-ready v0.5.3 - Complete Full-Stack Enterprise System
 
-**License:** Internal use - Q-Collector Enterprise Form Builder v0.5.2
+**License:** Internal use - Q-Collector Enterprise Form Builder v0.5.3
 - BOT TOKEN FOR TELEGRAM TESTING 7794493324:AAHlxtpYenok1kwyo88ns5R4rivWWXcqmE0   AND GROUP ID = -4847325737  record in .env
 - สร้าง Super Admin Account  โดยใช้ User Name : pongpanp  ชื่อ : Pongpan Peerawanichkul  email: pongpanp@qcon.co.th  Department : Technic  Role : Super Admin
