@@ -25,7 +25,7 @@
  *           type: string
  *           format: email
  *           description: User's email address
- *           example: "pongpanp@qcon.co.th"
+ *           example: "admin@example.com"
  *         firstName:
  *           type: string
  *           description: User's first name
@@ -82,7 +82,7 @@
  *           type: string
  *           format: email
  *           description: Valid email address
- *           example: "pongpanp@qcon.co.th"
+ *           example: "admin@example.com"
  *         password:
  *           type: string
  *           minLength: 8

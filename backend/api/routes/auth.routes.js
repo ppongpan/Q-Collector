@@ -71,7 +71,7 @@ function validate(req, res, next) {
  *                 type: string
  *                 format: email
  *                 description: Valid email address
- *                 example: "pongpanp@qcon.co.th"
+ *                 example: "admin@example.com"
  *               password:
  *                 type: string
  *                 minLength: 8
@@ -96,7 +96,7 @@ function validate(req, res, next) {
  *                 example: "technic"
  *           example:
  *             username: "pongpanp"
- *             email: "pongpanp@qcon.co.th"
+ *             email: "admin@example.com"
  *             password: "SecurePassword123"
  *             full_name: "Pongpan Peerawanichkul"
  *             phone: "+66-81-234-5678"
@@ -256,7 +256,7 @@ router.post(
  *                 user:
  *                   id: "123e4567-e89b-12d3-a456-426614174000"
  *                   username: "pongpanp"
- *                   email: "pongpanp@qcon.co.th"
+ *                   email: "admin@example.com"
  *                   firstName: "Pongpan"
  *                   lastName: "Peerawanichkul"
  *                   department: "Technic"

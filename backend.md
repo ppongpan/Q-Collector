@@ -934,5 +934,5 @@ GET /health/minio        # MinIO connection status
 
 **📝 เอกสารนี้อัพเดทล่าสุด:** 30 กันยายน 2568 - 14:45 น. (หลังเสร็จสิ้น Priority 3)
 **👨‍💻 ผู้จัดทำ:** Q-Collector Development Team
-**📞 ติดต่อ:** pongpanp@qcon.co.th
+**📞 ติดต่อ:** admin@example.com
 **🎯 Status:** ✅ **Phase 3 Complete - Priority 3 Features Successfully Deployed**

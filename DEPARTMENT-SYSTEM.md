@@ -10,7 +10,7 @@ Updated registration system to use Department selection instead of direct Role s
 
 ### 1. Super Admin Account Created
 - **Username**: pongpanp
-- **Email**: pongpanp@qcon.co.th
+- **Email**: admin@example.com
 - **Full Name**: Pongpan Peerawanichkul
 - **Role**: super_admin
 - **Password**: Admin@1234 (⚠️ Change after first login!)
@@ -89,7 +89,7 @@ Role permissions remain unchanged:
 {
   "username": "pongpanp",
   "role": "super_admin",
-  "email": "pongpanp@qcon.co.th"
+  "email": "admin@example.com"
 }
 ```
 

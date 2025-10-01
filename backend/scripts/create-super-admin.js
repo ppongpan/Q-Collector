@@ -30,7 +30,7 @@ async function createSuperAdmin() {
     // Create super admin
     const superAdmin = await User.create({
       username: 'pongpanp',
-      email: 'pongpanp@qcon.co.th',
+      email: 'admin@example.com',
       password_hash: 'Gfvtmiu613', // Will be hashed by beforeCreate hook
       full_name: 'Pongpan Peerawanichkul',
       role: 'super_admin',

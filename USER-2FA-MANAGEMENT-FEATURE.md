@@ -143,7 +143,7 @@ await trustedDeviceService.revokeAllDevices(userId);
       {
         "id": "cc72d54e-f4d1-4b87-9e3f-25d91706a319",
         "username": "pongpanp",
-        "email": "pongpanp@qcon.co.th",
+        "email": "admin@example.com",
         "full_name": "Pongpan Peerawanichkul",
         "role": "super_admin",
         "twoFactorEnabled": true,

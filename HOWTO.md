@@ -282,7 +282,7 @@ node scripts/create-super-admin.js
 **Follow prompts:**
 - Username: `pongpanp`
 - Full Name: `Pongpan Peerawanichkul`
-- Email: `pongpanp@qcon.co.th`
+- Email: `admin@example.com`
 - Password: `[secure password]`
 - Department: `Technic`
 - Role: `Super Admin`
@@ -748,7 +748,7 @@ tar -czf backup_$(date +%Y%m%d).tar.gz /var/www/qcollector
 - API Documentation: http://localhost:5000/api-docs
 
 **Contact:**
-- Email: pongpanp@qcon.co.th
+- Email: admin@example.com
 - GitHub Issues: https://github.com/ppongpan/Q-Collector/issues
 
 ---

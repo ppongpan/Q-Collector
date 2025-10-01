@@ -72,7 +72,7 @@ All API responses follow a consistent format:
       `,
       contact: {
         name: 'Q-Collector Team',
-        email: 'pongpanp@qcon.co.th'
+        email: 'admin@example.com'
       },
       license: {
         name: 'Internal Use Only',

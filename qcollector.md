@@ -656,7 +656,7 @@ Response: {
     "user": {
       "id": "uuid",
       "username": "pongpanp",
-      "email": "pongpanp@qcon.co.th",
+      "email": "admin@example.com",
       "role": "super_admin",
       "department": "Technic"
     },
@@ -870,7 +870,7 @@ class AuthService {
   "payload": {
     "id": "user_uuid",
     "username": "pongpanp",
-    "email": "pongpanp@qcon.co.th",
+    "email": "admin@example.com",
     "role": "super_admin",
     "iat": 1727697600,
     "exp": 1727701200
@@ -4115,4 +4115,4 @@ Q-Collector is a comprehensive, enterprise-grade form builder and data collectio
 
 ---
 
-For more information or support, contact the development team at pongpanp@qcon.co.th.
+For more information or support, contact the development team at admin@example.com.

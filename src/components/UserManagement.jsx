@@ -91,7 +91,7 @@ export default function UserManagement() {
         {
           id: '1',
           username: 'pongpanp',
-          email: 'pongpanp@qcon.co.th',
+          email: 'admin@example.com',
           full_name: 'Pongpan Peerawanichkul',
           role: 'super_admin',
           is_active: true,
