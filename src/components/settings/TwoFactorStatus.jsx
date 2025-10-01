@@ -231,20 +231,21 @@ const TwoFactorStatus = ({ apiClient }) => {
 
             <button
               onClick={() => status?.enabled ? setShowDisableConfirm(true) : setShowSetup(true)}
-              className={`ml-auto px-3 py-2 rounded-lg transition-all duration-300 flex items-center gap-2 font-medium ${
+              className={`ml-auto px-3 py-2 rounded-3xl transition-all duration-300 flex items-center justify-center font-medium ${
                 status?.enabled
                   ? 'bg-green-500/20 hover:bg-green-500/30 text-green-500'
                   : 'bg-red-500/20 hover:bg-red-500/30 text-red-500'
               }`}
+              style={{ borderRadius: '1.5rem' }}
               title={status?.enabled ? 'คลิกเพื่อปิดการใช้งาน 2FA' : 'คลิกเพื่อเปิดการใช้งาน 2FA'}
             >
               <motion.div
                 animate={status?.enabled ? { x: 6 } : { x: 0 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className="flex items-center justify-center"
               >
                 <FontAwesomeIcon icon={status?.enabled ? faToggleOn : faToggleOff} className="text-lg" />
               </motion.div>
-              <span className="text-sm">{status?.enabled ? 'เปิดอยู่' : 'ปิดอยู่'}</span>
             </button>
           </div>
 

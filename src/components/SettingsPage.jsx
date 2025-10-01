@@ -14,6 +14,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { useFont } from '../contexts/FontContext';
 import { ThemeToggle } from './ThemeToggle';
+import ThemeSelector from './settings/ThemeSelector';
 import TwoFactorStatus from './settings/TwoFactorStatus';
 import TrustedDevices from './settings/TrustedDevices';
 import TrustedDeviceDuration from './settings/TrustedDeviceDuration';
@@ -266,11 +267,21 @@ function SettingsPage({ onNavigate }) {
 
   const renderThemeSettings = () => (
     <motion.div
-      className="space-y-4"
+      className="space-y-6"
       variants={animationPresets.fadeInGlass}
       initial="initial"
       animate="animate"
     >
+      {/* Theme Selector */}
+      <motion.div
+        variants={componentVariants.glassCard}
+        initial="initial"
+        animate="animate"
+      >
+        <ThemeSelector />
+      </motion.div>
+
+      {/* Dark Mode Toggle */}
       <motion.div
         className="flex items-center justify-between"
         variants={componentVariants.glassCard}
@@ -283,7 +294,7 @@ function SettingsPage({ onNavigate }) {
           animate="animate"
           transition={{ delay: 0.1 }}
         >
-          <h2 className="text-lg font-medium text-foreground mt-2">ธีมสี</h2>
+          <h2 className="text-lg font-medium text-foreground">โหมดมืด (Dark Mode)</h2>
           <p className="text-sm text-muted-foreground">เปลี่ยนระหว่างธีมสีแสงและสีมืด</p>
         </motion.div>
         <motion.div
@@ -302,6 +313,28 @@ function SettingsPage({ onNavigate }) {
         >
           <ThemeToggle />
         </motion.div>
+      </motion.div>
+
+      {/* Test Theme Button */}
+      <motion.div
+        className="flex items-center justify-between p-4 rounded-lg bg-card/50 border border-border"
+        variants={componentVariants.glassCard}
+        initial="initial"
+        animate="animate"
+      >
+        <div>
+          <h2 className="text-lg font-medium text-foreground">ทดสอบธีม (Theme Test)</h2>
+          <p className="text-sm text-muted-foreground">ทดสอบการแสดงผลของคอมโพเนนต์ทั้ง 6 ตัว</p>
+        </div>
+        <motion.button
+          onClick={() => onNavigate && onNavigate('theme-test')}
+          className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          variants={microInteractions.buttonPress}
+          whileHover={shouldReduceMotion ? {} : "hover"}
+          whileTap={shouldReduceMotion ? {} : "tap"}
+        >
+          ทดสอบธีม
+        </motion.button>
       </motion.div>
     </motion.div>
   );

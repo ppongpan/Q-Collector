@@ -17,6 +17,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { GlassCard, GlassCardContent, GlassCardHeader } from '../ui/glass-card';
+import { InfoModal } from '../ui/alert-modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faLock, faSignInAlt, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import TwoFactorVerification from './TwoFactorVerification';
@@ -37,6 +38,7 @@ export function LoginPage() {
   const [requires2FA, setRequires2FA] = useState(false);
   const [tempToken, setTempToken] = useState(null);
   const [username2FA, setUsername2FA] = useState('');
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -188,9 +190,9 @@ export function LoginPage() {
               className="flex justify-center mb-6"
             >
               <img
-                src="/share.png"
+                src="/SHARE_POTENTIALS.png"
                 alt="Q-CON - Share Potentials to Shape Community"
-                className="h-20 w-auto opacity-90"
+                className="h-24 w-auto opacity-95"
               />
             </motion.div>
 
@@ -273,7 +275,7 @@ export function LoginPage() {
                 <button
                   type="button"
                   className="text-sm text-primary hover:underline"
-                  onClick={() => alert('ฟีเจอร์นี้จะเปิดใช้งานในเร็วๆ นี้')}
+                  onClick={() => setShowInfoModal(true)}
                   disabled={isAuthenticating}
                 >
                   ลืมรหัสผ่าน?
@@ -285,7 +287,8 @@ export function LoginPage() {
                 type="submit"
                 whileHover={{ scale: isAuthenticating ? 1 : 1.02 }}
                 whileTap={{ scale: isAuthenticating ? 1 : 0.98 }}
-                className="w-full py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                className="w-full py-3 px-4 bg-primary text-white rounded-3xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                style={{ borderRadius: '1.5rem' }}
                 disabled={isAuthenticating}
               >
                 {isAuthenticating ? (
@@ -320,9 +323,18 @@ export function LoginPage() {
 
         {/* App Info */}
         <div className="text-center mt-6 text-muted-foreground" style={{ fontSize: '10px' }}>
-          <p>Q-Collector v0.5.3</p>
+          <p>Q-Collector v0.6.1</p>
           <p className="mt-1">Form Builder & Data Collection System</p>
         </div>
+
+        {/* Info Modal for Forgot Password */}
+        <InfoModal
+          isOpen={showInfoModal}
+          onClose={() => setShowInfoModal(false)}
+          title="ฟีเจอร์กำลังพัฒนา"
+          message="ฟีเจอร์การรีเซ็ตรหัสผ่านจะเปิดใช้งานในเร็วๆ นี้ กรุณาติดต่อผู้ดูแลระบบหากต้องการเปลี่ยนรหัสผ่าน"
+          confirmText="เข้าใจแล้ว"
+        />
       </motion.div>
     </div>
   );

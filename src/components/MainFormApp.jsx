@@ -8,6 +8,7 @@ import { UserMenu } from './ui/user-menu';
 import EnhancedFormBuilder from './EnhancedFormBuilder';
 import SettingsPage from './SettingsPage';
 import UserManagement from './UserManagement';
+import ThemeTestPage from './ThemeTestPage';
 import FormView from './FormView';
 import FormListApp from './FormListApp';
 import FormSubmissionList from './FormSubmissionList';
@@ -26,7 +27,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 // Main App Component with Toast Integration
 function MainFormAppContent() {
-  const [currentPage, setCurrentPage] = useState('form-list'); // 'form-list', 'form-builder', 'settings', 'user-management', 'submission-list', 'submission-detail', 'form-view', 'subform-view', 'subform-detail'
+  const [currentPage, setCurrentPage] = useState('form-list'); // 'form-list', 'form-builder', 'settings', 'user-management', 'theme-test', 'submission-list', 'submission-detail', 'form-view', 'subform-view', 'subform-detail'
   const [currentFormId, setCurrentFormId] = useState(null);
   const [currentSubmissionId, setCurrentSubmissionId] = useState(null);
   const [currentSubFormId, setCurrentSubFormId] = useState(null);
@@ -533,7 +534,7 @@ function MainFormAppContent() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <SettingsPage />
+        <SettingsPage onNavigate={handleNavigate} />
       </motion.div>
     </main>
   );
@@ -657,6 +658,8 @@ function MainFormAppContent() {
         return renderSettings();
       case 'user-management':
         return <UserManagement />;
+      case 'theme-test':
+        return <ThemeTestPage onNavigate={handleNavigate} />;
       case 'submission-list':
         return renderSubmissionList();
       case 'submission-detail':

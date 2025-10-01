@@ -6,22 +6,22 @@ import { useTheme } from '../contexts/ThemeContext';
  * Features smooth transitions, professional dark theme focus, and orange highlights
  */
 export const ThemeToggle = ({ className = "", showLabel = true }) => {
-  const { toggleTheme, isDark } = useTheme();
+  const { toggleDarkMode, isDarkMode } = useTheme();
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <button
-        onClick={toggleTheme}
+        onClick={toggleDarkMode}
         className="theme-toggle-button group relative flex items-center justify-center w-10 h-10 rounded-lg"
-        title={isDark ? 'สลับไปโหมดสว่าง' : 'สลับไปโหมดมืด'}
-        aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+        title={isDarkMode ? 'สลับไปโหมดสว่าง' : 'สลับไปโหมดมืด'}
+        aria-label={isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'}
       >
         {/* Background glow effect on hover */}
         <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-300 bg-primary"></div>
 
         {/* Icon container */}
         <div className="relative z-10 flex items-center justify-center">
-          {isDark ? (
+          {isDarkMode ? (
             // Sun icon for light mode switch
             <svg
               className="w-5 h-5 transition-all duration-300 group-hover:text-primary group-hover:scale-110 group-hover:rotate-45"
@@ -58,13 +58,13 @@ export const ThemeToggle = ({ className = "", showLabel = true }) => {
 
         {/* Subtle indicator dot */}
         <div className={`absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-          isDark ? 'bg-orange-400' : 'bg-blue-400'
+          isDarkMode ? 'bg-orange-400' : 'bg-blue-400'
         }`}></div>
       </button>
 
       {showLabel && (
         <span className="text-sm text-muted-foreground font-medium transition-colors duration-300 group-hover:text-primary">
-          {isDark ? 'มืด' : 'สว่าง'}
+          {isDarkMode ? 'มืด' : 'สว่าง'}
         </span>
       )}
     </div>
@@ -82,13 +82,13 @@ export const ThemeToggleMinimal = ({ className = "" }) => {
  * Theme Status Indicator (read-only)
  */
 export const ThemeIndicator = ({ className = "" }) => {
-  const { isDark } = useTheme();
+  const { isDarkMode } = useTheme();
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-orange-400' : 'bg-blue-400'}`}></div>
+      <div className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-orange-400' : 'bg-blue-400'}`}></div>
       <span className="text-sm text-muted-foreground">
-        {isDark ? 'Dark Mode' : 'Light Mode'}
+        {isDarkMode ? 'Dark Mode' : 'Light Mode'}
       </span>
     </div>
   );

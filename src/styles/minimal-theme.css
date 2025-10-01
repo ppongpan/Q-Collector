@@ -1,0 +1,722 @@
+/**
+ * Minimal Theme for Q-Collector v0.6.0
+ *
+ * Design Principles:
+ * - Simple, clean design with solid colors
+ * - No transparency (except shadows)
+ * - Subtle shadows only
+ * - Small border-radius (≤12px)
+ * - Fast transitions (≤200ms)
+ * - WCAG AA accessibility compliance
+ *
+ * Forbidden Effects:
+ * - NO backdrop-filter
+ * - NO backdrop-blur
+ * - NO rgba transparency (except shadows)
+ * - NO gradient backgrounds
+ * - NO glow effects
+ * - NO complex animations
+ */
+
+/* ============================================
+   MINIMAL THEME - LIGHT MODE
+   ============================================ */
+
+[data-theme="minimal"] {
+  /* Base Colors */
+  --background: 0 0% 98%;           /* #fafafa - Light gray background */
+  --foreground: 0 0% 5%;            /* #0d0d0d - Near black text */
+
+  /* Card Colors */
+  --card: 0 0% 100%;                /* #ffffff - Pure white */
+  --card-foreground: 0 0% 5%;       /* #0d0d0d - Dark text */
+
+  /* Primary Colors (Orange - Q-Collector Brand) */
+  --primary: 24 95% 50%;            /* Darker orange for light mode */
+  --primary-foreground: 0 0% 100%;  /* #ffffff - White text */
+
+  /* Secondary Colors */
+  --secondary: 0 0% 90%;            /* #e6e6e6 - Light gray */
+  --secondary-foreground: 0 0% 5%;  /* #0d0d0d - Dark text */
+
+  /* Borders & Inputs */
+  --border: 0 0% 88%;               /* #e0e0e0 - Medium gray border */
+  --input: 0 0% 96%;                /* #f5f5f5 - Light gray input background */
+
+  /* Popover */
+  --popover: 0 0% 100%;             /* #ffffff - White */
+  --popover-foreground: 0 0% 5%;    /* #0d0d0d - Dark text */
+
+  /* States */
+  --muted: 0 0% 94%;                /* #f0f0f0 - Muted background */
+  --muted-foreground: 0 0% 40%;     /* #666666 - Muted text */
+  --accent: 24 95% 50%;             /* Darker orange accent for light mode */
+  --accent-foreground: 0 0% 100%;   /* #ffffff - White text */
+  --destructive: 0 84% 60%;         /* #f56565 - Red */
+  --destructive-foreground: 0 0% 100%; /* #ffffff - White text */
+
+  /* Focus Ring */
+  --ring: 0 0% 5%;                  /* #0d0d0d - Dark ring */
+
+  /* Border Radius */
+  --radius: 0.5rem;                 /* 8px - Default border radius */
+
+  /* Shadow System (Subtle) */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 2px 4px 0 rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 4px 8px 0 rgb(0 0 0 / 0.12);
+}
+
+/* ============================================
+   MINIMAL THEME - DARK MODE
+   ============================================ */
+
+[data-theme="minimal"].dark {
+  /* Base Colors */
+  --background: 0 0% 8%;            /* #141414 - Dark gray background */
+  --foreground: 0 0% 95%;           /* #f2f2f2 - Light gray text */
+
+  /* Card Colors */
+  --card: 0 0% 12%;                 /* #1f1f1f - Dark card background */
+  --card-foreground: 0 0% 95%;      /* #f2f2f2 - Light text */
+
+  /* Primary Colors (Orange - Brighter for dark mode) */
+  --primary: 24 95% 60%;            /* Lighter orange for dark mode */
+  --primary-foreground: 0 0% 100%;  /* #ffffff - White text */
+
+  /* Secondary Colors */
+  --secondary: 0 0% 16%;            /* #292929 - Dark gray */
+  --secondary-foreground: 0 0% 95%; /* #f2f2f2 - Light text */
+
+  /* Borders & Inputs */
+  --border: 0 0% 45%;               /* Much lighter border for visibility in dark mode */
+  --input: 0 0% 16%;                /* #292929 - Dark input background */
+
+  /* Popover */
+  --popover: 0 0% 12%;              /* #1f1f1f - Dark popover */
+  --popover-foreground: 0 0% 95%;   /* #f2f2f2 - Light text */
+
+  /* States */
+  --muted: 0 0% 16%;                /* #292929 - Muted background */
+  --muted-foreground: 0 0% 70%;     /* #b3b3b3 - Muted text */
+  --accent: 24 95% 60%;             /* Lighter orange accent for dark mode */
+  --accent-foreground: 0 0% 100%;   /* #ffffff - White text */
+  --destructive: 0 84% 60%;         /* #f56565 - Red */
+  --destructive-foreground: 0 0% 100%; /* #ffffff - White text */
+
+  /* Focus Ring */
+  --ring: 24 95% 60%;               /* Lighter orange ring for visibility in dark mode */
+}
+
+/* ============================================
+   COMPONENT BASE CLASSES
+   ============================================ */
+
+/**
+ * Minimal Card Component
+ * Simple card with border and subtle shadow
+ */
+.minimal-card {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 200ms;
+}
+
+.minimal-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/**
+ * Minimal Button Component
+ * Clean button with solid background
+ */
+.minimal-button {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 500;
+  transition: background 200ms;
+  cursor: pointer;
+}
+
+.minimal-button:hover {
+  background: hsl(var(--primary) / 0.9);
+}
+
+.minimal-button:active {
+  background: hsl(var(--primary) / 0.8);
+}
+
+.minimal-button:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.minimal-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/**
+ * Minimal Button Variants
+ */
+.minimal-button-secondary {
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
+.minimal-button-secondary:hover {
+  background: hsl(var(--secondary) / 0.8);
+}
+
+.minimal-button-outline {
+  background: transparent;
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+}
+
+.minimal-button-outline:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.minimal-button-ghost {
+  background: transparent;
+  color: hsl(var(--foreground));
+}
+
+.minimal-button-ghost:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.minimal-button-destructive {
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+}
+
+.minimal-button-destructive:hover {
+  background: hsl(var(--destructive) / 0.9);
+}
+
+/**
+ * Minimal Input Component
+ * Simple input with border and background
+ */
+.minimal-input {
+  background: hsl(var(--input));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  padding: 8px 12px;
+  transition: border-color 200ms;
+  width: 100%;
+}
+
+.minimal-input:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+}
+
+.minimal-input::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.minimal-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/**
+ * Minimal Textarea Component
+ */
+.minimal-textarea {
+  background: hsl(var(--input));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  padding: 8px 12px;
+  transition: border-color 200ms;
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+}
+
+.minimal-textarea:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+}
+
+/**
+ * Minimal Select Component
+ */
+.minimal-select {
+  background: hsl(var(--input));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  padding: 8px 12px;
+  transition: border-color 200ms;
+  width: 100%;
+  cursor: pointer;
+}
+
+.minimal-select:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+}
+
+/**
+ * Minimal Checkbox Component
+ */
+.minimal-checkbox {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid hsl(var(--border));
+  border-radius: 4px;
+  background: hsl(var(--background));
+  cursor: pointer;
+  position: relative;
+  transition: all 200ms;
+}
+
+.minimal-checkbox:checked {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+
+.minimal-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid hsl(var(--primary-foreground));
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.minimal-checkbox:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/**
+ * Minimal Radio Component
+ */
+.minimal-radio {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid hsl(var(--border));
+  border-radius: 50%;
+  background: hsl(var(--background));
+  cursor: pointer;
+  position: relative;
+  transition: all 200ms;
+}
+
+.minimal-radio:checked {
+  border-color: hsl(var(--primary));
+}
+
+.minimal-radio:checked::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+}
+
+.minimal-radio:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/**
+ * Minimal Switch Component
+ */
+.minimal-switch {
+  appearance: none;
+  width: 44px;
+  height: 24px;
+  background: hsl(var(--muted));
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background 200ms;
+}
+
+.minimal-switch:checked {
+  background: hsl(var(--primary));
+}
+
+.minimal-switch::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  background: hsl(var(--background));
+  border-radius: 50%;
+  transition: transform 200ms;
+  box-shadow: var(--shadow-sm);
+}
+
+.minimal-switch:checked::after {
+  transform: translateX(20px);
+}
+
+.minimal-switch:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/**
+ * Minimal Badge Component
+ */
+.minimal-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 6px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
+.minimal-badge-primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.minimal-badge-destructive {
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+}
+
+.minimal-badge-outline {
+  background: transparent;
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+/**
+ * Minimal Alert Component
+ */
+.minimal-alert {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.minimal-alert-destructive {
+  background: hsl(var(--destructive) / 0.1);
+  border-color: hsl(var(--destructive));
+  color: hsl(var(--destructive));
+}
+
+/**
+ * Minimal Table Component
+ */
+.minimal-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: hsl(var(--card));
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.minimal-table thead {
+  background: hsl(var(--muted));
+}
+
+.minimal-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.minimal-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.minimal-table tbody tr:hover {
+  background: hsl(var(--muted) / 0.5);
+}
+
+.minimal-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/**
+ * Minimal Dialog/Modal Component
+ */
+.minimal-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.5);
+  z-index: 50;
+}
+
+.minimal-dialog-content {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+  z-index: 51;
+}
+
+/**
+ * Minimal Tooltip Component
+ */
+.minimal-tooltip {
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  box-shadow: var(--shadow-md);
+}
+
+/**
+ * Minimal Progress Bar Component
+ */
+.minimal-progress {
+  width: 100%;
+  height: 8px;
+  background: hsl(var(--muted));
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.minimal-progress-indicator {
+  height: 100%;
+  background: hsl(var(--primary));
+  transition: width 200ms;
+}
+
+/**
+ * Minimal Separator Component
+ */
+.minimal-separator {
+  height: 1px;
+  background: hsl(var(--border));
+  width: 100%;
+}
+
+.minimal-separator-vertical {
+  width: 1px;
+  height: 100%;
+  background: hsl(var(--border));
+}
+
+/**
+ * Minimal Loading Spinner Component
+ */
+.minimal-loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid hsl(var(--muted));
+  border-top-color: hsl(var(--primary));
+  border-radius: 50%;
+  animation: minimal-spin 0.6s linear infinite;
+}
+
+@keyframes minimal-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/**
+ * Minimal Container Component
+ */
+.minimal-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/**
+ * Minimal Page Layout
+ */
+.minimal-page {
+  min-height: 100vh;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/**
+ * Minimal Section
+ */
+.minimal-section {
+  padding: 40px 0;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Text Colors */
+.minimal-text-primary {
+  color: hsl(var(--primary));
+}
+
+.minimal-text-muted {
+  color: hsl(var(--muted-foreground));
+}
+
+.minimal-text-destructive {
+  color: hsl(var(--destructive));
+}
+
+/* Background Colors */
+.minimal-bg-primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.minimal-bg-secondary {
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
+.minimal-bg-muted {
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+/* Border */
+.minimal-border {
+  border: 1px solid hsl(var(--border));
+}
+
+.minimal-border-top {
+  border-top: 1px solid hsl(var(--border));
+}
+
+.minimal-border-bottom {
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+/* Shadows */
+.minimal-shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.minimal-shadow-md {
+  box-shadow: var(--shadow-md);
+}
+
+.minimal-shadow-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Border Radius */
+.minimal-rounded-sm {
+  border-radius: 6px;
+}
+
+.minimal-rounded {
+  border-radius: 8px;
+}
+
+.minimal-rounded-lg {
+  border-radius: 12px;
+}
+
+/* ============================================
+   ACCESSIBILITY HELPERS
+   ============================================ */
+
+/* Focus Visible Ring */
+.minimal-focus-ring:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Skip to Content Link */
+.minimal-skip-link {
+  position: absolute;
+  left: -9999px;
+  z-index: 999;
+  padding: 8px 16px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.minimal-skip-link:focus {
+  left: 8px;
+  top: 8px;
+}
+
+/* Screen Reader Only */
+.minimal-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ============================================
+   RESPONSIVE HELPERS
+   ============================================ */
+
+/* Mobile First Design */
+@media (min-width: 640px) {
+  .minimal-container {
+    padding: 0 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .minimal-container {
+    padding: 0 32px;
+  }
+
+  .minimal-section {
+    padding: 60px 0;
+  }
+}
+
+/* ============================================
+   END OF MINIMAL THEME
+   ============================================ */

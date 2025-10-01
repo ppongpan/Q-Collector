@@ -28,29 +28,22 @@ export const EnhancedToastProvider = ({ children }) => {
   const [recentToasts, setRecentToasts] = useState(new Map()); // Track recent toasts for debouncing
 
   const addToast = (message, type = 'info', options = {}) => {
-    // Debouncing: Check for duplicate toast with same message, type, and title
-    const isDuplicate = toasts.some(existingToast =>
+    const toastKey = `${type}_${message}_${options.title || ''}`;
+
+    // Check for duplicate toast with same message, type, and title - ปิดกล่องเดิมทันที
+    const existingToast = toasts.find(existingToast =>
       existingToast.message === message &&
       existingToast.type === type &&
       existingToast.title === options.title
     );
 
-    if (isDuplicate) {
-      console.log('Duplicate toast prevented (active):', { message, type, title: options.title });
-      return null; // Don't add duplicate toast
-    }
-
-    // Time-based debouncing: Prevent same message within 2 seconds
-    const toastKey = `${type}_${message}_${options.title || ''}`;
-    const now = Date.now();
-    const lastShown = recentToasts.get(toastKey);
-
-    if (lastShown && (now - lastShown) < 2000) {
-      console.log('Duplicate toast prevented (recent):', { message, type, title: options.title });
-      return null; // Don't add recent duplicate
+    if (existingToast) {
+      console.log('Duplicate toast found - closing old one:', { message, type, title: options.title });
+      removeToast(existingToast.id); // ปิดกล่องเดิมทันที
     }
 
     // Update recent toasts map
+    const now = Date.now();
     setRecentToasts(prev => {
       const updated = new Map(prev);
       updated.set(toastKey, now);
@@ -66,7 +59,7 @@ export const EnhancedToastProvider = ({ children }) => {
     });
 
     const id = Date.now() + Math.random();
-    const duration = options.duration || (type === 'error' ? 8000 : 5000);
+    const duration = options.duration || (type === 'error' ? 5000 : 3000); // ลดเวลาลง: error 5s, อื่นๆ 3s
 
     const toast = {
       id,

@@ -1134,8 +1134,8 @@ export default function SubmissionDetail({
               className="hidden lg:flex absolute -left-20 top-1/2 -translate-y-1/2 w-16 h-16 cursor-pointer group items-center justify-center"
               title="คลิกเพื่อดูข้อมูลก่อนหน้า"
             >
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-md border border-orange-500/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-orange-500/30 shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-400 group-hover:text-orange-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-12 h-12 rounded-full bg-orange-500/10 dark:bg-orange-500/20 hover:bg-orange-500/80 dark:hover:bg-orange-500/60 backdrop-blur-md border border-orange-500/40 dark:border-orange-500/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-[0_0_0_0_rgba(249,115,22,0)] group-hover:shadow-[0_0_20px_8px_rgba(249,115,22,0.4)]">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-600 dark:text-orange-400 group-hover:text-white dark:group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                 </svg>
               </div>
@@ -1149,40 +1149,40 @@ export default function SubmissionDetail({
               className="hidden lg:flex absolute -right-20 top-1/2 -translate-y-1/2 w-16 h-16 cursor-pointer group items-center justify-center"
               title="คลิกเพื่อดูข้อมูลถัดไป"
             >
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-md border border-orange-500/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-orange-500/30 shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-400 group-hover:text-orange-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-12 h-12 rounded-full bg-orange-500/10 dark:bg-orange-500/20 hover:bg-orange-500/80 dark:hover:bg-orange-500/60 backdrop-blur-md border border-orange-500/40 dark:border-orange-500/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-[0_0_0_0_rgba(249,115,22,0)] group-hover:shadow-[0_0_20px_8px_rgba(249,115,22,0.4)]">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-600 dark:text-orange-400 group-hover:text-white dark:group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                 </svg>
               </div>
             </div>
           )}
 
-          {/* Previous Click Area - Hidden arrows on medium screens */}
+          {/* Previous Click Area - Arrows on narrow screens */}
           {hasPrevious && onNavigatePrevious && (
             <div
               onClick={onNavigatePrevious}
               className="lg:hidden absolute left-0 top-0 bottom-0 w-16 z-10 cursor-pointer group"
               title="คลิกเพื่อดูข้อมูลก่อนหน้า"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="hidden md:block absolute left-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:left-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-orange-400 drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="absolute inset-0 rounded-l-[24px] bg-gradient-to-r from-orange-500/10 dark:from-orange-500/20 via-orange-500/30 dark:via-orange-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute left-2 top-1/2 -translate-y-1/2 opacity-50 md:opacity-30 group-hover:opacity-100 transition-all duration-300 group-hover:left-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 md:h-8 md:w-8 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                 </svg>
               </div>
             </div>
           )}
 
-          {/* Next Click Area - Hidden arrows on medium screens */}
+          {/* Next Click Area - Arrows on narrow screens */}
           {hasNext && onNavigateNext && (
             <div
               onClick={onNavigateNext}
               className="lg:hidden absolute right-0 top-0 bottom-0 w-16 z-10 cursor-pointer group"
               title="คลิกเพื่อดูข้อมูลถัดไป"
             >
-              <div className="absolute inset-0 bg-gradient-to-l from-orange-500/0 via-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="hidden md:block absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:right-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-orange-400 drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="absolute inset-0 rounded-r-[24px] bg-gradient-to-l from-orange-500/10 dark:from-orange-500/20 via-orange-500/30 dark:via-orange-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-50 md:opacity-30 group-hover:opacity-100 transition-all duration-300 group-hover:right-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 md:h-8 md:w-8 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                 </svg>
               </div>

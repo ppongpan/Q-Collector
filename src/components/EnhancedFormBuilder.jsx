@@ -1121,14 +1121,24 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
 
   // Generate PowerBI connection info
   const getPowerBIInfo = () => {
-    const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
-    const connectionString = `${apiBaseUrl}/forms/${form.id}/submissions`;
+    // PostgreSQL Connection Details
+    const server = 'localhost:5432';
+    const database = 'qcollector_dev_2025';
+    const mainTable = form.table_name || `form_${form.id.substring(form.id.length - 6)}`;
+
+    // Get sub-form tables if they exist
+    const subFormTables = form.subForms?.filter(sf => sf.table_name).map(sf => ({
+      title: sf.title,
+      tableName: sf.table_name
+    })) || [];
 
     return {
-      apiEndpoint: connectionString,
+      server,
+      database,
+      mainTable,
+      subFormTables,
       formId: form.id,
-      tableName: `form_${form.id}_submissions`,
-      description: 'Use this endpoint to import form data into PowerBI'
+      description: 'Connect directly to PostgreSQL database in Power BI Desktop'
     };
   };
 
@@ -1987,37 +1997,82 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                       <div className="flex items-start gap-2">
                         <div className="w-2 h-2 rounded-full bg-primary animate-pulse mt-1.5"></div>
                         <div className="flex-1">
-                          <GlassCardTitle className="text-sm">PowerBI Connection</GlassCardTitle>
+                          <GlassCardTitle className="text-sm">Power BI - PostgreSQL Connection</GlassCardTitle>
                           <GlassCardDescription className="text-xs">{getPowerBIInfo().description}</GlassCardDescription>
                         </div>
                       </div>
                     </GlassCardHeader>
                     <GlassCardContent>
                       <div className="space-y-3">
-                        <div className="bg-background/50 rounded p-3 border border-border/40">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-foreground/80">API Endpoint:</span>
-                            <button
-                              onClick={() => copyToClipboard(getPowerBIInfo().apiEndpoint)}
-                              className="text-primary hover:text-primary/80 transition-colors text-xs px-3 py-1 rounded bg-primary/10 hover:bg-primary/20"
-                            >
-                              {showCopied ? 'Copied!' : 'Copy'}
-                            </button>
+                        {/* Server and Database */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="bg-background/50 rounded p-3 border border-border/40">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-foreground/80">Server:</span>
+                              <button
+                                onClick={() => copyToClipboard(getPowerBIInfo().server)}
+                                className="text-primary hover:text-primary/80 transition-colors text-xs px-2 py-1 rounded bg-primary/10 hover:bg-primary/20"
+                              >
+                                Copy
+                              </button>
+                            </div>
+                            <code className="text-xs text-primary font-mono">{getPowerBIInfo().server}</code>
                           </div>
-                          <code className="text-xs text-foreground/70 break-all block font-mono">
-                            {getPowerBIInfo().apiEndpoint}
-                          </code>
+
+                          <div className="bg-background/50 rounded p-3 border border-border/40">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-foreground/80">Database:</span>
+                              <button
+                                onClick={() => copyToClipboard(getPowerBIInfo().database)}
+                                className="text-primary hover:text-primary/80 transition-colors text-xs px-2 py-1 rounded bg-primary/10 hover:bg-primary/20"
+                              >
+                                Copy
+                              </button>
+                            </div>
+                            <code className="text-xs text-primary font-mono">{getPowerBIInfo().database}</code>
+                          </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-background/50 rounded p-3 border border-border/40">
-                            <span className="text-xs font-medium text-foreground/80 block mb-2">Form ID:</span>
-                            <code className="text-sm text-primary font-mono">{getPowerBIInfo().formId}</code>
+                        {/* Main Form Table */}
+                        <div className="bg-background/50 rounded p-3 border border-border/40">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-foreground/80">Main Form Table:</span>
+                            <button
+                              onClick={() => copyToClipboard(getPowerBIInfo().mainTable)}
+                              className="text-primary hover:text-primary/80 transition-colors text-xs px-2 py-1 rounded bg-primary/10 hover:bg-primary/20"
+                            >
+                              Copy
+                            </button>
                           </div>
-                          <div className="bg-background/50 rounded p-3 border border-border/40">
-                            <span className="text-xs font-medium text-foreground/80 block mb-2">Table:</span>
-                            <code className="text-xs text-primary font-mono">{getPowerBIInfo().tableName}</code>
+                          <code className="text-xs text-primary font-mono break-all">{getPowerBIInfo().mainTable}</code>
+                        </div>
+
+                        {/* Sub-Form Tables */}
+                        {getPowerBIInfo().subFormTables.length > 0 && (
+                          <div className="space-y-2">
+                            <span className="text-xs font-medium text-foreground/80 block">Sub-Form Tables:</span>
+                            {getPowerBIInfo().subFormTables.map((subForm, index) => (
+                              <div key={index} className="bg-background/50 rounded p-3 border border-border/40">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs font-medium text-foreground/60">{subForm.title}:</span>
+                                  <button
+                                    onClick={() => copyToClipboard(subForm.tableName)}
+                                    className="text-primary hover:text-primary/80 transition-colors text-xs px-2 py-1 rounded bg-primary/10 hover:bg-primary/20"
+                                  >
+                                    Copy
+                                  </button>
+                                </div>
+                                <code className="text-xs text-primary font-mono break-all">{subForm.tableName}</code>
+                              </div>
+                            ))}
                           </div>
+                        )}
+
+                        {/* Instructions */}
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded p-3">
+                          <p className="text-xs text-foreground/70">
+                            <strong>How to connect:</strong> Open Power BI Desktop → Get Data → PostgreSQL database → Enter Server and Database → Select tables above
+                          </p>
                         </div>
                       </div>
                     </GlassCardContent>

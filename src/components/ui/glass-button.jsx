@@ -12,10 +12,10 @@ const GlassButton = React.forwardRef(({
   ...props
 }, ref) => {
   const variants = {
-    default: 'btn-glass glass-interactive hover-orange-neon blur-edge',
+    default: 'btn-glass glass-interactive blur-edge',
     primary: 'btn-glass-primary glass-interactive blur-edge-intense',
-    ghost: 'btn-glass hover:bg-glass-elevated/50 glass-interactive hover-orange-neon blur-edge',
-    icon: 'icon-glass glass-interactive hover-orange-neon blur-edge p-0 w-10 h-10'
+    ghost: 'btn-glass hover:bg-glass-elevated/50 glass-interactive blur-edge',
+    icon: 'icon-glass glass-interactive blur-edge p-0 w-10 h-10'
   };
 
   const sizes = {
@@ -30,9 +30,9 @@ const GlassButton = React.forwardRef(({
       ref={ref}
       className={cn(
         'inline-flex items-center justify-center whitespace-nowrap font-medium',
-        size === 'icon' ? 'rounded-full' : 'rounded-2xl',
+        'rounded-3xl',  // ใช้ rounded-3xl (1.5rem) สำหรับความโค้งมาก
         'transition-all duration-300 ease-out',
-        'focus-glass focus-orange-neon disabled:opacity-50 disabled:pointer-events-none',
+        'focus-glass disabled:opacity-50 disabled:pointer-events-none',
         'relative overflow-visible',
         'will-change-transform',
         variants[variant],

@@ -4,8 +4,8 @@
 
 ## Version Information
 
-- **Version**: 0.6.0-dev (In Development)
-- **Release Date**: 2025-10-01 (Planning Phase)
+- **Version**: 0.6.1
+- **Release Date**: 2025-10-02
 - **Framework**: React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 - **Target**: Thai Business Forms & Data Collection
 - **Architecture**: Full-Stack Enterprise Application
@@ -101,6 +101,35 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 **Accessibility:** WCAG 2.1 AA compliance, ARIA labels, keyboard navigation
 
 ## Version History
+
+### v0.6.1 (2025-10-02) - UI/UX Enhancements & Logo Update
+
+**Major Updates:**
+- ✅ **Detail View Navigation Improvements** - Enhanced hover effects and glowing buttons
+- ✅ **PowerBI Connection Info Update** - Direct PostgreSQL connection details with copy buttons
+- ✅ **Mobile Layout Fixes** - Centered form cards on mobile devices
+- ✅ **Login Page Branding** - Updated logo to SHARE_POTENTIALS.png
+
+**UI/UX Enhancements:**
+- **Navigation Arrow Improvements** - Glowing hover effects with radial shadow
+- **Border Radius Precision** - 24px curved borders matching container
+- **Mobile Arrow Visibility** - Visible arrows with opacity hints on mobile/tablet
+- **Gradient Effects** - Enhanced gradient overlays for medium screens
+
+**PowerBI Integration:**
+- **PostgreSQL Connection Display** - Server (localhost:5432), Database, Table names
+- **Copy-to-Clipboard** - Easy copying of connection details
+- **Sub-Form Tables** - Display sub-form table names if they exist
+- **Removed Global Settings** - Cleaned up unnecessary PowerBI info from Settings page
+
+**Components Updated:**
+- `src/components/SubmissionDetail.jsx` - Enhanced navigation arrows
+- `src/components/SubFormDetail.jsx` - Enhanced navigation arrows
+- `src/components/EnhancedFormBuilder.jsx` - PowerBI connection info
+- `src/components/SettingsPage.jsx` - Removed PowerBI section
+- `src/components/auth/LoginPage.jsx` - Updated logo
+- `src/components/FormListApp.jsx` - Mobile layout
+- `src/index.css` - Mobile responsive fixes
 
 ### v0.5.4 (2025-10-01) - User 2FA Management & Trusted Device Settings
 

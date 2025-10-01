@@ -14,6 +14,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle } from './ui/glass-card';
 import { useEnhancedToast } from './ui/enhanced-toast';
+import { ConfirmModal } from './ui/alert-modal';
 import CustomSelect from './ui/custom-select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -52,6 +53,7 @@ export default function UserManagement() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [confirmDialog, setConfirmDialog] = useState({ show: false, type: null, user: null });
 
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -230,12 +232,18 @@ export default function UserManagement() {
   };
 
   const handleForceEnable2FA = async (user) => {
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(`ยืนยันการบังคับเปิด 2FA สำหรับ "${user.username}"?\n\nผู้ใช้จะต้องตั้งค่า 2FA ในครั้งต่อไปที่เข้าสู่ระบบ`)) {
-      return;
-    }
+    setConfirmDialog({
+      show: true,
+      type: 'force',
+      user: user
+    });
+  };
+
+  const confirmForceEnable2FA = async () => {
+    const user = confirmDialog.user;
 
     try {
+      setConfirmDialog({ show: false, type: null, user: null });
       // TODO: Replace with actual API call
       // await ApiClient.post(`/admin/users/${user.id}/force-2fa`);
 
@@ -257,12 +265,18 @@ export default function UserManagement() {
   };
 
   const handleReset2FA = async (user) => {
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(`ยืนยันการรีเซ็ต 2FA สำหรับ "${user.username}"?\n\n- จะลบ 2FA secret และ backup codes ทั้งหมด\n- ผู้ใช้จะต้องตั้งค่า 2FA ใหม่ทั้งหมด\n- Trusted devices ทั้งหมดจะถูกลบ`)) {
-      return;
-    }
+    setConfirmDialog({
+      show: true,
+      type: 'reset',
+      user: user
+    });
+  };
+
+  const confirmReset2FA = async () => {
+    const user = confirmDialog.user;
 
     try {
+      setConfirmDialog({ show: false, type: null, user: null });
       // TODO: Replace with actual API call
       // await ApiClient.post(`/admin/users/${user.id}/reset-2fa`);
 
@@ -678,6 +692,58 @@ export default function UserManagement() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Confirmation Modals */}
+      <ConfirmModal
+        isOpen={confirmDialog.show && confirmDialog.type === 'force'}
+        onClose={() => setConfirmDialog({ show: false, type: null, user: null })}
+        onConfirm={confirmForceEnable2FA}
+        title="ยืนยันการบังคับเปิด 2FA"
+        message={
+          <div className="space-y-2">
+            {confirmDialog.user && (
+              <>
+                <p>คุณแน่ใจหรือไม่ที่จะบังคับเปิด 2FA สำหรับ</p>
+                <p className="font-semibold text-primary">"{confirmDialog.user.username}"</p>
+                <p className="text-sm text-muted-foreground">
+                  ผู้ใช้จะต้องตั้งค่า 2FA ในครั้งต่อไปที่เข้าสู่ระบบ
+                </p>
+              </>
+            )}
+          </div>
+        }
+        confirmText="บังคับเปิด 2FA"
+        cancelText="ยกเลิก"
+        variant="warning"
+      />
+
+      <ConfirmModal
+        isOpen={confirmDialog.show && confirmDialog.type === 'reset'}
+        onClose={() => setConfirmDialog({ show: false, type: null, user: null })}
+        onConfirm={confirmReset2FA}
+        title="ยืนยันการรีเซ็ต 2FA"
+        message={
+          <div className="space-y-2">
+            {confirmDialog.user && (
+              <>
+                <p>คุณแน่ใจหรือไม่ที่จะรีเซ็ต 2FA สำหรับ</p>
+                <p className="font-semibold text-primary">"{confirmDialog.user.username}"</p>
+                <div className="mt-3 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                  <p className="font-semibold text-orange-500 mb-2">⚠️ การดำเนินการนี้จะ:</p>
+                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>ลบ 2FA secret และ backup codes ทั้งหมด</li>
+                    <li>ผู้ใช้จะต้องตั้งค่า 2FA ใหม่ทั้งหมด</li>
+                    <li>Trusted devices ทั้งหมดจะถูกลบ</li>
+                  </ul>
+                </div>
+              </>
+            )}
+          </div>
+        }
+        confirmText="รีเซ็ต 2FA"
+        cancelText="ยกเลิก"
+        variant="danger"
+      />
     </div>
   );
 }

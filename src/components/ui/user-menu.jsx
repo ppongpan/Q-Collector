@@ -120,7 +120,7 @@ export function UserMenu({ onSettingsClick }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-            className="fixed top-[60px] right-2 sm:right-4 w-[200px] sm:w-[220px] glass-container rounded-2xl shadow-2xl border border-border/40 overflow-hidden z-[100]"
+            className="fixed top-[60px] right-2 sm:right-4 w-[200px] sm:w-[220px] rounded-2xl shadow-2xl border border-border/40 overflow-hidden z-[100] bg-card"
           >
             {/* User Info Section */}
             <div className="p-2.5 border-b border-border/30 bg-gradient-to-br from-primary/5 to-transparent">

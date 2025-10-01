@@ -4,6 +4,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import Theme Stylesheets */
+@import './styles/minimal-theme.css';
+
 @layer base {
   :root {
     /* Font System */
@@ -12,24 +15,24 @@
 
     /* Color System - Enhanced for WCAG AA Compliance */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 2%;          /* Enhanced contrast: darker text (was 4.9%) */
+    --foreground: 0 0% 10%;              /* Dark gray text for readability */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 2%;     /* Enhanced contrast: darker text */
+    --card-foreground: 0 0% 10%;         /* Dark gray text on cards */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 2%;  /* Enhanced contrast: darker text */
+    --popover-foreground: 0 0% 10%;      /* Dark gray text on popovers */
     --primary: 24 95% 45%;               /* Enhanced contrast: darker orange (was 53%) */
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 94%;            /* Slightly darker background (was 96%) */
-    --secondary-foreground: 222.2 84% 2%; /* Enhanced contrast: darker text */
+    --secondary-foreground: 0 0% 10%;    /* Dark gray text */
     --muted: 210 40% 94%;                /* Slightly darker background */
-    --muted-foreground: 215.4 16.3% 35%; /* Enhanced contrast: darker text (was 46.9%) */
+    --muted-foreground: 0 0% 45%;        /* Medium gray for muted text */
     --accent: 24 95% 45%;                /* Enhanced contrast: darker orange */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 50%;          /* Enhanced contrast: darker red (was 60.2%) */
     --destructive-foreground: 0 0% 100%;
     --border: 214.3 31.8% 85%;           /* Slightly darker border (was 91.4%) */
     --input: 214.3 31.8% 85%;            /* Slightly darker input background */
-    --ring: 222.2 84% 2%;                /* Enhanced contrast: darker ring */
+    --ring: 24 95% 45%;                  /* Orange ring for focus */
     --radius: 0.5rem;
 
     /* Success, Warning, Error, Info with muted variants */
@@ -131,39 +134,39 @@
   }
 
   .dark {
-    --background: 0 0% 3%;               /* Darker background for better contrast */
-    --foreground: 0 0% 98%;              /* Maximum contrast: very light text */
-    --card: 0 0% 6%;                     /* Darker card background */
-    --card-foreground: 0 0% 98%;         /* Maximum contrast: very light text */
-    --popover: 0 0% 6%;                  /* Darker popover background */
-    --popover-foreground: 0 0% 98%;      /* Maximum contrast: very light text */
-    --primary: 24 95% 65%;               /* Bright orange for visibility */
-    --primary-foreground: 0 0% 3%;       /* Dark text on orange background */
-    --secondary: 0 0% 10%;               /* Darker secondary background */
-    --secondary-foreground: 0 0% 98%;    /* Maximum contrast: very light text */
-    --muted: 0 0% 10%;                   /* Darker muted background */
-    --muted-foreground: 0 0% 85%;        /* Very light muted text for visibility */
-    --accent: 24 95% 65%;                /* Bright orange for visibility */
-    --accent-foreground: 0 0% 3%;        /* Dark text on accent background */
-    --destructive: 0 84.2% 70%;          /* Bright red for visibility */
-    --destructive-foreground: 0 0% 3%;   /* Dark text on destructive background */
-    --border: 0 0% 25%;                  /* More visible borders */
-    --input: 0 0% 8%;                    /* Darker input backgrounds */
-    --ring: 24 95% 65%;                  /* Bright ring for visibility */
-    --success: 142.1 70.6% 60%;          /* Bright green for visibility */
-    --success-foreground: 144.9 80.4% 3%; /* Dark text on success background */
-    --success-muted: 142.1 30% 15%;      /* Darker success muted background */
-    --success-muted-foreground: 142.1 70.6% 60%;
-    --warning: 47.9 95.8% 65%;           /* Bright yellow for visibility */
-    --warning-foreground: 26 83.3% 3%;   /* Dark text on warning background */
-    --warning-muted: 47.9 40% 15%;       /* Darker warning muted background */
-    --warning-muted-foreground: 47.9 95.8% 65%;
-    --info: 220.9 39.3% 80%;             /* Bright blue for visibility */
-    --info-foreground: 220.9 39.3% 3%;   /* Dark text on info background */
-    --info-muted: 220.9 20% 15%;         /* Darker info muted background */
-    --info-muted-foreground: 220.9 39.3% 80%;
-    --error: 0 84.2% 70%;                /* Bright red for visibility */
-    --error-foreground: 0 0% 3%;         /* Dark text on error background */
+    --background: 0 0% 8%;               /* Dark background */
+    --foreground: 0 0% 95%;              /* Light text for readability */
+    --card: 0 0% 12%;                    /* Dark card background */
+    --card-foreground: 0 0% 95%;         /* Light text on cards */
+    --popover: 0 0% 12%;                 /* Dark popover background */
+    --popover-foreground: 0 0% 95%;      /* Light text on popovers */
+    --primary: 24 95% 55%;               /* Orange primary color */
+    --primary-foreground: 0 0% 100%;     /* White text on orange */
+    --secondary: 0 0% 16%;               /* Dark secondary background */
+    --secondary-foreground: 0 0% 95%;    /* Light text on secondary */
+    --muted: 0 0% 16%;                   /* Dark muted background */
+    --muted-foreground: 0 0% 65%;        /* Medium gray for muted text */
+    --accent: 24 95% 55%;                /* Orange accent color */
+    --accent-foreground: 0 0% 100%;      /* White text on accent */
+    --destructive: 0 84% 60%;            /* Red destructive color */
+    --destructive-foreground: 0 0% 100%; /* White text on destructive */
+    --border: 0 0% 45%;                  /* Much lighter borders for visibility in dark mode */
+    --input: 0 0% 16%;                   /* Dark input background */
+    --ring: 24 95% 55%;                  /* Orange ring for focus */
+    --success: 142 70% 50%;              /* Green for success */
+    --success-foreground: 0 0% 100%;     /* White text on success */
+    --success-muted: 142 30% 20%;        /* Dark success muted */
+    --success-muted-foreground: 142 70% 60%;
+    --warning: 48 96% 60%;               /* Yellow for warning */
+    --warning-foreground: 0 0% 10%;      /* Dark text on warning */
+    --warning-muted: 48 40% 20%;         /* Dark warning muted */
+    --warning-muted-foreground: 48 96% 65%;
+    --info: 221 40% 70%;                 /* Blue for info */
+    --info-foreground: 0 0% 10%;         /* Dark text on info */
+    --info-muted: 221 20% 20%;           /* Dark info muted */
+    --info-muted-foreground: 221 40% 75%;
+    --error: 0 84% 60%;                  /* Red for error */
+    --error-foreground: 0 0% 100%;       /* White text on error */
   }
 
   * {
@@ -190,6 +193,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
 
   code {
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
@@ -520,7 +524,7 @@
 
   /* Enhanced Button Components with Touch Targets and Clear Hover States */
   .btn {
-    @apply inline-flex items-center justify-center whitespace-nowrap rounded-xl transition-all duration-200 ease-out focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 touch-target-min;
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-3xl transition-all duration-200 ease-out focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 touch-target-min;
     font-size: clamp(14px, calc(16px * var(--font-scale)), 18px);  /* Limit font scaling */
     font-weight: 500;                      /* Enhanced: medium weight for better readability */
   }
@@ -593,7 +597,7 @@
 
   /* Enhanced Form Controls with Clear Hover States */
   .form-input {
-    @apply flex w-full rounded-xl border border-input bg-background ring-offset-background file:border-0 file:bg-transparent file:font-medium placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 touch-target-min;
+    @apply flex w-full rounded-3xl border border-input bg-background ring-offset-background file:border-0 file:bg-transparent file:font-medium placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 touch-target-min;
     padding: 12px 16px;                     /* Enhanced: more padding */
     font-size: 14px;                        /* Reduced font size to 14px */
     line-height: 1.5;
@@ -639,46 +643,38 @@
   .orange-neon-focus {
     position: relative;
     border: none !important; /* Remove double borders */
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(16px);
     transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
-    /* Remove box-shadow to prevent square glow */
+    border-radius: 1.5rem !important;
+    /* ใช้ box-shadow แบบ active effect */
+    box-shadow:
+      0 0 30px rgba(249, 115, 22, 0.6),
+      0 0 60px rgba(249, 115, 22, 0.4),
+      inset 0 0 30px rgba(249, 115, 22, 0.2);
   }
 
   .orange-neon-focus::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border-radius: inherit !important;
-    background: linear-gradient(135deg,
-      rgba(249, 115, 22, 0.3) 0%,
-      rgba(249, 115, 22, 0.1) 50%,
-      rgba(249, 115, 22, 0.2) 100%);
-    z-index: -1;
-    filter: blur(8px);
-    opacity: 0.9;
+    /* ไม่ใช้ pseudo-element เพื่อป้องกันขอบเหลี่ยม */
+    display: none;
   }
 
   .orange-neon-hover {
     position: relative;
     border: none !important;
-    backdrop-filter: blur(12px);
-    transform: translateY(-1px);
+    backdrop-filter: blur(16px);
+    /* ไม่ใช้ transform เพื่อไม่ให้ปุ่มอื่นขยับ */
     transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
-    /* Remove box-shadow to prevent square glow */
+    border-radius: 1.5rem !important; /* Force rounded-xl */
+    /* ใช้ box-shadow แบบ active effect แทน */
+    box-shadow:
+      0 0 30px rgba(249, 115, 22, 0.6),
+      0 0 60px rgba(249, 115, 22, 0.4),
+      inset 0 0 30px rgba(249, 115, 22, 0.2);
   }
 
   .orange-neon-hover::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border-radius: inherit !important;
-    background: linear-gradient(135deg,
-      rgba(249, 115, 22, 0.4) 0%,
-      rgba(249, 115, 22, 0.2) 50%,
-      rgba(249, 115, 22, 0.3) 100%);
-    z-index: -1;
-    filter: blur(10px);
-    opacity: 0.8;
+    /* ไม่ใช้ pseudo-element เพื่อป้องกันขอบเหลี่ยม */
+    display: none;
   }
 
   .orange-neon-active {
@@ -733,6 +729,21 @@
   .factory-button-rounded:hover::before,
   .factory-button-rounded:focus::before {
     border-radius: 0.5rem !important;
+  }
+
+  /* Dark mode text color fixes for orange-neon elements */
+  .dark .orange-neon-button {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .dark .focus-orange-neon,
+  .dark .hover-orange-neon {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .dark .bg-orange-50,
+  .dark .dark\:bg-orange-900\/20 {
+    color: hsl(var(--foreground)) !important;
   }
 
   /* Enhanced Date/Time Input Styling */
@@ -1226,65 +1237,140 @@
 
   /* Glass Buttons */
   .btn-glass {
-    @apply relative overflow-hidden rounded-xl font-medium transition-all duration-200 ease-out;
-    background: rgba(255, 255, 255, 0.8);    /* Light background for light theme */
-    backdrop-filter: blur(12px) saturate(120%);
-    border: 1px solid rgba(0, 0, 0, 0.1);    /* Dark border for light theme */
+    @apply relative overflow-hidden rounded-3xl font-medium transition-all duration-200 ease-out;
+    background: transparent;    /* โปร่งแสงเหมือน Ghost */
+    backdrop-filter: none;      /* ไม่มี blur ในสถานะ normal */
+    border: none !important;    /* ลบเส้นขอบออก */
     color: hsl(var(--foreground));
     font-size: clamp(14px, calc(16px * var(--font-scale)), 18px);  /* Limit font scaling */
   }
 
   .btn-glass:hover {
     background: rgba(249, 115, 22, 0.1) !important; /* Orange hint on hover */
-    border: 1px solid rgba(249, 115, 22, 0.4) !important; /* Orange border on hover */
+    border: none !important; /* ไม่มีขอบ */
+    border-radius: 1.5rem !important; /* ใช้ rounded-3xl (1.5rem) เท่ากับ normal state */
     color: hsl(var(--primary)) !important; /* Orange text on hover */
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.2);
+    /* Orange neon glow effect */
+    box-shadow:
+      0 0 20px rgba(249, 115, 22, 0.4),
+      0 0 40px rgba(249, 115, 22, 0.2),
+      inset 0 0 20px rgba(249, 115, 22, 0.1) !important;
+  }
+
+  .btn-glass:focus,
+  .btn-glass:focus-visible {
+    background: rgba(249, 115, 22, 0.1) !important;
+    border: none !important;
+    border-radius: 1.5rem !important; /* ใช้ rounded-3xl (1.5rem) เท่ากับ normal state */
+    color: hsl(var(--primary)) !important;
+    /* Orange neon glow effect เหมือน hover */
+    box-shadow:
+      0 0 20px rgba(249, 115, 22, 0.4),
+      0 0 40px rgba(249, 115, 22, 0.2),
+      inset 0 0 20px rgba(249, 115, 22, 0.1) !important;
   }
 
   .btn-glass:active {
-    transform: translateY(0);
-    background: rgba(249, 115, 22, 0.15);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    /* ใช้ orange neon effect แบบเข้มขึ้นเมื่อกด - ไม่มีขอบ */
+    background: rgba(249, 115, 22, 0.2) !important;
+    border: none !important;
+    border-radius: 1.5rem !important; /* ใช้ rounded-3xl (1.5rem) เท่ากับ normal state */
+    color: hsl(var(--primary)) !important;
+    box-shadow:
+      0 0 30px rgba(249, 115, 22, 0.6),
+      0 0 60px rgba(249, 115, 22, 0.4),
+      inset 0 0 30px rgba(249, 115, 22, 0.2) !important;
   }
 
   .dark .btn-glass {
-    background: rgba(255, 255, 255, 0.08);  /* More visible button background */
-    border: 1px solid rgba(255, 255, 255, 0.15); /* More visible border */
+    background: transparent;    /* โปร่งแสงเหมือน Ghost */
+    backdrop-filter: none;      /* ไม่มี blur ในสถานะ normal */
+    border: none !important; /* ไม่มีขอบ */
     color: hsl(var(--foreground)) !important; /* Ensure light text */
     font-size: clamp(14px, calc(16px * var(--font-scale)), 18px) !important; /* Limit font scaling */
   }
 
   .dark .btn-glass:hover {
     background: rgba(249, 115, 22, 0.15) !important; /* Orange background on hover */
-    border: 1px solid rgba(249, 115, 22, 0.5) !important; /* Orange border on hover */
+    border: none !important; /* ไม่มีขอบ */
+    border-radius: 1.5rem !important; /* ใช้ rounded-3xl (1.5rem) เท่ากับ normal state */
     color: hsl(var(--primary)) !important;   /* Orange text on hover */
-    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.3);
+    /* Orange neon glow effect */
+    box-shadow:
+      0 0 20px rgba(249, 115, 22, 0.4),
+      0 0 40px rgba(249, 115, 22, 0.2),
+      inset 0 0 20px rgba(249, 115, 22, 0.1) !important;
+  }
+
+  .dark .btn-glass:focus,
+  .dark .btn-glass:focus-visible {
+    background: rgba(249, 115, 22, 0.15) !important;
+    border: none !important;
+    border-radius: 1.5rem !important; /* ใช้ rounded-3xl (1.5rem) เท่ากับ normal state */
+    color: hsl(var(--primary)) !important;
+    /* Orange neon glow effect เหมือน hover */
+    box-shadow:
+      0 0 20px rgba(249, 115, 22, 0.4),
+      0 0 40px rgba(249, 115, 22, 0.2),
+      inset 0 0 20px rgba(249, 115, 22, 0.1) !important;
+  }
+
+  .dark .btn-glass:active {
+    background: rgba(249, 115, 22, 0.2) !important;
+    border: none !important; /* ไม่มีขอบ */
+    border-radius: 1.5rem !important; /* ใช้ rounded-3xl (1.5rem) เท่ากับ normal state */
+    color: hsl(var(--primary)) !important;
+    box-shadow:
+      0 0 30px rgba(249, 115, 22, 0.6),
+      0 0 60px rgba(249, 115, 22, 0.4),
+      inset 0 0 30px rgba(249, 115, 22, 0.2) !important;
   }
 
   .btn-glass-primary {
-    @apply rounded-xl;
-    background: rgba(249, 115, 22, 0.9);
-    backdrop-filter: blur(12px) saturate(120%);
-    border: none;
-    color: white;
+    @apply rounded-3xl;
+    background: transparent;    /* โปร่งแสงเหมือน Ghost */
+    backdrop-filter: none;      /* ไม่มี blur */
+    border: none !important;    /* ไม่มีขอบ */
+    color: hsl(var(--foreground));
+    font-size: clamp(14px, calc(16px * var(--font-scale)), 18px);
   }
 
   .btn-glass-primary:hover {
-    background: rgba(249, 115, 22, 1);
+    background: rgba(249, 115, 22, 0.1) !important;
+    border: none !important;
+    border-radius: 1.5rem !important;
+    color: hsl(var(--primary)) !important;
     box-shadow:
-      0 4px 16px rgba(249, 115, 22, 0.4),
-      0 8px 32px rgba(249, 115, 22, 0.2);
-    transform: translateY(-1px);
+      0 0 20px rgba(249, 115, 22, 0.4),
+      0 0 40px rgba(249, 115, 22, 0.2),
+      inset 0 0 20px rgba(249, 115, 22, 0.1) !important;
+  }
+
+  .btn-glass-primary:focus,
+  .btn-glass-primary:focus-visible {
+    background: rgba(249, 115, 22, 0.1) !important;
+    border: none !important;
+    border-radius: 1.5rem !important;
+    color: hsl(var(--primary)) !important;
+    box-shadow:
+      0 0 20px rgba(249, 115, 22, 0.4),
+      0 0 40px rgba(249, 115, 22, 0.2),
+      inset 0 0 20px rgba(249, 115, 22, 0.1) !important;
   }
 
   .btn-glass-primary:active {
-    background: rgba(234, 88, 12, 1);
-    transform: translateY(0);
+    background: rgba(249, 115, 22, 0.2) !important;
+    border: none !important;
+    border-radius: 1.5rem !important;
+    color: hsl(var(--primary)) !important;
+    box-shadow:
+      0 0 30px rgba(249, 115, 22, 0.6),
+      0 0 60px rgba(249, 115, 22, 0.4),
+      inset 0 0 30px rgba(249, 115, 22, 0.2) !important;
   }
 
   .icon-glass {
-    @apply w-10 h-10 flex items-center justify-center transition-all duration-200 rounded-xl;
+    @apply w-10 h-10 flex items-center justify-center transition-all duration-200 rounded-3xl;
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(8px);
     border: none;
@@ -1314,7 +1400,7 @@
     background: rgba(255, 255, 255, 0.85) !important;  /* Light background for light theme */
     backdrop-filter: blur(8px) saturate(120%);
     border: 1px solid rgba(0, 0, 0, 0.1) !important;   /* Light border for light theme */
-    border-radius: 0.75rem !important;                 /* Force rounded corners always */
+    border-radius: 1.5rem !important;                 /* Force rounded-3xl corners (1.5rem) always */
     color: hsl(var(--foreground)) !important;          /* Use theme text color */
     font-size: 14px !important;                        /* Reduced font size to 14px */
     font-weight: 500 !important;                       /* Better visibility */
@@ -1335,7 +1421,7 @@
     background: rgb(40, 40, 40) !important;            /* Dark background for dark theme */
     backdrop-filter: blur(8px) saturate(120%);
     border: 1px solid rgba(255, 255, 255, 0.1) !important;   /* Light border for dark theme */
-    border-radius: 0.75rem !important;                 /* Force rounded corners always */
+    border-radius: 1.5rem !important;                 /* Force rounded-3xl corners (1.5rem) always */
     color: rgb(255, 255, 255) !important;              /* White text in dark theme */
     font-size: 14px !important;                        /* Reduced font size to 14px */
     font-weight: 500 !important;                       /* Better visibility */
@@ -1354,7 +1440,7 @@
     color: hsl(var(--primary)) !important;             /* Orange text on hover */
     transform: translateY(-1px);
     border: 1px solid rgba(249, 115, 22, 0.3) !important;  /* Orange border on hover */
-    border-radius: 0.75rem !important;                  /* Force rounded corners on hover */
+    border-radius: 1.5rem !important;                  /* Force rounded-3xl corners (1.5rem) on hover */
     /* Apply orange neon hover effect */
     box-shadow:
       0 0 20px rgba(249, 115, 22, 0.5),
@@ -1369,7 +1455,7 @@
     transform: translateY(-1px);
     outline: none !important;
     border: 1px solid rgba(249, 115, 22, 0.5) !important;  /* Orange border on focus */
-    border-radius: 0.75rem !important;                  /* Force rounded corners on focus */
+    border-radius: 1.5rem !important;                  /* Force rounded-3xl corners (1.5rem) on focus */
     /* Apply orange neon focus effect */
     box-shadow:
       0 0 25px rgba(249, 115, 22, 0.6),
@@ -1392,7 +1478,7 @@
   .dark .input-glass:hover {
     background: rgba(42, 42, 42, 0.9) !important;        /* Lighter background on hover */
     color: #ff6600 !important;                            /* Orange text on hover */
-    border-radius: 0.75rem !important;                    /* Force rounded corners on hover */
+    border-radius: 1.5rem !important;                    /* Force rounded-3xl corners (1.5rem) on hover */
     /* Apply orange neon hover effect */
     box-shadow:
       0 0 20px rgba(249, 115, 22, 0.5),
@@ -1406,7 +1492,7 @@
     color: #ffffff !important;                            /* White text on focus */
     transform: translateY(-1px);
     outline: none !important;
-    border-radius: 0.75rem !important;                    /* Force rounded corners on focus */
+    border-radius: 1.5rem !important;                    /* Force rounded-3xl corners (1.5rem) on focus */
     /* Apply orange neon focus effect */
     box-shadow:
       0 0 25px rgba(249, 115, 22, 0.6),
@@ -1685,8 +1771,12 @@
     transition: all 0.2s ease !important;
   }
 
-  .dark select.input-glass option {
-    background-color: rgb(30, 30, 30) !important; /* Dark gray background for better readability */
+  .dark select.input-glass option,
+  html.dark select.input-glass option,
+  .dark select option,
+  html.dark select option {
+    background: rgb(40, 40, 40) !important; /* สีเข้มขึ้นสำหรับ dark mode */
+    background-color: rgb(40, 40, 40) !important;
     color: rgb(255, 255, 255) !important; /* White text for contrast */
     font-weight: 400 !important;
   }
@@ -1829,7 +1919,8 @@
   }
 
   .motion-lift {
-    @apply hover:shadow-lg hover:-translate-y-1 transition-all duration-200 ease-out;
+    /* ไม่ใช้ translate เพื่อไม่ให้ปุ่มอื่นขยับ - ใช้แค่ shadow */
+    @apply hover:shadow-lg transition-all duration-200 ease-out;
   }
 
   .motion-bounce {
@@ -1952,6 +2043,27 @@
   input[type="checkbox"]:checked, input[type="radio"]:checked {
     background-color: hsl(var(--primary)) !important; /* Orange background when checked */
     border-color: hsl(var(--primary)) !important;
+  }
+
+  /* Glass Checkbox Styling - Radix UI based */
+  .glass-checkbox {
+    width: 20px !important;
+    height: 20px !important;
+    border-width: 2px !important;
+    border-style: solid !important;
+    border-color: rgba(30, 30, 30, 1) !important;
+    background: rgba(30, 30, 30, 0.1) !important;
+    box-shadow: 0 0 20px rgba(30, 30, 30, 0.6), inset 0 0 10px rgba(30, 30, 30, 0.3) !important;
+  }
+
+  .glass-checkbox[data-state="checked"] {
+    width: 20px !important;
+    height: 20px !important;
+    border-width: 2px !important;
+    border-style: solid !important;
+    border-color: rgba(249, 115, 22, 1) !important;
+    background: rgba(249, 115, 22, 0.9) !important;
+    box-shadow: 0 0 25px rgba(249, 115, 22, 0.8), inset 0 0 15px rgba(249, 115, 22, 0.5) !important;
   }
 
   /* Enhanced Label Styling for Better Accessibility */
@@ -2177,7 +2289,7 @@
     overflow: visible !important;
     border: none !important;
 
-    /* Force rounded corners with webkit prefix */
+    /* Force rounded-3xl corners (1.5rem) with webkit prefix */
     -webkit-border-radius: 24px !important;
     -moz-border-radius: 24px !important;
 
@@ -2401,49 +2513,41 @@
     border: none !important;
   }
 
-  /* Force remove all focus/active effects on buttons and divs */
+  /* Force remove outline only - ให้ background และ box-shadow ทำงานได้ */
   button,
   div[onclick],
   div[title],
   [role="button"] {
     outline: none !important;
-    box-shadow: none !important;
-    border: none !important;
-    background: transparent !important;
   }
 
   button:focus,
   button:focus-visible,
-  button:active,
   div[onclick]:focus,
   div[onclick]:focus-visible,
-  div[onclick]:active,
   div[title]:focus,
   div[title]:focus-visible,
-  div[title]:active,
   [role="button"]:focus,
-  [role="button"]:focus-visible,
-  [role="button"]:active {
+  [role="button"]:focus-visible {
     outline: none !important;
-    box-shadow: none !important;
-    border: none !important;
-    background: transparent !important;
   }
+
+  /* ไม่ใช้กับ :active เพื่อให้ active effect ทำงานได้ */
 
   /* Blur Edge Effects System - Fixed for Rounded Corners */
   .blur-edge {
     position: relative;
     overflow: visible;
-    border-radius: 24px !important;
+    border-radius: 1.5rem !important; /* ใช้ rounded-3xl (1.5rem) ทั้งหมด */
   }
 
   /* Special handling for input-glass with blur-edge */
   .input-glass.blur-edge {
-    border-radius: 0.75rem !important;
+    border-radius: 1.5rem !important;
   }
 
   .input-glass.blur-edge::before {
-    border-radius: 0.75rem !important;
+    border-radius: 1.5rem !important;
   }
 
   .blur-edge::before {
@@ -2452,22 +2556,22 @@
     inset: 0;
     background: transparent;
     backdrop-filter: blur(12px);
-    border-radius: 24px !important;
+    border-radius: 1.5rem !important; /* ใช้ rounded-3xl (1.5rem) ทั้งหมด */
     z-index: -1;
   }
 
   .blur-edge-intense {
     position: relative;
     overflow: visible;
-    border-radius: 24px !important;
+    border-radius: 1.5rem !important; /* ใช้ rounded-3xl (1.5rem) ทั้งหมด */
   }
 
   .input-glass.blur-edge-intense {
-    border-radius: 0.75rem !important;
+    border-radius: 1.5rem !important;
   }
 
   .input-glass.blur-edge-intense::before {
-    border-radius: 0.75rem !important;
+    border-radius: 1.5rem !important;
   }
 
   /* Ensure input-glass maintains rounded corners in all states */
@@ -2475,14 +2579,41 @@
   .input-glass:focus.blur-edge,
   .input-glass:hover.blur-edge-intense,
   .input-glass:focus.blur-edge-intense {
-    border-radius: 0.75rem !important;
+    border-radius: 1.5rem !important;
   }
 
   .input-glass:hover.blur-edge::before,
   .input-glass:focus.blur-edge::before,
   .input-glass:hover.blur-edge-intense::before,
   .input-glass:focus.blur-edge-intense::before {
-    border-radius: 0.75rem !important;
+    border-radius: 1.5rem !important;
+  }
+
+  /* Ensure button maintains rounded corners in all states */
+  button.blur-edge,
+  button.blur-edge:hover,
+  button.blur-edge:focus,
+  button.blur-edge:focus-visible,
+  button.blur-edge:active,
+  button.blur-edge-intense,
+  button.blur-edge-intense:hover,
+  button.blur-edge-intense:focus,
+  button.blur-edge-intense:focus-visible,
+  button.blur-edge-intense:active {
+    border-radius: 1.5rem !important;
+  }
+
+  button.blur-edge::before,
+  button.blur-edge:hover::before,
+  button.blur-edge:focus::before,
+  button.blur-edge:focus-visible::before,
+  button.blur-edge:active::before,
+  button.blur-edge-intense::before,
+  button.blur-edge-intense:hover::before,
+  button.blur-edge-intense:focus::before,
+  button.blur-edge-intense:focus-visible::before,
+  button.blur-edge-intense:active::before {
+    border-radius: 1.5rem !important;
   }
 
   .blur-edge-intense::before {
@@ -2491,7 +2622,7 @@
     inset: 0;
     background: transparent;
     backdrop-filter: blur(16px) saturate(120%);
-    border-radius: 24px !important;
+    border-radius: 1.5rem !important; /* ใช้ rounded-3xl (1.5rem) ทั้งหมด */
     z-index: -1;
   }
 
@@ -2600,15 +2731,39 @@
   }
 
   .glass-interactive:not(select):hover {
-    @apply blur-edge-intense;
-    transform: translateY(-2px) translateZ(0);
+    /* ไม่เปลี่ยน class - ให้คง blur-edge เดิม */
+    /* ใช้ border-radius เท่ากับ normal state */
+    border-radius: 1.5rem !important;
+  }
+
+  .glass-interactive:not(select):hover::before {
+    border-radius: 1.5rem !important;
+  }
+
+  .glass-interactive:not(select):focus,
+  .glass-interactive:not(select):focus-visible {
+    border-radius: 1.5rem !important;
+  }
+
+  .glass-interactive:not(select):focus::before,
+  .glass-interactive:not(select):focus-visible::before {
+    border-radius: 1.5rem !important;
+  }
+
+  .glass-interactive:not(select):active {
+    border-radius: 1.5rem !important;
+  }
+
+  .glass-interactive:not(select):active::before {
+    border-radius: 1.5rem !important;
   }
 
   /* Responsive adjustments for animations */
   @media (max-width: 640px) {
     .form-list-grid-container {
       padding: 12px;
-      margin: -6px;
+      margin: 0 auto;
+      width: 100%;
     }
 
     .form-card-borderless {
@@ -2618,7 +2773,8 @@
     .animated-grid {
       gap: 1rem;
       padding: 12px;
-      margin: -6px;
+      margin: 0 auto;
+      width: 100%;
     }
 
     /* Reduce blur effects on mobile for performance */
@@ -2631,7 +2787,8 @@
   @media (max-width: 480px) {
     .form-list-grid-container {
       padding: 8px;
-      margin: -4px;
+      margin: 0 auto;
+      width: 100%;
     }
 
     .form-card-borderless {
@@ -2641,7 +2798,8 @@
     .animated-grid {
       gap: 0.75rem;
       padding: 8px;
-      margin: -4px;
+      margin: 0 auto;
+      width: 100%;
     }
 
     /* Further reduce blur effects on small mobile */
@@ -2876,3 +3034,17 @@
     @apply red-neon-active;
   }
 }
+  /* Login Button - Force border-radius in all states */
+  button.bg-primary,
+  button.bg-primary:hover,
+  button.bg-primary:focus,
+  button.bg-primary:active {
+    border-radius: 1.5rem !important;
+  }
+
+  /* Dark mode checkbox - white border */
+  .dark .glass-checkbox {
+    border-color: rgba(255, 255, 255, 1) !important;
+    background: rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.3) !important;
+  }

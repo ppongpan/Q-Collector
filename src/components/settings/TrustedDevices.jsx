@@ -25,6 +25,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { GlassCard, GlassCardContent, GlassCardHeader } from '../ui/glass-card';
 import { useEnhancedToast } from '../ui/enhanced-toast';
+import { ConfirmModal } from '../ui/alert-modal';
 import ApiClient from '../../services/ApiClient';
 
 const TrustedDevices = () => {
@@ -32,6 +33,7 @@ const TrustedDevices = () => {
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState(null);
   const [showRevokeAll, setShowRevokeAll] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({ show: false, type: null, device: null });
   const toast = useEnhancedToast();
 
   useEffect(() => {
@@ -58,14 +60,19 @@ const TrustedDevices = () => {
   };
 
   const handleRevokeDevice = async (deviceId, deviceName) => {
-    // Use window.confirm to avoid eslint warning
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(`ยืนยันการยกเลิกอุปกรณ์ "${deviceName}"?\n\nคุณจะต้องยืนยัน 2FA อีกครั้งเมื่อเข้าสู่ระบบจากอุปกรณ์นี้`)) {
-      return;
-    }
+    setConfirmDialog({
+      show: true,
+      type: 'single',
+      device: { id: deviceId, name: deviceName }
+    });
+  };
+
+  const confirmRevokeDevice = async () => {
+    const { id: deviceId, name: deviceName } = confirmDialog.device;
 
     try {
       setRevoking(deviceId);
+      setConfirmDialog({ show: false, type: null, device: null });
       const response = await ApiClient.delete(`/auth/trusted-devices/${deviceId}`);
 
       if (response.success) {
@@ -89,14 +96,17 @@ const TrustedDevices = () => {
   };
 
   const handleRevokeAllDevices = async () => {
-    // Use window.confirm to avoid eslint warning
-    // eslint-disable-next-line no-alert
-    if (!window.confirm('ยืนยันการยกเลิกอุปกรณ์ทั้งหมด?\n\nคุณจะต้องยืนยัน 2FA ทุกครั้งที่เข้าสู่ระบบ')) {
-      return;
-    }
+    setConfirmDialog({
+      show: true,
+      type: 'all',
+      device: null
+    });
+  };
 
+  const confirmRevokeAllDevices = async () => {
     try {
       setRevoking('all');
+      setConfirmDialog({ show: false, type: null, device: null });
       const response = await ApiClient.delete('/auth/trusted-devices');
 
       if (response.success) {
@@ -370,6 +380,46 @@ const TrustedDevices = () => {
           </div>
         )}
       </GlassCardContent>
+
+      {/* Confirmation Modals */}
+      <ConfirmModal
+        isOpen={confirmDialog.show && confirmDialog.type === 'single'}
+        onClose={() => setConfirmDialog({ show: false, type: null, device: null })}
+        onConfirm={confirmRevokeDevice}
+        title="ยืนยันการยกเลิกอุปกรณ์"
+        message={
+          <div className="space-y-2">
+            <p>คุณแน่ใจหรือไม่ที่จะยกเลิกอุปกรณ์นี้?</p>
+            {confirmDialog.device && (
+              <p className="font-semibold text-primary">"{confirmDialog.device.name}"</p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              คุณจะต้องยืนยัน 2FA อีกครั้งเมื่อเข้าสู่ระบบจากอุปกรณ์นี้
+            </p>
+          </div>
+        }
+        confirmText="ยกเลิกอุปกรณ์"
+        cancelText="ปิด"
+        variant="danger"
+      />
+
+      <ConfirmModal
+        isOpen={confirmDialog.show && confirmDialog.type === 'all'}
+        onClose={() => setConfirmDialog({ show: false, type: null, device: null })}
+        onConfirm={confirmRevokeAllDevices}
+        title="ยืนยันการยกเลิกอุปกรณ์ทั้งหมด"
+        message={
+          <div className="space-y-2">
+            <p>คุณแน่ใจหรือไม่ที่จะยกเลิกอุปกรณ์ทั้งหมด?</p>
+            <p className="text-sm text-muted-foreground">
+              คุณจะต้องยืนยัน 2FA ทุกครั้งที่เข้าสู่ระบบ
+            </p>
+          </div>
+        }
+        confirmText="ยกเลิกทั้งหมด"
+        cancelText="ปิด"
+        variant="danger"
+      />
     </GlassCard>
   );
 };
