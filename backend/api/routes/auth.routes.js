@@ -10,7 +10,10 @@
 
 const express = require('express');
 const { body, validationResult } = require('express-validator');
+const jwt = require('jsonwebtoken');
 const AuthService = require('../../services/AuthService');
+const twoFactorService = require('../../services/TwoFactorService');
+const trustedDeviceService = require('../../services/TrustedDeviceService');
 const {
   authenticate,
   authRateLimit,
@@ -18,6 +21,7 @@ const {
 } = require('../../middleware/auth.middleware');
 const { asyncHandler, ApiError } = require('../../middleware/error.middleware');
 const logger = require('../../utils/logger.util');
+const cacheService = require('../../services/CacheService');
 
 const router = express.Router();
 
@@ -27,6 +31,11 @@ const router = express.Router();
 function validate(req, res, next) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    logger.error('Validation errors:', {
+      url: req.url,
+      body: req.body,
+      errors: errors.array()
+    });
     throw new ApiError(400, 'Validation failed', 'VALIDATION_ERROR', errors.array());
   }
   next();
@@ -295,8 +304,88 @@ router.post(
   ],
   validate,
   asyncHandler(async (req, res) => {
-    const { identifier, password } = req.body;
+    const { identifier, password, deviceFingerprint } = req.body;
 
+    const { User } = require('../../models');
+
+    // Find user first to check 2FA status
+    const user = await User.findByIdentifier(identifier);
+
+    if (!user) {
+      throw new ApiError(401, 'Invalid credentials', 'INVALID_CREDENTIALS');
+    }
+
+    // Check if user is active
+    if (!user.is_active) {
+      throw new ApiError(403, 'Account is inactive', 'ACCOUNT_INACTIVE');
+    }
+
+    // Validate password
+    const isPasswordValid = await user.validatePassword(password);
+    if (!isPasswordValid) {
+      throw new ApiError(401, 'Invalid credentials', 'INVALID_CREDENTIALS');
+    }
+
+    // Check if user has 2FA enabled
+    if (user.twoFactorEnabled) {
+      // Check if device is trusted (skip 2FA if trusted)
+      if (deviceFingerprint) {
+        const isTrusted = await trustedDeviceService.isDeviceTrusted(
+          user.id,
+          deviceFingerprint
+        );
+
+        if (isTrusted) {
+          // Device is trusted - skip 2FA and login directly
+          logger.info(`Trusted device login for user: ${user.username}`);
+          const result = await AuthService.login(identifier, password, req.metadata);
+
+          return res.status(200).json({
+            success: true,
+            message: 'Login successful (trusted device)',
+            data: {
+              user: result.user,
+              tokens: result.tokens,
+            },
+          });
+        }
+      }
+      // Generate temporary token (5 minutes expiry)
+      const tempToken = jwt.sign(
+        {
+          userId: user.id,
+          type: 'temp_2fa',
+          username: user.username
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '5m' }
+      );
+
+      // Cache temp token with user data
+      await cacheService.set(
+        `2fa:login:${tempToken}`,
+        {
+          userId: user.id,
+          username: user.username,
+          metadata: req.metadata
+        },
+        300 // 5 minutes
+      );
+
+      logger.info(`2FA required for user: ${user.username}`);
+
+      return res.status(200).json({
+        success: true,
+        requires2FA: true,
+        message: '2FA verification required',
+        data: {
+          tempToken,
+          username: user.username
+        }
+      });
+    }
+
+    // No 2FA - proceed with normal login
     const result = await AuthService.login(identifier, password, req.metadata);
 
     logger.info(`User logged in successfully: ${result.user.username}`);
@@ -307,6 +396,101 @@ router.post(
       data: {
         user: result.user,
         tokens: result.tokens,
+      },
+    });
+  })
+);
+
+/**
+ * POST /api/v1/auth/login/2fa
+ * Complete 2FA login with verification code
+ */
+router.post(
+  '/login/2fa',
+  attachMetadata,
+  authRateLimit(5, 15 * 60 * 1000), // 5 attempts per 15 minutes
+  [
+    body('tempToken')
+      .notEmpty()
+      .withMessage('Temporary token is required'),
+    body('token')
+      .notEmpty()
+      .withMessage('2FA code is required'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { tempToken, token, trustDevice, deviceFingerprint, deviceInfo } = req.body;
+
+    // Verify temp token
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+      if (decoded.type !== 'temp_2fa') {
+        throw new ApiError(401, 'Invalid temporary token');
+      }
+    } catch (error) {
+      throw new ApiError(401, 'Temporary token expired or invalid');
+    }
+
+    // Get cached login data
+    const loginData = await cacheService.get(`2fa:login:${tempToken}`);
+    if (!loginData) {
+      throw new ApiError(401, 'Login session expired. Please login again.');
+    }
+
+    // Get user
+    const { User } = require('../../models');
+    const user = await User.findByPk(decoded.userId);
+
+    if (!user || !user.twoFactorEnabled) {
+      throw new ApiError(400, '2FA is not enabled for this user');
+    }
+
+    // Verify 2FA token
+    const verified = await twoFactorService.verifyToken(user, token);
+
+    if (!verified) {
+      throw new ApiError(401, 'Invalid 2FA code');
+    }
+
+    // Clear temp token from cache
+    await cacheService.delete(`2fa:login:${tempToken}`);
+
+    // Update last login time
+    user.last_login_at = new Date();
+    await user.save();
+
+    // Trust device if requested
+    if (trustDevice && deviceFingerprint) {
+      await trustedDeviceService.trustDevice(user.id, deviceFingerprint, {
+        deviceName: deviceInfo?.deviceName || 'Unknown Device',
+        userAgent: deviceInfo?.userAgent || req.headers['user-agent'],
+        ipAddress: loginData.metadata?.ipAddress || req.metadata?.ipAddress
+      });
+      logger.info(`Device trusted for user: ${user.username}`);
+    }
+
+    // Generate full access tokens
+    const tokens = await AuthService.generateTokens(user, loginData.metadata || req.metadata);
+
+    // Create audit log
+    const { AuditLog } = require('../../models');
+    await AuditLog.logAction({
+      userId: user.id,
+      action: 'login',
+      entityType: 'session',
+      ipAddress: loginData.metadata?.ipAddress || req.metadata?.ipAddress,
+      userAgent: loginData.metadata?.userAgent || req.metadata?.userAgent,
+    });
+
+    logger.info(`User logged in successfully with 2FA: ${user.username}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        user: user.toJSON(),
+        tokens,
       },
     });
   })
@@ -513,6 +697,229 @@ router.get(
         username: req.user.username,
         role: req.userRole,
       },
+    });
+  })
+);
+
+// ==========================================
+// TWO-FACTOR AUTHENTICATION (2FA) ROUTES
+// ==========================================
+
+/**
+ * GET /api/v1/2fa/status
+ * Get 2FA status for current user
+ */
+router.get(
+  '/2fa/status',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const status = await twoFactorService.getStatus(req.userId);
+    res.status(200).json({
+      success: true,
+      data: status,
+    });
+  })
+);
+
+/**
+ * POST /api/v1/2fa/setup
+ * Initialize 2FA setup - Get QR code and backup codes
+ */
+router.post(
+  '/2fa/setup',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const setupData = await twoFactorService.generateSetup(req.userId);
+    res.status(200).json({
+      success: true,
+      message: 'สร้างข้อมูลการตั้งค่า 2FA สำเร็จ',
+      data: setupData,
+    });
+  })
+);
+
+/**
+ * POST /api/v1/2fa/enable
+ * Enable 2FA with verification code
+ */
+router.post(
+  '/2fa/enable',
+  authenticate,
+  authRateLimit,
+  [
+    body('token').notEmpty().withMessage('กรุณาใส่รหัสยืนยัน'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { token } = req.body;
+    await twoFactorService.enable(req.userId, token);
+
+    res.status(200).json({
+      success: true,
+      message: 'เปิดใช้งาน 2FA สำเร็จ',
+    });
+  })
+);
+
+/**
+ * POST /api/v1/2fa/disable
+ * Disable 2FA with verification code
+ */
+router.post(
+  '/2fa/disable',
+  authenticate,
+  authRateLimit,
+  [
+    body('token').notEmpty().withMessage('กรุณาใส่รหัสยืนยัน'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { token } = req.body;
+    await twoFactorService.disable(req.userId, token);
+
+    res.status(200).json({
+      success: true,
+      message: 'ปิดใช้งาน 2FA สำเร็จ',
+    });
+  })
+);
+
+/**
+ * POST /api/v1/2fa/backup-codes
+ * Regenerate backup codes
+ */
+router.post(
+  '/2fa/backup-codes',
+  authenticate,
+  authRateLimit,
+  [
+    body('token').notEmpty().withMessage('กรุณาใส่รหัสยืนยัน'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { token } = req.body;
+    const backupCodes = await twoFactorService.regenerateBackupCodes(req.userId, token);
+
+    res.status(200).json({
+      success: true,
+      message: 'สร้าง Backup Codes ใหม่สำเร็จ',
+      data: { backupCodes },
+    });
+  })
+);
+
+/**
+ * GET /api/v1/auth/trusted-devices
+ * Get list of user's trusted devices
+ */
+router.get(
+  '/trusted-devices',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const devices = await trustedDeviceService.getUserDevices(req.userId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Trusted devices retrieved successfully',
+      data: { devices },
+    });
+  })
+);
+
+/**
+ * DELETE /api/v1/auth/trusted-devices/:id
+ * Revoke a specific trusted device
+ */
+router.delete(
+  '/trusted-devices/:id',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    await trustedDeviceService.revokeDevice(req.userId, id);
+
+    logger.info(`Trusted device revoked: ${id} for user: ${req.userId}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Trusted device revoked successfully',
+    });
+  })
+);
+
+/**
+ * DELETE /api/v1/auth/trusted-devices
+ * Revoke all trusted devices for the user
+ */
+router.delete(
+  '/trusted-devices',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const count = await trustedDeviceService.revokeAllDevices(req.userId);
+
+    logger.info(`All trusted devices revoked (${count}) for user: ${req.userId}`);
+
+    res.status(200).json({
+      success: true,
+      message: `${count} trusted device(s) revoked successfully`,
+      data: { count },
+    });
+  })
+);
+
+/**
+ * GET /api/v1/auth/trusted-devices/settings
+ * Get trusted device duration settings (Super Admin only)
+ */
+router.get(
+  '/trusted-devices/settings',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    // Check if user is Super Admin
+    if (req.user.role !== 'super_admin') {
+      throw new ApiError(403, 'Only Super Admin can access these settings');
+    }
+
+    const settings = await trustedDeviceService.getSettings();
+
+    res.status(200).json({
+      success: true,
+      data: settings,
+    });
+  })
+);
+
+/**
+ * PUT /api/v1/auth/trusted-devices/settings
+ * Update trusted device duration settings (Super Admin only)
+ */
+router.put(
+  '/trusted-devices/settings',
+  authenticate,
+  [
+    body('duration')
+      .notEmpty()
+      .withMessage('Duration is required')
+      .isInt({ min: 1, max: 720 })
+      .withMessage('Duration must be between 1 and 720 hours'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    // Check if user is Super Admin
+    if (req.user.role !== 'super_admin') {
+      throw new ApiError(403, 'Only Super Admin can modify these settings');
+    }
+
+    const { duration } = req.body;
+
+    const settings = await trustedDeviceService.updateSettings(duration);
+
+    logger.info(`Trusted device duration updated to ${duration} hours by: ${req.user.username}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Settings updated successfully',
+      data: settings,
     });
   })
 );

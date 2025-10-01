@@ -4,7 +4,7 @@
 
 ## Version Information
 
-- **Version**: 0.5.3
+- **Version**: 0.5.4
 - **Release Date**: 2025-10-01
 - **Framework**: React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 - **Target**: Thai Business Forms & Data Collection
@@ -101,6 +101,57 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 **Accessibility:** WCAG 2.1 AA compliance, ARIA labels, keyboard navigation
 
 ## Version History
+
+### v0.5.4 (2025-10-01) - User 2FA Management & Trusted Device Settings
+
+**Major Updates:**
+- ✅ **User 2FA Management for Super Admin** - Complete control over user 2FA settings
+- ✅ **Trusted Device Duration Settings** - Configurable skip 2FA duration
+- ✅ **Data Cleanup Tools** - User consistency maintenance scripts
+- ✅ **Admin API Endpoints** - Super Admin-only routes for user management
+
+**User 2FA Management Features:**
+- **Super Admin Only Access** - Restricted to super_admin role
+- **View All Users' 2FA Status** - Complete overview with statistics
+- **Force Enable 2FA** - Require users to setup 2FA on next login
+- **Reset 2FA** - Remove secret, backup codes, and trusted devices
+- **Search & Filter** - Find users by name/email, filter by 2FA status
+- **Stats Dashboard** - Total users, enabled/disabled counts
+
+**Trusted Device Settings:**
+- **Duration Configuration** - Set trust duration from 1-720 hours
+- **Default 24 Hours** - Reasonable security/convenience balance
+- **Super Admin Only** - Protected settings for security policy
+- **Validation** - Range checking and error handling
+- **API Endpoints:** GET/PUT `/api/v1/auth/trusted-device-settings`
+
+**Admin API Endpoints:**
+- `GET /api/v1/admin/users/2fa-status` - List all users with 2FA status
+- `POST /api/v1/admin/users/:userId/force-2fa` - Force enable 2FA
+- `POST /api/v1/admin/users/:userId/reset-2fa` - Reset user's 2FA completely
+
+**New Components:**
+- `src/components/admin/User2FAManagement.jsx` - 2FA management interface
+- `src/components/settings/TrustedDeviceDuration.jsx` - Duration settings
+- `backend/api/routes/admin.routes.js` - Admin-only endpoints
+
+**Utility Scripts:**
+- `backend/scripts/check-users.js` - User data analysis
+- `backend/scripts/cleanup-unused-users-auto.js` - Remove inactive users
+- `backend/scripts/create-technicuser.js` - Create technic user account
+- `backend/scripts/check-2fa-status.js` - 2FA status checker
+- `backend/scripts/disable-2fa.js` - Disable 2FA for user
+- `backend/scripts/test-2fa.js` - Test 2FA functionality
+
+**Documentation:**
+- `USER-2FA-MANAGEMENT-FEATURE.md` - Complete feature documentation
+- `TRUSTED-DEVICE-DURATION-FEATURE.md` - Duration settings guide
+- `TRUSTED-DEVICE-IMPLEMENTATION.md` - Updated to 90% complete
+
+**Components Updated:**
+- `src/components/UserManagement.jsx` - Integrated 2FA management
+- `src/components/SettingsPage.jsx` - Added duration settings
+- `backend/api/routes/index.js` - Mounted admin routes
 
 ### v0.5.3 (2025-10-01) - Direct Form Link & Navigation Improvements
 
@@ -250,8 +301,9 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 
 ---
 
-**Application Status:** ✅ Production-ready v0.5.3 - Complete Full-Stack Enterprise System
+**Application Status:** ✅ Production-ready v0.5.4 - Complete Full-Stack Enterprise System
 
-**License:** Internal use - Q-Collector Enterprise Form Builder v0.5.3
+**License:** Internal use - Q-Collector Enterprise Form Builder v0.5.4
 - BOT TOKEN FOR TELEGRAM TESTING 7794493324:AAHlxtpYenok1kwyo88ns5R4rivWWXcqmE0   AND GROUP ID = -4847325737  record in .env
 - สร้าง Super Admin Account  โดยใช้ User Name : pongpanp  ชื่อ : Pongpan Peerawanichkul  email: pongpanp@qcon.co.th  Department : Technic  Role : Super Admin
+- ตรวจสอบ claude code process  อย่าหยุดการทำงานของ claude code เมื่อต้องการ restart all servers

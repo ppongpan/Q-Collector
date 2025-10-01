@@ -5,10 +5,12 @@
 
 const express = require('express');
 const authRoutes = require('./auth.routes');
+const twoFactorRoutes = require('./2fa.routes');
 const formRoutes = require('./form.routes');
 const submissionRoutes = require('./submission.routes');
 const fileRoutes = require('./file.routes');
 const userRoutes = require('./user.routes');
+const adminRoutes = require('./admin.routes');
 const cacheRoutes = require('./cache.routes');
 const websocketRoutes = require('./websocket.routes');
 const queueRoutes = require('./queue.routes');
@@ -40,11 +42,13 @@ router.get('/docs', (req, res) => {
  * Mount route modules
  */
 router.use('/auth', authRoutes);
+router.use('/2fa', twoFactorRoutes);
 router.use('/forms', formRoutes);
 router.use('/forms', submissionRoutes); // Nested under forms
 router.use('/submissions', submissionRoutes); // Also available at root level
 router.use('/files', fileRoutes);
 router.use('/users', userRoutes);
+router.use('/admin', adminRoutes);
 router.use('/cache', cacheRoutes);
 router.use('/websocket', websocketRoutes);
 router.use('/queue', queueRoutes);

@@ -20,14 +20,30 @@ class AuthService {
    * Login with username/email and password
    * @param {string} identifier - Username or email
    * @param {string} password - User password
+   * @param {string} deviceFingerprint - Optional device fingerprint for trusted device feature
    * @returns {Promise<Object>} - User data and tokens
    */
-  async login(identifier, password) {
+  async login(identifier, password, deviceFingerprint = null) {
     try {
-      const response = await ApiClient.post(API_ENDPOINTS.auth.login, {
+      const payload = {
         identifier,
         password
-      });
+      };
+
+      if (deviceFingerprint) {
+        payload.deviceFingerprint = deviceFingerprint;
+      }
+
+      const response = await ApiClient.post(API_ENDPOINTS.auth.login, payload);
+
+      // Check if 2FA is required
+      if (response.data?.requires2FA) {
+        return {
+          requires2FA: true,
+          tempToken: response.data.data.tempToken,
+          username: response.data.data.username
+        };
+      }
 
       // Store tokens and user data
       const { data } = response;

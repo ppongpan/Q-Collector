@@ -31,10 +31,15 @@ import {
   faFileAlt,
   faPlus,
   faTrash,
-  faBriefcase
+  faBriefcase,
+  faShieldAlt,
+  faRotateRight,
+  faCheckCircle,
+  faTimesCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { ALL_ROLES, getRoleLabel } from '../config/roles.config';
 import { useAuth } from '../contexts/AuthContext';
+import User2FAManagement from './admin/User2FAManagement';
 
 export default function UserManagement() {
   const { user: currentUser } = useAuth();
@@ -91,7 +96,8 @@ export default function UserManagement() {
           role: 'super_admin',
           is_active: true,
           createdAt: '2025-09-30T03:00:19.531Z',
-          special_forms: []
+          special_forms: [],
+          twoFactorEnabled: true
         },
         {
           id: '2',
@@ -101,7 +107,8 @@ export default function UserManagement() {
           role: 'technic',
           is_active: true,
           createdAt: '2025-09-30T03:01:59.506Z',
-          special_forms: ['[Technic Request]', '[บันทึกการเข้าไซต์งาน]']
+          special_forms: ['[Technic Request]', '[บันทึกการเข้าไซต์งาน]'],
+          twoFactorEnabled: false
         }
       ];
       setUsers(mockUsers);
@@ -222,6 +229,60 @@ export default function UserManagement() {
     }
   };
 
+  const handleForceEnable2FA = async (user) => {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(`ยืนยันการบังคับเปิด 2FA สำหรับ "${user.username}"?\n\nผู้ใช้จะต้องตั้งค่า 2FA ในครั้งต่อไปที่เข้าสู่ระบบ`)) {
+      return;
+    }
+
+    try {
+      // TODO: Replace with actual API call
+      // await ApiClient.post(`/admin/users/${user.id}/force-2fa`);
+
+      // Update local state
+      setUsers(users.map(u =>
+        u.id === user.id ? { ...u, twoFactorEnabled: true } : u
+      ));
+
+      toast.success('บังคับเปิด 2FA สำเร็จ', {
+        title: '✅ สำเร็จ',
+        description: `${user.username} จะต้องตั้งค่า 2FA ในครั้งต่อไปที่เข้าสู่ระบบ`
+      });
+    } catch (error) {
+      toast.error('ไม่สามารถบังคับเปิด 2FA ได้', {
+        title: '❌ ข้อผิดพลาด',
+        description: error.message
+      });
+    }
+  };
+
+  const handleReset2FA = async (user) => {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(`ยืนยันการรีเซ็ต 2FA สำหรับ "${user.username}"?\n\n- จะลบ 2FA secret และ backup codes ทั้งหมด\n- ผู้ใช้จะต้องตั้งค่า 2FA ใหม่ทั้งหมด\n- Trusted devices ทั้งหมดจะถูกลบ`)) {
+      return;
+    }
+
+    try {
+      // TODO: Replace with actual API call
+      // await ApiClient.post(`/admin/users/${user.id}/reset-2fa`);
+
+      // Update local state
+      setUsers(users.map(u =>
+        u.id === user.id ? { ...u, twoFactorEnabled: false } : u
+      ));
+
+      toast.success('รีเซ็ต 2FA สำเร็จ', {
+        title: '✅ สำเร็จ',
+        description: `รีเซ็ต 2FA ของ ${user.username} เรียบร้อยแล้ว`
+      });
+    } catch (error) {
+      toast.error('ไม่สามารถรีเซ็ต 2FA ได้', {
+        title: '❌ ข้อผิดพลาด',
+        description: error.message
+      });
+    }
+  };
+
   const getRoleBadgeColor = (role) => {
     switch (role) {
       case 'super_admin':
@@ -261,11 +322,21 @@ export default function UserManagement() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90">
-      <div className="container-responsive px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6 sm:py-8 lg:py-12">
+      <div className="container-responsive px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6 sm:py-8 lg:py-12 space-y-8">
+        {/* User 2FA Management Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
+        >
+          <User2FAManagement />
+        </motion.div>
+
+        {/* User Management Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
           className="mb-8"
         >
           {/* Search and Filter Row */}

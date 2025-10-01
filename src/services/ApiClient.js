@@ -154,21 +154,21 @@ class ApiClient {
    * Get authentication token from storage
    */
   getToken() {
-    return localStorage.getItem(API_CONFIG.token.storageKey);
+    return localStorage.getItem('access_token');
   }
 
   /**
    * Set authentication token in storage
    */
   setToken(token) {
-    localStorage.setItem(API_CONFIG.token.storageKey, token);
+    localStorage.setItem('access_token', token);
   }
 
   /**
    * Get refresh token from storage
    */
   getRefreshToken() {
-    return localStorage.getItem(API_CONFIG.token.refreshStorageKey);
+    return localStorage.getItem('refresh_token');
   }
 
   /**
@@ -367,6 +367,63 @@ class ApiClient {
    */
   isCancel(error) {
     return axios.isCancel(error);
+  }
+
+  // ===================================
+  // Two-Factor Authentication Methods
+  // ===================================
+
+  /**
+   * Initialize 2FA setup - Get QR code and backup codes
+   * @returns {Promise} Setup data with QR code and backup codes
+   */
+  async setup2FA() {
+    return this.post('/2fa/setup');
+  }
+
+  /**
+   * Enable 2FA with verification code
+   * @param {string} code - 6-digit TOTP code from authenticator app
+   * @returns {Promise} Success response
+   */
+  async enable2FA(code) {
+    return this.post('/2fa/enable', { token: code });
+  }
+
+  /**
+   * Disable 2FA with verification code
+   * @param {string} code - 6-digit TOTP code or backup code
+   * @returns {Promise} Success response
+   */
+  async disable2FA(code) {
+    return this.post('/2fa/disable', { token: code });
+  }
+
+  /**
+   * Verify 2FA code during login
+   * @param {string} tempToken - Temporary token from initial login
+   * @param {string} code - 6-digit TOTP code or backup code
+   * @returns {Promise} Login response with user and tokens
+   */
+  async verify2FA(tempToken, code) {
+    return this.post('/auth/login/2fa', { tempToken, token: code });
+  }
+
+  /**
+   * Get 2FA status for current user
+   * @returns {Promise} 2FA status data
+   */
+  async get2FAStatus() {
+    return this.get('/2fa/status');
+  }
+
+  /**
+   * Regenerate backup codes
+   * @param {string} code - 6-digit TOTP code for verification
+   * @returns {Promise} New backup codes
+   */
+  async regenerateBackupCodes(code) {
+    return this.post('/2fa/backup-codes', { token: code });
   }
 }
 

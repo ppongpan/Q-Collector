@@ -9,10 +9,15 @@ import {
   faCog,
   faGlobe,
   faBell,
-  faStar
+  faStar,
+  faShieldAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { useFont } from '../contexts/FontContext';
 import { ThemeToggle } from './ThemeToggle';
+import TwoFactorStatus from './settings/TwoFactorStatus';
+import TrustedDevices from './settings/TrustedDevices';
+import TrustedDeviceDuration from './settings/TrustedDeviceDuration';
+import apiClient from '../services/ApiClient';
 import {
   pageTransitions,
   componentVariants,
@@ -28,13 +33,19 @@ function SettingsPage({ onNavigate }) {
     changeFont,
     resetFont
   } = useFont();
-  const [activeSection, setActiveSection] = useState('fonts');
+  const [activeSection, setActiveSection] = useState('security');
   const [isChanging, setIsChanging] = useState(false);
   const [lastChanged, setLastChanged] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
   const sections = [
+    {
+      id: 'security',
+      title: 'ความปลอดภัย',
+      icon: faShieldAlt,
+      description: 'จัดการความปลอดภัยและ 2FA'
+    },
     {
       id: 'fonts',
       title: 'ฟอนต์',
@@ -113,7 +124,66 @@ function SettingsPage({ onNavigate }) {
     showSuccessFeedback('font');
   };
 
+  const renderSecuritySettings = () => (
+    <motion.div
+      className="space-y-6"
+      variants={animationPresets.fadeInGlass}
+      initial="initial"
+      animate="animate"
+    >
+      <motion.div
+        variants={componentVariants.glassCard}
+        initial="initial"
+        animate="animate"
+        transition={{ delay: 0.1 }}
+      >
+        <motion.h2
+          className="text-lg font-medium text-foreground mt-2"
+          variants={animationPresets.slideUpGlass}
+          initial="initial"
+          animate="animate"
+        >
+          ความปลอดภัย
+        </motion.h2>
+        <motion.p
+          className="text-sm text-muted-foreground mt-1"
+          variants={animationPresets.slideUpGlass}
+          initial="initial"
+          animate="animate"
+          transition={{ delay: 0.05 }}
+        >
+          จัดการการยืนยันตัวตนแบบสองขั้นตอน (2FA) และความปลอดภัยของบัญชี
+        </motion.p>
+      </motion.div>
 
+      <motion.div
+        variants={componentVariants.glassCard}
+        initial="initial"
+        animate="animate"
+        transition={{ delay: 0.2 }}
+      >
+        <TwoFactorStatus apiClient={apiClient} />
+      </motion.div>
+
+      <motion.div
+        variants={componentVariants.glassCard}
+        initial="initial"
+        animate="animate"
+        transition={{ delay: 0.3 }}
+      >
+        <TrustedDevices />
+      </motion.div>
+
+      <motion.div
+        variants={componentVariants.glassCard}
+        initial="initial"
+        animate="animate"
+        transition={{ delay: 0.4 }}
+      >
+        <TrustedDeviceDuration />
+      </motion.div>
+    </motion.div>
+  );
 
   const renderFontSettings = () => (
     <motion.div
@@ -159,9 +229,9 @@ function SettingsPage({ onNavigate }) {
             <motion.button
               key={font.id}
               onClick={() => handleFontChange(font.id)}
-              className={`btn-glass flex-1 px-4 py-3 rounded-lg transition-all duration-200 text-center border-2 relative overflow-hidden ${
+              className={`btn-glass flex-1 px-4 py-3 rounded-lg transition-all duration-200 text-center border-2 relative ${
                 selectedFont.id === font.id
-                  ? 'bg-primary/10 border-primary text-primary shadow-lg'
+                  ? 'bg-primary/10 border-primary text-primary'
                   : 'bg-background/60 border-border/40 text-foreground hover:bg-background/80 hover:border-border/60'
               }`}
               variants={componentVariants.glassButton}
@@ -186,19 +256,6 @@ function SettingsPage({ onNavigate }) {
               >
                 {font.thaiName} - {font.name}
               </div>
-              {selectedFont.id === font.id && (
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/20 to-transparent"
-                  initial={{ x: '-100%' }}
-                  animate={{ x: '100%' }}
-                  transition={{
-                    duration: 1.5,
-                    ease: 'linear',
-                    repeat: Infinity,
-                    repeatDelay: 2
-                  }}
-                />
-              )}
             </motion.button>
           ))}
         </div>
@@ -441,24 +498,13 @@ function SettingsPage({ onNavigate }) {
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
                 title={section.description}
-                className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-lg border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
+                className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-lg border-b-3 whitespace-nowrap touch-target-comfortable ${
                   activeSection === section.id
                     ? 'text-primary bg-primary/5 border-primary shadow-sm backdrop-blur-sm'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/10 border-transparent'
                 }`}
                 style={{
-                  borderRadius: '16px 16px 0 0',
-                  overflow: 'visible'
-                }}
-                onMouseEnter={(e) => {
-                  if (activeSection !== section.id) {
-                    e.target.style.boxShadow = '0 0 15px 2px rgba(249,115,22,0.3), 0 0 30px 4px rgba(249,115,22,0.2)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeSection !== section.id) {
-                    e.target.style.boxShadow = '';
-                  }
+                  borderRadius: '16px 16px 0 0'
                 }}
                 variants={componentVariants.glassButton}
                 whileHover={shouldReduceMotion ? {} : "hover"}
@@ -529,6 +575,7 @@ function SettingsPage({ onNavigate }) {
                   animate="animate"
                   exit="exit"
                 >
+                  {activeSection === 'security' && renderSecuritySettings()}
                   {activeSection === 'fonts' && renderFontSettings()}
                   {activeSection === 'theme' && renderThemeSettings()}
                   {activeSection === 'general' && renderGeneralSettings()}

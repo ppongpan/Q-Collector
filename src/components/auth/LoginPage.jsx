@@ -3,6 +3,7 @@
  *
  * Features:
  * - Email/password login form
+ * - Two-Factor Authentication (2FA) support
  * - Form validation
  * - Loading states
  * - Error messages
@@ -18,10 +19,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { GlassCard, GlassCardContent, GlassCardHeader } from '../ui/glass-card';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faLock, faSignInAlt, faUserPlus } from '@fortawesome/free-solid-svg-icons';
+import TwoFactorVerification from './TwoFactorVerification';
+import * as tokenManager from '../../utils/tokenManager';
+import { getDeviceFingerprint } from '../../utils/deviceFingerprint';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticating, isAuthenticated } = useAuth();
+  const { login, isAuthenticating, isAuthenticated, setUser } = useAuth();
 
   const [formData, setFormData] = useState({
     username: '',
@@ -30,6 +34,9 @@ export function LoginPage() {
 
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [tempToken, setTempToken] = useState(null);
+  const [username2FA, setUsername2FA] = useState('');
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -83,16 +90,85 @@ export function LoginPage() {
     if (!validate()) return;
 
     try {
-      const response = await login(formData.username, formData.password);
-      // Navigation is handled by AppRouter based on isAuthenticated state
-      // The AuthContext will update and trigger the redirect
-      if (response && response.user) {
-        navigate('/', { replace: true });
+      // Get device fingerprint
+      const deviceFingerprint = await getDeviceFingerprint();
+
+      // Use AuthContext login which handles both 2FA and normal login
+      const loginResponse = await login(
+        formData.username,
+        formData.password,
+        deviceFingerprint
+      );
+
+      console.log('LoginPage - Login response:', loginResponse);
+
+      if (loginResponse) {
+        // Check if 2FA is required - response has nested data structure
+        if (loginResponse.requires2FA || loginResponse.data?.tempToken) {
+          console.log('LoginPage - 2FA required, setting state:', {
+            tempToken: loginResponse.tempToken || loginResponse.data?.tempToken,
+            username: loginResponse.username || loginResponse.data?.username
+          });
+          setRequires2FA(true);
+          setTempToken(loginResponse.tempToken || loginResponse.data?.tempToken);
+          setUsername2FA(loginResponse.username || loginResponse.data?.username);
+        } else if (loginResponse.user) {
+          // No 2FA - login successful
+          navigate('/', { replace: true });
+        }
       }
     } catch (error) {
       setApiError(error.message || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
     }
   };
+
+  // Handle 2FA verification success
+  const handle2FASuccess = (data) => {
+    try {
+      console.log('handle2FASuccess - received data:', data);
+
+      // Store tokens from 2FA response
+      if (data.tokens?.accessToken) {
+        tokenManager.setAccessToken(data.tokens.accessToken);
+      }
+      if (data.tokens?.refreshToken) {
+        tokenManager.setRefreshToken(data.tokens.refreshToken);
+      }
+      if (data.user) {
+        tokenManager.setUser(data.user);
+        // Update AuthContext state immediately
+        setUser(data.user);
+      }
+
+      // Navigate to home page
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('handle2FASuccess error:', error);
+      setApiError('เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+    }
+  };
+
+  // Handle 2FA cancel
+  const handle2FACancel = () => {
+    setRequires2FA(false);
+    setTempToken(null);
+    setUsername2FA('');
+    setFormData({ username: '', password: '' });
+  };
+
+  // Show 2FA verification screen
+  if (requires2FA) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <TwoFactorVerification
+          tempToken={tempToken}
+          username={username2FA}
+          onSuccess={handle2FASuccess}
+          onCancel={handle2FACancel}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -104,19 +180,31 @@ export function LoginPage() {
       >
         <GlassCard>
           <GlassCardHeader>
+            {/* Company Branding - Top */}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="flex justify-center mb-6"
+            >
+              <img
+                src="/share.png"
+                alt="Q-CON - Share Potentials to Shape Community"
+                className="h-20 w-auto opacity-90"
+              />
+            </motion.div>
+
             <div className="text-center mb-6">
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: 'spring' }}
-                className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 mb-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
               >
-                <FontAwesomeIcon icon={faSignInAlt} className="text-3xl text-primary" />
+                <p className="font-bold mb-2" style={{ fontSize: '20px' }}>
+                  <span className="text-white">ยินดีต้อนรับสู่ </span>
+                  <span className="text-primary">Q-Collector</span>
+                </p>
               </motion.div>
-              <h1 className="text-2xl font-bold">เข้าสู่ระบบ</h1>
-              <p className="text-sm text-muted-foreground mt-2">
-                ยินดีต้อนรับกลับสู่ Q-Collector
-              </p>
             </div>
           </GlassCardHeader>
 
@@ -231,8 +319,8 @@ export function LoginPage() {
         </GlassCard>
 
         {/* App Info */}
-        <div className="text-center mt-6 text-sm text-muted-foreground">
-          <p>Q-Collector v0.5.0</p>
+        <div className="text-center mt-6 text-muted-foreground" style={{ fontSize: '10px' }}>
+          <p>Q-Collector v0.5.3</p>
           <p className="mt-1">Form Builder & Data Collection System</p>
         </div>
       </motion.div>

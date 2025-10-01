@@ -300,15 +300,32 @@ class TwoFactorService {
   }
 
   encryptSecret(secret) {
-    const cipher = crypto.createCipher('aes-256-cbc', process.env.ENCRYPTION_KEY);
+    const algorithm = 'aes-256-cbc';
+    // Derive a proper 32-byte key from the encryption key
+    const key = crypto.scryptSync(process.env.ENCRYPTION_KEY, 'salt', 32);
+    // Generate random initialization vector
+    const iv = crypto.randomBytes(16);
+
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
     let encrypted = cipher.update(secret, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    return encrypted;
+
+    // Prepend IV to encrypted data (separated by :)
+    return iv.toString('hex') + ':' + encrypted;
   }
 
   decryptSecret(encryptedSecret) {
-    const decipher = crypto.createDecipher('aes-256-cbc', process.env.ENCRYPTION_KEY);
-    let decrypted = decipher.update(encryptedSecret, 'hex', 'utf8');
+    const algorithm = 'aes-256-cbc';
+    // Derive the same 32-byte key
+    const key = crypto.scryptSync(process.env.ENCRYPTION_KEY, 'salt', 32);
+
+    // Extract IV and encrypted data
+    const parts = encryptedSecret.split(':');
+    const iv = Buffer.from(parts[0], 'hex');
+    const encrypted = parts[1];
+
+    const decipher = crypto.createDecipheriv(algorithm, key, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
   }

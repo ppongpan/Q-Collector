@@ -88,11 +88,14 @@ export function AuthProvider({ children }) {
   /**
    * Login with username/email and password
    */
-  const login = useCallback(async (identifier, password) => {
+  const login = useCallback(async (identifier, password, deviceFingerprint = null) => {
     setIsAuthenticating(true);
     try {
-      const response = await AuthService.login(identifier, password);
-      setUser(response.user);
+      const response = await AuthService.login(identifier, password, deviceFingerprint);
+      // Only set user if not requiring 2FA
+      if (!response.requires2FA && response.user) {
+        setUser(response.user);
+      }
       return response;
     } catch (error) {
       throw error;
@@ -215,6 +218,13 @@ export function AuthProvider({ children }) {
     return forms.filter(form => checkFormAccess(form.tags, form.createdBy));
   }, [user, checkFormAccess, isAdmin]);
 
+  /**
+   * Manually set user (for 2FA completion)
+   */
+  const setUserData = useCallback((userData) => {
+    setUser(userData);
+  }, []);
+
   const value = {
     // State
     user,
@@ -229,6 +239,7 @@ export function AuthProvider({ children }) {
     updateProfile,
     changePassword,
     refreshUser,
+    setUser: setUserData,
 
     // Permission checks
     checkPermission,
