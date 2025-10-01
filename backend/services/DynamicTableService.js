@@ -16,11 +16,11 @@ const {
 class DynamicTableService {
   constructor(pool) {
     this.pool = pool || new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5432,
-      database: process.env.DB_NAME || 'qcollector_dev_2025',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres'
+      host: process.env.POSTGRES_HOST || 'localhost',
+      port: process.env.POSTGRES_PORT || 5432,
+      database: process.env.POSTGRES_DB || 'qcollector_db',
+      user: process.env.POSTGRES_USER || 'qcollector',
+      password: process.env.POSTGRES_PASSWORD || 'qcollector_dev_2025'
     });
   }
 

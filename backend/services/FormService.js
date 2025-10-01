@@ -9,6 +9,10 @@ const logger = require('../utils/logger.util');
 const { ApiError } = require('../middleware/error.middleware');
 const cacheService = require('./CacheService');
 const { KEYS, POLICIES, INVALIDATION_PATTERNS } = require('../config/cache.config');
+const DynamicTableService = require('./DynamicTableService');
+
+// Initialize DynamicTableService
+const dynamicTableService = new DynamicTableService();
 
 class FormService {
   /**
@@ -123,8 +127,25 @@ class FormService {
 
       logger.info(`Form created: ${title} by user ${userId}`);
 
+      // Get form with all fields for table creation
+      const formWithFields = await this.getForm(form.id, userId);
+
+      // Create dynamic PostgreSQL table for this form
+      try {
+        const tableName = await dynamicTableService.createFormTable({
+          id: formWithFields.id,
+          title: formWithFields.title,
+          fields: formWithFields.fields || []
+        });
+        logger.info(`Dynamic table created: ${tableName} for form ${form.id}`);
+      } catch (tableError) {
+        logger.error(`Failed to create dynamic table for form ${form.id}:`, tableError);
+        // Don't fail the entire operation if table creation fails
+        // Table can be created later manually if needed
+      }
+
       // Return form with all related data
-      return await this.getForm(form.id, userId);
+      return formWithFields;
     } catch (error) {
       await transaction.rollback();
       logger.error('Form creation failed:', error);
@@ -248,6 +269,48 @@ class FormService {
       });
 
       logger.info(`Form updated: ${formId} by user ${userId}`);
+
+      // Update dynamic table if fields or subForms changed
+      if (updates.fields !== undefined || updates.subForms !== undefined || updates.title !== undefined) {
+        try {
+          const formWithFields = await this.getForm(formId, userId);
+
+          // If table doesn't exist yet, create it
+          if (!form.table_name) {
+            const tableName = await dynamicTableService.createFormTable({
+              id: formWithFields.id,
+              title: formWithFields.title,
+              fields: formWithFields.fields || []
+            });
+            logger.info(`Dynamic table created: ${tableName} for form ${formId}`);
+          } else {
+            // Update existing table columns
+            const client = await dynamicTableService.pool.connect();
+            try {
+              await client.query('BEGIN');
+              await dynamicTableService.updateFormTableColumns(
+                {
+                  id: formWithFields.id,
+                  title: formWithFields.title,
+                  fields: formWithFields.fields || []
+                },
+                form.table_name,
+                client
+              );
+              await client.query('COMMIT');
+              logger.info(`Dynamic table updated: ${form.table_name} for form ${formId}`);
+            } catch (err) {
+              await client.query('ROLLBACK');
+              throw err;
+            } finally {
+              client.release();
+            }
+          }
+        } catch (tableError) {
+          logger.error(`Failed to update dynamic table for form ${formId}:`, tableError);
+          // Don't fail the entire operation if table update fails
+        }
+      }
 
       return await this.getForm(formId, userId);
     } catch (error) {
