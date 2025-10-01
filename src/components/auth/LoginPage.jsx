@@ -323,7 +323,7 @@ export function LoginPage() {
 
         {/* App Info */}
         <div className="text-center mt-6 text-muted-foreground" style={{ fontSize: '10px' }}>
-          <p>Q-Collector v0.6.1</p>
+          <p>Q-Collector v0.6.2</p>
           <p className="mt-1">Form Builder & Data Collection System</p>
         </div>
 

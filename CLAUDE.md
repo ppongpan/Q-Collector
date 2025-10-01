@@ -4,7 +4,7 @@
 
 ## Version Information
 
-- **Version**: 0.6.1
+- **Version**: 0.6.2
 - **Release Date**: 2025-10-02
 - **Framework**: React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 - **Target**: Thai Business Forms & Data Collection
@@ -101,6 +101,48 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 **Accessibility:** WCAG 2.1 AA compliance, ARIA labels, keyboard navigation
 
 ## Version History
+
+### v0.6.2 (2025-10-02) - Dynamic Tables with Thai-English Translation
+
+**Major Updates:**
+- ✅ **Automatic Table Creation** - PostgreSQL tables created automatically for each form
+- ✅ **Thai-English Translation** - Form and field names translated to meaningful English
+- ✅ **Smart Column Names** - Column names based on field labels, not IDs
+- ✅ **FormService Integration** - Automatic table creation/update on form operations
+
+**Dynamic Tables Features:**
+- **Auto Table Creation** - Creates table when form is created
+- **Auto Column Addition** - Adds columns when fields are added to form
+- **Thai Translation** - 100+ word dictionary for accurate translations
+- **Compound Word Support** - Handles multi-word Thai phrases correctly
+- **PostgreSQL Types** - Maps field types to appropriate PostgreSQL data types
+- **Performance Indexes** - Auto-creates indexes for form_id, user_id, submitted_at
+
+**Translation Examples:**
+- "แบบฟอร์มติดต่อ" → `form_contact_abc123`
+- "ชื่อเต็ม" → `full_name_field1`
+- "เบอร์โทรศัพท์" → `phone_abc123`
+- "อีเมล" → `email_def456`
+
+**Benefits:**
+- **PowerBI Direct Connection** - Connect directly to PostgreSQL
+- **AI-Friendly** - Column names are meaningful and understandable
+- **Better Performance** - No JSON parsing needed for queries
+- **Data Analysis** - Easy to create SQL queries and reports
+
+**Technical Implementation:**
+- `DynamicTableService.js` - Core table management service
+- `thaiTranslator.js` - Thai-English translation dictionary
+- `tableNameHelper.js` - Table/column name generation utilities
+- `FormService.js` - Integrated with form CRUD operations
+
+**Testing:**
+- Added integration tests for DynamicTableService
+- Tests cover table creation, updates, translations, data types
+
+**Documentation:**
+- Updated `DYNAMIC-TABLES-GUIDE.md` with implementation status
+- Phase 1 marked as ✅ Implemented
 
 ### v0.6.1 (2025-10-02) - UI/UX Enhancements & Logo Update
 
