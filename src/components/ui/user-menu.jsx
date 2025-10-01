@@ -16,7 +16,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faSignOutAlt, faCog, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 
 export function UserMenu({ onSettingsClick }) {
-  const { user, logout, userName, userRole } = useAuth();
+  const { user, logout, userName, userRole, userEmail } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -64,28 +64,49 @@ export function UserMenu({ onSettingsClick }) {
     }
   };
 
+  const getRoleTextColor = (role) => {
+    switch (role) {
+      case 'super_admin':
+        return 'text-purple-400';
+      case 'admin':
+        return 'text-red-400';
+      case 'moderator':
+        return 'text-blue-400';
+      case 'customer_service':
+        return 'text-green-400';
+      case 'sales':
+        return 'text-orange-400';
+      case 'marketing':
+        return 'text-pink-400';
+      case 'technic':
+        return 'text-cyan-400';
+      default:
+        return 'text-gray-400';
+    }
+  };
+
   return (
     <div className="relative" ref={menuRef}>
       {/* User Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-background/50 transition-colors"
+        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-all duration-200 group"
       >
         {/* User Avatar */}
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary">
-          <FontAwesomeIcon icon={faUser} className="text-sm" />
+        <div className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/20 group-hover:border-primary/40 transition-all duration-200">
+          <FontAwesomeIcon icon={faUser} className="text-sm text-primary" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-background"></div>
         </div>
 
         {/* User Info (hidden on mobile) */}
         <div className="hidden lg:block text-left">
-          <p className="text-sm font-medium text-foreground truncate max-w-[120px]">{userName}</p>
-          <p className="text-xs text-muted-foreground truncate max-w-[120px]">{getRoleLabel(userRole)}</p>
+          <p className={`text-sm font-semibold truncate max-w-[150px] ${getRoleTextColor(userRole)}`}>{userName}</p>
         </div>
 
         {/* Dropdown Icon */}
         <FontAwesomeIcon
           icon={faChevronDown}
-          className={`text-xs text-muted-foreground transition-transform ${
+          className={`text-xs text-muted-foreground transition-transform duration-200 ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
@@ -95,40 +116,27 @@ export function UserMenu({ onSettingsClick }) {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 5, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 5, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="fixed top-[60px] right-2 sm:right-4 w-[200px] sm:w-[220px] glass-container rounded-lg shadow-xl border border-border/40 overflow-hidden z-[100]"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+            className="fixed top-[60px] right-2 sm:right-4 w-[200px] sm:w-[220px] glass-container rounded-2xl shadow-2xl border border-border/40 overflow-hidden z-[100]"
           >
             {/* User Info Section */}
-            <div className="p-1.5 border-b border-border/40 bg-gradient-to-br from-primary/5 to-transparent">
-              <div className="flex items-start gap-1.5">
-                {/* Avatar */}
-                <div className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary border border-primary/30">
-                  <FontAwesomeIcon icon={faUser} className="text-[9px]" />
+            <div className="p-2.5 border-b border-border/30 bg-gradient-to-br from-primary/5 to-transparent">
+              <div className="flex flex-col items-center text-center">
+                {/* Username with Role Color and Icon */}
+                <div className="flex items-center gap-1.5">
+                  <p className={`font-bold text-sm sm:text-base truncate ${getRoleTextColor(userRole)}`}>{userName}</p>
+                  <FontAwesomeIcon icon={faUser} className={`text-[10px] sm:text-xs ${getRoleTextColor(userRole)}`} />
                 </div>
-
-                {/* User Details */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground text-[11px] truncate">{userName}</p>
-
-                  {/* Role Badge */}
-                  <div className="mt-0.5">
-                    <span
-                      className={`inline-block px-1 py-0.5 text-[8px] font-medium rounded border ${getRoleBadgeColor(
-                        userRole
-                      )}`}
-                    >
-                      {getRoleLabel(userRole)}
-                    </span>
-                  </div>
-                </div>
+                {/* Email */}
+                <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate max-w-full mt-0.5">{userEmail}</p>
               </div>
             </div>
 
             {/* Menu Items */}
-            <div className="p-1">
+            <div className="p-1.5 sm:p-2">
               {/* Settings */}
               {onSettingsClick && (
                 <button
@@ -136,24 +144,24 @@ export function UserMenu({ onSettingsClick }) {
                     onSettingsClick();
                     setIsOpen(false);
                   }}
-                  className="w-full flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-background/50 transition-all duration-200 text-left group"
+                  className="w-full flex items-center gap-2.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl hover:bg-primary/10 transition-all duration-200 text-left group"
                 >
-                  <div className="flex items-center justify-center w-5 h-5 rounded bg-muted/50 group-hover:bg-primary/10 transition-colors">
-                    <FontAwesomeIcon icon={faCog} className="text-muted-foreground group-hover:text-primary transition-colors text-[9px]" />
+                  <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-muted/80 to-muted/40 group-hover:from-primary/20 group-hover:to-primary/10 transition-all duration-200">
+                    <FontAwesomeIcon icon={faCog} className="text-muted-foreground group-hover:text-primary transition-colors text-xs sm:text-sm" />
                   </div>
-                  <span className="text-[11px] font-medium text-foreground">ตั้งค่า</span>
+                  <span className="text-xs sm:text-sm font-medium text-foreground group-hover:text-primary transition-colors">ตั้งค่า</span>
                 </button>
               )}
 
               {/* Logout */}
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-red-500/10 transition-all duration-200 text-left group"
+                className="w-full flex items-center gap-2.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl hover:bg-red-500/10 transition-all duration-200 text-left group mt-1"
               >
-                <div className="flex items-center justify-center w-5 h-5 rounded bg-red-500/10 group-hover:bg-red-500/20 transition-colors">
-                  <FontAwesomeIcon icon={faSignOutAlt} className="text-red-500 text-[9px]" />
+                <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-red-500/10 to-red-500/5 group-hover:from-red-500/20 group-hover:to-red-500/10 transition-all duration-200">
+                  <FontAwesomeIcon icon={faSignOutAlt} className="text-red-500 text-xs sm:text-sm" />
                 </div>
-                <span className="text-[11px] font-semibold text-red-500">ออกจากระบบ</span>
+                <span className="text-xs sm:text-sm font-medium text-red-500">ออกจากระบบ</span>
               </button>
             </div>
           </motion.div>

@@ -4,8 +4,8 @@
 
 ## Version Information
 
-- **Version**: 0.5.1
-- **Release Date**: 2025-09-30
+- **Version**: 0.5.2
+- **Release Date**: 2025-10-01
 - **Framework**: React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 - **Target**: Thai Business Forms & Data Collection
 - **Architecture**: Full-Stack Enterprise Application
@@ -102,6 +102,38 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 
 ## Version History
 
+### v0.5.2 (2025-10-01) - Enhanced User Menu & Profile Display
+
+**Major Updates:**
+- ✅ **Redesigned User Menu Dropdown** - Modern, compact design with glass morphism
+- ✅ **Role-Based Username Colors** - Visual role identification without labels
+- ✅ **Responsive User Menu** - Optimized for mobile, tablet, and desktop
+- ✅ **Improved User Profile Display** - Username-first approach with role colors
+
+**User Menu Enhancements:**
+- **Fixed positioning:** Menu appears below navigation bar at `top-[60px]`
+- **Compact design:** `w-[200px]` mobile, `w-[220px]` desktop
+- **Centered username:** Role-colored username with user icon at top
+- **Clean menu items:** Settings and Logout with gradient backgrounds
+- **Responsive font sizes:** Scales from mobile to desktop seamlessly
+- **Role color system:**
+  - Super Admin: Purple (`text-purple-400`)
+  - Admin: Red (`text-red-400`)
+  - Moderator: Blue (`text-blue-400`)
+  - Customer Service: Green (`text-green-400`)
+  - Sales: Orange (`text-orange-400`)
+  - Marketing: Pink (`text-pink-400`)
+  - Technic: Cyan (`text-cyan-400`)
+
+**Top Menu Display:**
+- Username shown in role color (instead of email)
+- Removed role label for cleaner appearance
+- Avatar with green status indicator
+
+**Components Updated:**
+- `src/components/ui/user-menu.jsx` - Complete redesign
+- `src/contexts/AuthContext.jsx` - Username priority over email
+
 ### v0.5.1 (2025-09-30) - Previous/Next Navigation in Detail Views
 
 **Major Updates:**
@@ -193,8 +225,8 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 
 ---
 
-**Application Status:** ✅ Production-ready v0.5.1 - Complete Full-Stack Enterprise System with Navigation
+**Application Status:** ✅ Production-ready v0.5.2 - Complete Full-Stack Enterprise System
 
-**License:** Internal use - Q-Collector Enterprise Form Builder v0.5.1
+**License:** Internal use - Q-Collector Enterprise Form Builder v0.5.2
 - BOT TOKEN FOR TELEGRAM TESTING 7794493324:AAHlxtpYenok1kwyo88ns5R4rivWWXcqmE0   AND GROUP ID = -4847325737  record in .env
 - สร้าง Super Admin Account  โดยใช้ User Name : pongpanp  ชื่อ : Pongpan Peerawanichkul  email: pongpanp@qcon.co.th  Department : Technic  Role : Super Admin

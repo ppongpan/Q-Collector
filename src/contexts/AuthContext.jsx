@@ -241,7 +241,7 @@ export function AuthProvider({ children }) {
     userId: user?.id || null,
     userRole: user?.role || null,
     userEmail: user?.email || null,
-    userName: user?.name || user?.email || 'ผู้ใช้งาน'
+    userName: user?.username || user?.name || 'ผู้ใช้งาน'
   };
 
   return (
