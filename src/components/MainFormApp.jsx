@@ -289,26 +289,56 @@ function MainFormAppContent() {
               )}
 
               {currentPage === 'form-view' && (
-                <div
+                <motion.div
                   onClick={() => {
                     if (formViewSaveHandlerRef.current) {
                       formViewSaveHandlerRef.current.handleSubmit();
                     }
                   }}
                   title="บันทึกข้อมูล"
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                  className="relative flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    outline: 'none',
-                    boxShadow: 'none'
+                    outline: 'none'
+                  }}
+                  animate={{
+                    scale: [1, 1.15, 1],
+                    opacity: [0.9, 1, 0.9]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
                   }}
                 >
+                  {/* Pulsing glow background */}
+                  <motion.div
+                    className="absolute inset-0 rounded-full"
+                    animate={{
+                      scale: [1, 1.4, 1],
+                      opacity: [0.6, 0.2, 0.6]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    style={{
+                      background: 'radial-gradient(circle, rgba(255, 100, 0, 0.4) 0%, rgba(249, 115, 22, 0.2) 50%, transparent 70%)',
+                      filter: 'blur(8px)'
+                    }}
+                  />
+
+                  {/* Icon with orange color */}
                   <FontAwesomeIcon
                     icon={faSave}
-                    className="text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all duration-300"
+                    className="relative z-10 text-2xl text-[#ff6400] group-hover:text-[#ff8533] group-hover:scale-110 transition-all duration-300"
+                    style={{
+                      filter: 'drop-shadow(0 0 8px rgba(255, 100, 0, 0.6))'
+                    }}
                   />
-                </div>
+                </motion.div>
               )}
 
               {currentPage === 'submission-list' && (
