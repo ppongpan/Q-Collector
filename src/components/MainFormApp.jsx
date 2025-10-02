@@ -333,13 +333,21 @@ function MainFormAppContent() {
                   {/* Icon with orange color and rotation on hover */}
                   <motion.div
                     className="relative z-10"
+                    initial={{ rotate: 0 }}
                     whileHover={{
                       rotate: 360,
                       scale: 1.1
                     }}
+                    animate={{ rotate: 0 }}
                     transition={{
-                      duration: 0.5,
-                      ease: "easeInOut"
+                      rotate: {
+                        duration: 0.5,
+                        ease: "linear"
+                      },
+                      scale: {
+                        duration: 0.2,
+                        ease: "easeInOut"
+                      }
                     }}
                   >
                     <FontAwesomeIcon
