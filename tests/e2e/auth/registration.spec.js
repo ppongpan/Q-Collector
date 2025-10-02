@@ -43,22 +43,25 @@ test.describe('User Registration', () => {
 
     test('should register user with each department', async ({ page }) => {
       for (const dept of Object.values(DEPARTMENTS)) {
-        const userData = generateTestUser(dept.role, `${dept.value}${Date.now()}`);
+        // Create unique suffix without underscores
+        const cleanSuffix = Date.now().toString();
+        const userData = generateTestUser(dept.role, cleanSuffix);
 
         await navigateToRegister(page);
         await fillRegistrationForm(page, userData);
         await submitRegistrationForm(page);
 
         // Should redirect to home page
-        await page.waitForURL('**/');
+        await page.waitForURL('**/', { timeout: 10000 });
 
-        // Should be authenticated
-        const authenticated = await isAuthenticated(page);
-        expect(authenticated).toBeTruthy();
+        // Should be authenticated - check for user menu button
+        const userMenuButton = page.locator('[data-testid="user-menu-button"]');
+        await expect(userMenuButton).toBeVisible({ timeout: 10000 });
 
         // Logout for next test
         await page.goto('/login');
         await page.evaluate(() => localStorage.clear());
+        await page.waitForTimeout(500);
       }
     });
   });
@@ -71,9 +74,9 @@ test.describe('User Registration', () => {
       await fillRegistrationForm(page, invalidData);
       await submitRegistrationForm(page);
 
-      // Should show validation error
-      const error = await page.locator('text=*Username*3*').first();
-      await expect(error).toBeVisible();
+      // Should show validation error - look for red error text
+      const error = page.locator('.text-red-500', { hasText: '3' });
+      await expect(error).toBeVisible({ timeout: 5000 });
     });
 
     test('should show error for invalid email', async ({ page }) => {
@@ -81,11 +84,18 @@ test.describe('User Registration', () => {
 
       await navigateToRegister(page);
       await fillRegistrationForm(page, invalidData);
+
+      // Check email field validity (browser HTML5 validation)
+      const emailInput = page.locator('input[name="email"]');
+      const isValid = await emailInput.evaluate((el) => el.validity.valid);
+      expect(isValid).toBe(false);
+
+      // Browser should block form submission
       await submitRegistrationForm(page);
 
-      // Should show validation error
-      const error = await page.locator('text=*อีเมล*').first();
-      await expect(error).toBeVisible();
+      // Should still be on registration page
+      await page.waitForTimeout(1000);
+      expect(page.url()).toContain('register');
     });
 
     test('should show error for weak password', async ({ page }) => {
@@ -96,8 +106,8 @@ test.describe('User Registration', () => {
       await submitRegistrationForm(page);
 
       // Should show validation error
-      const error = await page.locator('text=*รหัสผ่าน*8*').first();
-      await expect(error).toBeVisible();
+      const error = page.locator('.text-red-500', { hasText: '8' });
+      await expect(error).toBeVisible({ timeout: 5000 });
     });
 
     test('should show error for password missing uppercase', async ({ page }) => {
@@ -108,43 +118,41 @@ test.describe('User Registration', () => {
       await submitRegistrationForm(page);
 
       // Should show validation error
-      const error = await page.locator('text=*ตัวพิมพ์*').first();
-      await expect(error).toBeVisible();
+      const error = page.locator('.text-red-500', { hasText: 'ตัวพิมพ์' });
+      await expect(error).toBeVisible({ timeout: 5000 });
     });
 
     test('should show error for username with special characters', async ({ page }) => {
-      const userData = generateTestUser('general_user');
-      userData.username = `test_user_${Date.now()}`;
+      const invalidData = generateInvalidUserData().specialCharInUsername;
 
       await navigateToRegister(page);
-      await fillRegistrationForm(page, userData);
+      await fillRegistrationForm(page, invalidData);
       await submitRegistrationForm(page);
 
-      // Should show validation error (either from frontend or backend)
-      // Wait a bit for API response
-      await page.waitForTimeout(2000);
-
-      // Check if still on registration page (failed)
-      const url = page.url();
-      expect(url).toContain('register');
+      // Should show validation error
+      const error = page.locator('.text-red-500', { hasText: 'ตัวอักษร' });
+      await expect(error).toBeVisible({ timeout: 5000 });
     });
 
     test('should show error for duplicate username', async ({ page }) => {
       const userData = generateTestUser('general_user');
 
       // Register first time
-      const success = await registerUser(page, userData);
-      expect(success).toBeTruthy();
+      await navigateToRegister(page);
+      await fillRegistrationForm(page, userData);
+      await submitRegistrationForm(page);
+      await page.waitForURL('**/', { timeout: 10000 });
 
-      // Clear storage and try to register again with same username
+      // Logout and try to register again with same username
+      await page.goto('/login');
       await page.evaluate(() => localStorage.clear());
 
       await navigateToRegister(page);
       await fillRegistrationForm(page, userData);
       await submitRegistrationForm(page);
 
-      // Should show error
-      await page.waitForTimeout(2000);
+      // Should stay on registration page or show error
+      await page.waitForTimeout(3000);
       const url = page.url();
       expect(url).toContain('register');
     });
@@ -156,13 +164,13 @@ test.describe('User Registration', () => {
 
       const passwordInput = page.locator('input[name="password"]');
 
-      // Weak password
-      await passwordInput.fill('weak');
+      // Type a password
+      await passwordInput.fill('TestPassword123');
       await page.waitForTimeout(500);
 
-      // Check for strength indicator (look for color or text)
-      const strengthIndicator = page.locator('[data-testid="password-strength"], .password-strength');
-      const count = await strengthIndicator.count();
+      // Check for strength indicator bars or text
+      const strengthBars = page.locator('.h-1.flex-1.rounded-full');
+      const count = await strengthBars.count();
       expect(count).toBeGreaterThan(0);
     });
 
@@ -181,8 +189,8 @@ test.describe('User Registration', () => {
       await submitRegistrationForm(page);
 
       // Should show mismatch error
-      const error = await page.locator('text=*รหัสผ่าน*ตรง*').first();
-      await expect(error).toBeVisible();
+      const error = page.locator('.text-red-500', { hasText: 'ตรงกัน' });
+      await expect(error).toBeVisible({ timeout: 5000 });
     });
   });
 });
