@@ -238,7 +238,7 @@ function MainFormAppContent() {
               )}
 
               <div className="flex items-center gap-3">
-                <h1 className="text-base font-bold text-foreground">
+                <h1 className="text-base font-bold text-[#10B981]">
                   {getPageTitle()}
                 </h1>
                 {/* Dark mode toggle - only on form list page */}
