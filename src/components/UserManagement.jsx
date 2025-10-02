@@ -160,6 +160,11 @@ export default function UserManagement() {
     setShowPasswordReset(false);
     setPasswordForm({ newPassword: '', confirmPassword: '' });
     setIsEditModalOpen(true);
+
+    // Scroll to top to ensure modal is visible
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
   const handleSaveUser = async () => {
@@ -403,13 +408,11 @@ export default function UserManagement() {
                   <table className="w-full text-[12px]">
                     <thead className="bg-muted/30 border-b border-border/40">
                       <tr>
-                        <th className="px-3 py-2 text-left font-semibold text-foreground/80">ชื่อผู้ใช้</th>
-                        <th className="px-3 py-2 text-left font-semibold text-foreground/80">อีเมล</th>
-                        <th className="px-3 py-2 text-left font-semibold text-foreground/80">ชื่อ-นามสกุล</th>
-                        <th className="px-3 py-2 text-center font-semibold text-foreground/80">บทบาท</th>
-                        <th className="px-3 py-2 text-center font-semibold text-foreground/80">สถานะ</th>
-                        <th className="px-3 py-2 text-center font-semibold text-foreground/80">สิทธิ์พิเศษ</th>
-                        <th className="px-3 py-2 text-center font-semibold text-foreground/80">จัดการ</th>
+                        <th className="px-2 py-2 text-left font-semibold text-foreground/80 w-[15%]">ชื่อผู้ใช้</th>
+                        <th className="px-2 py-2 text-left font-semibold text-foreground/80 w-[25%]">อีเมล</th>
+                        <th className="px-2 py-2 text-left font-semibold text-foreground/80 w-[25%]">ชื่อ-นามสกุล</th>
+                        <th className="px-2 py-2 text-center font-semibold text-foreground/80 w-[20%]">บทบาท</th>
+                        <th className="px-2 py-2 text-center font-semibold text-foreground/80 w-[15%]">สถานะ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -419,22 +422,27 @@ export default function UserManagement() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.03 }}
-                          className="border-b border-border/30 hover:bg-muted/20 transition-colors cursor-pointer"
+                          onClick={() => handleEditUser(user)}
+                          className="border-b border-border/30 hover:bg-muted/30 transition-colors cursor-pointer"
                         >
-                          <td className="px-3 py-2">
+                          <td className="px-2 py-2">
                             <div className="flex items-center gap-2">
                               <FontAwesomeIcon icon={faUser} className="text-primary text-[10px]" />
                               <span className="font-medium">{user.username}</span>
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-muted-foreground">{user.email}</td>
-                          <td className="px-3 py-2">{user.full_name || '-'}</td>
-                          <td className="px-3 py-2 text-center">
+                          <td className="px-2 py-2 text-muted-foreground">
+                            <div className="line-clamp-2 break-words">{user.email}</div>
+                          </td>
+                          <td className="px-2 py-2">
+                            <div className="line-clamp-2 break-words">{user.full_name || '-'}</div>
+                          </td>
+                          <td className="px-2 py-2 text-center">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getRoleBadgeColor(user.role)}`}>
                               {getRoleLabel(user.role)}
                             </span>
                           </td>
-                          <td className="px-3 py-2 text-center">
+                          <td className="px-2 py-2 text-center">
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${
                               user.is_active
                                 ? 'bg-green-500/20 text-green-700 dark:text-green-300'
@@ -443,25 +451,6 @@ export default function UserManagement() {
                               <FontAwesomeIcon icon={user.is_active ? faUnlock : faLock} className="text-[8px]" />
                               {user.is_active ? 'ใช้งาน' : 'ระงับ'}
                             </span>
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            {user.special_forms && user.special_forms.length > 0 ? (
-                              <div className="inline-flex items-center gap-1 text-primary">
-                                <FontAwesomeIcon icon={faFileAlt} className="text-[10px]" />
-                                <span>{user.special_forms.length}</span>
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <button
-                              onClick={() => handleEditUser(user)}
-                              className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-primary/10 text-primary transition-colors"
-                              title="แก้ไขข้อมูล"
-                            >
-                              <FontAwesomeIcon icon={faEdit} className="text-[11px]" />
-                            </button>
                           </td>
                         </motion.tr>
                       ))}
