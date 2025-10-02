@@ -1,22 +1,27 @@
 /**
  * ThemeSelector Component
  *
- * Provides UI for selecting application theme (Glass or Minimal).
- * Displays theme cards with preview and status indicators.
+ * Provides UI for selecting application theme (Glass, Minimal, or Liquid).
+ * Displays theme cards with preview and tooltips.
  *
  * @component
- * @version 0.6.0
+ * @version 0.6.3
  * @since 2025-10-01
  */
 
 import React from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { themes, getAvailableThemes } from '../../config/themes';
-import { Check, Lock } from 'lucide-react';
+import { themes } from '../../config/themes';
+import { Check, Lock, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 
 const ThemeSelector = () => {
   const { theme: currentTheme, setTheme } = useTheme();
-  const availableThemes = getAvailableThemes();
 
   const handleThemeChange = (themeId) => {
     const selectedTheme = themes[themeId];
@@ -25,107 +30,145 @@ const ThemeSelector = () => {
     }
   };
 
+  // Theme preview configuration
+  const themePreview = {
+    glass: {
+      emoji: '✨',
+      subtitle: 'กระจกเรืองแสง',
+      gradient: 'bg-gradient-to-br from-orange-500/20 via-orange-400/10 to-transparent backdrop-blur-sm border-orange-500/30',
+      textColor: 'text-orange-500'
+    },
+    minimal: {
+      emoji: '⚡',
+      subtitle: 'เรียบง่ายเร็ว',
+      gradient: 'bg-card border-border',
+      textColor: 'text-foreground'
+    },
+    liquid: {
+      emoji: '💧',
+      subtitle: 'Liquid สีฟ้า',
+      gradient: 'bg-gradient-to-br from-cyan-400/30 via-blue-500/20 to-transparent backdrop-blur-xl border-cyan-400/40',
+      textColor: 'text-cyan-400'
+    }
+  };
+
   return (
-    <div className="space-y-6 pt-4 md:pt-0">
+    <div className="space-y-5 pt-4 md:pt-0">
+      {/* Header with reduced description */}
       <div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">
-          เลือกธีม (Theme)
+        <h3 className="text-xl font-bold text-foreground mb-1">
+          เลือกธีม
         </h3>
-        <p className="text-sm text-muted-foreground">
-          เลือกรูปแบบการแสดงผลของแอปพลิเคชัน
+        <p className="text-xs text-muted-foreground">
+          รูปแบบการแสดงผล
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Theme Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {Object.values(themes).map((themeOption) => {
           const isActive = currentTheme === themeOption.id;
           const isAvailable = themeOption.available;
           const isDefault = themeOption.isDefault;
+          const preview = themePreview[themeOption.id];
 
           return (
-            <button
-              key={themeOption.id}
-              onClick={() => handleThemeChange(themeOption.id)}
-              disabled={!isAvailable}
-              className={`
-                relative p-4 rounded-lg border-2 transition-all duration-200
-                ${isActive
-                  ? 'border-primary bg-primary/5'
-                  : isAvailable
-                    ? 'border-border hover:border-primary/50 hover:bg-accent/5'
-                    : 'border-border bg-muted/30 cursor-not-allowed opacity-60'
-                }
-                text-left
-              `}
-            >
-              {/* Active Indicator */}
-              {isActive && (
-                <div className="absolute top-3 right-3 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <Check className="h-4 w-4" />
-                </div>
-              )}
+            <TooltipProvider key={themeOption.id} delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => handleThemeChange(themeOption.id)}
+                    disabled={!isAvailable}
+                    className={`
+                      relative p-3 rounded-lg border-2 transition-all duration-200
+                      ${isActive
+                        ? 'border-primary bg-primary/5 shadow-lg'
+                        : isAvailable
+                          ? 'border-border hover:border-primary/50 hover:bg-accent/5 hover:shadow-md'
+                          : 'border-border bg-muted/30 cursor-not-allowed opacity-50'
+                      }
+                      text-left group
+                    `}
+                  >
+                    {/* Active Indicator */}
+                    {isActive && (
+                      <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                        <Check className="h-3 w-3" />
+                      </div>
+                    )}
 
-              {/* Locked Indicator */}
-              {!isAvailable && (
-                <div className="absolute top-3 right-3 h-6 w-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
-                  <Lock className="h-4 w-4" />
-                </div>
-              )}
+                    {/* Locked Indicator */}
+                    {!isAvailable && (
+                      <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
+                        <Lock className="h-3 w-3" />
+                      </div>
+                    )}
 
-              {/* Theme Preview Box */}
-              <div className={`
-                h-24 rounded-md mb-3 border flex items-center justify-center
-                ${themeOption.id === 'glass'
-                  ? 'bg-gradient-to-br from-orange-500/20 via-orange-400/10 to-transparent backdrop-blur-sm border-orange-500/30'
-                  : themeOption.id === 'minimal'
-                    ? 'bg-card border-border'
-                    : 'bg-gradient-to-br from-blue-500/20 via-blue-400/10 to-transparent backdrop-blur-sm border-blue-500/30'
-                }
-              `}>
-                {/* Preview Text */}
-                <div className="text-center">
-                  <div className={`text-2xl font-bold mb-1 ${themeOption.id === 'glass' ? 'text-orange-500' : 'text-foreground'}`}>
-                    {themeOption.id === 'glass' ? '✨' : themeOption.id === 'minimal' ? '⚡' : '💧'}
-                  </div>
-                  <div className="text-xs text-muted-foreground font-medium">
-                    {themeOption.id === 'glass' ? 'กระจกเรืองแสง' : themeOption.id === 'minimal' ? 'เรียบง่ายเร็ว' : 'ลื่นไหล iOS'}
-                  </div>
-                </div>
-              </div>
+                    {/* Theme Preview Box */}
+                    <div className={`
+                      h-20 rounded-md mb-2 border flex items-center justify-center
+                      transition-all duration-300 group-hover:scale-[1.02]
+                      ${preview.gradient}
+                    `}>
+                      <div className="text-center">
+                        <div className={`text-3xl mb-1 ${preview.textColor}`}>
+                          {preview.emoji}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground font-medium">
+                          {preview.subtitle}
+                        </div>
+                      </div>
+                    </div>
 
-              {/* Theme Info */}
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-foreground">
-                  {themeOption.name}
-                </h4>
-                {isDefault && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                    ค่าเริ่มต้น
-                  </span>
-                )}
-                {!isAvailable && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                    เร็วๆ นี้
-                  </span>
-                )}
-              </div>
-            </button>
+                    {/* Theme Name & Badges */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-sm font-bold text-foreground truncate">
+                          {themeOption.name}
+                        </h4>
+                        {isAvailable && (
+                          <Info className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        {isDefault && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                            ค่าเริ่มต้น
+                          </span>
+                        )}
+                        {!isAvailable && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                            เร็วๆ นี้
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="text-xs font-medium mb-1">{themeOption.name}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {themeOption.description}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           );
         })}
       </div>
 
-      {/* Current Theme Info */}
-      <div className="mt-6 p-4 rounded-lg bg-muted/30 border border-border">
-        <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Check className="h-5 w-5 text-primary" />
+      {/* Current Theme Compact Info */}
+      <div className="p-3 rounded-lg bg-muted/20 border border-border/50">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Check className="h-4 w-4 text-primary" />
           </div>
-          <div>
-            <h4 className="font-medium text-foreground mb-1">
-              ธีมปัจจุบัน: {themes[currentTheme]?.name}
+          <div className="min-w-0 flex-1">
+            <h4 className="text-sm font-bold text-foreground truncate">
+              {themes[currentTheme]?.name}
             </h4>
-            <p className="text-sm text-muted-foreground">
-              {themes[currentTheme]?.description}
+            <p className="text-[11px] text-muted-foreground truncate">
+              กำลังใช้งาน
             </p>
           </div>
         </div>

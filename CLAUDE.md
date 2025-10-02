@@ -4,7 +4,7 @@
 
 ## Version Information
 
-- **Version**: 0.6.2
+- **Version**: 0.6.3
 - **Release Date**: 2025-10-02
 - **Framework**: React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 - **Target**: Thai Business Forms & Data Collection
@@ -14,6 +14,8 @@
 
 ✅ **Complete Form Builder System** - Drag-and-drop interface with 17 field types
 ✅ **Modern UI Components** - ShadCN UI with glass morphism effects
+✅ **Edit Functionality** - Full CRUD operations for main forms and sub-forms with dual-write
+✅ **Breadcrumb Navigation** - Dynamic breadcrumb trail across all pages with deep linking
 ✅ **Circular Animation Buttons** - Beautiful motion effects with AnimatedAddButton
 ✅ **Advanced Toast System** - Portal-based notifications outside containers
 ✅ **Sub-Form Management** - Default empty sub-forms with dynamic field addition
@@ -21,6 +23,7 @@
 ✅ **Advanced Telegram Notifications** - Dual-panel field ordering with drag-and-drop
 ✅ **Responsive Design** - Mobile-first with container-responsive patterns
 ✅ **Thai Localization** - Province selector, phone formatting, date formats
+✅ **Deep Linking Support** - URL parameters for direct navigation to any page
 
 ## Quick Start
 
@@ -102,15 +105,166 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 
 ## Version History
 
-### v0.6.2 (2025-10-02) - Dynamic Tables with Thai-English Translation
+### v0.6.3 (2025-10-02) - Advanced Navigation & Edit Functionality
 
 **Major Updates:**
-- ✅ **Automatic Table Creation** - PostgreSQL tables created automatically for each form
-- ✅ **Thai-English Translation** - Form and field names translated to meaningful English
-- ✅ **Smart Column Names** - Column names based on field labels, not IDs
-- ✅ **FormService Integration** - Automatic table creation/update on form operations
+- ✅ **Edit Pages System** - Complete edit functionality for main forms and sub-forms
+- ✅ **Breadcrumb Navigation** - Comprehensive breadcrumb system across all pages
+- ✅ **Deep Linking** - URL parameter support for direct navigation
+- ✅ **Form Builder Navigation** - Enhanced navigation flows with browser support
+- ✅ **Mobile Optimization** - Responsive edit pages and navigation
 
-**Dynamic Tables Features:**
+**Edit Pages Implementation:**
+- **MainFormEditPage** - Full-featured editing for main form submissions
+  - Load existing submission data with pre-filled fields
+  - Dual-write system (old tables + dynamic tables)
+  - Complete validation and error handling
+  - File upload support with preview
+  - Permission-based access (admin/moderator/owner)
+  - Theme-aware design (glass/minimal)
+  - Mobile-responsive layout
+
+- **SubFormEditPage** - Multi-entry editing for sub-forms
+  - Edit multiple sub-form entries
+  - Drag-and-drop reordering with @dnd-kit
+  - Array-based data management
+  - Order index preservation
+  - Theme support
+  - Mobile touch gestures
+
+- **Edit Button Integration**
+  - Edit buttons in SubmissionDetail and SubFormDetail
+  - Responsive design (text on desktop, icon on mobile)
+  - Smooth navigation: Detail → Edit → Save → Back to Detail
+  - Permission checking before showing edit option
+
+**Breadcrumb Navigation System:**
+- **Auto-Generated Breadcrumbs** - Dynamic breadcrumb based on navigation context
+  - Form List: "Home"
+  - Form Builder: "Home > Create Form" / "Home > Edit Form"
+  - Submission List: "Home > [Form Name]"
+  - Submission Detail: "Home > [Form Name] > Submission #123456"
+  - Main Form Edit: "Home > [Form Name] > Submission #123456 > Edit"
+  - Sub-Form Detail: "Home > [Form Name] > Submission #123456 > [Sub-Form Name]"
+  - Sub-Form Edit: "Home > [Form Name] > Submission #123456 > [Sub-Form Name] > Edit"
+  - Settings: "Home > Settings"
+  - User Management: "Home > User Management"
+
+- **UX Features**
+  - Clickable navigation trail for quick access
+  - Smart truncation for long form names (max 20 chars)
+  - Ellipsis display for deep paths (maxItems: 3)
+  - Home icon for quick return
+  - Smooth Framer Motion animations
+  - Theme-aware styling (glass/minimal)
+  - Mobile responsive with adaptive font sizes
+
+**Deep Linking & URL Parameters:**
+- **Multiple URL Patterns Supported:**
+  - `?mode=builder` - Create new form
+  - `?mode=builder&form=xyz` - Edit existing form
+  - `?form=xyz&view=submissions` - View submission list
+  - `?form=xyz&view=detail&submission=abc` - View submission detail
+  - `?form=xyz&mode=edit&submission=abc` - Edit submission
+  - `?form=xyz&mode=create` - Create new submission
+  - `?form=xyz&view=subform&submission=abc&subform=def&subsub=ghi` - Sub-form detail
+
+- **Navigation Features**
+  - Auto-navigation based on URL parameters
+  - URL cleanup after navigation
+  - Browser back/forward button support
+  - Deep linking from external sources
+  - State preservation during navigation
+
+**Form Builder Navigation Enhancements:**
+- Tested and fixed navigation flows:
+  - Form creation: Form List → Builder → Save → List
+  - Form editing: List → Builder (edit mode) → Save → List
+  - Back button behavior verified
+  - State cleanup confirmed
+  - Draft saving functional
+  - Field reordering doesn't break navigation
+  - Sub-form creation within builder tested
+
+**Technical Implementation:**
+
+*Edit Pages:*
+- `src/components/pages/MainFormEditPage.jsx` - Main form edit component (701 lines)
+- `src/components/pages/SubFormEditPage.jsx` - Sub-form edit component (497 lines)
+- Integrated with DataService for dual-write
+- Form validation with error messages
+- File upload handling with preview
+- Permission-based access control
+
+*Breadcrumb System:*
+- `src/components/ui/breadcrumb.jsx` - Breadcrumb component (232 lines)
+  - ResponsiveBreadcrumb component
+  - BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage
+  - BreadcrumbSeparator, BreadcrumbEllipsis
+  - Theme variants (glass/minimal)
+- `src/contexts/BreadcrumbContext.jsx` - Breadcrumb state management (317 lines)
+  - BreadcrumbProvider and useBreadcrumb hook
+  - Auto-generation based on navigation
+  - Custom label support
+  - Truncation logic
+
+*Navigation Updates:*
+- `src/components/MainFormApp.jsx` - Enhanced with:
+  - Breadcrumb integration (lines 799-817)
+  - Edit page routes (main-form-edit, subform-edit)
+  - URL parameter handling (lines 62-99)
+  - Navigation state management
+  - Form title tracking for breadcrumbs
+
+*Detail View Updates:*
+- `src/components/SubmissionDetail.jsx` - Added Edit button
+- `src/components/SubFormDetail.jsx` - Added Edit button
+- Responsive button design (text + icon on desktop, icon only on mobile)
+
+**Benefits:**
+- **Improved UX** - Clear navigation with visual breadcrumb trail
+- **Edit Functionality** - Full CRUD operations on submissions
+- **Deep Linking** - Share direct links to specific views
+- **Mobile Optimized** - Touch-friendly edit pages and navigation
+- **Theme Consistency** - All new features support both themes
+- **Browser Friendly** - Back/forward buttons work correctly
+
+**Navigation Flow Examples:**
+```
+1. Edit Flow:
+   Submission List → Detail → Click Edit → Edit Page → Save → Back to Detail
+
+2. Breadcrumb Navigation:
+   Click "Form Name" in breadcrumb → Jump to Submission List
+   Click "Home" → Return to Form List
+
+3. Deep Link:
+   Share URL: /?form=abc&mode=edit&submission=def
+   Recipient opens link → Directly to edit page
+```
+
+**Success Metrics:**
+- ✅ 100% feature parity for editing
+- ✅ Breadcrumbs on all pages
+- ✅ All URL patterns working
+- ✅ Mobile responsive (320px+)
+- ✅ Theme support verified
+- ✅ No console errors
+- ✅ Build successful
+
+---
+
+### v0.6.2 (2025-10-02) - Dynamic Tables Phase 2 & Theme System Complete
+
+**Major Updates:**
+- ✅ **Dynamic Tables Phase 2** - Sub-form table support with parent-child relationships
+- ✅ **Frontend Integration** - Dual-write system for backward compatibility
+- ✅ **Minimal Theme Complete** - Clean design without blur effects
+- ✅ **Liquid Glass Theme** - iOS 26 design system verified (implemented as "glass" theme)
+- ✅ **Theme Selector UI** - Beautiful theme switcher in Settings
+- ✅ **Comprehensive Testing** - 9 new integration tests for sub-form tables
+
+**Dynamic Tables Phase 1 Features:**
 - **Auto Table Creation** - Creates table when form is created
 - **Auto Column Addition** - Adds columns when fields are added to form
 - **Thai Translation** - 100+ word dictionary for accurate translations
@@ -118,31 +272,94 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 - **PostgreSQL Types** - Maps field types to appropriate PostgreSQL data types
 - **Performance Indexes** - Auto-creates indexes for form_id, user_id, submitted_at
 
+**Dynamic Tables Phase 2 - Sub-Form Tables:**
+- **Separate Tables for Sub-Forms** - Each sub-form gets its own PostgreSQL table
+- **Parent-Child Relationships** - Foreign key `parent_id` references main table
+- **Order Preservation** - `order_index` column maintains entry sequence
+- **Cascade Deletion** - ON DELETE CASCADE for referential integrity
+- **Migration Support** - Added `table_name` column to `sub_forms` table
+- **Dual-Write System** - Writes to both old (submissions) and new (dynamic) tables
+- **Graceful Degradation** - Sub-form failures don't block main form submissions
+
+**Sub-Form Table Structure:**
+```sql
+CREATE TABLE {sub_form_table_name} (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parent_id UUID NOT NULL REFERENCES {main_table}(id) ON DELETE CASCADE,
+  form_id UUID NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
+  sub_form_id UUID NOT NULL REFERENCES sub_forms(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  submission_number INTEGER,
+  order_index INTEGER DEFAULT 0,
+  status VARCHAR(50) DEFAULT 'submitted',
+  submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  -- Dynamic columns based on sub-form fields
+);
+```
+
 **Translation Examples:**
 - "แบบฟอร์มติดต่อ" → `form_contact_abc123`
 - "ชื่อเต็ม" → `full_name_field1`
 - "เบอร์โทรศัพท์" → `phone_abc123`
 - "อีเมล" → `email_def456`
+- "รายการสินค้า" → `order_items_sub001` (sub-form)
 
 **Benefits:**
 - **PowerBI Direct Connection** - Connect directly to PostgreSQL
 - **AI-Friendly** - Column names are meaningful and understandable
 - **Better Performance** - No JSON parsing needed for queries
 - **Data Analysis** - Easy to create SQL queries and reports
+- **One-to-Many Support** - Natural handling of sub-form data relationships
+
+**Theme System Complete:**
+- **Minimal Theme** - Clean ShadCN UI design without blur/transparency
+- **Liquid Glass Theme** - iOS 26 design with backdrop blur (existing "glass" theme)
+- **Theme Selector** - Beautiful UI with theme previews and icons
+- **Theme Persistence** - localStorage + React Context pattern
+- **Theme Service** - Centralized theme management with DOM manipulation
+- **Three Themes Available:** glass (Liquid Glass), minimal (Clean), liquid (Future)
 
 **Technical Implementation:**
-- `DynamicTableService.js` - Core table management service
-- `thaiTranslator.js` - Thai-English translation dictionary
-- `tableNameHelper.js` - Table/column name generation utilities
-- `FormService.js` - Integrated with form CRUD operations
+
+*Dynamic Tables:*
+- `backend/services/DynamicTableService.js` - Added 3 methods for sub-form tables:
+  - `createSubFormTable()` - Create sub-form table with foreign keys
+  - `insertSubFormData()` - Insert data into sub-form table
+  - `getSubFormData()` - Retrieve sub-form data by parent_id
+- `backend/services/FormService.js` - Enhanced for sub-form table creation/updates
+- `backend/services/SubmissionService.js` - Dual-write integration (lines 121-183)
+- `backend/models/SubForm.js` - Added `table_name` field
+- `backend/migrations/20251002000002-add-table-name-to-subforms.js` - New migration
+- `backend/utils/thaiTranslator.js` - Thai-English translation dictionary
+- `backend/utils/tableNameHelper.js` - Table/column name generation utilities
+
+*Theme System:*
+- `src/contexts/ThemeContext.jsx` - React Context for theme state
+- `src/services/ThemeService.js` - localStorage & DOM manipulation
+- `src/config/themes.js` - Theme configuration (glass, minimal, liquid)
+- `src/styles/minimal-theme.css` - Complete Minimal theme (723 lines)
+- `src/components/ui/minimal-*.jsx` - All minimal UI components
+- `src/components/settings/ThemeSelector.jsx` - Theme switcher UI
+- Integrated in `src/components/SettingsPage.jsx` (line 281)
 
 **Testing:**
-- Added integration tests for DynamicTableService
-- Tests cover table creation, updates, translations, data types
+- **9 New Integration Tests** for sub-form tables:
+  - Sub-form table creation with correct structure
+  - Parent-child foreign key relationships
+  - Order preservation with order_index
+  - Multiple entries per parent
+  - Cascade deletion on parent delete
+  - Data retrieval by parent_id
+  - Column validation and data types
+- **Fixed UUID validation** - Corrected 5 invalid test UUIDs to valid hex format
+- Tests in `backend/tests/integration/DynamicTableService.test.js`
 
 **Documentation:**
-- Updated `DYNAMIC-TABLES-GUIDE.md` with implementation status
-- Phase 1 marked as ✅ Implemented
+- Updated `DYNAMIC-TABLES-GUIDE.md` with Phase 2 implementation
+- Phase 1 & 2 marked as ✅ Implemented
+- Added sub-form table examples and best practices
 
 ### v0.6.1 (2025-10-02) - UI/UX Enhancements & Logo Update
 
@@ -372,9 +589,9 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 
 ---
 
-**Application Status:** ✅ Production-ready v0.5.4 - Complete Full-Stack Enterprise System
+**Application Status:** ✅ Production-ready v0.6.3 - Advanced Navigation, Edit Functionality & Breadcrumb System
 
-**License:** Internal use - Q-Collector Enterprise Form Builder v0.5.4
+**License:** Internal use - Q-Collector Enterprise Form Builder v0.6.3
 
 **Configuration Notes:**
 - Telegram Bot Token และ Group ID ตั้งค่าใน .env (ไม่เปิดเผยใน repository)

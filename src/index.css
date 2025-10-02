@@ -6,6 +6,7 @@
 
 /* Import Theme Stylesheets */
 @import './styles/minimal-theme.css';
+@import './styles/liquid-theme.css';
 
 @layer base {
   :root {

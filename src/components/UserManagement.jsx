@@ -38,7 +38,7 @@ import {
   faCheckCircle,
   faTimesCircle
 } from '@fortawesome/free-solid-svg-icons';
-import { ALL_ROLES, getRoleLabel } from '../config/roles.config';
+import { ALL_ROLES, getRoleLabel, getRoleBadgeColor, getRoleTextColor } from '../config/roles.config';
 import { useAuth } from '../contexts/AuthContext';
 import User2FAManagement from './admin/User2FAManagement';
 
@@ -297,26 +297,7 @@ export default function UserManagement() {
     }
   };
 
-  const getRoleBadgeColor = (role) => {
-    switch (role) {
-      case 'super_admin':
-        return 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30';
-      case 'admin':
-        return 'bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-500/30';
-      case 'moderator':
-        return 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30';
-      case 'customer_service':
-        return 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30';
-      case 'sales':
-        return 'bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30';
-      case 'marketing':
-        return 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30';
-      case 'technic':
-        return 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border-cyan-500/30';
-      default:
-        return 'bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30';
-    }
-  };
+  // getRoleBadgeColor is now imported from roles.config.js to match Form Settings colors
 
   if (!isSuperAdmin) {
     return (

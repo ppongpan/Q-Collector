@@ -30,9 +30,9 @@ export const themes = {
   liquid: {
     id: 'liquid',
     name: 'ธีมกระจกลิควิด',
-    description: 'ดีไซน์แบบ iOS กระจกฝ้าพร้อมแอนิเมชั่นลื่นไหล',
+    description: 'ดีไซน์ iOS 26 สไตล์ Liquid Glass สีฟ้าเงางาม พร้อมแอนิเมชั่นลื่นไหล 60fps',
     isDefault: false,
-    available: false // Planned for v0.7.0
+    available: true // v0.6.3 - iOS 26 Liquid Glass Theme (Cyan/Blue)
   }
 };
 

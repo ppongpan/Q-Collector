@@ -718,5 +718,238 @@
 }
 
 /* ============================================
+   MINIMAL TYPOGRAPHY SYSTEM
+   ============================================ */
+
+/* Typography Scale - Consistent with Glass & Liquid themes */
+[data-theme="minimal"] .text-micro {
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+[data-theme="minimal"] .text-caption {
+  font-size: 18px;
+  line-height: 1.36;
+  font-weight: 500;
+}
+
+[data-theme="minimal"] .text-caption-2 {
+  font-size: 18px;
+  line-height: 1.33;
+  font-weight: 500;
+}
+
+[data-theme="minimal"] .text-footnote {
+  font-size: 18px;
+  line-height: 1.38;
+  font-weight: 400;
+}
+
+[data-theme="minimal"] .text-subhead {
+  font-size: 20px;
+  line-height: 1.33;
+  font-weight: 400;
+}
+
+[data-theme="minimal"] .text-callout {
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 400;
+}
+
+[data-theme="minimal"] .text-body {
+  font-size: 20px;
+  line-height: 1.41;
+  font-weight: 400;
+}
+
+[data-theme="minimal"] .text-headline {
+  font-size: 24px;
+  line-height: 1.41;
+  font-weight: 600;
+}
+
+[data-theme="minimal"] .text-title-3 {
+  font-size: 28px;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+[data-theme="minimal"] .text-title-2 {
+  font-size: 32px;
+  line-height: 1.27;
+  font-weight: 700;
+}
+
+[data-theme="minimal"] .text-title-1 {
+  font-size: 36px;
+  line-height: 1.21;
+  font-weight: 700;
+}
+
+[data-theme="minimal"] .text-large-title {
+  font-size: 42px;
+  line-height: 1.18;
+  font-weight: 700;
+}
+
+/* Heading elements */
+[data-theme="minimal"] h1 {
+  font-size: 36px;
+  line-height: 1.21;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+}
+
+[data-theme="minimal"] h2 {
+  font-size: 32px;
+  line-height: 1.27;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+}
+
+[data-theme="minimal"] h3 {
+  font-size: 28px;
+  line-height: 1.25;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+[data-theme="minimal"] h4 {
+  font-size: 24px;
+  line-height: 1.41;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+[data-theme="minimal"] h5 {
+  font-size: 20px;
+  line-height: 1.33;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+[data-theme="minimal"] h6 {
+  font-size: 18px;
+  line-height: 1.36;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+/* Paragraph and body text */
+[data-theme="minimal"] p {
+  font-size: 20px;
+  line-height: 1.41;
+  font-weight: 400;
+  color: hsl(var(--card-foreground));
+}
+
+/* Small text */
+[data-theme="minimal"] small {
+  font-size: 18px;
+  line-height: 1.36;
+  font-weight: 400;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Responsive Typography */
+[data-theme="minimal"] .text-responsive-xs {
+  font-size: 18px;
+  line-height: 1.36;
+}
+
+@media (min-width: 768px) {
+  [data-theme="minimal"] .text-responsive-xs {
+    font-size: 18px;
+    line-height: 1.38;
+  }
+}
+
+[data-theme="minimal"] .text-responsive-sm {
+  font-size: 18px;
+  line-height: 1.38;
+}
+
+@media (min-width: 768px) {
+  [data-theme="minimal"] .text-responsive-sm {
+    font-size: 20px;
+    line-height: 1.33;
+  }
+}
+
+[data-theme="minimal"] .text-responsive-base {
+  font-size: 20px;
+  line-height: 1.33;
+}
+
+@media (min-width: 768px) {
+  [data-theme="minimal"] .text-responsive-base {
+    font-size: 22px;
+    line-height: 1.25;
+  }
+}
+
+[data-theme="minimal"] .text-responsive-lg {
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+@media (min-width: 768px) {
+  [data-theme="minimal"] .text-responsive-lg {
+    font-size: 20px;
+    line-height: 1.41;
+  }
+}
+
+[data-theme="minimal"] .text-responsive-xl {
+  font-size: 20px;
+  line-height: 1.41;
+}
+
+@media (min-width: 768px) {
+  [data-theme="minimal"] .text-responsive-xl {
+    font-size: 24px;
+    line-height: 1.41;
+  }
+}
+
+[data-theme="minimal"] .text-responsive-2xl {
+  font-size: 24px;
+  line-height: 1.41;
+}
+
+@media (min-width: 768px) {
+  [data-theme="minimal"] .text-responsive-2xl {
+    font-size: 28px;
+    line-height: 1.25;
+  }
+}
+
+[data-theme="minimal"] .text-responsive-3xl {
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+@media (min-width: 768px) {
+  [data-theme="minimal"] .text-responsive-3xl {
+    font-size: 32px;
+    line-height: 1.27;
+  }
+}
+
+[data-theme="minimal"] .text-responsive-4xl {
+  font-size: 32px;
+  line-height: 1.27;
+}
+
+@media (min-width: 768px) {
+  [data-theme="minimal"] .text-responsive-4xl {
+    font-size: 36px;
+    line-height: 1.21;
+  }
+}
+
+/* ============================================
    END OF MINIMAL THEME
    ============================================ */

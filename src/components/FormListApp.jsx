@@ -19,7 +19,7 @@ const USER_ROLES = {
   CUSTOMER_SERVICE: { id: 'customer_service', color: 'text-blue-500', bgColor: 'bg-blue-500/10', name: 'Customer Service', isDefault: false },
   TECHNIC: { id: 'technic', color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', name: 'Technic', isDefault: false },
   SALE: { id: 'sale', color: 'text-green-500', bgColor: 'bg-green-500/10', name: 'Sale', isDefault: false },
-  MARKETING: { id: 'marketing', color: 'text-orange-500', bgColor: 'bg-orange-500/10', name: 'Marketing', isDefault: false },
+  MARKETING: { id: 'marketing', color: 'text-yellow-500', bgColor: 'bg-yellow-500/10', name: 'Marketing', isDefault: false }, // FIXED v0.6.6: Changed from orange to yellow
   GENERAL_USER: { id: 'general_user', color: 'text-gray-500', bgColor: 'bg-gray-500/10', name: 'General User', isDefault: false }
 };
 
@@ -69,7 +69,7 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
       'HR Manager': 'bg-purple-500/20 text-purple-200',
       'Supervisor': 'bg-green-500/20 text-green-200',
       'Employee': 'bg-yellow-500/20 text-yellow-200',
-      'Technician': 'bg-orange-500/20 text-orange-200',
+      'Technician': 'bg-cyan-500/20 text-cyan-200', // FIXED v0.6.6: Changed from orange to cyan
       'All': 'bg-gray-500/20 text-gray-200'
     };
     return colors[role] || 'bg-gray-500/20 text-gray-200';
@@ -190,7 +190,7 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
       'Meeting': 'from-green-500/20 to-green-600/20',
       'Maintenance': 'from-yellow-500/20 to-yellow-600/20',
       'Survey': 'from-purple-500/20 to-purple-600/20',
-      'Request': 'from-orange-500/20 to-orange-600/20'
+      'Request': 'from-cyan-500/20 to-cyan-600/20' // FIXED v0.6.6: Changed from orange to cyan for liquid theme
     };
     return colors[category] || 'from-gray-500/20 to-gray-600/20';
   };
@@ -457,7 +457,7 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
                         >
                           <FontAwesomeIcon
                             icon={faEye}
-                            className="text-lg text-muted-foreground/60 group-hover:text-orange-500 transition-colors duration-200"
+                            className="text-lg text-muted-foreground/60 group-hover:text-cyan-400 transition-colors duration-200"
                           />
                         </div>
 
@@ -473,7 +473,7 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
                           >
                             <FontAwesomeIcon
                               icon={faEdit}
-                              className="text-lg text-muted-foreground/60 group-hover:text-orange-500 transition-colors duration-200"
+                              className="text-lg text-muted-foreground/60 group-hover:text-cyan-400 transition-colors duration-200"
                             />
                           </div>
                         )}

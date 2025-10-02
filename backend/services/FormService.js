@@ -138,6 +138,27 @@ class FormService {
           fields: formWithFields.fields || []
         });
         logger.info(`Dynamic table created: ${tableName} for form ${form.id}`);
+
+        // Create sub-form tables if sub-forms exist
+        if (formWithFields.subForms && formWithFields.subForms.length > 0) {
+          for (const subForm of formWithFields.subForms) {
+            try {
+              const subFormTableName = await dynamicTableService.createSubFormTable(
+                {
+                  id: subForm.id,
+                  title: subForm.title,
+                  fields: subForm.fields || []
+                },
+                tableName,
+                formWithFields.id
+              );
+              logger.info(`Sub-form table created: ${subFormTableName} for sub-form ${subForm.id}`);
+            } catch (subTableError) {
+              logger.error(`Failed to create sub-form table for ${subForm.id}:`, subTableError);
+              // Continue with other sub-forms even if one fails
+            }
+          }
+        }
       } catch (tableError) {
         logger.error(`Failed to create dynamic table for form ${form.id}:`, tableError);
         // Don't fail the entire operation if table creation fails
@@ -304,6 +325,58 @@ class FormService {
               throw err;
             } finally {
               client.release();
+            }
+          }
+
+          // Handle sub-form tables if subForms were updated
+          if (updates.subForms !== undefined) {
+            const mainTableName = form.table_name;
+            if (mainTableName) {
+              for (const subForm of formWithFields.subForms || []) {
+                try {
+                  // Get sub-form from database to check if it has table_name
+                  const dbSubForm = await SubForm.findByPk(subForm.id);
+
+                  if (!dbSubForm.table_name) {
+                    // Create new sub-form table
+                    const subFormTableName = await dynamicTableService.createSubFormTable(
+                      {
+                        id: subForm.id,
+                        title: subForm.title,
+                        fields: subForm.fields || []
+                      },
+                      mainTableName,
+                      formId
+                    );
+                    logger.info(`Sub-form table created: ${subFormTableName} for sub-form ${subForm.id}`);
+                  } else {
+                    // Update existing sub-form table columns
+                    const client = await dynamicTableService.pool.connect();
+                    try {
+                      await client.query('BEGIN');
+                      await dynamicTableService.updateFormTableColumns(
+                        {
+                          id: subForm.id,
+                          title: subForm.title,
+                          fields: subForm.fields || []
+                        },
+                        dbSubForm.table_name,
+                        client
+                      );
+                      await client.query('COMMIT');
+                      logger.info(`Sub-form table updated: ${dbSubForm.table_name} for sub-form ${subForm.id}`);
+                    } catch (err) {
+                      await client.query('ROLLBACK');
+                      throw err;
+                    } finally {
+                      client.release();
+                    }
+                  }
+                } catch (subTableError) {
+                  logger.error(`Failed to update sub-form table for ${subForm.id}:`, subTableError);
+                  // Continue with other sub-forms even if one fails
+                }
+              }
             }
           }
         } catch (tableError) {

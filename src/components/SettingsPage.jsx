@@ -13,12 +13,14 @@ import {
   faShieldAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { useFont } from '../contexts/FontContext';
+import { useAuth } from '../contexts/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import ThemeSelector from './settings/ThemeSelector';
 import TwoFactorStatus from './settings/TwoFactorStatus';
 import TrustedDevices from './settings/TrustedDevices';
 import TrustedDeviceDuration from './settings/TrustedDeviceDuration';
 import apiClient from '../services/ApiClient';
+import { USER_ROLES } from '../config/roles.config';
 import {
   pageTransitions,
   componentVariants,
@@ -34,11 +36,15 @@ function SettingsPage({ onNavigate }) {
     changeFont,
     resetFont
   } = useFont();
+  const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('security');
   const [isChanging, setIsChanging] = useState(false);
   const [lastChanged, setLastChanged] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const shouldReduceMotion = useReducedMotion();
+
+  // Check if user is Super Admin
+  const isSuperAdmin = user?.role === USER_ROLES.SUPER_ADMIN;
 
   const sections = [
     {
@@ -272,14 +278,16 @@ function SettingsPage({ onNavigate }) {
       initial="initial"
       animate="animate"
     >
-      {/* Theme Selector */}
-      <motion.div
-        variants={componentVariants.glassCard}
-        initial="initial"
-        animate="animate"
-      >
-        <ThemeSelector />
-      </motion.div>
+      {/* Theme Selector - Super Admin Only */}
+      {isSuperAdmin && (
+        <motion.div
+          variants={componentVariants.glassCard}
+          initial="initial"
+          animate="animate"
+        >
+          <ThemeSelector />
+        </motion.div>
+      )}
 
       {/* Dark Mode Toggle */}
       <motion.div

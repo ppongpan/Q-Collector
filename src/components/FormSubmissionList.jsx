@@ -900,7 +900,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                               ? 'bg-muted/30'
                               : ''
                           }`}
-                          onClick={(e) => handleMenuOpen(e, submission.id)}
+                          onClick={() => onViewSubmission && onViewSubmission(submission.id)}
                           onMouseEnter={(e) => {
                             // Force clean styling with JavaScript
                             const row = e.currentTarget;

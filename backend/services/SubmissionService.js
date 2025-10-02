@@ -4,12 +4,14 @@
  */
 
 const { Op } = require('sequelize');
-const { Submission, SubmissionData, Form, Field, User, AuditLog, sequelize } = require('../models');
+const { Submission, SubmissionData, Form, Field, SubForm, User, AuditLog, sequelize } = require('../models');
 const logger = require('../utils/logger.util');
 const { ApiError } = require('../middleware/error.middleware');
 const { Parser } = require('json2csv');
 const cacheService = require('./CacheService');
 const { KEYS, POLICIES, INVALIDATION_PATTERNS } = require('../config/cache.config');
+const DynamicTableService = require('./DynamicTableService');
+const { generateColumnName } = require('../utils/tableNameHelper');
 
 class SubmissionService {
   /**
@@ -114,6 +116,70 @@ class SubmissionService {
           field,
           { transaction }
         );
+      }
+
+      // Also insert into dynamic table if form has one
+      if (form.table_name) {
+        try {
+          const dynamicTableService = new DynamicTableService();
+
+          // Prepare data for main form dynamic table
+          const mainFormData = {};
+          const subFormDataMap = new Map(); // Group sub-form data by sub_form_id
+
+          for (const [fieldId, value] of Object.entries(fieldData)) {
+            const field = fieldMap.get(fieldId);
+            if (!field) continue;
+
+            const columnName = generateColumnName(field.label || field.title, field.id);
+
+            if (!field.sub_form_id) {
+              // Main form field
+              mainFormData[columnName] = value;
+            } else {
+              // Sub-form field - group by sub_form_id
+              if (!subFormDataMap.has(field.sub_form_id)) {
+                subFormDataMap.set(field.sub_form_id, {});
+              }
+              subFormDataMap.get(field.sub_form_id)[columnName] = value;
+            }
+          }
+
+          // Insert into main form dynamic table
+          const mainSubmission = await dynamicTableService.insertSubmission(
+            formId,
+            form.table_name,
+            userId,
+            mainFormData
+          );
+
+          logger.info(`Submission ${submission.id} stored in dynamic table ${form.table_name}`);
+
+          // Insert sub-form data
+          for (const [subFormId, subFormData] of subFormDataMap.entries()) {
+            try {
+              const subForm = await SubForm.findByPk(subFormId);
+              if (subForm && subForm.table_name) {
+                await dynamicTableService.insertSubFormData(
+                  subForm.table_name,
+                  mainSubmission.id,  // parent_id from dynamic table
+                  formId,
+                  subFormId,
+                  userId,
+                  subFormData,
+                  0  // order_index
+                );
+                logger.info(`Sub-form data stored in ${subForm.table_name}`);
+              }
+            } catch (subFormError) {
+              logger.error(`Failed to insert sub-form ${subFormId}:`, subFormError);
+              // Continue with other sub-forms
+            }
+          }
+        } catch (dynamicTableError) {
+          logger.error('Failed to insert into dynamic table:', dynamicTableError);
+          // Don't fail the entire submission if dynamic table insert fails
+        }
       }
 
       await transaction.commit();

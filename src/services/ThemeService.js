@@ -11,18 +11,28 @@
 import { themes, DEFAULT_THEME, isValidTheme, isThemeAvailable } from '../config/themes.js';
 
 /**
- * LocalStorage key for theme preferences
+ * LocalStorage key prefix for theme preferences
  * @constant {string}
  */
-const STORAGE_KEY = 'qcollector_theme_preference';
+const STORAGE_KEY_PREFIX = 'qcollector_theme_preference';
+
+/**
+ * Get storage key for user-specific or global theme preference
+ * @param {string|null} userId - User ID for per-user preferences, null for global
+ * @returns {string} Storage key
+ */
+const getStorageKey = (userId = null) => {
+  return userId ? `${STORAGE_KEY_PREFIX}_user_${userId}` : STORAGE_KEY_PREFIX;
+};
 
 /**
  * Default theme preference structure
+ * v0.6.7: Changed default to dark mode (orange-neon in dark mode)
  * @constant {Object}
  */
 const DEFAULT_PREFERENCE = {
-  theme: DEFAULT_THEME,
-  isDarkMode: false
+  theme: DEFAULT_THEME, // 'glass' = orange-neon theme
+  isDarkMode: true // v0.6.7: Default to dark mode
 };
 
 /**
@@ -32,13 +42,29 @@ const DEFAULT_PREFERENCE = {
 class ThemeService {
   /**
    * Load theme preference from localStorage
+   * @param {string|null} userId - User ID for per-user preferences, null for global
    * @returns {Object} Theme preference object {theme: string, isDarkMode: boolean}
    */
-  static loadThemePreference() {
+  static loadThemePreference(userId = null) {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const storageKey = getStorageKey(userId);
+      const stored = localStorage.getItem(storageKey);
 
       if (!stored) {
+        // If no user-specific preference found, try loading global preference as fallback
+        if (userId) {
+          const globalStored = localStorage.getItem(getStorageKey(null));
+          if (globalStored) {
+            const parsed = JSON.parse(globalStored);
+            const theme = (isValidTheme(parsed.theme) && isThemeAvailable(parsed.theme))
+              ? parsed.theme
+              : DEFAULT_THEME;
+            const isDarkMode = typeof parsed.isDarkMode === 'boolean'
+              ? parsed.isDarkMode
+              : (typeof parsed.darkMode === 'boolean' ? parsed.darkMode : false);
+            return { theme, isDarkMode };
+          }
+        }
         return { ...DEFAULT_PREFERENCE };
       }
 
@@ -66,9 +92,10 @@ class ThemeService {
    * @param {Object} preference - Theme preference object
    * @param {string} preference.theme - Theme identifier
    * @param {boolean} preference.isDarkMode - Dark mode enabled state
+   * @param {string|null} userId - User ID for per-user preferences, null for global
    * @returns {boolean} True if save successful, false otherwise
    */
-  static saveThemePreference(preference) {
+  static saveThemePreference(preference, userId = null) {
     try {
       // Validate input
       if (!preference || typeof preference !== 'object') {
@@ -87,9 +114,10 @@ class ThemeService {
         return false;
       }
 
-      // Save to localStorage
+      // Save to localStorage with appropriate key
+      const storageKey = getStorageKey(userId);
       const dataToSave = JSON.stringify({ theme, isDarkMode });
-      localStorage.setItem(STORAGE_KEY, dataToSave);
+      localStorage.setItem(storageKey, dataToSave);
 
       return true;
     } catch (error) {
@@ -128,6 +156,25 @@ class ThemeService {
         root.classList.remove('dark');
       }
 
+      // Dynamically load theme-specific CSS if needed
+      if (validTheme === 'liquid') {
+        // Check if liquid theme CSS is already loaded
+        if (!document.querySelector('link[href*="liquid-theme.css"]')) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = '/src/styles/liquid-theme.css';
+          document.head.appendChild(link);
+        }
+      } else if (validTheme === 'minimal') {
+        // Check if minimal theme CSS is already loaded
+        if (!document.querySelector('link[href*="minimal-theme.css"]')) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = '/src/styles/minimal-theme.css';
+          document.head.appendChild(link);
+        }
+      }
+
       return true;
     } catch (error) {
       // Silent fail
@@ -152,11 +199,13 @@ class ThemeService {
 
   /**
    * Reset theme to default
+   * @param {string|null} userId - User ID for per-user preferences, null for global
    * @returns {Object} Default theme preference
    */
-  static resetToDefault() {
+  static resetToDefault(userId = null) {
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      const storageKey = getStorageKey(userId);
+      localStorage.removeItem(storageKey);
       this.applyThemeToDOM(DEFAULT_PREFERENCE.theme, DEFAULT_PREFERENCE.isDarkMode);
       return { ...DEFAULT_PREFERENCE };
     } catch (error) {

@@ -5,7 +5,7 @@ import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription, Glass
 import { GlassButton } from './ui/glass-button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faPlus
+  faPlus, faEdit
 } from '@fortawesome/free-solid-svg-icons';
 import { FileDisplay, FileDisplayCompact } from './ui/file-display';
 import { FileGallery, ImageThumbnail } from './ui/image-thumbnail';
@@ -1001,8 +1001,6 @@ export default function SubmissionDetail({
                                 rel="noopener noreferrer"
                                 className="text-primary"
                                 title={value}
-                                target="_blank"
-                  rel="noopener noreferrer"
                               >
                                 {displayText}
                               </a>
@@ -1117,6 +1115,18 @@ export default function SubmissionDetail({
               )}
             </div>
 
+            {/* Edit button */}
+            {onEdit && (
+              <GlassButton
+                onClick={() => onEdit(submissionId)}
+                size="sm"
+                className="orange-neon-button flex items-center gap-2"
+                title="แก้ไขข้อมูล"
+              >
+                <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
+                <span className="hidden sm:inline">แก้ไข</span>
+              </GlassButton>
+            )}
           </div>
         </motion.div>
 

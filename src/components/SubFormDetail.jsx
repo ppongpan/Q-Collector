@@ -4,7 +4,7 @@ import { GlassCard, GlassCardContent } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faCalendarAlt
+  faCalendarAlt, faEdit
 } from '@fortawesome/free-solid-svg-icons';
 import { FileDisplay } from './ui/file-display';
 import { FileGallery } from './ui/image-thumbnail';
@@ -506,6 +506,18 @@ export default function SubFormDetail({
               </div>
             </div>
 
+            {/* Edit button */}
+            {onEdit && (
+              <GlassButton
+                onClick={() => onEdit(subSubmissionId)}
+                size="sm"
+                className="orange-neon-button flex items-center gap-2"
+                title="แก้ไขข้อมูล"
+              >
+                <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
+                <span className="hidden sm:inline">แก้ไข</span>
+              </GlassButton>
+            )}
           </div>
         </motion.div>
 

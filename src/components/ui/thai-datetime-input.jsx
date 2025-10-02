@@ -135,9 +135,9 @@ const ThaiDateTimeInput = React.forwardRef(({
     }
   };
 
-  const handleCalendarIconClick = () => {
-    if (hiddenInputRef.current) {
-      hiddenInputRef.current.focus();
+  // FIXED v0.6.7: Click anywhere in field to open datetime picker
+  const handleDisplayInputClick = () => {
+    if (!disabled && hiddenInputRef.current) {
       hiddenInputRef.current.showPicker?.();
     }
   };
@@ -149,12 +149,13 @@ const ThaiDateTimeInput = React.forwardRef(({
   };
 
   const inputClasses = cn(
-    'input-glass pr-10',
+    'input-glass',
     'border-0 bg-transparent',
     'placeholder:text-muted-foreground/50',
     'glass-interactive blur-edge',
     'focus-orange-neon hover-orange-neon',
     'transition-all duration-300 ease-out',
+    'cursor-pointer', // FIXED v0.6.7: Show pointer cursor to indicate clickability
     error && 'border-destructive focus:border-destructive',
     hasValidationError && 'red-neon-focus',
     className
@@ -162,7 +163,7 @@ const ThaiDateTimeInput = React.forwardRef(({
 
   const dateTimeInputContent = (
     <div className="relative">
-      {/* Display input for DD/MM/YYYY HH:MM format */}
+      {/* Display input for DD/MM/YYYY HH:MM format - FIXED v0.6.7: Click anywhere to open picker */}
       <input
         ref={ref || displayInputRef}
         type="text"
@@ -170,6 +171,7 @@ const ThaiDateTimeInput = React.forwardRef(({
         onChange={handleDisplayInputChange}
         onFocus={handleDisplayInputFocus}
         onBlur={handleDisplayInputBlur}
+        onClick={handleDisplayInputClick}
         placeholder={placeholder}
         className={inputClasses}
         required={required}
@@ -196,28 +198,7 @@ const ThaiDateTimeInput = React.forwardRef(({
         tabIndex={-1}
       />
 
-      {/* Calendar icon button */}
-      <button
-        type="button"
-        onClick={handleCalendarIconClick}
-        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-orange-500 transition-colors duration-200"
-        tabIndex={-1}
-        disabled={disabled}
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-          />
-        </svg>
-      </button>
+      {/* FIXED v0.6.7: Icon removed - click anywhere in field to open picker */}
     </div>
   );
 

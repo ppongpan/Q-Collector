@@ -1,16 +1,21 @@
 /**
- * ThemeTestPage - Component Testing Page for Minimal Theme
+ * ThemeTestPage - Comprehensive Theme Testing System
  *
- * Tests all 6 core components to verify proper styling and functionality.
- * Use this page to test theme switching between Glass and Minimal themes.
+ * Tests all themes (Glass, Minimal, Liquid) with:
+ * - Typography system
+ * - All UI components
+ * - Color palettes
+ * - Responsive behavior
+ * - Quick theme switching
  *
  * @component
- * @version 0.6.0
- * @since 2025-10-01
+ * @version 0.6.3
+ * @since 2025-10-02
  */
 
 import React, { useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   GlassCard,
   GlassCardHeader,
@@ -23,16 +28,62 @@ import { GlassButton } from './ui/glass-button';
 import { GlassInput, GlassSelect } from './ui/glass-input';
 import { GlassCheckbox } from './ui/glass-checkbox';
 import { GlassLabel } from './ui/glass-label';
-import { ArrowLeft, Moon, Sun } from 'lucide-react';
+import { MinimalCard, MinimalCardContent, MinimalCardHeader, MinimalCardTitle } from './ui/minimal-card';
+import { MinimalButton } from './ui/minimal-button';
+import { MinimalInput } from './ui/minimal-input';
+import { MinimalSelect } from './ui/minimal-select';
+import { ArrowLeft, Moon, Sun, Sparkles, Palette, Type, Layout, Zap, Droplet } from 'lucide-react';
 
 const ThemeTestPage = ({ onNavigate }) => {
-  const { theme, isDarkMode, toggleDarkMode } = useTheme();
+  const { theme, setTheme, isDarkMode, toggleDarkMode } = useTheme();
   const [inputValue, setInputValue] = useState('');
   const [selectValue, setSelectValue] = useState('');
   const [checked, setChecked] = useState(false);
+  const [showLiquidDemo, setShowLiquidDemo] = useState(false);
+  const [activeSection, setActiveSection] = useState('all');
+
+  // Liquid theme animation variants
+  const pageVariants = {
+    initial: {
+      opacity: 0,
+      scale: 0.95
+    },
+    animate: {
+      opacity: 1,
+      scale: 1,
+      transition: {
+        duration: 0.5,
+        ease: [0.19, 1, 0.22, 1]
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: {
+      opacity: 0,
+      y: 20
+    },
+    visible: (index) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: index * 0.1,
+        duration: 0.5,
+        type: "spring",
+        stiffness: 100
+      }
+    })
+  };
+
+  const isLiquid = theme === 'liquid';
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <motion.div
+      className="min-h-screen bg-background p-6"
+      initial={isLiquid ? "initial" : false}
+      animate={isLiquid ? "animate" : false}
+      variants={pageVariants}
+    >
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-8">
@@ -64,6 +115,12 @@ const ThemeTestPage = ({ onNavigate }) => {
         </div>
 
         {/* Card Component Test */}
+        <motion.div
+          custom={0}
+          initial={isLiquid ? "hidden" : false}
+          animate={isLiquid ? "visible" : false}
+          variants={cardVariants}
+        >
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>GlassCard Component</GlassCardTitle>
@@ -81,8 +138,15 @@ const ThemeTestPage = ({ onNavigate }) => {
             <p className="text-xs text-muted-foreground">Card Footer</p>
           </GlassCardFooter>
         </GlassCard>
+        </motion.div>
 
         {/* Button Variants Test */}
+        <motion.div
+          custom={1}
+          initial={isLiquid ? "hidden" : false}
+          animate={isLiquid ? "visible" : false}
+          variants={cardVariants}
+        >
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>GlassButton Component</GlassCardTitle>
@@ -121,8 +185,15 @@ const ThemeTestPage = ({ onNavigate }) => {
             </div>
           </GlassCardContent>
         </GlassCard>
+        </motion.div>
 
         {/* Input Component Test */}
+        <motion.div
+          custom={2}
+          initial={isLiquid ? "hidden" : false}
+          animate={isLiquid ? "visible" : false}
+          variants={cardVariants}
+        >
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>GlassInput Component</GlassCardTitle>
@@ -156,8 +227,15 @@ const ThemeTestPage = ({ onNavigate }) => {
             />
           </GlassCardContent>
         </GlassCard>
+        </motion.div>
 
         {/* Select Component Test */}
+        <motion.div
+          custom={3}
+          initial={isLiquid ? "hidden" : false}
+          animate={isLiquid ? "visible" : false}
+          variants={cardVariants}
+        >
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>GlassSelect Component</GlassCardTitle>
@@ -183,8 +261,15 @@ const ThemeTestPage = ({ onNavigate }) => {
             </p>
           </GlassCardContent>
         </GlassCard>
+        </motion.div>
 
         {/* Checkbox and Label Test */}
+        <motion.div
+          custom={4}
+          initial={isLiquid ? "hidden" : false}
+          animate={isLiquid ? "visible" : false}
+          variants={cardVariants}
+        >
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>GlassCheckbox & GlassLabel</GlassCardTitle>
@@ -215,8 +300,15 @@ const ThemeTestPage = ({ onNavigate }) => {
             </div>
           </GlassCardContent>
         </GlassCard>
+        </motion.div>
 
         {/* Summary */}
+        <motion.div
+          custom={5}
+          initial={isLiquid ? "hidden" : false}
+          animate={isLiquid ? "visible" : false}
+          variants={cardVariants}
+        >
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>Testing Summary</GlassCardTitle>
@@ -240,8 +332,97 @@ const ThemeTestPage = ({ onNavigate }) => {
             </p>
           </GlassCardFooter>
         </GlassCard>
+        </motion.div>
+
+        {/* Liquid Theme Special Demo */}
+        {isLiquid && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            transition={{ duration: 0.5 }}
+          >
+            <GlassCard className="liquid-card overflow-hidden">
+              <GlassCardHeader>
+                <motion.div
+                  animate={{
+                    rotate: [0, 360],
+                    scale: [1, 1.1, 1]
+                  }}
+                  transition={{
+                    duration: 20,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                  className="absolute top-4 right-4"
+                >
+                  <Sparkles className="h-6 w-6 text-orange-500 opacity-50" />
+                </motion.div>
+                <GlassCardTitle>iOS 26 Liquid Glass Theme Active</GlassCardTitle>
+                <GlassCardDescription>
+                  Experience ultra-smooth animations with 60fps performance
+                </GlassCardDescription>
+              </GlassCardHeader>
+              <GlassCardContent>
+                <div className="space-y-4">
+                  <motion.div
+                    className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/30"
+                    whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(255, 140, 0, 0.3)" }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <h4 className="font-semibold mb-2">Liquid Effects</h4>
+                    <ul className="text-sm space-y-1 opacity-90">
+                      <li>✨ 32px ultra-smooth blur</li>
+                      <li>🌊 Organic cubic-bezier curves</li>
+                      <li>🎨 150% color saturation</li>
+                      <li>💫 Multi-layer shadows with glow</li>
+                    </ul>
+                  </motion.div>
+
+                  <motion.button
+                    className="liquid-button primary w-full"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowLiquidDemo(!showLiquidDemo)}
+                  >
+                    {showLiquidDemo ? "Hide" : "Show"} Liquid Demo
+                  </motion.button>
+
+                  <AnimatePresence>
+                    {showLiquidDemo && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="grid grid-cols-3 gap-2"
+                      >
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                          <motion.div
+                            key={i}
+                            className="aspect-square bg-gradient-to-br from-orange-500/20 to-orange-600/30 rounded-lg"
+                            initial={{ opacity: 0, scale: 0 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{
+                              delay: i * 0.05,
+                              type: "spring",
+                              stiffness: 200
+                            }}
+                            whileHover={{
+                              scale: 1.1,
+                              rotate: 5,
+                              transition: { type: "spring", stiffness: 400 }
+                            }}
+                          />
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </GlassCardContent>
+            </GlassCard>
+          </motion.div>
+        )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 

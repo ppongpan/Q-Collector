@@ -5,6 +5,9 @@ import { GlassButton } from './ui/glass-button';
 // import { GlassInput } from './ui/glass-input'; // Unused
 import { EnhancedToastProvider, useEnhancedToast } from './ui/enhanced-toast';
 import { UserMenu } from './ui/user-menu';
+import { ResponsiveBreadcrumb } from './ui/breadcrumb';
+import { BreadcrumbProvider, useBreadcrumb } from '../contexts/BreadcrumbContext';
+import { ThemeToggle } from './ThemeToggle';
 import EnhancedFormBuilder from './EnhancedFormBuilder';
 import SettingsPage from './SettingsPage';
 import UserManagement from './UserManagement';
@@ -15,6 +18,8 @@ import FormSubmissionList from './FormSubmissionList';
 import SubmissionDetail from './SubmissionDetail';
 import SubFormView from './SubFormView';
 import SubFormDetail from './SubFormDetail';
+import MainFormEditPage from './pages/MainFormEditPage';
+import SubFormEditPage from './pages/SubFormEditPage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCog, faArrowLeft, faFileAlt, faPlus, faSave, faEdit, faTrashAlt, faUsers
@@ -27,27 +32,69 @@ import { useAuth } from '../contexts/AuthContext';
 
 // Main App Component with Toast Integration
 function MainFormAppContent() {
-  const [currentPage, setCurrentPage] = useState('form-list'); // 'form-list', 'form-builder', 'settings', 'user-management', 'theme-test', 'submission-list', 'submission-detail', 'form-view', 'subform-view', 'subform-detail'
+  const [currentPage, setCurrentPage] = useState('form-list'); // 'form-list', 'form-builder', 'settings', 'user-management', 'theme-test', 'submission-list', 'submission-detail', 'form-view', 'subform-view', 'subform-detail', 'main-form-edit', 'subform-edit'
   const [currentFormId, setCurrentFormId] = useState(null);
   const [currentSubmissionId, setCurrentSubmissionId] = useState(null);
   const [currentSubFormId, setCurrentSubFormId] = useState(null);
   const [currentSubSubmissionId, setCurrentSubSubmissionId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [currentEditSubmissionId, setCurrentEditSubmissionId] = useState(null);
+  const [currentEditSubFormId, setCurrentEditSubFormId] = useState(null);
+  const [currentFormTitle, setCurrentFormTitle] = useState('');
+  const [currentSubFormTitle, setCurrentSubFormTitle] = useState('');
   const formBuilderSaveHandlerRef = useRef(null);
   const formViewSaveHandlerRef = useRef(null);
   const toast = useEnhancedToast();
   const { user } = useAuth();
+  const { generateBreadcrumbs, breadcrumbs } = useBreadcrumb();
+
+  // Update breadcrumbs when navigation changes
+  useEffect(() => {
+    generateBreadcrumbs(currentPage, {
+      formId: currentFormId,
+      formTitle: currentFormTitle,
+      submissionId: currentSubmissionId,
+      subFormId: currentSubFormId,
+      subFormTitle: currentSubFormTitle
+    });
+  }, [currentPage, currentFormId, currentFormTitle, currentSubmissionId, currentSubFormId, currentSubFormTitle, generateBreadcrumbs]);
 
   // Handle URL parameters for direct links
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const formId = urlParams.get('form');
     const view = urlParams.get('view');
+    const mode = urlParams.get('mode');
+    const submissionId = urlParams.get('submission');
+    const subFormId = urlParams.get('subform');
+    const subSubmissionId = urlParams.get('subsub');
 
-    if (formId && view === 'submissions') {
-      // Navigate directly to submission list
-      handleNavigate('submission-list', formId);
-      // Clear URL parameters
+    // Handle different URL patterns
+    if (formId) {
+      if (view === 'submissions') {
+        // Navigate directly to submission list
+        handleNavigate('submission-list', formId);
+      } else if (view === 'detail' && submissionId) {
+        // Navigate directly to submission detail
+        handleNavigate('submission-detail', formId, false, submissionId);
+      } else if (view === 'subform' && submissionId && subFormId && subSubmissionId) {
+        // Navigate directly to sub-form detail
+        handleNavigate('subform-detail', formId, false, submissionId, subFormId, subSubmissionId);
+      } else if (mode === 'edit' && submissionId) {
+        // Navigate directly to edit page
+        handleNavigate('main-form-edit', formId, false, submissionId);
+      } else if (mode === 'builder') {
+        // Navigate directly to form builder in edit mode
+        handleNavigate('form-builder', formId, true);
+      } else if (mode === 'create') {
+        // Navigate directly to form view for new submission
+        handleNavigate('form-view', formId);
+      }
+      // Clear URL parameters after navigation
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (mode === 'builder') {
+      // Create new form
+      handleNavigate('form-builder', null, false);
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
@@ -69,6 +116,20 @@ function MainFormAppContent() {
     setCurrentSubFormId(subFormId);
     setCurrentSubSubmissionId(subSubmissionId);
     setIsEditing(editing);
+
+    // Update form titles when navigating
+    if (formId) {
+      const form = dataService.getForm(formId);
+      if (form) {
+        setCurrentFormTitle(form.title);
+        if (subFormId && form.subForms) {
+          const subForm = form.subForms.find(sf => sf.id === subFormId);
+          if (subForm) {
+            setCurrentSubFormTitle(subForm.title);
+          }
+        }
+      }
+    }
   };
 
   const handleNewForm = () => {
@@ -127,6 +188,9 @@ function MainFormAppContent() {
         case 'form-view': return 'กรอกข้อมูลฟอร์ม';
         case 'subform-view': return 'กรอกข้อมูลฟอร์มย่อย';
         case 'subform-detail': return 'รายละเอียดฟอร์มย่อย';
+        case 'main-form-edit': return 'แก้ไขข้อมูลฟอร์ม';
+        case 'subform-edit': return 'แก้ไขข้อมูลฟอร์มย่อย';
+        case 'theme-test': return 'ทดสอบธีม';
         default: return 'จัดการฟอร์ม';
       }
     };
@@ -180,14 +244,13 @@ function MainFormAppContent() {
               )}
 
               <div className="flex items-center gap-3">
-                {currentPage === 'form-list' && (
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <FontAwesomeIcon icon={faFileAlt} className="w-5 h-5 text-primary" />
-                  </div>
-                )}
                 <h1 className="text-base font-bold text-foreground">
                   {getPageTitle()}
                 </h1>
+                {/* Dark mode toggle - only on form list page */}
+                {currentPage === 'form-list' && (
+                  <ThemeToggle />
+                )}
               </div>
             </div>
 
@@ -564,7 +627,7 @@ function MainFormAppContent() {
       <SubmissionDetail
         formId={currentFormId}
         submissionId={currentSubmissionId}
-        onEdit={(submissionId) => handleNavigate('form-view', currentFormId, false, submissionId)}
+        onEdit={(submissionId) => handleNavigate('main-form-edit', currentFormId, false, submissionId)}
         onDelete={(submissionId) => {
           // After delete, go back to submission list
           handleNavigate('submission-list', currentFormId);
@@ -631,7 +694,7 @@ function MainFormAppContent() {
         subFormId={currentSubFormId}
         subSubmissionId={currentSubSubmissionId}
         onEdit={(subSubmissionId) => {
-          handleNavigate('subform-view', currentFormId, false, currentSubmissionId, currentSubFormId, subSubmissionId);
+          handleNavigate('subform-edit', currentFormId, false, currentSubmissionId, currentSubFormId, subSubmissionId);
         }}
         onDelete={(subSubmissionId) => {
           // After delete, go back to submission detail
@@ -646,6 +709,55 @@ function MainFormAppContent() {
     );
   };
 
+  const renderMainFormEdit = () => (
+    <main className="container-responsive py-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <MainFormEditPage
+          formId={currentFormId}
+          submissionId={currentSubmissionId}
+          onSave={(submission, isEdit) => {
+            console.log('Form updated successfully:', submission);
+            // After edit, go back to submission detail
+            handleNavigate('submission-detail', currentFormId, false, currentSubmissionId);
+          }}
+          onCancel={() => {
+            // Go back to submission detail
+            handleNavigate('submission-detail', currentFormId, false, currentSubmissionId);
+          }}
+        />
+      </motion.div>
+    </main>
+  );
+
+  const renderSubFormEdit = () => (
+    <main className="container-responsive py-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <SubFormEditPage
+          formId={currentFormId}
+          submissionId={currentSubmissionId}
+          subFormId={currentSubFormId}
+          subSubmissionId={currentSubSubmissionId}
+          onSave={(submission, isEdit) => {
+            console.log('Sub-form updated successfully:', submission);
+            // After edit, go back to sub-form detail
+            handleNavigate('subform-detail', currentFormId, false, currentSubmissionId, currentSubFormId, currentSubSubmissionId);
+          }}
+          onCancel={() => {
+            // Go back to sub-form detail
+            handleNavigate('subform-detail', currentFormId, false, currentSubmissionId, currentSubFormId, currentSubSubmissionId);
+          }}
+        />
+      </motion.div>
+    </main>
+  );
 
 
   const renderCurrentPage = () => {
@@ -670,6 +782,10 @@ function MainFormAppContent() {
         return renderSubFormView();
       case 'subform-detail':
         return renderSubFormDetail();
+      case 'main-form-edit':
+        return renderMainFormEdit();
+      case 'subform-edit':
+        return renderSubFormEdit();
       default:
         return renderFormList();
     }
@@ -678,6 +794,27 @@ function MainFormAppContent() {
   return (
     <div className="min-h-screen bg-background">
       {renderNavigation()}
+
+      {/* Breadcrumb Navigation */}
+      {breadcrumbs && breadcrumbs.length > 1 && (
+        <div className="container-responsive px-4 sm:px-6 lg:px-8 py-2">
+          <ResponsiveBreadcrumb
+            items={breadcrumbs}
+            onNavigate={(path, params) => {
+              // Navigate based on breadcrumb click
+              handleNavigate(
+                path,
+                params.formId,
+                false,
+                params.submissionId,
+                params.subFormId,
+                params.subSubmissionId
+              );
+            }}
+            maxItems={3}
+          />
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -694,11 +831,13 @@ function MainFormAppContent() {
   );
 }
 
-// Main App Wrapper with Toast Provider
+// Main App Wrapper with Toast Provider and Breadcrumb Provider
 export default function MainFormApp() {
   return (
     <EnhancedToastProvider>
-      <MainFormAppContent />
+      <BreadcrumbProvider>
+        <MainFormAppContent />
+      </BreadcrumbProvider>
     </EnhancedToastProvider>
   );
 }

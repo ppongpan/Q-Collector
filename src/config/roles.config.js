@@ -276,6 +276,64 @@ export function mapDepartmentToRole(department) {
   return dept ? dept.role : USER_ROLES.GENERAL_USER;
 }
 
+/**
+ * Get role text color (for badges, labels, etc.)
+ * Matches colors from Form Settings (EnhancedFormBuilder.jsx)
+ * @param {string} role - User role
+ * @returns {string} Tailwind CSS class for text color
+ */
+export function getRoleTextColor(role) {
+  switch (role) {
+    case USER_ROLES.SUPER_ADMIN:
+      return 'text-red-500'; // Form Settings: RED
+    case USER_ROLES.ADMIN:
+      return 'text-pink-500'; // Form Settings: PINK
+    case USER_ROLES.MODERATOR:
+      return 'text-purple-500'; // Form Settings: PURPLE
+    case USER_ROLES.CUSTOMER_SERVICE:
+      return 'text-blue-500'; // Form Settings: BLUE
+    case USER_ROLES.SALES:
+      return 'text-green-500'; // Form Settings: GREEN (note: "sale" in form settings)
+    case USER_ROLES.MARKETING:
+      return 'text-orange-500'; // Form Settings: ORANGE
+    case USER_ROLES.TECHNIC:
+      return 'text-cyan-500'; // Form Settings: CYAN
+    case USER_ROLES.GENERAL_USER:
+      return 'text-gray-500'; // Form Settings: GRAY
+    default:
+      return 'text-gray-500';
+  }
+}
+
+/**
+ * Get role badge color (background + text + border)
+ * Matches colors from Form Settings (EnhancedFormBuilder.jsx)
+ * @param {string} role - User role
+ * @returns {string} Tailwind CSS classes for badge styling
+ */
+export function getRoleBadgeColor(role) {
+  switch (role) {
+    case USER_ROLES.SUPER_ADMIN:
+      return 'bg-red-500/20 text-red-500 border-red-500/30'; // Form Settings: RED
+    case USER_ROLES.ADMIN:
+      return 'bg-pink-500/20 text-pink-500 border-pink-500/30'; // Form Settings: PINK
+    case USER_ROLES.MODERATOR:
+      return 'bg-purple-500/20 text-purple-500 border-purple-500/30'; // Form Settings: PURPLE
+    case USER_ROLES.CUSTOMER_SERVICE:
+      return 'bg-blue-500/20 text-blue-500 border-blue-500/30'; // Form Settings: BLUE
+    case USER_ROLES.SALES:
+      return 'bg-green-500/20 text-green-500 border-green-500/30'; // Form Settings: GREEN
+    case USER_ROLES.MARKETING:
+      return 'bg-orange-500/20 text-orange-500 border-orange-500/30'; // Form Settings: ORANGE
+    case USER_ROLES.TECHNIC:
+      return 'bg-cyan-500/20 text-cyan-500 border-cyan-500/30'; // Form Settings: CYAN
+    case USER_ROLES.GENERAL_USER:
+      return 'bg-gray-500/20 text-gray-500 border-gray-500/30'; // Form Settings: GRAY
+    default:
+      return 'bg-gray-500/20 text-gray-500 border-gray-500/30';
+  }
+}
+
 export default {
   USER_ROLES,
   DEPARTMENTS,
@@ -287,5 +345,7 @@ export default {
   canDeleteForm,
   getRoleLabel,
   isAdminRole,
-  mapDepartmentToRole
+  mapDepartmentToRole,
+  getRoleTextColor,
+  getRoleBadgeColor
 };

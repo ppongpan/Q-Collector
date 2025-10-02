@@ -39,6 +39,11 @@ module.exports = (sequelize, DataTypes) => {
         min: 0,
       },
     },
+    table_name: {
+      type: DataTypes.STRING(63),
+      allowNull: true,
+      comment: 'PostgreSQL table name for this sub-form',
+    },
   }, {
     tableName: 'sub_forms',
     timestamps: true,

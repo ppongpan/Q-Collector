@@ -152,6 +152,91 @@ class DynamicTableService {
   }
 
   /**
+   * Create table for a sub-form
+   * @param {Object} subForm - Sub-form object with id, title, and fields
+   * @param {string} mainTableName - Parent table name
+   * @param {string} formId - Parent form ID
+   * @returns {Promise<string>} - Created sub-form table name
+   */
+  async createSubFormTable(subForm, mainTableName, formId) {
+    const subFormTableName = generateTableName(subForm.title, subForm.id);
+
+    if (!isValidTableName(subFormTableName)) {
+      throw new Error(`Invalid sub-form table name generated: ${subFormTableName}`);
+    }
+
+    const client = await this.pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // Check if table already exists
+      const existsQuery = `
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = $1
+        );
+      `;
+      const existsResult = await client.query(existsQuery, [subFormTableName]);
+
+      if (existsResult.rows[0].exists) {
+        console.log(`Sub-form table ${subFormTableName} already exists. Updating columns...`);
+        await this.updateFormTableColumns(
+          { id: subForm.id, title: subForm.title, fields: subForm.fields },
+          subFormTableName,
+          client
+        );
+      } else {
+        // Create new sub-form table with base columns
+        const createTableQuery = `
+          CREATE TABLE ${subFormTableName} (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            parent_id UUID NOT NULL REFERENCES ${mainTableName}(id) ON DELETE CASCADE,
+            form_id UUID NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
+            sub_form_id UUID NOT NULL REFERENCES sub_forms(id) ON DELETE CASCADE,
+            user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+            submission_number INTEGER,
+            order_index INTEGER DEFAULT 0,
+            status VARCHAR(50) DEFAULT 'submitted',
+            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+        `;
+
+        await client.query(createTableQuery);
+        console.log(`Created sub-form table: ${subFormTableName}`);
+
+        // Add columns for each field
+        await this.addFormFieldColumns(subForm.fields || [], subFormTableName, client);
+
+        // Create indexes
+        await client.query(`CREATE INDEX idx_${subFormTableName}_parent_id ON ${subFormTableName}(parent_id);`);
+        await client.query(`CREATE INDEX idx_${subFormTableName}_form_id ON ${subFormTableName}(form_id);`);
+        await client.query(`CREATE INDEX idx_${subFormTableName}_sub_form_id ON ${subFormTableName}(sub_form_id);`);
+        await client.query(`CREATE INDEX idx_${subFormTableName}_user_id ON ${subFormTableName}(user_id);`);
+      }
+
+      // Store table name mapping in sub_forms table
+      await client.query(
+        'UPDATE sub_forms SET table_name = $1 WHERE id = $2',
+        [subFormTableName, subForm.id]
+      );
+
+      await client.query('COMMIT');
+      return subFormTableName;
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error creating sub-form table:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Insert submission into dynamic table
    */
   async insertSubmission(formId, tableName, userId, submissionData) {
@@ -234,6 +319,73 @@ class DynamicTableService {
       }
 
       const result = await client.query(query, values);
+      return result.rows;
+
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Insert sub-form data
+   * @param {string} subFormTableName - Sub-form table name
+   * @param {string} parentId - Parent submission ID
+   * @param {string} formId - Form ID
+   * @param {string} subFormId - Sub-form ID
+   * @param {string} userId - User ID
+   * @param {Object} submissionData - Sub-form data
+   * @param {number} orderIndex - Order index for multiple entries
+   * @returns {Promise<Object>} - Inserted record
+   */
+  async insertSubFormData(subFormTableName, parentId, formId, subFormId, userId, submissionData, orderIndex = 0) {
+    const client = await this.pool.connect();
+
+    try {
+      // Prepare columns and values
+      const columns = ['parent_id', 'form_id', 'sub_form_id', 'user_id', 'order_index'];
+      const values = [parentId, formId, subFormId, userId, orderIndex];
+      const placeholders = ['$1', '$2', '$3', '$4', '$5'];
+      let paramIndex = 6;
+
+      // Add data fields
+      for (const [key, value] of Object.entries(submissionData)) {
+        columns.push(key);
+        values.push(value);
+        placeholders.push(`$${paramIndex}`);
+        paramIndex++;
+      }
+
+      const insertQuery = `
+        INSERT INTO ${subFormTableName} (${columns.join(', ')})
+        VALUES (${placeholders.join(', ')})
+        RETURNING *;
+      `;
+
+      const result = await client.query(insertQuery, values);
+      return result.rows[0];
+
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Get sub-form data by parent ID
+   * @param {string} subFormTableName - Sub-form table name
+   * @param {string} parentId - Parent submission ID
+   * @returns {Promise<Array>} - Array of sub-form records
+   */
+  async getSubFormData(subFormTableName, parentId) {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        SELECT * FROM ${subFormTableName}
+        WHERE parent_id = $1
+        ORDER BY order_index ASC, created_at ASC;
+      `;
+
+      const result = await client.query(query, [parentId]);
       return result.rows;
 
     } finally {

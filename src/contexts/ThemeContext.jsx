@@ -46,6 +46,7 @@ const ThemeProvider = ({ children }) => {
   const [theme, setThemeState] = useState(DEFAULT_THEME);
   const [isDarkMode, setIsDarkModeState] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserIdState] = useState(null); // Current user ID for per-user preferences
 
   /**
    * Initialize theme from localStorage on mount
@@ -59,8 +60,8 @@ const ThemeProvider = ({ children }) => {
           return;
         }
 
-        // Load saved preference
-        const preference = ThemeService.loadThemePreference();
+        // Load saved preference (global initially, will be user-specific after login)
+        const preference = ThemeService.loadThemePreference(userId);
 
         // Update state
         setThemeState(preference.theme);
@@ -80,6 +81,37 @@ const ThemeProvider = ({ children }) => {
   }, []);
 
   /**
+   * Reload theme preference when user changes (login/logout)
+   */
+  useEffect(() => {
+    try {
+      if (!ThemeService.isStorageAvailable()) {
+        return;
+      }
+
+      // Load user-specific or global preference
+      const preference = ThemeService.loadThemePreference(userId);
+
+      // Update state
+      setThemeState(preference.theme);
+      setIsDarkModeState(preference.isDarkMode);
+
+      // Apply to DOM
+      ThemeService.applyThemeToDOM(preference.theme, preference.isDarkMode);
+    } catch (error) {
+      // Silent fail - keep current theme
+    }
+  }, [userId]);
+
+  /**
+   * Set user ID for per-user theme preferences
+   * @param {string|null} newUserId - User ID or null for global preferences
+   */
+  const setUserId = React.useCallback((newUserId) => {
+    setUserIdState(newUserId);
+  }, []);
+
+  /**
    * Set theme and persist to localStorage
    * @param {string} newTheme - Theme identifier
    */
@@ -88,18 +120,18 @@ const ThemeProvider = ({ children }) => {
       // Update state
       setThemeState(newTheme);
 
-      // Save to localStorage
+      // Save to localStorage (user-specific or global)
       ThemeService.saveThemePreference({
         theme: newTheme,
         isDarkMode
-      });
+      }, userId);
 
       // Apply to DOM
       ThemeService.applyThemeToDOM(newTheme, isDarkMode);
     } catch (error) {
       // Silent fail - theme will still work in current session
     }
-  }, [isDarkMode]);
+  }, [isDarkMode, userId]);
 
   /**
    * Set dark mode and persist to localStorage
@@ -110,18 +142,18 @@ const ThemeProvider = ({ children }) => {
       // Update state
       setIsDarkModeState(darkMode);
 
-      // Save to localStorage
+      // Save to localStorage (user-specific or global)
       ThemeService.saveThemePreference({
         theme,
         isDarkMode: darkMode
-      });
+      }, userId);
 
       // Apply to DOM
       ThemeService.applyThemeToDOM(theme, darkMode);
     } catch (error) {
       // Silent fail - dark mode will still work in current session
     }
-  }, [theme]);
+  }, [theme, userId]);
 
   /**
    * Toggle dark mode
@@ -130,11 +162,11 @@ const ThemeProvider = ({ children }) => {
     setIsDarkModeState(prev => {
       const newDarkMode = !prev;
       try {
-        // Save to localStorage
+        // Save to localStorage (user-specific or global)
         ThemeService.saveThemePreference({
           theme,
           isDarkMode: newDarkMode
-        });
+        }, userId);
 
         // Apply to DOM
         ThemeService.applyThemeToDOM(theme, newDarkMode);
@@ -143,7 +175,7 @@ const ThemeProvider = ({ children }) => {
       }
       return newDarkMode;
     });
-  }, [theme]);
+  }, [theme, userId]);
 
   /**
    * Memoized context value to prevent unnecessary re-renders
@@ -155,9 +187,10 @@ const ThemeProvider = ({ children }) => {
       isDarkMode,
       setIsDarkMode,
       toggleDarkMode,
-      isLoading
+      isLoading,
+      setUserId // Expose setUserId for per-user preferences
     }),
-    [theme, setTheme, isDarkMode, setIsDarkMode, toggleDarkMode, isLoading]
+    [theme, setTheme, isDarkMode, setIsDarkMode, toggleDarkMode, isLoading, setUserId]
   );
 
   // Show loading state to prevent flash of unstyled content (FOUC)

@@ -7,6 +7,7 @@ import { StorageProvider } from './contexts/StorageContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/ui/toast';
 import { EnhancedToastProvider } from './components/ui/enhanced-toast';
+import ThemeUserSync from './components/ThemeUserSync';
 import './App.css';
 import './styles/animations.css';
 
@@ -16,6 +17,8 @@ function App() {
       <FontProvider>
         <StorageProvider>
           <AuthProvider>
+            {/* Sync user ID to theme context for per-user preferences */}
+            <ThemeUserSync />
             <ToastProvider>
               <EnhancedToastProvider>
                 <motion.div
