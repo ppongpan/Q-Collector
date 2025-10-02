@@ -29,15 +29,16 @@ test.describe('User Registration', () => {
       await submitRegistrationForm(page);
 
       // Should redirect to home page
-      await page.waitForURL('**/');
+      await page.waitForURL('**/', { timeout: 10000 });
 
-      // Should be authenticated
-      const authenticated = await isAuthenticated(page);
-      expect(authenticated).toBeTruthy();
+      // Should be authenticated - check for user menu button
+      const userMenuButton = page.locator('[data-testid="user-menu-button"]');
+      await expect(userMenuButton).toBeVisible({ timeout: 10000 });
 
-      // Should display correct username
-      const currentUser = await getCurrentUser(page);
-      expect(currentUser?.username).toBe(userData.username);
+      // Verify username is displayed (on large screens)
+      const username = page.locator('[data-testid="user-menu-username"]');
+      await expect(username).toBeVisible();
+      await expect(username).toHaveText(userData.username);
     });
 
     test('should register user with each department', async ({ page }) => {

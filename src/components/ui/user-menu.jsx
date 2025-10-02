@@ -89,6 +89,7 @@ export function UserMenu({ onSettingsClick }) {
     <div className="relative" ref={menuRef}>
       {/* User Button */}
       <button
+        data-testid="user-menu-button"
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-all duration-200 group"
       >
@@ -100,7 +101,7 @@ export function UserMenu({ onSettingsClick }) {
 
         {/* User Info (hidden on mobile) */}
         <div className="hidden lg:block text-left">
-          <p className={`text-sm font-semibold truncate max-w-[150px] ${getRoleTextColor(userRole)}`}>{userName}</p>
+          <p data-testid="user-menu-username" className={`text-sm font-semibold truncate max-w-[150px] ${getRoleTextColor(userRole)}`}>{userName}</p>
         </div>
 
         {/* Dropdown Icon */}
@@ -155,6 +156,7 @@ export function UserMenu({ onSettingsClick }) {
 
               {/* Logout */}
               <button
+                data-testid="logout-button"
                 onClick={handleLogout}
                 className="w-full flex items-center gap-2.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl hover:bg-red-500/10 transition-all duration-200 text-left group mt-1"
               >

@@ -38,7 +38,9 @@ const DEPARTMENTS = {
  * @returns {Object} User data object
  */
 function generateTestUser(role, suffix = Date.now()) {
-  const username = `test${role}${suffix}`;
+  // Remove underscores from role for username (alphanumeric only)
+  const cleanRole = role.replace(/_/g, '');
+  const username = `test${cleanRole}${suffix}`;
 
   return {
     username,
@@ -147,7 +149,7 @@ function generateInvalidUserData() {
       error: 'Password must contain uppercase, lowercase, and number'
     },
     specialCharInUsername: {
-      username: `test_user_${timestamp}`,  // Has underscore
+      username: `test@user${timestamp}`,  // Has special char (@)
       email: `test${timestamp}@test.com`,
       password: 'TestPassword123',
       full_name: 'Test User',
