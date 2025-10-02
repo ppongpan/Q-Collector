@@ -191,7 +191,7 @@ const User2FAManagement = () => {
             <FontAwesomeIcon icon={faShieldAlt} className="text-orange-500" />
             การจัดการ 2FA ของผู้ใช้
           </h3>
-          <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-400 rounded">
+          <span className="text-xs px-2 py-1 bg-red-500/20 text-red-500 rounded border border-red-500/30">
             Super Admin Only
           </span>
         </div>

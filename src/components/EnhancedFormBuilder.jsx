@@ -1124,18 +1124,22 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
     // PostgreSQL Connection Details
     const server = 'localhost:5432';
     const database = 'qcollector_dev_2025';
-    const mainTable = form.table_name || `form_${form.id.substring(form.id.length - 6)}`;
 
-    // Get sub-form tables if they exist
-    const subFormTables = form.subForms?.filter(sf => sf.table_name).map(sf => ({
+    // v0.7.0: Generate table name from form title (Thai→English translation)
+    const { generateTableName } = require('../utils/tableNameGenerator');
+    const mainTable = generateTableName(form.title, 'form_');
+
+    // Generate sub-form tables from sub-form titles
+    const subFormTables = form.subForms?.map(sf => ({
       title: sf.title,
-      tableName: sf.table_name
+      tableName: generateTableName(sf.title, 'form_')
     })) || [];
 
     return {
       server,
       database,
       mainTable,
+      mainTableDisplay: `${mainTable} (${form.title})`,
       subFormTables,
       formId: form.id,
       description: 'Connect directly to PostgreSQL database in Power BI Desktop'
@@ -2036,7 +2040,10 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                         {/* Main Form Table */}
                         <div className="bg-background/50 rounded p-3 border border-border/40">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-foreground/80">Main Form Table:</span>
+                            <div>
+                              <span className="text-xs font-medium text-foreground/80 block">Main Form Table:</span>
+                              <span className="text-xs text-muted-foreground mt-0.5 block">{form.title}</span>
+                            </div>
                             <button
                               onClick={() => copyToClipboard(getPowerBIInfo().mainTable)}
                               className="text-primary hover:text-primary/80 transition-colors text-xs px-2 py-1 rounded bg-primary/10 hover:bg-primary/20"
