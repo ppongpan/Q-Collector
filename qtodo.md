@@ -239,6 +239,213 @@
 
 ---
 
+## 🚧 PLANNED: Phase 9 - Formula Field & Number Formatting (v0.7.1)
+
+### Major Feature: Calculated Fields & Advanced Number Options
+
+**Objective**: Enable formula-based calculations and advanced number formatting options for number fields.
+
+**Requirements**:
+1. **Formula Fields**: Number fields can display calculated values using formulas
+2. **Field References**: Use `[FieldName]` syntax to reference other fields
+3. **Date Calculations**: Support date arithmetic (e.g., `[วันที่รับ] + 7`)
+4. **Conditional Logic**: IF, AND, OR functions with nested conditions
+5. **Number Formatting**: Decimal places, integer-only, big number support
+6. **Math Functions**: ROUND, CEIL, FLOOR, ABS, etc.
+
+### Phase 9.1: Formula Field Foundation
+
+#### Task 1: Extend Formula Engine for Math & Date Functions
+- [ ] Add to `src/utils/formulaEngine.js`:
+  - **Math Functions**: `ROUND(value, decimals)`, `CEIL()`, `FLOOR()`, `ABS()`, `MIN()`, `MAX()`
+  - **Aggregate Functions**: `SUM([Field1], [Field2], ...)`, `AVG()`, `COUNT()`
+  - **Date Functions**: `DATEADD([DateField], days)`, `DATEDIFF([Date1], [Date2])`
+  - **Power/Root**: `POWER(base, exp)`, `SQRT()`, `MOD()`
+- [ ] Add date arithmetic support:
+  - Parse: `[DateField] + 7` → add 7 days
+  - Parse: `[Date1] - [Date2]` → difference in days
+- [ ] Add number type validation
+- [ ] Add error handling for invalid formulas
+- [ ] Create comprehensive test suite
+
+#### Task 2: Create Formula Builder UI Component
+- [ ] Create `src/components/ui/formula-builder.jsx`:
+  - Formula input with syntax highlighting
+  - Field picker dropdown with autocomplete
+  - Function reference panel
+  - Real-time formula validation
+  - Preview calculated result
+  - Error highlighting with helpful messages
+- [ ] Add field type filtering (show only number/date fields for math operations)
+- [ ] Add formula templates library:
+  - "Area Calculation": `[Length] * [Width]`
+  - "Price with Tax": `[Price] * 1.07`
+  - "Deadline Date": `[StartDate] + [Duration]`
+  - "Conditional Days": `IF(AND([Type]="3D", [Product]="Wall"), 7, 5)`
+- [ ] Add dark mode support
+- [ ] Mobile-responsive design
+
+#### Task 3: Number Format Settings UI
+- [ ] Create `src/components/ui/number-format-settings.jsx`:
+  - Decimal places selector (0-10)
+  - Integer-only toggle
+  - Big number support toggle
+  - Thousand separator option
+  - Negative number format (-, (), red color)
+  - Prefix/Suffix (฿, $, %, etc.)
+- [ ] Add format preview with example values
+- [ ] Save format settings to field config
+
+### Phase 9.2: Number Field Enhancements
+
+#### Task 4: Update Number Field Configuration
+- [ ] Modify `EnhancedFormBuilder.jsx` number field settings:
+  - Add "Calculated Field" toggle
+  - Show Formula Builder when enabled
+  - Add Number Format Settings panel
+  - Add field data structure:
+    ```javascript
+    {
+      type: 'number',
+      label: 'Field Label',
+      isCalculated: false,
+      formula: '',
+      numberFormat: {
+        decimalPlaces: 2,
+        isInteger: false,
+        useBigNumber: false,
+        thousandSeparator: true,
+        prefix: '',
+        suffix: '',
+        negativeFormat: 'minus' // 'minus', 'parentheses', 'red'
+      }
+    }
+    ```
+
+#### Task 5: Formula Evaluation in Form View
+- [ ] Update `FormView.jsx`:
+  - Detect calculated fields on form load
+  - Evaluate formulas when dependent fields change
+  - Update calculated field values in real-time
+  - Disable manual input for calculated fields
+  - Show formula in field tooltip/hint
+- [ ] Add dependency tracking:
+  - Track which fields each formula depends on
+  - Re-calculate when dependencies change
+  - Prevent circular dependencies
+- [ ] Add loading state during calculation
+
+#### Task 6: Number Formatting Display
+- [ ] Update `FieldInlinePreview.jsx`:
+  - Apply decimal places formatting
+  - Show thousand separators
+  - Apply prefix/suffix
+  - Format negative numbers
+  - Handle big numbers (use library if needed)
+- [ ] Update `SubmissionDetail.jsx` display
+- [ ] Update Excel export formatting
+
+### Phase 9.3: Advanced Formula Features
+
+#### Task 7: Date Calculation Support
+- [ ] Extend formula parser for date types:
+  - Recognize date field references
+  - Parse date + number as "add days"
+  - Parse date - date as "difference"
+- [ ] Add date utility functions:
+  - `DATEADD([StartDate], 7)` → add 7 days
+  - `DATEDIFF([EndDate], [StartDate])` → days between
+  - `TODAY()` → current date
+  - `WORKDAY([StartDate], 5)` → add 5 working days
+- [ ] Handle date edge cases:
+  - Empty date fields
+  - Invalid dates
+  - Timezone considerations
+
+#### Task 8: Conditional Formula Validation
+- [ ] Add formula validation rules:
+  - Type checking (can't add string to number)
+  - Field existence check
+  - Circular dependency detection
+  - Syntax error detection
+- [ ] Show validation errors in UI:
+  - Red underline for errors
+  - Tooltip with error message
+  - Suggested fixes
+- [ ] Add formula debugging mode:
+  - Step-by-step evaluation
+  - Show intermediate values
+  - Variable inspection
+
+#### Task 9: Formula Library & Templates
+- [ ] Create formula template system:
+  - Pre-built formulas for common calculations
+  - Template categories (Math, Date, Conditional, Text)
+  - User-saved custom templates
+- [ ] Add formula examples:
+  - Construction: `[AreaPerUnit] * [NumBuildings]`
+  - Scheduling: `IF([DrawingType]="3D", [ReceiveDate] + 7, [ReceiveDate] + 5)`
+  - Pricing: `[BasePrice] * IF([Customer]="VIP", 0.9, 1.0)`
+  - Quality Score: `ROUND(([Score1] + [Score2] + [Score3]) / 3, 2)`
+
+### Phase 9.4: Testing & Documentation
+
+#### Task 10: Comprehensive Testing
+- [ ] Unit tests for formula engine extensions
+- [ ] Integration tests for formula fields
+- [ ] Test date arithmetic edge cases
+- [ ] Test number formatting options
+- [ ] Test circular dependency detection
+- [ ] Performance testing with complex formulas
+- [ ] Mobile testing for formula builder UI
+
+#### Task 11: User Documentation
+- [ ] Create "Formula Field Guide":
+  - Introduction to calculated fields
+  - Formula syntax reference
+  - Function reference with examples
+  - Common use cases
+  - Troubleshooting guide
+- [ ] Add in-app help:
+  - Tooltip with formula syntax
+  - Function reference modal
+  - Example formulas library
+- [ ] Create video tutorial (optional)
+
+#### Task 12: Performance Optimization
+- [ ] Implement formula result caching
+- [ ] Optimize re-calculation triggers
+- [ ] Add debounce for real-time updates
+- [ ] Profile and optimize formula parser
+- [ ] Consider Web Worker for complex calculations
+
+### Phase 9.5: Backend Integration
+
+#### Task 13: Database Schema Updates
+- [ ] Add formula field columns to schema:
+  - `is_calculated BOOLEAN`
+  - `formula TEXT`
+  - `number_format JSONB`
+- [ ] Update migration scripts
+- [ ] Add validation for formula storage
+
+#### Task 14: API Endpoints
+- [ ] Update form schema endpoints to include formula fields
+- [ ] Add formula validation endpoint: `POST /api/forms/:id/validate-formula`
+- [ ] Add formula preview endpoint: `POST /api/forms/:id/preview-formula`
+- [ ] Update submission endpoints to calculate formulas server-side
+
+#### Task 15: Server-Side Formula Evaluation
+- [ ] Implement formula engine in Node.js (backend)
+- [ ] Match frontend formula behavior exactly
+- [ ] Add security validation:
+  - Prevent code injection
+  - Limit execution time
+  - Prevent infinite loops
+- [ ] Add calculation logging for debugging
+
+---
+
 ## ✅ COMPLETE: Phase 7 - Date Picker UX & Theme Completion (v0.6.7)
 
 **Release Date**: 2025-10-02
