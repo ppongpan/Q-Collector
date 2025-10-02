@@ -41,6 +41,7 @@ import {
 import { ALL_ROLES, getRoleLabel, getRoleBadgeColor, getRoleTextColor } from '../config/roles.config';
 import { useAuth } from '../contexts/AuthContext';
 import User2FAManagement from './admin/User2FAManagement';
+import ApiClient from '../services/ApiClient';
 
 export default function UserManagement() {
   const { user: currentUser } = useAuth();
@@ -88,37 +89,39 @@ export default function UserManagement() {
   const loadUsers = async () => {
     try {
       setIsLoading(true);
-      // TODO: Replace with actual API call
-      const mockUsers = [
-        {
-          id: '1',
-          username: 'pongpanp',
-          email: 'admin@example.com',
-          full_name: 'Pongpan Peerawanichkul',
-          role: 'super_admin',
-          is_active: true,
-          createdAt: '2025-09-30T03:00:19.531Z',
-          special_forms: [],
-          twoFactorEnabled: true
-        },
-        {
-          id: '2',
-          username: 'technicuser',
-          email: 'technic@example.com',
-          full_name: 'Technic User',
-          role: 'technic',
-          is_active: true,
-          createdAt: '2025-09-30T03:01:59.506Z',
-          special_forms: ['[Technic Request]', '[บันทึกการเข้าไซต์งาน]'],
-          twoFactorEnabled: false
+
+      // Fetch users from API
+      const response = await ApiClient.get('/users', {
+        params: {
+          page: 1,
+          limit: 1000 // Get all users
         }
-      ];
-      setUsers(mockUsers);
+      });
+
+      // Extract users from response
+      const fetchedUsers = response.data?.users || response.users || [];
+
+      // Transform users to match expected format
+      const transformedUsers = fetchedUsers.map(user => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        is_active: user.is_active !== undefined ? user.is_active : true,
+        createdAt: user.created_at || user.createdAt,
+        special_forms: user.special_forms || [],
+        twoFactorEnabled: user.two_factor_enabled || user.twoFactorEnabled || false
+      }));
+
+      setUsers(transformedUsers);
       setIsLoading(false);
     } catch (error) {
+      console.error('Error loading users:', error);
       toast.error('ไม่สามารถโหลดข้อมูลผู้ใช้ได้', {
-        description: error.message
+        description: error.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล'
       });
+      setUsers([]);
       setIsLoading(false);
     }
   };
