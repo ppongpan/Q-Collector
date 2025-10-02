@@ -1,12 +1,21 @@
 /**
  * TranslationService - Thai to English Translation for Database Schema
  *
+ * 3-Tier Translation System:
+ * 1. Dictionary Lookup (instant, free) - ~200 common terms
+ * 2. Database Cache (fast, free) - previously translated phrases
+ * 3. MyMemory Translation API (accurate, rate limited 1000/day)
+ * 4. Fallback: Transliteration
+ *
  * Provides translation functionality for converting Thai form names and field names
  * to English equivalents for use in PostgreSQL table and column names.
  *
- * @version 0.7.0
+ * @version 0.6.4
  * @since 2025-10-02
  */
+
+const axios = require('axios');
+const logger = require('../utils/logger.util');
 
 /**
  * Common Thai→English Translation Dictionary
@@ -162,56 +171,263 @@ const THAI_TO_ROMAN = {
 };
 
 class TranslationService {
+  constructor() {
+    // MyMemory API endpoint
+    this.apiEndpoint = 'https://api.mymemory.translated.net/get';
+
+    // API rate limit (free tier: 1000 requests/day)
+    this.dailyLimit = 1000;
+
+    // In-memory API usage tracking (will move to DB later)
+    this.apiUsage = {
+      date: new Date().toISOString().split('T')[0],
+      requestCount: 0,
+      successCount: 0,
+      errorCount: 0,
+    };
+  }
+
   /**
-   * Translate Thai text to English
-   * Uses dictionary lookup first, then falls back to transliteration
+   * Main translation method with 3-tier system
+   * Tier 1: Dictionary → Tier 2: Cache → Tier 3: API → Fallback: Transliteration
    *
    * @param {string} thaiText - Thai text to translate
    * @param {Object} options - Translation options
-   * @param {boolean} options.preferDictionary - Prefer dictionary over transliteration (default: true)
+   * @param {boolean} options.useAPI - Allow API calls (default: true)
    * @param {boolean} options.lowercase - Convert result to lowercase (default: true)
-   * @returns {string} Translated/transliterated English text
+   * @returns {Promise<object>} Translation result with source and confidence
    */
-  static translate(thaiText, options = {}) {
+  async translate(thaiText, options = {}) {
     const {
-      preferDictionary = true,
+      useAPI = true,
       lowercase = true
     } = options;
 
-    if (!thaiText || typeof thaiText !== 'string') {
-      return '';
+    try {
+      if (!thaiText || typeof thaiText !== 'string') {
+        throw new Error('Invalid input: thaiText must be a non-empty string');
+      }
+
+      const trimmed = thaiText.trim();
+
+      if (trimmed.length === 0) {
+        return {
+          thai: '',
+          english: '',
+          source: 'empty',
+          confidence: 1.0,
+        };
+      }
+
+      logger.info(`Translating: "${trimmed}"`);
+
+      // Check if already in English
+      if (!this.containsThai(trimmed)) {
+        const normalized = this.normalizeEnglish(trimmed, lowercase);
+        return {
+          thai: trimmed,
+          english: normalized,
+          source: 'already_english',
+          confidence: 1.0,
+        };
+      }
+
+      // Tier 1: Dictionary Lookup
+      const dictionaryResult = this.lookupDictionary(trimmed, lowercase);
+      if (dictionaryResult) {
+        logger.info(`Dictionary hit: "${trimmed}" → "${dictionaryResult}"`);
+        return {
+          thai: trimmed,
+          english: dictionaryResult,
+          source: 'dictionary',
+          confidence: 1.0,
+        };
+      }
+
+      // Tier 2: Database Cache (TODO: implement after models)
+      // const cacheResult = await this.lookupCache(trimmed);
+      // if (cacheResult) {
+      //   return cacheResult;
+      // }
+
+      // Tier 3: MyMemory Translation API
+      if (useAPI) {
+        const apiResult = await this.callMyMemoryAPI(trimmed);
+        if (apiResult) {
+          const cleaned = this.normalizeEnglish(apiResult.english, lowercase);
+          logger.info(`API translation: "${trimmed}" → "${cleaned}"`);
+
+          // TODO: Save to cache
+          // await this.saveToCache(trimmed, cleaned, 'api', apiResult.confidence);
+
+          return {
+            thai: trimmed,
+            english: cleaned,
+            source: 'api',
+            confidence: apiResult.confidence,
+          };
+        }
+      }
+
+      // Fallback: Transliteration
+      const fallback = this.transliterate(trimmed);
+      const normalized = this.normalizeEnglish(fallback, lowercase);
+
+      logger.warn(`Fallback to transliteration: "${trimmed}" → "${normalized}"`);
+
+      return {
+        thai: trimmed,
+        english: normalized,
+        source: 'transliteration',
+        confidence: 0.6,
+      };
+
+    } catch (error) {
+      logger.error('Translation error:', error);
+
+      // Always provide a fallback
+      const fallback = this.transliterate(thaiText);
+      const normalized = this.normalizeEnglish(fallback, lowercase);
+
+      return {
+        thai: thaiText,
+        english: normalized,
+        source: 'error_fallback',
+        confidence: 0.3,
+        error: error.message,
+      };
     }
+  }
 
-    const trimmed = thaiText.trim();
-
-    // Empty string check
-    if (trimmed.length === 0) {
-      return '';
-    }
-
-    // Check if text is already in English (no Thai characters)
-    if (!this.containsThai(trimmed)) {
-      // Already English, just normalize
-      return this.normalizeEnglish(trimmed, lowercase);
-    }
-
-    // Try dictionary lookup first
-    if (preferDictionary) {
-      const exactMatch = TRANSLATION_DICTIONARY[trimmed];
+  /**
+   * Tier 1: Dictionary Lookup
+   * @param {string} thaiText - Thai text to lookup
+   * @param {boolean} lowercase - Convert to lowercase
+   * @returns {string|null} English translation or null
+   */
+  lookupDictionary(thaiText, lowercase = true) {
+    try {
+      // Exact match
+      const exactMatch = TRANSLATION_DICTIONARY[thaiText];
       if (exactMatch) {
         return lowercase ? exactMatch.toLowerCase() : exactMatch;
       }
 
-      // Try partial matches for compound words
-      const partialTranslation = this.translatePartial(trimmed);
+      // Partial matches for compound words
+      const partialTranslation = this.translatePartial(thaiText);
       if (partialTranslation) {
         return lowercase ? partialTranslation.toLowerCase() : partialTranslation;
       }
+
+      return null;
+    } catch (error) {
+      logger.error('Dictionary lookup error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Tier 2: Database Cache Lookup
+   * TODO: Implement after creating Translation model
+   */
+  async lookupCache(thaiText) {
+    // TODO: Implement
+    return null;
+  }
+
+  /**
+   * Tier 3: MyMemory Translation API
+   * @param {string} thaiText - Thai text to translate
+   * @returns {Promise<object|null>} API translation result or null
+   */
+  async callMyMemoryAPI(thaiText) {
+    try {
+      // Check API rate limit
+      if (!this.checkAPILimit()) {
+        logger.warn('API rate limit exceeded, skipping API call');
+        return null;
+      }
+
+      // Call MyMemory API
+      const response = await axios.get(this.apiEndpoint, {
+        params: {
+          q: thaiText,
+          langpair: 'th|en',
+        },
+        timeout: 5000, // 5 second timeout
+      });
+
+      this.incrementAPIUsage('success');
+
+      if (response.data && response.data.responseStatus === 200) {
+        const translatedText = response.data.responseData.translatedText;
+        const match = response.data.responseData.match || 0.7;
+
+        return {
+          english: translatedText,
+          confidence: match,
+        };
+      }
+
+      logger.warn('API returned non-200 status:', response.data);
+      this.incrementAPIUsage('error');
+      return null;
+
+    } catch (error) {
+      logger.error('MyMemory API error:', error.message);
+      this.incrementAPIUsage('error');
+      return null;
+    }
+  }
+
+  /**
+   * Check API rate limit
+   * @returns {boolean} True if API call is allowed
+   */
+  checkAPILimit() {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Reset counter if new day
+    if (this.apiUsage.date !== today) {
+      this.apiUsage = {
+        date: today,
+        requestCount: 0,
+        successCount: 0,
+        errorCount: 0,
+      };
     }
 
-    // Fallback to transliteration
-    const transliterated = this.transliterate(trimmed);
-    return lowercase ? transliterated.toLowerCase() : transliterated;
+    return this.apiUsage.requestCount < this.dailyLimit;
+  }
+
+  /**
+   * Increment API usage counter
+   * @param {string} status - 'success' or 'error'
+   */
+  incrementAPIUsage(status = 'success') {
+    this.apiUsage.requestCount++;
+
+    if (status === 'success') {
+      this.apiUsage.successCount++;
+    } else {
+      this.apiUsage.errorCount++;
+    }
+
+    logger.info(`API usage: ${this.apiUsage.requestCount}/${this.dailyLimit} (${status})`);
+
+    // TODO: Save to database
+  }
+
+  /**
+   * Get current API usage statistics
+   * @returns {object} API usage stats
+   */
+  getAPIUsage() {
+    return {
+      ...this.apiUsage,
+      remaining: this.dailyLimit - this.apiUsage.requestCount,
+      percentUsed: ((this.apiUsage.requestCount / this.dailyLimit) * 100).toFixed(2),
+    };
   }
 
   /**
@@ -220,7 +436,7 @@ class TranslationService {
    * @param {string} thaiText - Thai text to transliterate
    * @returns {string} Romanized text
    */
-  static transliterate(thaiText) {
+  transliterate(thaiText) {
     if (!thaiText || typeof thaiText !== 'string') {
       return '';
     }
@@ -253,7 +469,7 @@ class TranslationService {
    * @param {string} thaiText - Thai text
    * @returns {string|null} Partial translation or null if none found
    */
-  static translatePartial(thaiText) {
+  translatePartial(thaiText) {
     const words = Object.keys(TRANSLATION_DICTIONARY)
       .sort((a, b) => b.length - a.length); // Sort by length descending
 
@@ -296,7 +512,7 @@ class TranslationService {
    * @param {string} text - Text to check
    * @returns {boolean} True if contains Thai characters
    */
-  static containsThai(text) {
+  containsThai(text) {
     if (!text || typeof text !== 'string') {
       return false;
     }
@@ -312,7 +528,7 @@ class TranslationService {
    * @param {boolean} lowercase - Convert to lowercase
    * @returns {string} Normalized text
    */
-  static normalizeEnglish(text, lowercase = true) {
+  normalizeEnglish(text, lowercase = true) {
     if (!text || typeof text !== 'string') {
       return '';
     }
@@ -345,7 +561,7 @@ class TranslationService {
    * @param {string} thai - Thai term
    * @param {string} english - English translation
    */
-  static addTranslation(thai, english) {
+  addTranslation(thai, english) {
     if (thai && english && typeof thai === 'string' && typeof english === 'string') {
       TRANSLATION_DICTIONARY[thai.trim()] = english.trim();
     }
@@ -356,7 +572,7 @@ class TranslationService {
    *
    * @returns {Object} Copy of translation dictionary
    */
-  static getTranslations() {
+  getTranslations() {
     return { ...TRANSLATION_DICTIONARY };
   }
 
@@ -365,15 +581,25 @@ class TranslationService {
    *
    * @param {Array<string>} terms - Array of Thai terms
    * @param {Object} options - Translation options
-   * @returns {Array<string>} Array of translated terms
+   * @returns {Promise<Array>} Array of translation results
    */
-  static batchTranslate(terms, options = {}) {
+  async batchTranslate(terms, options = {}) {
     if (!Array.isArray(terms)) {
       return [];
     }
 
-    return terms.map(term => this.translate(term, options));
+    const results = [];
+    for (const term of terms) {
+      const result = await this.translate(term, options);
+      results.push(result);
+
+      // Small delay to avoid overwhelming the API
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    return results;
   }
 }
 
-module.exports = TranslationService;
+// Export singleton instance
+module.exports = new TranslationService();
