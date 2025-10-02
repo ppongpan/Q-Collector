@@ -334,11 +334,11 @@ function MainFormAppContent() {
                   <motion.div
                     className="relative z-10"
                     whileHover={{
-                      rotate: [0, 360, 720, 1080],
+                      rotate: 360,
                       scale: 1.1
                     }}
                     transition={{
-                      duration: 0.8,
+                      duration: 0.5,
                       ease: "easeInOut"
                     }}
                   >
