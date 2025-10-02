@@ -244,6 +244,270 @@
 
 ---
 
+## 🚧 IN PROGRESS: Phase 8.8 - Comprehensive User Registration & 2FA Testing (v0.7.0)
+
+### Major Feature: End-to-End Authentication Testing with Playwright
+
+**Objective**: Create comprehensive automated tests for user registration, authentication, and 2FA workflows across all user roles.
+
+**Status**: 🔴 **STARTING**
+**Start Date**: 2025-10-02
+**Testing Framework**: Playwright E2E Tests
+
+**Requirements**:
+1. **Multi-Role Registration**: Test user registration for all 7 roles
+2. **2FA Workflow Testing**: Test complete 2FA setup and verification flow
+3. **Login Flow Testing**: Test login with and without 2FA
+4. **Role-Based Access**: Verify RBAC permissions after login
+5. **Error Handling**: Test validation errors and edge cases
+6. **Browser Compatibility**: Test across Chrome, Firefox, Safari
+
+### Phase 8.8.1: Test Environment Setup
+
+#### Task 1: Install and Configure Playwright
+- [ ] Install Playwright and dependencies
+  ```bash
+  npm install -D @playwright/test
+  npx playwright install
+  ```
+- [ ] Create Playwright configuration file (`playwright.config.js`)
+- [ ] Set up test directory structure:
+  ```
+  tests/
+  ├── e2e/
+  │   ├── auth/
+  │   │   ├── registration.spec.js
+  │   │   ├── login.spec.js
+  │   │   ├── 2fa-setup.spec.js
+  │   │   └── 2fa-login.spec.js
+  │   └── fixtures/
+  │       ├── test-users.js
+  │       └── auth-helpers.js
+  ```
+- [ ] Configure test reporters (HTML, JSON, console)
+- [ ] Set up environment variables for testing
+
+#### Task 2: Create Test Utilities and Fixtures
+- [ ] Create `tests/e2e/fixtures/test-users.js`:
+  - Define test users for each role (8 roles)
+  - User data generator functions
+  - Cleanup utilities for test users
+- [ ] Create `tests/e2e/fixtures/auth-helpers.js`:
+  - Login helper function
+  - 2FA setup helper
+  - Token validation helper
+  - Role verification helper
+- [ ] Create database seeding script for test environment
+- [ ] Create cleanup script for test data
+
+### Phase 8.8.2: Registration Testing
+
+#### Task 3: Basic Registration Tests
+- [ ] Create `tests/e2e/auth/registration.spec.js`
+- [ ] Test 1: Register user with valid data
+  - Navigate to registration page
+  - Fill form with valid data
+  - Submit and verify success
+  - Verify redirect to home page
+  - Verify user is logged in
+- [ ] Test 2: Registration validation errors
+  - Test username too short (< 3 chars)
+  - Test invalid email format
+  - Test password too weak (< 8 chars)
+  - Test password missing uppercase
+  - Test password missing lowercase
+  - Test password missing number
+  - Test password mismatch
+  - Test duplicate username
+  - Test duplicate email
+- [ ] Test 3: Username validation
+  - Test alphanumeric-only requirement
+  - Test special characters rejection
+  - Test underscore rejection
+
+#### Task 4: Multi-Role Registration Tests
+- [ ] Test registration for each role:
+  - [ ] `super_admin` (should be admin-only creation)
+  - [ ] `admin` (should be admin-only creation)
+  - [ ] `moderator` (should be admin-only creation)
+  - [ ] `customer_service` (user self-registration)
+  - [ ] `sales` (user self-registration)
+  - [ ] `marketing` (user self-registration)
+  - [ ] `technic` (user self-registration)
+  - [ ] `general_user` (default role)
+- [ ] Verify role assignment after registration
+- [ ] Verify role-based permissions after first login
+- [ ] Test department selection UI
+- [ ] Verify role mapping from department selection
+
+### Phase 8.8.3: Login Testing
+
+#### Task 5: Basic Login Tests
+- [ ] Create `tests/e2e/auth/login.spec.js`
+- [ ] Test 1: Login with username
+  - Register new user
+  - Logout
+  - Login with username
+  - Verify successful login
+  - Verify user data in session
+- [ ] Test 2: Login with email
+  - Login with email instead of username
+  - Verify successful login
+- [ ] Test 3: Login validation errors
+  - Test empty username
+  - Test empty password
+  - Test invalid credentials
+  - Test inactive account
+- [ ] Test 4: Remember me functionality (if implemented)
+- [ ] Test 5: Session persistence
+  - Login successfully
+  - Refresh page
+  - Verify still logged in
+  - Verify token refresh
+
+#### Task 6: Multi-User Login Tests
+- [ ] Test login for each role
+- [ ] Verify role-specific navigation after login
+- [ ] Verify role-specific menu items visibility
+- [ ] Test concurrent logins (multiple users)
+- [ ] Test login rate limiting
+
+### Phase 8.8.4: 2FA Setup Testing
+
+#### Task 7: 2FA Enablement Tests
+- [ ] Create `tests/e2e/auth/2fa-setup.spec.js`
+- [ ] Test 1: Navigate to 2FA settings
+  - Login as user
+  - Navigate to settings page
+  - Open 2FA setup section
+- [ ] Test 2: Generate 2FA secret
+  - Click "Enable 2FA" button
+  - Verify QR code is displayed
+  - Verify secret key is displayed
+  - Verify backup codes are generated
+- [ ] Test 3: Verify 2FA token
+  - Use authenticator app (simulate with speakeasy)
+  - Enter valid TOTP code
+  - Verify 2FA enabled successfully
+  - Verify backup codes saved
+- [ ] Test 4: 2FA validation errors
+  - Test invalid TOTP code
+  - Test expired TOTP code
+  - Test reused TOTP code
+- [ ] Test 5: Backup codes download
+  - Verify backup codes can be downloaded
+  - Verify codes are encrypted
+  - Test backup code login
+
+#### Task 8: 2FA Disable Tests
+- [ ] Test 1: Disable 2FA with password
+  - Navigate to 2FA settings
+  - Click "Disable 2FA"
+  - Enter password
+  - Verify 2FA disabled
+- [ ] Test 2: Disable 2FA with backup code
+  - Enable 2FA
+  - Disable using backup code
+  - Verify backup codes invalidated
+
+### Phase 8.8.5: 2FA Login Testing
+
+#### Task 9: 2FA Login Flow Tests
+- [ ] Create `tests/e2e/auth/2fa-login.spec.js`
+- [ ] Test 1: Login with 2FA enabled
+  - Register user
+  - Enable 2FA
+  - Logout
+  - Login with username/password
+  - Verify 2FA prompt appears
+  - Enter valid TOTP code
+  - Verify successful login
+- [ ] Test 2: Login with backup code
+  - Logout
+  - Login with username/password
+  - Enter backup code instead of TOTP
+  - Verify successful login
+  - Verify backup code marked as used
+- [ ] Test 3: Trusted device feature
+  - Login with 2FA
+  - Check "Trust this device"
+  - Verify device fingerprint saved
+  - Logout and login again
+  - Verify 2FA skipped on trusted device
+- [ ] Test 4: 2FA errors
+  - Test invalid TOTP code (3 attempts)
+  - Test expired temp token
+  - Test missing TOTP code
+- [ ] Test 5: 2FA timeout
+  - Start login flow
+  - Wait for temp token to expire (5 minutes)
+  - Try to verify
+  - Verify session expired message
+
+### Phase 8.8.6: Admin 2FA Management Tests
+
+#### Task 10: Super Admin 2FA Control Tests
+- [ ] Test 1: View all users' 2FA status
+  - Login as super admin
+  - Navigate to user management
+  - Open 2FA management
+  - Verify all users listed with 2FA status
+- [ ] Test 2: Force enable 2FA for user
+  - Select user without 2FA
+  - Click "Force Enable 2FA"
+  - Verify user required to setup 2FA on next login
+- [ ] Test 3: Reset user's 2FA
+  - Select user with 2FA
+  - Click "Reset 2FA"
+  - Verify secret cleared
+  - Verify backup codes cleared
+  - Verify trusted devices cleared
+- [ ] Test 4: Trusted device duration settings
+  - Navigate to system settings
+  - Change trusted device duration
+  - Verify setting saved
+  - Test new duration applies
+
+### Phase 8.8.7: Edge Cases and Error Handling
+
+#### Task 11: Edge Case Tests
+- [ ] Test concurrent 2FA setup attempts
+- [ ] Test 2FA with network errors
+- [ ] Test 2FA with slow connections
+- [ ] Test browser back button during 2FA
+- [ ] Test refresh during 2FA verification
+- [ ] Test multiple tabs login
+- [ ] Test session expiry during 2FA
+- [ ] Test XSS prevention in registration
+- [ ] Test SQL injection prevention
+- [ ] Test rate limiting on all endpoints
+
+#### Task 12: Cross-Browser Testing
+- [ ] Run all tests on Chromium
+- [ ] Run all tests on Firefox
+- [ ] Run all tests on WebKit (Safari)
+- [ ] Verify consistent behavior across browsers
+- [ ] Document browser-specific issues
+
+### Phase 8.8.8: Test Reporting and CI/CD
+
+#### Task 13: Test Reports and Documentation
+- [ ] Generate HTML test report
+- [ ] Generate JSON test results
+- [ ] Create test coverage report
+- [ ] Document test scenarios in README
+- [ ] Create test execution guide
+- [ ] Add screenshots for failed tests
+
+#### Task 14: CI/CD Integration
+- [ ] Create GitHub Actions workflow for E2E tests
+- [ ] Configure test execution on pull requests
+- [ ] Set up test result notifications
+- [ ] Configure parallel test execution
+- [ ] Add test artifacts upload
+
+---
+
 ## 🚧 PLANNED: Phase 9 - Formula Field & Number Formatting (v0.7.1)
 
 ### Major Feature: Calculated Fields & Advanced Number Options
