@@ -330,14 +330,26 @@ function MainFormAppContent() {
                     }}
                   />
 
-                  {/* Icon with orange color */}
-                  <FontAwesomeIcon
-                    icon={faSave}
-                    className="relative z-10 text-2xl text-[#ff6400] group-hover:text-[#ff8533] group-hover:scale-110 transition-all duration-300"
-                    style={{
-                      filter: 'drop-shadow(0 0 8px rgba(255, 100, 0, 0.6))'
+                  {/* Icon with orange color and rotation on hover */}
+                  <motion.div
+                    className="relative z-10"
+                    whileHover={{
+                      rotate: [0, 360, 720, 1080],
+                      scale: 1.1
                     }}
-                  />
+                    transition={{
+                      duration: 0.8,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <FontAwesomeIcon
+                      icon={faSave}
+                      className="text-2xl text-[#ff6400] group-hover:text-[#ff8533] transition-colors duration-300"
+                      style={{
+                        filter: 'drop-shadow(0 0 8px rgba(255, 100, 0, 0.6))'
+                      }}
+                    />
+                  </motion.div>
                 </motion.div>
               )}
 
