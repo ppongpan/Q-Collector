@@ -97,8 +97,10 @@ export function RegisterPage() {
 
     if (!formData.password) {
       newErrors.password = 'กรุณากรอกรหัสผ่าน';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร';
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password = 'รหัสผ่านต้องมีตัวพิมพ์เล็ก ตัวพิมพ์ใหญ่ และตัวเลข';
     }
 
     if (!formData.confirmPassword) {

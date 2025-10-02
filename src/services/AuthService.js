@@ -80,18 +80,25 @@ class AuthService {
     try {
       const response = await ApiClient.post(API_ENDPOINTS.auth.register, userData);
 
+      // Response structure: { success: true, data: { user, tokens } }
+      const { data } = response;
+
       // Store tokens and user data
-      if (response.accessToken) {
-        tokenManager.setAccessToken(response.accessToken);
+      if (data?.tokens?.accessToken) {
+        tokenManager.setAccessToken(data.tokens.accessToken);
       }
-      if (response.refreshToken) {
-        tokenManager.setRefreshToken(response.refreshToken);
+      if (data?.tokens?.refreshToken) {
+        tokenManager.setRefreshToken(data.tokens.refreshToken);
       }
-      if (response.user) {
-        tokenManager.setUser(response.user);
+      if (data?.user) {
+        tokenManager.setUser(data.user);
       }
 
-      return response;
+      return {
+        user: data?.user,
+        tokens: data?.tokens,
+        data: data
+      };
     } catch (error) {
       const message = parseApiError(error);
       throw new Error(message);
