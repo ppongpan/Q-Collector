@@ -224,21 +224,15 @@ function MainFormAppContent() {
                 <div
                   onClick={() => handleNavigate('form-list')}
                   title="กลับสู่รายการฟอร์ม"
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
                     border: 'none'
                   }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'scale(1)';
-                  }}
                 >
                   <FontAwesomeIcon
                     icon={faArrowLeft}
-                    className="text-base text-muted-foreground group-hover:text-primary transition-colors duration-300"
+                    className="text-base text-muted-foreground group-hover:text-primary group-hover:scale-110 group-hover:-translate-x-1 transition-all duration-300"
                   />
                 </div>
               )}
@@ -260,23 +254,15 @@ function MainFormAppContent() {
                 <div
                   onClick={handleNewForm}
                   title="สร้างฟอร์มใหม่"
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
                     border: 'none'
                   }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'scale(1.1) rotate(90deg)';
-                    e.target.style.boxShadow = '0 0 20px rgba(255, 100, 0, 0.5), 0 0 40px rgba(255, 100, 0, 0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'scale(1) rotate(0deg)';
-                    e.target.style.boxShadow = '';
-                  }}
                 >
                   <FontAwesomeIcon
                     icon={faPlus}
-                    className="text-xl text-muted-foreground group-hover:text-[#ff6400] transition-colors duration-300"
+                    className="text-xl text-muted-foreground group-hover:text-[#ff6400] group-hover:scale-110 group-hover:rotate-90 transition-all duration-300"
                   />
                 </div>
               )}
@@ -289,23 +275,15 @@ function MainFormAppContent() {
                     }
                   }}
                   title="บันทึกฟอร์ม"
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
                     border: 'none'
                   }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'scale(1.1)';
-                    e.target.style.boxShadow = '0 0 20px rgba(249, 115, 22, 0.4), 0 0 40px rgba(249, 115, 22, 0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'scale(1)';
-                    e.target.style.boxShadow = '';
-                  }}
                 >
                   <FontAwesomeIcon
                     icon={faSave}
-                    className="text-muted-foreground group-hover:text-primary transition-colors duration-300"
+                    className="text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all duration-300"
                   />
                 </div>
               )}
@@ -318,25 +296,17 @@ function MainFormAppContent() {
                     }
                   }}
                   title="บันทึกข้อมูล"
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
                     border: 'none',
                     outline: 'none',
                     boxShadow: 'none'
                   }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'scale(1.1)';
-                    e.target.style.boxShadow = '0 0 20px rgba(249, 115, 22, 0.4), 0 0 40px rgba(249, 115, 22, 0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'scale(1)';
-                    e.target.style.boxShadow = '';
-                  }}
                 >
                   <FontAwesomeIcon
                     icon={faSave}
-                    className="text-muted-foreground group-hover:text-primary transition-colors duration-300"
+                    className="text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all duration-300"
                   />
                 </div>
               )}
@@ -345,23 +315,15 @@ function MainFormAppContent() {
                 <div
                   onClick={() => handleNavigate('form-view', currentFormId)}
                   title="เพิ่มข้อมูลใหม่"
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
                     border: 'none'
                   }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'scale(1.1)';
-                    e.target.style.boxShadow = '0 0 20px rgba(255, 100, 0, 0.5), 0 0 40px rgba(255, 100, 0, 0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'scale(1)';
-                    e.target.style.boxShadow = '';
-                  }}
                 >
                   <FontAwesomeIcon
                     icon={faPlus}
-                    className="text-xl text-muted-foreground group-hover:text-[#ff6400] transition-colors duration-300"
+                    className="text-xl text-muted-foreground group-hover:text-[#ff6400] group-hover:scale-110 group-hover:rotate-90 transition-all duration-300"
                   />
                 </div>
               )}
@@ -372,23 +334,15 @@ function MainFormAppContent() {
                   <div
                     onClick={() => handleNavigate('form-view', currentFormId, false, currentSubmissionId)}
                     title="แก้ไขข้อมูล"
-                    className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                    className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
                     style={{
                       background: 'transparent',
                       border: 'none'
                     }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'scale(1.1)';
-                      e.target.style.boxShadow = '0 0 20px rgba(249, 115, 22, 0.4), 0 0 40px rgba(249, 115, 22, 0.2)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
-                      e.target.style.boxShadow = '';
-                    }}
                   >
                     <FontAwesomeIcon
                       icon={faEdit}
-                      className="text-muted-foreground group-hover:text-primary transition-colors duration-300"
+                      className="text-muted-foreground group-hover:text-primary group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"
                     />
                   </div>
 
@@ -418,23 +372,15 @@ function MainFormAppContent() {
                       });
                     }}
                     title="ลบข้อมูล"
-                    className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                    className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
                     style={{
                       background: 'transparent',
                       border: 'none'
                     }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'scale(1.1)';
-                      e.target.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(239, 68, 68, 0.2)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
-                      e.target.style.boxShadow = '';
-                    }}
                   >
                     <FontAwesomeIcon
                       icon={faTrashAlt}
-                      className="text-muted-foreground group-hover:text-destructive transition-colors duration-300"
+                      className="text-muted-foreground group-hover:text-destructive group-hover:scale-110 transition-all duration-300"
                     />
                   </div>
                 </>
@@ -445,23 +391,15 @@ function MainFormAppContent() {
                 <div
                   onClick={() => handleNavigate('user-management')}
                   title="จัดการผู้ใช้งาน"
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
                     border: 'none'
                   }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'scale(1.1)';
-                    e.target.style.boxShadow = '0 0 20px rgba(249, 115, 22, 0.4), 0 0 40px rgba(249, 115, 22, 0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'scale(1)';
-                    e.target.style.boxShadow = '';
-                  }}
                 >
                   <FontAwesomeIcon
                     icon={faUsers}
-                    className="text-muted-foreground group-hover:text-primary transition-colors duration-300"
+                    className="text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all duration-300"
                   />
                 </div>
               )}
@@ -472,22 +410,16 @@ function MainFormAppContent() {
               <div
                 onClick={() => handleNavigate('form-list')}
                 title="หน้าหลัก"
-                className="w-12 h-12 cursor-pointer touch-target-comfortable transition-all duration-300 group"
+                className="w-12 h-12 cursor-pointer touch-target-comfortable group"
                 style={{
                   background: 'transparent',
                   border: 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
                 }}
               >
                 <img
                   src="/qlogo.png"
                   alt="Q-Collector Logo"
-                  className="w-full h-full object-cover rounded-lg transition-all duration-300 group-hover:rounded-full"
+                  className="w-full h-full object-cover rounded-lg transition-all duration-300 group-hover:rounded-full group-hover:scale-110"
                 />
               </div>
             </div>

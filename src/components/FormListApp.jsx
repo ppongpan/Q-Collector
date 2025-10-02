@@ -442,7 +442,7 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
                         >
                           <FontAwesomeIcon
                             icon={faLink}
-                            className="text-lg text-muted-foreground/60 group-hover:text-blue-500 transition-colors duration-200"
+                            className="text-lg text-muted-foreground/60 group-hover:text-blue-500 group-hover:scale-110 transition-all duration-300"
                           />
                         </div>
 
@@ -457,7 +457,7 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
                         >
                           <FontAwesomeIcon
                             icon={faEye}
-                            className="text-lg text-muted-foreground/60 group-hover:text-cyan-400 transition-colors duration-200"
+                            className="text-lg text-muted-foreground/60 group-hover:text-cyan-400 group-hover:scale-110 transition-all duration-300"
                           />
                         </div>
 
@@ -473,7 +473,7 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
                           >
                             <FontAwesomeIcon
                               icon={faEdit}
-                              className="text-lg text-muted-foreground/60 group-hover:text-cyan-400 transition-colors duration-200"
+                              className="text-lg text-muted-foreground/60 group-hover:text-cyan-400 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"
                             />
                           </div>
                         )}
