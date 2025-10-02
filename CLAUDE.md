@@ -4,7 +4,7 @@
 
 ## Version Information
 
-- **Version**: 0.6.3
+- **Version**: 0.6.4
 - **Release Date**: 2025-10-02
 - **Framework**: React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 - **Target**: Thai Business Forms & Data Collection
@@ -104,6 +104,375 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 **Accessibility:** WCAG 2.1 AA compliance, ARIA labels, keyboard navigation
 
 ## Version History
+
+### v0.6.4 (2025-10-02) - User Management UX & Future Feature Planning
+
+**Major Updates:**
+- ✅ **User Management API Integration** - Real API calls instead of mock data
+- ✅ **Enhanced Table UX** - Clickable rows, optimized columns, text wrapping
+- ✅ **Modal Positioning Fix** - Sticky popup with scroll-to-top behavior
+- 📋 **Mandatory 2FA Setup Plan** - Complete workflow design (ready to implement)
+- 📋 **Thai-English Translation Plan** - Intelligent slug generation system (ready to implement)
+
+**User Management Enhancements:**
+- **Real API Integration**
+  - Replaced mock data with `/api/v1/users` endpoint
+  - Response transformation (snake_case → camelCase)
+  - Error handling with enhanced toasts
+  - Auto-refresh on data changes
+
+- **Improved Table UX**
+  - **Clickable Rows** - Click anywhere on row to open edit modal
+  - **Reduced Columns** - Removed "Actions" column (7→5 columns)
+  - **Optimized Widths** - 15%, 25%, 25%, 20%, 15% to fit viewport
+  - **Text Wrapping** - Email and full_name wrap to 2 lines
+  - **Better Padding** - Reduced from px-3 to px-2 for compact layout
+  - **Enhanced Hover** - Improved hover effect (hover:bg-muted/30)
+  - **Cursor Feedback** - cursor-pointer for better UX
+
+- **Modal Positioning**
+  - **Scroll-to-Top** - Modal always visible when opened
+  - **Viewport Centering** - Fixed inset-0 z-50 positioning
+  - **Mobile Friendly** - No off-screen modals on small screens
+  - **Smooth Animation** - Framer Motion transitions
+
+**Components Updated:**
+- `src/components/UserManagement.jsx` (Lines 44, 89-127, 150-167, 403-451)
+  - Added ApiClient import
+  - Modified loadUsers() for real API calls
+  - Added scroll-to-top in handleEditUser()
+  - Restructured table header and body
+
+---
+
+## 📋 Future Features - Implementation Plans
+
+### Plan 1: Mandatory 2FA Setup Workflow
+
+**Goal:** Force all new users to setup 2FA immediately after registration before accessing the system.
+
+**Architecture Diagram:**
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    MANDATORY 2FA SETUP WORKFLOW                      │
+└─────────────────────────────────────────────────────────────────────┘
+
+REGISTRATION FLOW:
+┌──────────┐    ┌──────────┐    ┌───────────────┐    ┌──────────────┐
+│ Register │───▶│ Create   │───▶│ Set flag:     │───▶│ Redirect to  │
+│  Form    │    │  User    │    │ requires_2fa_ │    │  2FA Setup   │
+│          │    │          │    │ setup = true  │    │    Page      │
+└──────────┘    └──────────┘    └───────────────┘    └──────────────┘
+                                                              │
+                                                              ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                        2FA SETUP PAGE                                 │
+├──────────────────────────────────────────────────────────────────────┤
+│  1. Generate 2FA Secret (backend)                                    │
+│  2. Display QR Code (frontend)                                       │
+│  3. Show Backup Codes (frontend)                                     │
+│  4. User scans QR code with authenticator app                        │
+│  5. User enters OTP to verify                                        │
+│  6. Backend validates OTP                                            │
+│  7. Set requires_2fa_setup = false                                   │
+│  8. Set two_factor_enabled = true                                    │
+│  9. Redirect to Home Page                                            │
+└──────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌──────────────────┐
+                    │  Access Granted  │
+                    │   Normal Login   │
+                    └──────────────────┘
+
+MIDDLEWARE PROTECTION:
+┌──────────────┐    ┌─────────────────┐    ┌────────────────┐
+│ User Login   │───▶│ Check: requires │───▶│ Block access & │
+│              │    │ _2fa_setup ?    │    │ redirect to    │
+│              │    │                 │    │ 2FA Setup      │
+└──────────────┘    └─────────────────┘    └────────────────┘
+                            │
+                            │ (false)
+                            ▼
+                    ┌──────────────┐
+                    │ Allow Access │
+                    └──────────────┘
+```
+
+**Implementation Tasks:**
+
+**Phase 1: Backend Setup**
+- [ ] Add `requires_2fa_setup` BOOLEAN column to users table
+- [ ] Add migration: `20251002000003-add-requires-2fa-setup.js`
+- [ ] Update User model with new field
+- [ ] Modify AuthService.register() to set flag = true
+- [ ] Create middleware: `requireTwoFactorSetup()`
+- [ ] Add route: `POST /api/v1/auth/2fa/setup-required`
+  - Generate secret
+  - Generate QR code
+  - Generate backup codes
+  - Return to frontend
+- [ ] Add route: `POST /api/v1/auth/2fa/verify-setup`
+  - Validate OTP
+  - Set requires_2fa_setup = false
+  - Set two_factor_enabled = true
+
+**Phase 2: Frontend Components**
+- [ ] Create `TwoFactorSetupRequired.jsx` page
+  - Display QR code image
+  - Show secret key (for manual entry)
+  - Display 10 backup codes with copy button
+  - OTP input field (6 digits)
+  - Verify button
+  - Instructions in Thai
+- [ ] Update `AuthContext.jsx`
+  - Check requires_2fa_setup flag
+  - Redirect to setup page if true
+- [ ] Update `PrivateRoute.jsx`
+  - Block access if requires_2fa_setup = true
+- [ ] Update `RegisterPage.jsx`
+  - After successful registration → redirect to 2FA setup
+
+**Phase 3: Testing**
+- [ ] E2E test: Registration → 2FA Setup → OTP Verify → Access
+- [ ] E2E test: Login with requires_2fa_setup = true → Block
+- [ ] E2E test: QR code display and scan simulation
+- [ ] E2E test: Backup codes generation and display
+- [ ] E2E test: Invalid OTP rejection
+- [ ] Unit test: Middleware requireTwoFactorSetup()
+
+**Success Criteria:**
+- ✅ All new users must setup 2FA before accessing system
+- ✅ QR code displays correctly
+- ✅ Backup codes generated (10 codes)
+- ✅ OTP verification works
+- ✅ Users cannot bypass setup
+- ✅ Existing users not affected
+
+---
+
+### Plan 2: Thai-English Translation System for Slugs
+
+**Goal:** Generate meaningful English slugs from Thai form/field names using translation instead of transliteration.
+
+**Architecture Diagram:**
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│              THAI-ENGLISH TRANSLATION SYSTEM                         │
+└─────────────────────────────────────────────────────────────────────┘
+
+INPUT: Thai Text (e.g., "ฟอร์มบันทึกการร้องขอทีมบริการเทคนิค")
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                      3-TIER TRANSLATION SYSTEM                        │
+└──────────────────────────────────────────────────────────────────────┘
+
+TIER 1: Dictionary Lookup (Instant, Free)
+┌────────────────────────────────────────┐
+│  Built-in Thai-English Dictionary      │
+│  - Common form terms (~200 words)      │
+│  - Technical terms                     │
+│  - Business terms                      │
+│  - Instant response                    │
+│  - No API calls                        │
+└────────────────────────────────────────┘
+                │
+                │ (Not Found)
+                ▼
+TIER 2: Database Cache (Fast, Free)
+┌────────────────────────────────────────┐
+│  translation_cache Table               │
+│  - Previously translated phrases       │
+│  - Auto-populated from API results     │
+│  - Fast database lookup                │
+│  - Reduces API usage                   │
+└────────────────────────────────────────┘
+                │
+                │ (Not Found)
+                ▼
+TIER 3: MyMemory Translation API (Accurate, Rate Limited)
+┌────────────────────────────────────────┐
+│  MyMemory Translation API              │
+│  - https://mymemory.translated.net     │
+│  - Free: 1,000 requests/day            │
+│  - Quality: Good for Thai→English      │
+│  - Auto-save result to cache           │
+│  - Track API usage                     │
+└────────────────────────────────────────┘
+                │
+                ▼
+OUTPUT: English Slug (e.g., "technic_service_team_request_recording_form")
+
+EXAMPLE TRANSLATIONS:
+┌──────────────────────────────────────┬─────────────────────────────────┐
+│ Thai Input                           │ English Output                  │
+├──────────────────────────────────────┼─────────────────────────────────┤
+│ ฟอร์มบันทึกการร้องขอทีมบริการเทคนิค │ technic_service_request_form    │
+│ รายการติดตาม                         │ follow_up_list                  │
+│ ข้อมูลลูกค้า                         │ customer_information            │
+│ ชื่อเต็ม                              │ full_name                       │
+│ เบอร์โทรศัพท์                        │ phone_number                    │
+│ ที่อยู่                               │ address                         │
+└──────────────────────────────────────┴─────────────────────────────────┘
+```
+
+**Translation Flow Diagram:**
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    TRANSLATION FLOW                                  │
+└─────────────────────────────────────────────────────────────────────┘
+
+1. User creates form with Thai name "ฟอร์มบันทึกการติดต่อ"
+                              │
+                              ▼
+2. FormService.createForm() called
+                              │
+                              ▼
+3. TranslationService.translate("ฟอร์มบันทึกการติดต่อ")
+                              │
+                              ▼
+4. Check Dictionary         ┌─────────────┐
+   ├─ Found? ──────────────▶│ Return:     │
+   │                        │ "contact_   │──┐
+   │                        │  recording_ │  │
+   └─ Not found            │  form"      │  │
+                           └─────────────┘  │
+                              │              │
+                              ▼              │
+5. Check Cache              ┌─────────────┐  │
+   ├─ Found? ──────────────▶│ Return      │──┤
+   │                        │ cached      │  │
+   └─ Not found            │ translation │  │
+                           └─────────────┘  │
+                              │              │
+                              ▼              │
+6. Call MyMemory API        ┌─────────────┐  │
+   ├─ Success ─────────────▶│ Save to     │──┤
+   │                        │ cache       │  │
+   │                        │ Return      │  │
+   └─ Failed (rate limit)  │ translation │  │
+      or error             └─────────────┘  │
+                              │              │
+                              ▼              │
+7. Fallback to             ┌─────────────┐  │
+   transliteration ────────▶│ Return      │──┘
+   (last resort)            │ phonetic    │
+                           └─────────────┘
+                              │
+                              ▼
+8. Slug generated: "contact_recording_form_abc123"
+                              │
+                              ▼
+9. Table created: contact_recording_form_abc123
+```
+
+**Database Schema:**
+```sql
+-- Translation Cache Table
+CREATE TABLE translation_cache (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  thai_text TEXT NOT NULL UNIQUE,
+  english_text TEXT NOT NULL,
+  source VARCHAR(50) DEFAULT 'api', -- 'dictionary', 'api', 'manual'
+  confidence DECIMAL(3,2), -- 0.00 to 1.00
+  used_count INTEGER DEFAULT 0,
+  last_used_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- API Usage Tracking Table
+CREATE TABLE translation_api_usage (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  date DATE NOT NULL UNIQUE,
+  request_count INTEGER DEFAULT 0,
+  success_count INTEGER DEFAULT 0,
+  error_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for fast lookup
+CREATE INDEX idx_translation_cache_thai ON translation_cache(thai_text);
+CREATE INDEX idx_api_usage_date ON translation_api_usage(date);
+```
+
+**Implementation Tasks:**
+
+**Phase 1: Translation Service**
+- [ ] Create `backend/services/TranslationService.js`
+  - `translate(thaiText)` - Main translation method
+  - `lookupDictionary(thaiText)` - Dictionary lookup
+  - `lookupCache(thaiText)` - Database cache lookup
+  - `callMyMemoryAPI(thaiText)` - API call with error handling
+  - `saveToCache(thai, english, source)` - Save translation
+  - `checkAPILimit()` - Check daily limit (1,000 requests)
+  - `incrementAPIUsage()` - Track API calls
+
+**Phase 2: Dictionary**
+- [ ] Create `backend/config/thai-english-dictionary.js`
+  - Common form terms (~200 words)
+  - Field type terms
+  - Business terms
+  - Action verbs
+  - Technical terms
+
+**Phase 3: Database**
+- [ ] Add migration: `20251002000004-create-translation-tables.js`
+- [ ] Create Translation model
+- [ ] Create APIUsage model
+- [ ] Add indexes
+
+**Phase 4: Integration**
+- [ ] Update `FormService.createForm()`
+  - Call TranslationService before slug generation
+  - Generate table name with translated slug
+- [ ] Update `FormService.updateForm()`
+  - Retranslate if form name changed
+  - Update table name (if no data exists)
+- [ ] Update `SubFormService.createSubForm()`
+  - Translate sub-form names
+  - Generate sub-form table names
+
+**Phase 5: Migration Tool**
+- [ ] Create `backend/scripts/migrate-slugs.js`
+  - Find all forms with transliterated slugs
+  - Translate form names to English
+  - Generate new table names
+  - Option to rename tables (if safe)
+  - Report on changes
+
+**Phase 6: Testing**
+- [ ] Unit test: Dictionary lookup
+- [ ] Unit test: Cache lookup and save
+- [ ] Unit test: MyMemory API call
+- [ ] Unit test: Rate limit checking
+- [ ] Integration test: Full translation flow
+- [ ] Integration test: Cache hit/miss scenarios
+- [ ] Integration test: API fallback behavior
+
+**Success Criteria:**
+- ✅ 90%+ translations from dictionary/cache (no API needed)
+- ✅ Meaningful English slugs for all new forms
+- ✅ API usage under 100 requests/day
+- ✅ Fallback to transliteration if API fails
+- ✅ Migration tool for existing forms
+- ✅ No breaking changes to existing data
+
+**API Rate Limit Management:**
+```
+Daily Limit: 1,000 requests
+Expected Usage with Cache: <100 requests/day
+
+Strategy:
+- Dictionary covers 60% of terms → 0 API calls
+- Cache covers 30% of terms → 0 API calls
+- Only 10% needs API → ~10-20 calls/day
+- Safety margin: 980 requests remaining
+```
+
+---
 
 ### v0.6.3 (2025-10-02) - Advanced Navigation & Edit Functionality
 
@@ -589,9 +958,9 @@ CREATE TABLE {sub_form_table_name} (
 
 ---
 
-**Application Status:** ✅ Production-ready v0.6.3 - Advanced Navigation, Edit Functionality & Breadcrumb System
+**Application Status:** ✅ Production-ready v0.6.4 - User Management UX & Future Feature Planning
 
-**License:** Internal use - Q-Collector Enterprise Form Builder v0.6.3
+**License:** Internal use - Q-Collector Enterprise Form Builder v0.6.4
 
 **Configuration Notes:**
 - Telegram Bot Token และ Group ID ตั้งค่าใน .env (ไม่เปิดเผยใน repository)
