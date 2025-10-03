@@ -2,7 +2,7 @@
 
 **Enterprise Form Builder & Data Collection System**
 
-## Version: 0.6.6 (2025-10-03)
+## Version: 0.7.1 (2025-10-03)
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection
@@ -36,6 +36,39 @@ npm run build && npm run lint
 
 ## Latest Release
 
+### v0.7.1 (2025-10-03) - Form Activation Fix & E2E Testing
+
+**Fixed:**
+- ✅ **Critical Bug**: Form activation hardcoded to false - Forms now active by default
+- ✅ **403 FORM_INACTIVE**: All new forms can accept submissions immediately
+- ✅ **Enhanced Logging**: Added validation error logging to submission/form routes
+- ✅ **E2E Testing**: Complete test suite for form creation and submission workflow
+
+**Investigation & Resolution:**
+- Created diagnostic scripts: check-form-ids.js, test-form-submission.js, check-last-form.js
+- Fixed FormService.js to respect `is_active` from formData (defaults to true)
+- Verified 100% UUID compliance for all form IDs
+- E2E test passes: Login → Create Form → Submit Data ✅
+
+**Technical:**
+- `backend/services/FormService.js` - Extract is_active from formData with default true
+- `backend/scripts/test-form-submission.js` - Comprehensive E2E workflow test
+- Enhanced error logging in form.routes.js and submission.routes.js
+- Database verification: Latest forms show Active: true
+
+---
+
+### v0.7.0 (2025-10-03) - Permission System & Field Settings
+
+**Fixed:**
+- ✅ Field settings persistence (showInTable, sendTelegram, telegramOrder, telegramPrefix)
+- ✅ Form submission permissions (super_admin, admin, moderator now have access)
+- ✅ Form.toJSON() recursively calls Field.toJSON() for camelCase consistency
+- ✅ Email service disabled to eliminate SMTP warnings
+- ✅ Queue processor duplicate handler warnings downgraded
+
+---
+
 ### v0.6.6 (2025-10-03) - API Integration & Beautiful Navigation
 
 **Fixed:**
@@ -43,11 +76,6 @@ npm run build && npm run lint
 - ✅ Navigation arrows restored - API-based navigation state management
 - ✅ Beautiful glass morphism navigation - Floating buttons with Framer Motion animations
 - ✅ Completed API migration - Submission list and navigation fully use API endpoints
-
-**Technical:**
-- Backend: SubmissionService includes SubmissionData associations with decryption
-- Frontend: Component-level state for navigation (React Hooks compliance)
-- UI: Glass buttons with glow, shimmer, and hover effects matching theme
 
 ---
 

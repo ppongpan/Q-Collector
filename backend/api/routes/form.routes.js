@@ -18,6 +18,14 @@ const router = express.Router();
 function validate(req, res, next) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    // Enhanced logging for debugging
+    logger.error('Validation failed:', {
+      url: req.originalUrl,
+      method: req.method,
+      params: req.params,
+      body: req.body,
+      errors: errors.array()
+    });
     throw new ApiError(400, 'Validation failed', 'VALIDATION_ERROR', errors.array());
   }
   next();

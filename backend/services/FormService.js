@@ -32,6 +32,7 @@ class FormService {
         settings = {},
         fields = [],
         subForms = [],
+        is_active = true, // Default to true (matches model default)
       } = formData;
 
       // Validate roles
@@ -48,7 +49,7 @@ class FormService {
           roles_allowed,
           settings,
           created_by: userId,
-          is_active: false, // Start as inactive
+          is_active, // Use value from formData, defaults to true
           version: 1,
         },
         { transaction }

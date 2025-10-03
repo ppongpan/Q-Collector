@@ -1,10 +1,10 @@
 # Q-Collector Development TODO
 
-## 🎯 Project Status: v0.7.0 - Bug Fixes & Permission Updates
+## 🎯 Project Status: v0.7.1 - Form Activation Fix & Database Integrity
 
-**Current Version**: 0.7.0-dev
+**Current Version**: 0.7.1
 **Release Date**: 2025-10-03
-**Status**: ✅ PRODUCTION READY - Permission System Updated
+**Status**: ✅ PRODUCTION READY - Form Activation Fixed
 
 **Phase 8 Progress**:
 - ✅ Phase 8.1: Translation Service (TranslationService.js) - Dictionary-based
@@ -25,7 +25,68 @@
 
 ---
 
-## ✅ COMPLETE: Bug Fixes & System Updates (2025-10-03)
+## ✅ COMPLETE: Form Activation Fix & E2E Testing (2025-10-03) - v0.7.1
+
+### Phase 8.11: Form Activation Bug Fix ✅ COMPLETE
+
+**Completion Date**: 2025-10-03
+**Status**: ✅ Critical bug fixed and verified
+
+#### Issue Fixed:
+
+**✅ Form Creation Activation Bug** - Fixed hardcoded `is_active: false`
+- **Problem**: All forms created via API were inactive by default, causing 403 FORM_INACTIVE errors on submission
+- **Root Cause**: `FormService.createForm()` hardcoded `is_active: false` on line 51, ignoring formData input
+- **Investigation**:
+  - Created diagnostic script `check-form-ids.js` - validated all form IDs are proper UUIDs (100%)
+  - Created E2E test script `test-form-submission.js` - reproduces full workflow
+  - Added enhanced error logging to routes (Lines 18-32 in submission.routes.js, form.routes.js)
+  - Discovered 403 errors instead of expected 400 validation errors
+- **File Modified**: `backend/services/FormService.js` (Lines 28-52)
+- **Solution**:
+  - Extract `is_active` from formData with default value `true`
+  - Use extracted value in Form.create() instead of hardcoded `false`
+- **Verification**:
+  - E2E test passed: ✅ Form created with `is_active: true`
+  - E2E test passed: ✅ Submission accepted (201 status)
+  - Database verified: Latest form shows `Active: true`
+- **Result**: All new forms now accept submissions immediately after creation
+
+#### Scripts Created:
+
+1. **check-form-ids.js** - Validates form ID integrity
+   - Checks all form IDs are valid UUIDs
+   - Reports invalid IDs if found
+   - Result: 100% valid UUIDs
+
+2. **test-form-submission.js** - E2E form workflow test
+   - Login → Create Form → Submit Data
+   - Verifies entire submission pipeline
+   - Result: ✅ All tests passed
+
+3. **check-last-form.js** - Quick form status check
+   - Shows last 3 created forms
+   - Displays ID, title, active status, creation date
+   - Used to verify fix effectiveness
+
+#### Files Changed:
+- `backend/services/FormService.js` - Fixed is_active handling (Lines 35, 52)
+- `backend/scripts/check-form-ids.js` - Created
+- `backend/scripts/test-form-submission.js` - Created
+- `backend/scripts/check-last-form.js` - Created
+- `backend/api/routes/submission.routes.js` - Enhanced logging (Lines 18-32)
+- `backend/api/routes/form.routes.js` - Enhanced logging (Lines 18-32)
+
+#### Benefits:
+- ✅ Forms active by default (can be overridden with `is_active: false`)
+- ✅ No more 403 FORM_INACTIVE errors on new forms
+- ✅ E2E test suite for form workflow
+- ✅ Enhanced debugging tools for future issues
+- ✅ Database validation scripts
+
+---
+
+## ✅ COMPLETE: Bug Fixes & System Updates (2025-10-03) - v0.7.0
 
 ### Phase 8.10: Field Settings Persistence & Permission Fixes ✅ COMPLETE
 
