@@ -17,6 +17,7 @@ import EnhancedFormSlider from './ui/enhanced-form-slider';
 import dataService from '../services/DataService.js';
 import submissionService from '../services/SubmissionService.js';
 import FileService from '../services/FileService.js';
+import apiClient from '../services/ApiClient';
 
 // Utilities
 import { formatNumberInput, parseNumberInput, isValidNumber } from '../utils/numberFormatter.js';
@@ -92,10 +93,15 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   const loadFormData = async () => {
     setLoading(true);
     try {
-      // Load form
-      const formData = dataService.getForm(formId);
+      // Load form from API
+      const response = await apiClient.getForm(formId);
+      const formData = response.data?.form || response.data;
       if (!formData) {
         console.error('Form not found:', formId);
+        toast.error('ไม่พบฟอร์มที่ต้องการ', {
+          title: 'เกิดข้อผิดพลาด',
+          duration: 5000
+        });
         return;
       }
       setForm(formData);

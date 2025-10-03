@@ -69,6 +69,10 @@ class FormService {
               show_condition: fields[i].show_condition || null,
               telegram_config: fields[i].telegram_config || null,
               validation_rules: fields[i].validation_rules || {},
+              show_in_table: fields[i].showInTable || false,
+              send_telegram: fields[i].sendTelegram || false,
+              telegram_order: fields[i].telegramOrder || 0,
+              telegram_prefix: fields[i].telegramPrefix || null,
             },
             { transaction }
           );
@@ -106,6 +110,10 @@ class FormService {
                   show_condition: subFormData.fields[j].show_condition || null,
                   telegram_config: subFormData.fields[j].telegram_config || null,
                   validation_rules: subFormData.fields[j].validation_rules || {},
+                  show_in_table: subFormData.fields[j].showInTable || false,
+                  send_telegram: subFormData.fields[j].sendTelegram || false,
+                  telegram_order: subFormData.fields[j].telegramOrder || 0,
+                  telegram_prefix: subFormData.fields[j].telegramPrefix || null,
                 },
                 { transaction }
               );
@@ -224,11 +232,23 @@ class FormService {
 
         // Create new fields
         for (let i = 0; i < updates.fields.length; i++) {
+          const fieldData = updates.fields[i];
           await Field.create(
             {
               form_id: formId,
-              ...updates.fields[i],
-              order: updates.fields[i].order !== undefined ? updates.fields[i].order : i,
+              type: fieldData.type,
+              title: fieldData.title,
+              placeholder: fieldData.placeholder,
+              required: fieldData.required || false,
+              order: fieldData.order !== undefined ? fieldData.order : i,
+              options: fieldData.options || {},
+              show_condition: fieldData.show_condition || null,
+              telegram_config: fieldData.telegram_config || null,
+              validation_rules: fieldData.validation_rules || {},
+              show_in_table: fieldData.showInTable || false,
+              send_telegram: fieldData.sendTelegram || false,
+              telegram_order: fieldData.telegramOrder || 0,
+              telegram_prefix: fieldData.telegramPrefix || null,
             },
             { transaction }
           );
@@ -260,12 +280,24 @@ class FormService {
           // Create sub-form fields
           if (subFormData.fields && subFormData.fields.length > 0) {
             for (let j = 0; j < subFormData.fields.length; j++) {
+              const fieldData = subFormData.fields[j];
               await Field.create(
                 {
                   form_id: formId,
                   sub_form_id: subForm.id,
-                  ...subFormData.fields[j],
-                  order: subFormData.fields[j].order !== undefined ? subFormData.fields[j].order : j,
+                  type: fieldData.type,
+                  title: fieldData.title,
+                  placeholder: fieldData.placeholder,
+                  required: fieldData.required || false,
+                  order: fieldData.order !== undefined ? fieldData.order : j,
+                  options: fieldData.options || {},
+                  show_condition: fieldData.show_condition || null,
+                  telegram_config: fieldData.telegram_config || null,
+                  validation_rules: fieldData.validation_rules || {},
+                  show_in_table: fieldData.showInTable || false,
+                  send_telegram: fieldData.sendTelegram || false,
+                  telegram_order: fieldData.telegramOrder || 0,
+                  telegram_prefix: fieldData.telegramPrefix || null,
                 },
                 { transaction }
               );

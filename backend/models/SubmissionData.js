@@ -171,9 +171,10 @@ module.exports = (sequelize, DataTypes) => {
    * @param {string} fieldId - Field ID
    * @param {any} value - Field value
    * @param {Object} field - Field model instance
+   * @param {Object} options - Sequelize options (e.g., transaction)
    * @returns {Promise<SubmissionData>}
    */
-  SubmissionData.createWithEncryption = async function(submissionId, fieldId, value, field) {
+  SubmissionData.createWithEncryption = async function(submissionId, fieldId, value, field, options = {}) {
     const shouldEncrypt = SubmissionData.isSensitiveField(field);
     const valueType = SubmissionData.getValueType(value);
 
@@ -184,7 +185,7 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     submissionData.setValue(value, shouldEncrypt);
-    await submissionData.save();
+    await submissionData.save(options);
 
     return submissionData;
   };

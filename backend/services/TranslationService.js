@@ -2,15 +2,15 @@
  * TranslationService - Thai to English Translation for Database Schema
  *
  * 3-Tier Translation System:
- * 1. Dictionary Lookup (instant, free) - ~200 common terms
+ * 1. Dictionary Lookup (instant, free) - ~250 common terms
  * 2. Database Cache (fast, free) - previously translated phrases
- * 3. MyMemory Translation API (accurate, rate limited 1000/day)
+ * 3. LibreTranslate API (self-hosted, unlimited) - accurate neural translation
  * 4. Fallback: Transliteration
  *
  * Provides translation functionality for converting Thai form names and field names
  * to English equivalents for use in PostgreSQL table and column names.
  *
- * @version 0.6.4
+ * @version 0.6.5
  * @since 2025-10-02
  */
 
@@ -18,11 +18,37 @@ const axios = require('axios');
 const logger = require('../utils/logger.util');
 
 /**
- * Common Thai→English Translation Dictionary
+ * Comprehensive Thai→English Translation Dictionary
+ * Merged from multiple sources for complete coverage
  * Used for translating common form and field terms
  */
 const TRANSLATION_DICTIONARY = {
-  // Form Names - Common Business Forms
+  // Form-related terms (merged)
+  'ฟอร์ม': 'form',
+  'แบบฟอร์ม': 'form',
+  'บันทึก': 'record',
+  'การบันทึก': 'recording',
+  'รายการ': 'list',
+  'ข้อมูล': 'information',
+  'รายละเอียด': 'detail',
+  'คำขอ': 'request',
+  'การร้องขอ': 'request',
+  'คำร้อง': 'request',
+  'ใบ': 'form',
+  'เอกสาร': 'document',
+  'แบบ': 'form',
+  'การสมัคร': 'registration',
+  'สมัคร': 'register',
+  'ลงทะเบียน': 'register',
+  'การลงทะเบียน': 'registration',
+  'ติดตาม': 'follow_up',
+  'การติดตาม': 'follow_up',
+  'รายการติดตาม': 'follow_up_list',
+  'สำรวจ': 'survey',
+  'แบบสำรวจ': 'survey',
+  'ประเมิน': 'evaluation',
+  'การประเมิน': 'evaluation',
+  'แบบประเมิน': 'evaluation_form',
   'ใบสมัครงาน': 'job_application',
   'ใบลา': 'leave_request',
   'ใบเบิก': 'requisition',
@@ -30,14 +56,12 @@ const TRANSLATION_DICTIONARY = {
   'ใบเสนอราคา': 'quotation',
   'ใบแจ้งหนี้': 'invoice',
   'ใบเสร็จรับเงิน': 'receipt',
-  'แบบฟอร์ม': 'form',
-  'แบบสอบถาม': 'survey',
-  'คำร้อง': 'petition',
+  'ใบเสร็จ': 'receipt',
   'รายงาน': 'report',
 
-  // Personal Information
-  'ชื่อ': 'first_name',
-  'นามสกุล': 'last_name',
+  // Personal Information (merged)
+  'ชื่อ': 'name',
+  'นามสกุล': 'surname',
   'ชื่อเต็ม': 'full_name',
   'ชื่อ-นามสกุล': 'full_name',
   'อายุ': 'age',
@@ -49,8 +73,9 @@ const TRANSLATION_DICTIONARY = {
   'สถานภาพ': 'marital_status',
   'หมายเลขบัตรประชาชน': 'id_card_number',
   'เลขบัตรประชาชน': 'id_card_number',
+  'อาชีพ': 'occupation',
 
-  // Contact Information
+  // Contact Information (merged)
   'ที่อยู่': 'address',
   'บ้านเลขที่': 'house_number',
   'หมู่': 'village_number',
@@ -64,7 +89,14 @@ const TRANSLATION_DICTIONARY = {
   'รหัสไปรษณีย์': 'postal_code',
   'โทรศัพท์': 'phone',
   'มือถือ': 'mobile',
+  'เบอร์': 'number',
+  'เบอร์โทร': 'phone',
+  'เบอร์โทรศัพท์': 'phone_number',
+  'หมายเลข': 'number',
+  'รหัส': 'code',
+  'เลขที่': 'number',
   'อีเมล': 'email',
+  'อีเมล์': 'email',
   'เว็บไซต์': 'website',
 
   // Date and Time
@@ -127,6 +159,118 @@ const TRANSLATION_DICTIONARY = {
   'ลองจิจูด': 'longitude',
   'โรงงาน': 'factory',
   'สาขา': 'branch',
+  'สำนักงาน': 'office',
+  'คลัง': 'warehouse',
+  'ไซต์': 'site',
+  'พื้นที่': 'area',
+  'เขต': 'zone',
+  'เมือง': 'city',
+  'ประเทศ': 'country',
+
+  // Business terms (merged)
+  'ลูกค้า': 'customer',
+  'ข้อมูลลูกค้า': 'customer_information',
+  'พนักงาน': 'employee',
+  'บุคลากร': 'personnel',
+  'ทีม': 'team',
+  'สินค้า': 'product',
+  'ผลิตภัณฑ์': 'product',
+  'บริการ': 'service',
+  'การบริการ': 'service',
+  'คำสั่งซื้อ': 'order',
+  'ใบสั่งซื้อ': 'purchase_order',
+  'ยอดเงิน': 'amount',
+  'หน่วย': 'unit',
+  'โครงการ': 'project',
+  'งาน': 'work',
+  'ภารกิจ': 'task',
+  'กิจกรรม': 'activity',
+  'การประชุม': 'meeting',
+  'นัดหมาย': 'appointment',
+  'สัญญา': 'contract',
+  'การชำระเงิน': 'payment',
+  'ชำระ': 'pay',
+
+  // Action verbs
+  'สร้าง': 'create',
+  'การสร้าง': 'creation',
+  'แก้ไข': 'edit',
+  'การแก้ไข': 'editing',
+  'ลบ': 'delete',
+  'การลบ': 'deletion',
+  'ส่ง': 'send',
+  'การส่ง': 'sending',
+  'บันทึก': 'save',
+  'การบันทึก': 'saving',
+  'ยืนยัน': 'confirm',
+  'การยืนยัน': 'confirmation',
+  'อนุมัติ': 'approve',
+  'การอนุมัติ': 'approval',
+  'ตรวจสอบ': 'check',
+  'การตรวจสอบ': 'checking',
+  'ค้นหา': 'search',
+  'การค้นหา': 'searching',
+  'แจ้ง': 'notify',
+  'การแจ้ง': 'notification',
+  'การรายงาน': 'reporting',
+  'ติดต่อ': 'contact',
+  'การติดต่อ': 'contact',
+  'เพิ่ม': 'add',
+  'อัพเดท': 'update',
+  'ปรับปรุง': 'update',
+
+  // Technical terms
+  'ระบบ': 'system',
+  'เทคนิค': 'technic',
+  'เทคนิคเซอร์วิส': 'technic_service',
+  'เทคโนโลยี': 'technology',
+  'คอมพิวเตอร์': 'computer',
+  'ซอฟต์แวร์': 'software',
+  'ฮาร์ดแวร์': 'hardware',
+  'เครือข่าย': 'network',
+  'ฐานข้อมูล': 'database',
+  'แอปพลิเคชัน': 'application',
+  'แอป': 'app',
+  'เว็บ': 'web',
+  'อินเทอร์เน็ต': 'internet',
+  'ออนไลน์': 'online',
+  'ออฟไลน์': 'offline',
+
+  // Departments
+  'งานขาย': 'sales',
+  'ขาย': 'sales',
+  'การตลาด': 'marketing',
+  'บัญชี': 'accounting',
+  'การเงิน': 'finance',
+  'ทรัพยากรบุคคล': 'human_resources',
+  'HR': 'hr',
+  'ผลิต': 'production',
+  'คลังสินค้า': 'warehouse',
+  'โลจิสติกส์': 'logistics',
+  'ซ่อมบำรุง': 'maintenance',
+  'ดูแลระบบ': 'admin',
+  'ฝ่ายบริการลูกค้า': 'customer_service',
+  'บริการลูกค้า': 'customer_service',
+  'ดูแลลูกค้า': 'customer_care',
+
+  // Status & state
+  'สถานะการทำงาน': 'work_status',
+  'ใช้งาน': 'active',
+  'ไม่ใช้งาน': 'inactive',
+  'รอดำเนินการ': 'pending',
+  'กำลังดำเนินการ': 'in_progress',
+  'เสร็จสิ้น': 'completed',
+  'สำเร็จ': 'success',
+  'ล้มเหลว': 'failed',
+  'ยกเลิก': 'cancelled',
+  'พร้อม': 'ready',
+  'ไม่พร้อม': 'not_ready',
+  'แก้ปัญหา': 'troubleshoot',
+  'ปัญหา': 'issue',
+  'เรื่องร้องเรียน': 'complaint',
+  'ร้องเรียน': 'complaint',
+  'ข้อเสนอแนะ': 'suggestion',
+  'คำติชม': 'feedback',
 
   // Common Words
   'ใหม่': 'new',
@@ -172,18 +316,18 @@ const THAI_TO_ROMAN = {
 
 class TranslationService {
   constructor() {
-    // MyMemory API endpoint
-    this.apiEndpoint = 'https://api.mymemory.translated.net/get';
+    // Optional Translation API endpoint (currently not used - using Dictionary)
+    this.apiEndpoint = process.env.TRANSLATION_API_URL || null;
+    this.apiKey = process.env.TRANSLATION_API_KEY || '';
 
-    // API rate limit (free tier: 1000 requests/day)
-    this.dailyLimit = 1000;
-
-    // In-memory API usage tracking (will move to DB later)
-    this.apiUsage = {
+    // Statistics tracking
+    this.stats = {
       date: new Date().toISOString().split('T')[0],
-      requestCount: 0,
-      successCount: 0,
-      errorCount: 0,
+      dictionaryHits: 0,
+      cacheHits: 0,
+      apiCalls: 0,
+      apiSuccess: 0,
+      apiErrors: 0,
     };
   }
 
@@ -235,6 +379,7 @@ class TranslationService {
       // Tier 1: Dictionary Lookup
       const dictionaryResult = this.lookupDictionary(trimmed, lowercase);
       if (dictionaryResult) {
+        this.stats.dictionaryHits++;
         logger.info(`Dictionary hit: "${trimmed}" → "${dictionaryResult}"`);
         return {
           thai: trimmed,
@@ -247,24 +392,21 @@ class TranslationService {
       // Tier 2: Database Cache (TODO: implement after models)
       // const cacheResult = await this.lookupCache(trimmed);
       // if (cacheResult) {
+      //   this.stats.cacheHits++;
       //   return cacheResult;
       // }
 
-      // Tier 3: MyMemory Translation API
-      if (useAPI) {
-        const apiResult = await this.callMyMemoryAPI(trimmed);
+      // Tier 3: External Translation API (Argos Translate)
+      if (useAPI && this.apiEndpoint) {
+        const apiResult = await this.callTranslationAPI(trimmed);
         if (apiResult) {
           const cleaned = this.normalizeEnglish(apiResult.english, lowercase);
-          logger.info(`API translation: "${trimmed}" → "${cleaned}"`);
-
-          // TODO: Save to cache
-          // await this.saveToCache(trimmed, cleaned, 'api', apiResult.confidence);
-
+          logger.info(`Argos API: "${trimmed}" → "${cleaned}"`);
           return {
             thai: trimmed,
             english: cleaned,
-            source: 'api',
-            confidence: apiResult.confidence,
+            source: 'argos-api',
+            confidence: 0.95,
           };
         }
       }
@@ -336,97 +478,72 @@ class TranslationService {
   }
 
   /**
-   * Tier 3: MyMemory Translation API
+   * Tier 3: Argos Translation API
    * @param {string} thaiText - Thai text to translate
-   * @returns {Promise<object|null>} API translation result or null
+   * @returns {Promise<object|null>} Translation result or null
    */
-  async callMyMemoryAPI(thaiText) {
+  async callTranslationAPI(thaiText) {
     try {
-      // Check API rate limit
-      if (!this.checkAPILimit()) {
-        logger.warn('API rate limit exceeded, skipping API call');
-        return null;
+      this.stats.apiCalls++;
+
+      const requestBody = {
+        q: thaiText,
+        source: 'th',
+        target: 'en',
+      };
+
+      // Add API key if configured
+      if (this.apiKey) {
+        requestBody.api_key = this.apiKey;
       }
 
-      // Call MyMemory API
-      const response = await axios.get(this.apiEndpoint, {
-        params: {
-          q: thaiText,
-          langpair: 'th|en',
+      // Call Translation API
+      const response = await axios.post(`${this.apiEndpoint}/translate`, requestBody, {
+        headers: {
+          'Content-Type': 'application/json',
         },
-        timeout: 5000, // 5 second timeout
+        timeout: 10000, // 10 second timeout
       });
 
-      this.incrementAPIUsage('success');
+      if (response.data && response.data.translatedText) {
+        this.stats.apiSuccess++;
+        const translatedText = response.data.translatedText;
 
-      if (response.data && response.data.responseStatus === 200) {
-        const translatedText = response.data.responseData.translatedText;
-        const match = response.data.responseData.match || 0.7;
+        logger.info(`Translation API success: "${thaiText}" → "${translatedText}"`);
 
         return {
           english: translatedText,
-          confidence: match,
         };
       }
 
-      logger.warn('API returned non-200 status:', response.data);
-      this.incrementAPIUsage('error');
+      logger.warn('Translation API returned unexpected response:', response.data);
+      this.stats.apiErrors++;
       return null;
 
     } catch (error) {
-      logger.error('MyMemory API error:', error.message);
-      this.incrementAPIUsage('error');
+      this.stats.apiErrors++;
+
+      if (error.code === 'ECONNREFUSED') {
+        logger.error('Translation API not available. Check: ' + this.apiEndpoint);
+      } else {
+        logger.error('Translation API error:', error.message);
+      }
+
       return null;
     }
   }
 
   /**
-   * Check API rate limit
-   * @returns {boolean} True if API call is allowed
+   * Get translation statistics
+   * @returns {object} Current stats
    */
-  checkAPILimit() {
-    const today = new Date().toISOString().split('T')[0];
-
-    // Reset counter if new day
-    if (this.apiUsage.date !== today) {
-      this.apiUsage = {
-        date: today,
-        requestCount: 0,
-        successCount: 0,
-        errorCount: 0,
-      };
-    }
-
-    return this.apiUsage.requestCount < this.dailyLimit;
-  }
-
-  /**
-   * Increment API usage counter
-   * @param {string} status - 'success' or 'error'
-   */
-  incrementAPIUsage(status = 'success') {
-    this.apiUsage.requestCount++;
-
-    if (status === 'success') {
-      this.apiUsage.successCount++;
-    } else {
-      this.apiUsage.errorCount++;
-    }
-
-    logger.info(`API usage: ${this.apiUsage.requestCount}/${this.dailyLimit} (${status})`);
-
-    // TODO: Save to database
-  }
-
-  /**
-   * Get current API usage statistics
-   * @returns {object} API usage stats
-   */
-  getAPIUsage() {
+  getStats() {
     return {
-      ...this.apiUsage,
-      remaining: this.dailyLimit - this.apiUsage.requestCount,
-      percentUsed: ((this.apiUsage.requestCount / this.dailyLimit) * 100).toFixed(2),
+      ...this.stats,
+      totalTranslations: this.stats.dictionaryHits + this.stats.cacheHits + this.stats.apiSuccess,
+      apiSuccessRate: this.stats.apiCalls > 0
+        ? Math.round((this.stats.apiSuccess / this.stats.apiCalls) * 100)
+        : 0,
     };
   }
 

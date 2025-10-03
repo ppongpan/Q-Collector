@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear LocalStorage</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .success { color: green; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Clear Old LocalStorage Forms</h1>
+    <button onclick="clearOldForms()">Clear Old Forms</button>
+    <button onclick="clearAll()">Clear All LocalStorage</button>
+    <div id="result"></div>
+
+    <script>
+        function clearOldForms() {
+            const result = document.getElementById('result');
+            const keys = Object.keys(localStorage);
+            let cleared = 0;
+
+            keys.forEach(key => {
+                // Remove form data that starts with 'form-' (LocalStorage forms)
+                if (key.startsWith('form-') || key === 'forms' || key === 'submissions') {
+                    localStorage.removeItem(key);
+                    cleared++;
+                }
+            });
+
+            result.innerHTML = `<p class="success">✅ Cleared ${cleared} old form items from LocalStorage</p>`;
+        }
+
+        function clearAll() {
+            localStorage.clear();
+            document.getElementById('result').innerHTML = '<p class="success">✅ All LocalStorage data cleared</p>';
+        }
+
+        // Show current localStorage content
+        window.onload = function() {
+            const keys = Object.keys(localStorage);
+            const formKeys = keys.filter(k => k.startsWith('form-') || k === 'forms' || k === 'submissions');
+            document.getElementById('result').innerHTML = `<p class="info">Found ${formKeys.length} old form items</p>`;
+        };
+    </script>
+</body>
+</html>

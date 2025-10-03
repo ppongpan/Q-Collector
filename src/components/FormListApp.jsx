@@ -7,7 +7,6 @@ import {
   faPlus, faEdit, faEye, faTrashAlt, faCopy,
   faFileAlt, faUsers, faCalendarAlt, faBuilding, faBell, faLink
 } from '@fortawesome/free-solid-svg-icons';
-import dataService from '../services/DataService.js';
 import apiClient from '../services/ApiClient';
 import { useEnhancedToast } from './ui/enhanced-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -303,7 +302,10 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
 
   const handleDuplicate = async (formId) => {
     try {
-      const originalForm = dataService.getForm(formId);
+      // Get form from API
+      const response = await apiClient.getForm(formId);
+      const originalForm = response.data?.form || response.data;
+
       if (!originalForm) {
         toast.error('ไม่พบฟอร์มที่ต้องการทำสำเนา', {
           title: "ไม่พบฟอร์ม",
@@ -312,25 +314,13 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
         return;
       }
 
-      // Create duplicate with new ID and title
-      const duplicateForm = {
-        ...originalForm,
-        title: `${originalForm.title} (สำเนา)`,
-        description: originalForm.description,
-        fields: [...originalForm.fields],
-        subForms: [...originalForm.subForms],
-        settings: { ...originalForm.settings }
-      };
-
-      // Remove ID so DataService creates a new one
-      delete duplicateForm.id;
-      delete duplicateForm.createdAt;
-      delete duplicateForm.updatedAt;
-
-      const newForm = dataService.createForm(duplicateForm);
+      // Use backend duplicate API endpoint
+      const duplicateResponse = await apiClient.duplicateForm(formId, {
+        title: `${originalForm.title} (สำเนา)`
+      });
 
       // Reload forms to show the duplicate
-      loadForms();
+      await loadForms();
 
       toast.success('ทำสำเนาฟอร์มเรียบร้อยแล้ว', {
         title: "ทำสำเนาสำเร็จ",
@@ -338,7 +328,7 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
       });
     } catch (error) {
       console.error('Duplicate error:', error);
-      toast.error('เกิดข้อผิดพลาดในการทำสำเนาฟอร์ม', {
+      toast.error(`เกิดข้อผิดพลาดในการทำสำเนาฟอร์ม: ${error.message}`, {
         title: "ทำสำเนาไม่สำเร็จ",
         duration: 5000
       });
@@ -346,52 +336,64 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
   };
 
   const handleDelete = async (formId) => {
-    const form = dataService.getForm(formId);
-    if (!form) {
-      toast.error('ไม่พบฟอร์มที่ต้องการลบ', {
-        title: "ไม่พบฟอร์ม",
-        duration: 5000
-      });
-      return;
-    }
+    try {
+      // Get form from API
+      const response = await apiClient.getForm(formId);
+      const form = response.data?.form || response.data;
 
-    const submissions = dataService.getSubmissionsByFormId(formId);
-    const submissionCount = submissions.length;
+      if (!form) {
+        toast.error('ไม่พบฟอร์มที่ต้องการลบ', {
+          title: "ไม่พบฟอร์ม",
+          duration: 5000
+        });
+        return;
+      }
 
-    let confirmMessage = `คุณแน่ใจหรือไม่ที่จะลบฟอร์ม "${form.title}"?`;
-    let warningMessage = "การลบจะไม่สามารถย้อนกลับได้";
+      // Get submission count from form data
+      const submissionCount = form.submission_count || 0;
 
-    if (submissionCount > 0) {
-      warningMessage += ` ฟอร์มนี้มีข้อมูล ${submissionCount} รายการ ข้อมูลทั้งหมดจะถูกลบด้วย`;
-    }
+      let confirmMessage = `คุณแน่ใจหรือไม่ที่จะลบฟอร์ม "${form.title}"?`;
+      let warningMessage = "การลบจะไม่สามารถย้อนกลับได้";
 
-    // Show confirmation toast with action buttons
-    toast.error(warningMessage, {
-      title: confirmMessage,
-      duration: 10000,
-      action: {
-        label: "ยืนยันการลบ",
-        onClick: async () => {
-          try {
-            dataService.deleteForm(formId);
+      if (submissionCount > 0) {
+        warningMessage += ` ฟอร์มนี้มีข้อมูล ${submissionCount} รายการ ข้อมูลทั้งหมดจะถูกลบด้วย`;
+      }
 
-            // Reload forms to reflect deletion
-            loadForms();
+      // Show confirmation toast with action buttons
+      toast.error(warningMessage, {
+        title: confirmMessage,
+        duration: 10000,
+        action: {
+          label: "ยืนยันการลบ",
+          onClick: async () => {
+            try {
+              // Delete via API
+              await apiClient.deleteForm(formId);
 
-            toast.success('ลบฟอร์มเรียบร้อยแล้ว', {
-              title: "ลบสำเร็จ",
-              duration: 3000
-            });
-          } catch (error) {
-            console.error('Delete error:', error);
-            toast.error('เกิดข้อผิดพลาดในการลบฟอร์ม', {
-              title: "ลบไม่สำเร็จ",
-              duration: 5000
-            });
+              // Reload forms to reflect deletion
+              await loadForms();
+
+              toast.success('ลบฟอร์มเรียบร้อยแล้ว', {
+                title: "ลบสำเร็จ",
+                duration: 3000
+              });
+            } catch (error) {
+              console.error('Delete error:', error);
+              toast.error(`เกิดข้อผิดพลาดในการลบฟอร์ม: ${error.message}`, {
+                title: "ลบไม่สำเร็จ",
+                duration: 5000
+              });
+            }
           }
         }
-      }
-    });
+      });
+    } catch (error) {
+      console.error('Delete preparation error:', error);
+      toast.error('เกิดข้อผิดพลาดในการเตรียมการลบฟอร์ม', {
+        title: "เกิดข้อผิดพลาด",
+        duration: 5000
+      });
+    }
   };
 
   return (
@@ -432,6 +434,7 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
                 }}
               >
                 <GlassCard
+                  data-testid="form-card"
                   className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out h-full flex flex-col cursor-pointer"
                   onClick={() => handleFormClick(form.id)}
                 >

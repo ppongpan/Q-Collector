@@ -100,6 +100,8 @@ class SubmissionService {
         { transaction }
       );
 
+      logger.info(`✅ Submission created successfully: ${submission.id}`);
+
       // Create submission data with encryption for sensitive fields
       for (const [fieldId, value] of Object.entries(fieldData)) {
         const field = fieldMap.get(fieldId);
@@ -426,19 +428,48 @@ class SubmissionService {
             as: 'submitter',
             attributes: ['id', 'username', 'email'],
           },
+          {
+            model: SubmissionData,
+            as: 'submissionData',
+            include: [
+              {
+                model: Field,
+                as: 'field',
+              },
+            ],
+          },
         ],
         order: [['submitted_at', 'DESC']],
         limit,
         offset,
       });
 
+      // Decrypt submission data for each submission
+      const submissions = await Promise.all(
+        rows.map(async (s) => {
+          const decryptedData = {};
+          for (const data of s.submissionData || []) {
+            decryptedData[data.field_id] = {
+              fieldId: data.field_id,
+              fieldTitle: data.field.title,
+              fieldType: data.field.type,
+              value: data.getDecryptedValue(),
+            };
+          }
+
+          return {
+            id: s.id,
+            formId: s.form_id,
+            status: s.status,
+            submittedBy: s.submitter,
+            submittedAt: s.submitted_at,
+            data: decryptedData,
+          };
+        })
+      );
+
       return {
-        submissions: rows.map((s) => ({
-          id: s.id,
-          status: s.status,
-          submittedBy: s.submitter,
-          submittedAt: s.submitted_at,
-        })),
+        submissions,
         pagination: {
           total: count,
           page,

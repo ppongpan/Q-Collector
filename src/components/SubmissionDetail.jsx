@@ -15,6 +15,7 @@ import { LocationMap } from './ui/location-map';
 // Data services
 import dataService from '../services/DataService.js';
 import FileService from '../services/FileService.js';
+import apiClient from '../services/ApiClient';
 
 // Auth context
 import { useAuth } from '../contexts/AuthContext';
@@ -296,17 +297,34 @@ export default function SubmissionDetail({
   const loadSubmissionData = async () => {
     setLoading(true);
     try {
-      // Load form
-      const formData = dataService.getForm(formId);
+      // Load form from API first, fallback to localStorage
+      let formData = null;
+      try {
+        const response = await apiClient.getForm(formId);
+        formData = response.data?.form || response.data;
+        console.log('✅ Form loaded from API:', formData?.title);
+      } catch (apiError) {
+        console.warn('Failed to load form from API, trying localStorage:', apiError);
+        formData = dataService.getForm(formId);
+      }
+
       if (!formData) {
         console.error('Form not found:', formId);
         return;
       }
       setForm(formData);
 
+      // Load submission from API first, fallback to localStorage
+      let submissionData = null;
+      try {
+        const response = await apiClient.getSubmission(submissionId);
+        submissionData = response.data?.submission || response.data;
+        console.log('✅ Submission loaded from API:', submissionData?.id);
+      } catch (apiError) {
+        console.warn('Failed to load submission from API, trying localStorage:', apiError);
+        submissionData = dataService.getSubmission(submissionId);
+      }
 
-      // Load submission
-      const submissionData = dataService.getSubmission(submissionId);
       if (!submissionData) {
         console.error('Submission not found:', submissionId);
         return;
@@ -1118,6 +1136,7 @@ export default function SubmissionDetail({
             {/* Edit button */}
             {onEdit && (
               <GlassButton
+                data-testid="edit-btn"
                 onClick={() => onEdit(submissionId)}
                 size="sm"
                 className="orange-neon-button flex items-center gap-2"
@@ -1137,34 +1156,64 @@ export default function SubmissionDetail({
           transition={{ duration: 0.6, delay: 0.1 }}
           className="max-w-3xl mx-auto mb-8 relative"
         >
-          {/* Previous Arrow - Outside on large screens, hidden on mobile */}
+          {/* Previous Arrow - Floating Glass Button (Desktop) */}
           {hasPrevious && onNavigatePrevious && (
-            <div
+            <motion.div
               onClick={onNavigatePrevious}
-              className="hidden lg:flex absolute -left-20 top-1/2 -translate-y-1/2 w-16 h-16 cursor-pointer group items-center justify-center"
+              className="hidden lg:flex absolute -left-24 top-1/2 -translate-y-1/2 w-20 h-20 cursor-pointer group items-center justify-center"
               title="คลิกเพื่อดูข้อมูลก่อนหน้า"
+              whileHover={{ scale: 1.1, x: -4 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <div className="w-12 h-12 rounded-full bg-orange-500/10 dark:bg-orange-500/20 hover:bg-orange-500/80 dark:hover:bg-orange-500/60 backdrop-blur-md border border-orange-500/40 dark:border-orange-500/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-[0_0_0_0_rgba(249,115,22,0)] group-hover:shadow-[0_0_20px_8px_rgba(249,115,22,0.4)]">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-600 dark:text-orange-400 group-hover:text-white dark:group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              {/* Glow Effect */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500/20 to-orange-600/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+              {/* Glass Button */}
+              <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-white/10 to-white/5 dark:from-white/20 dark:to-white/10 backdrop-blur-xl border border-white/20 dark:border-white/30 shadow-2xl flex items-center justify-center overflow-hidden group-hover:border-orange-400/60 transition-all duration-300">
+                {/* Inner Glow */}
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-400/0 to-orange-600/0 group-hover:from-orange-400/30 group-hover:to-orange-600/30 transition-all duration-500" />
+
+                {/* Icon */}
+                <svg xmlns="http://www.w3.org/2000/svg" className="relative h-7 w-7 text-gray-700 dark:text-gray-300 group-hover:text-orange-500 dark:group-hover:text-orange-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
                 </svg>
+
+                {/* Shimmer Effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
-          {/* Next Arrow - Outside on large screens, hidden on mobile */}
+          {/* Next Arrow - Floating Glass Button (Desktop) */}
           {hasNext && onNavigateNext && (
-            <div
+            <motion.div
               onClick={onNavigateNext}
-              className="hidden lg:flex absolute -right-20 top-1/2 -translate-y-1/2 w-16 h-16 cursor-pointer group items-center justify-center"
+              className="hidden lg:flex absolute -right-24 top-1/2 -translate-y-1/2 w-20 h-20 cursor-pointer group items-center justify-center"
               title="คลิกเพื่อดูข้อมูลถัดไป"
+              whileHover={{ scale: 1.1, x: 4 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <div className="w-12 h-12 rounded-full bg-orange-500/10 dark:bg-orange-500/20 hover:bg-orange-500/80 dark:hover:bg-orange-500/60 backdrop-blur-md border border-orange-500/40 dark:border-orange-500/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-[0_0_0_0_rgba(249,115,22,0)] group-hover:shadow-[0_0_20px_8px_rgba(249,115,22,0.4)]">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-600 dark:text-orange-400 group-hover:text-white dark:group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              {/* Glow Effect */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-l from-orange-500/20 to-orange-600/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+              {/* Glass Button */}
+              <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-white/10 to-white/5 dark:from-white/20 dark:to-white/10 backdrop-blur-xl border border-white/20 dark:border-white/30 shadow-2xl flex items-center justify-center overflow-hidden group-hover:border-orange-400/60 transition-all duration-300">
+                {/* Inner Glow */}
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-400/0 to-orange-600/0 group-hover:from-orange-400/30 group-hover:to-orange-600/30 transition-all duration-500" />
+
+                {/* Icon */}
+                <svg xmlns="http://www.w3.org/2000/svg" className="relative h-7 w-7 text-gray-700 dark:text-gray-300 group-hover:text-orange-500 dark:group-hover:text-orange-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
                 </svg>
+
+                {/* Shimmer Effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Previous Click Area - Arrows on narrow screens */}
@@ -1208,7 +1257,9 @@ export default function SubmissionDetail({
             <div className="p-4">
               <div className="space-y-2 sm:space-y-3">
                 {(form.fields || []).map(field => {
-                  const value = submission.data[field.id];
+                  // Extract value from API response structure: {fieldId, fieldTitle, fieldType, value}
+                  const fieldData = submission.data[field.id];
+                  const value = fieldData?.value !== undefined ? fieldData.value : fieldData;
                   return renderFieldValue(field, value);
                 })}
               </div>

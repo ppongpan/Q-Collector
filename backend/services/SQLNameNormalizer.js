@@ -57,6 +57,7 @@ class SQLNameNormalizer {
 
   /**
    * Normalize a name to valid PostgreSQL identifier
+   * 🔄 ASYNC: Now uses LibreTranslate API for accurate translation
    *
    * @param {string} name - Original name (Thai or English)
    * @param {Object} options - Normalization options
@@ -64,9 +65,9 @@ class SQLNameNormalizer {
    * @param {string} options.prefix - Optional prefix to add
    * @param {string} options.suffix - Optional suffix to add
    * @param {boolean} options.avoidReserved - Avoid reserved words (default: true)
-   * @returns {string} Normalized PostgreSQL identifier
+   * @returns {Promise<string>} Normalized PostgreSQL identifier
    */
-  static normalize(name, options = {}) {
+  static async normalize(name, options = {}) {
     const {
       type = 'column',
       prefix = '',
@@ -80,12 +81,13 @@ class SQLNameNormalizer {
 
     let normalized = name.trim();
 
-    // Step 1: Translate Thai to English
+    // Step 1: Translate Thai to English (NOW ASYNC with LibreTranslate)
     if (TranslationService.containsThai(normalized)) {
-      normalized = TranslationService.translate(normalized, {
-        preferDictionary: true,
+      const translation = await TranslationService.translate(normalized, {
+        useAPI: true,
         lowercase: true
       });
+      normalized = translation.english;
     } else {
       // Already English, normalize it
       normalized = TranslationService.normalizeEnglish(normalized, true);
@@ -242,16 +244,17 @@ class SQLNameNormalizer {
 
   /**
    * Generate table name from form name
+   * 🔄 ASYNC: Now uses LibreTranslate API
    *
    * @param {string} formName - Form name (Thai or English)
    * @param {Object} options - Options
    * @param {string} options.prefix - Optional prefix (e.g., 'form_')
-   * @returns {string} Valid PostgreSQL table name
+   * @returns {Promise<string>} Valid PostgreSQL table name
    */
-  static generateTableName(formName, options = {}) {
+  static async generateTableName(formName, options = {}) {
     const { prefix = '' } = options;
 
-    return this.normalize(formName, {
+    return await this.normalize(formName, {
       type: 'table',
       prefix,
       avoidReserved: true
@@ -260,17 +263,18 @@ class SQLNameNormalizer {
 
   /**
    * Generate column name from field label
+   * 🔄 ASYNC: Now uses LibreTranslate API
    *
    * @param {string} fieldLabel - Field label (Thai or English)
    * @param {Object} options - Options
    * @param {string} options.prefix - Optional prefix
    * @param {string} options.suffix - Optional suffix
-   * @returns {string} Valid PostgreSQL column name
+   * @returns {Promise<string>} Valid PostgreSQL column name
    */
-  static generateColumnName(fieldLabel, options = {}) {
+  static async generateColumnName(fieldLabel, options = {}) {
     const { prefix = '', suffix = '' } = options;
 
-    return this.normalize(fieldLabel, {
+    return await this.normalize(fieldLabel, {
       type: 'column',
       prefix,
       suffix,
@@ -311,12 +315,13 @@ class SQLNameNormalizer {
 
   /**
    * Batch normalize names with uniqueness guarantee
+   * 🔄 ASYNC: Now uses LibreTranslate API
    *
    * @param {Array<string>} names - Array of names to normalize
    * @param {Object} options - Normalization options
-   * @returns {Array<{original: string, normalized: string}>} Array of mappings
+   * @returns {Promise<Array<{original: string, normalized: string}>>} Array of mappings
    */
-  static batchNormalize(names, options = {}) {
+  static async batchNormalize(names, options = {}) {
     if (!Array.isArray(names)) {
       return [];
     }
@@ -326,7 +331,7 @@ class SQLNameNormalizer {
 
     for (const name of names) {
       try {
-        const normalized = this.normalize(name, options);
+        const normalized = await this.normalize(name, options);
         const unique = this.ensureUnique(normalized, existingNames);
 
         existingNames.add(unique);

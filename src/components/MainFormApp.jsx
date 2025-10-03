@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
 // import { GlassInput } from './ui/glass-input'; // Unused
-import { EnhancedToastProvider, useEnhancedToast } from './ui/enhanced-toast';
+import { useEnhancedToast } from './ui/enhanced-toast';
 import { UserMenu } from './ui/user-menu';
 import { ResponsiveBreadcrumb } from './ui/breadcrumb';
 import { BreadcrumbProvider, useBreadcrumb } from '../contexts/BreadcrumbContext';
@@ -27,6 +27,7 @@ import {
 
 // Data services
 import dataService from '../services/DataService.js';
+import apiClient from '../services/ApiClient';
 import { useAuth } from '../contexts/AuthContext';
 
 
@@ -42,11 +43,43 @@ function MainFormAppContent() {
   const [currentEditSubFormId, setCurrentEditSubFormId] = useState(null);
   const [currentFormTitle, setCurrentFormTitle] = useState('');
   const [currentSubFormTitle, setCurrentSubFormTitle] = useState('');
+  const [editFormData, setEditFormData] = useState(null);
+  const [loadingEditForm, setLoadingEditForm] = useState(false);
   const formBuilderSaveHandlerRef = useRef(null);
   const formViewSaveHandlerRef = useRef(null);
   const toast = useEnhancedToast();
   const { user } = useAuth();
   const { generateBreadcrumbs, breadcrumbs } = useBreadcrumb();
+
+  // Navigation state for submission detail
+  const [allSubmissions, setAllSubmissions] = useState([]);
+  const [navCurrentIndex, setNavCurrentIndex] = useState(-1);
+  const [navHasPrevious, setNavHasPrevious] = useState(false);
+  const [navHasNext, setNavHasNext] = useState(false);
+
+  // Load form data for editing
+  useEffect(() => {
+    async function loadFormForEdit() {
+      if (isEditing && currentFormId && currentPage === 'form-builder') {
+        setLoadingEditForm(true);
+        try {
+          const response = await apiClient.getForm(currentFormId);
+          const formData = response.data?.form || response.data;
+          console.log('📝 Form loaded for editing:', { formId: currentFormId, title: formData?.title });
+          setEditFormData(formData);
+        } catch (error) {
+          console.warn('Failed to load form from API, trying localStorage:', error);
+          const localForm = dataService.getForm(currentFormId);
+          setEditFormData(localForm);
+        } finally {
+          setLoadingEditForm(false);
+        }
+      } else if (!isEditing) {
+        setEditFormData(null);
+      }
+    }
+    loadFormForEdit();
+  }, [isEditing, currentFormId, currentPage]);
 
   // Update breadcrumbs when navigation changes
   useEffect(() => {
@@ -109,7 +142,7 @@ function MainFormAppContent() {
 
 
 
-  const handleNavigate = (page, formId = null, editing = false, submissionId = null, subFormId = null, subSubmissionId = null) => {
+  const handleNavigate = async (page, formId = null, editing = false, submissionId = null, subFormId = null, subSubmissionId = null) => {
     setCurrentPage(page);
     setCurrentFormId(formId);
     setCurrentSubmissionId(submissionId);
@@ -119,16 +152,40 @@ function MainFormAppContent() {
 
     // Update form titles when navigating
     if (formId) {
-      const form = dataService.getForm(formId);
-      if (form) {
-        setCurrentFormTitle(form.title);
-        if (subFormId && form.subForms) {
-          const subForm = form.subForms.find(sf => sf.id === subFormId);
-          if (subForm) {
-            setCurrentSubFormTitle(subForm.title);
+      try {
+        // Try API first
+        const response = await apiClient.getForm(formId);
+        const form = response.data?.form || response.data;
+        console.log('📝 Form loaded for breadcrumb:', { formId, title: form?.title, name: form?.name });
+        if (form) {
+          const title = form.title || form.name || '';
+          console.log('✅ Setting currentFormTitle:', title);
+          setCurrentFormTitle(title);
+          if (subFormId && form.subForms) {
+            const subForm = form.subForms.find(sf => sf.id === subFormId);
+            if (subForm) {
+              setCurrentSubFormTitle(subForm.title);
+            }
+          }
+        }
+      } catch (error) {
+        // Fallback to localStorage
+        console.warn('Failed to load form from API, trying localStorage:', error);
+        const form = dataService.getForm(formId);
+        if (form) {
+          setCurrentFormTitle(form.title);
+          if (subFormId && form.subForms) {
+            const subForm = form.subForms.find(sf => sf.id === subFormId);
+            if (subForm) {
+              setCurrentSubFormTitle(subForm.title);
+            }
           }
         }
       }
+    } else {
+      // Clear form title when no formId
+      setCurrentFormTitle('');
+      setCurrentSubFormTitle('');
     }
   };
 
@@ -252,6 +309,7 @@ function MainFormAppContent() {
               {/* New Form button - only for Super Admin, Admin, Moderator */}
               {currentPage === 'form-list' && canCreateOrEditForms() && (
                 <div
+                  data-testid="create-form-btn"
                   onClick={handleNewForm}
                   title="สร้างฟอร์มใหม่"
                   className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
@@ -268,24 +326,77 @@ function MainFormAppContent() {
               )}
 
               {currentPage === 'form-builder' && (
-                <div
+                <motion.div
+                  data-testid="save-form-btn"
                   onClick={() => {
                     if (formBuilderSaveHandlerRef.current) {
                       formBuilderSaveHandlerRef.current();
                     }
                   }}
                   title="บันทึกฟอร์ม"
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                  className="relative flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
-                    border: 'none'
+                    border: 'none',
+                    outline: 'none'
+                  }}
+                  animate={{
+                    scale: [1, 1.15, 1],
+                    opacity: [0.9, 1, 0.9]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
                   }}
                 >
-                  <FontAwesomeIcon
-                    icon={faSave}
-                    className="text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all duration-300"
+                  {/* Pulsing glow background */}
+                  <motion.div
+                    className="absolute inset-0 rounded-full"
+                    animate={{
+                      scale: [1, 1.4, 1],
+                      opacity: [0.6, 0.2, 0.6]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    style={{
+                      background: 'radial-gradient(circle, rgba(255, 100, 0, 0.4) 0%, rgba(249, 115, 22, 0.2) 50%, transparent 70%)',
+                      filter: 'blur(8px)'
+                    }}
                   />
-                </div>
+
+                  {/* Icon with orange color and rotation on hover */}
+                  <motion.div
+                    className="relative z-10"
+                    initial={{ rotate: 0 }}
+                    whileHover={{
+                      rotate: 360,
+                      scale: 1.1
+                    }}
+                    animate={{ rotate: 0 }}
+                    transition={{
+                      rotate: {
+                        duration: 0.5,
+                        ease: "linear"
+                      },
+                      scale: {
+                        duration: 0.2,
+                        ease: "easeInOut"
+                      }
+                    }}
+                  >
+                    <FontAwesomeIcon
+                      icon={faSave}
+                      className="text-2xl text-[#ff6400] group-hover:text-[#ff8533] transition-colors duration-300"
+                      style={{
+                        filter: 'drop-shadow(0 0 8px rgba(255, 100, 0, 0.6))'
+                      }}
+                    />
+                  </motion.div>
+                </motion.div>
               )}
 
               {currentPage === 'form-view' && (
@@ -503,11 +614,14 @@ function MainFormAppContent() {
   );
 
   const renderFormBuilder = () => {
-    // Load the actual form from DataService for editing
-    let form = null;
-    if (isEditing && currentFormId) {
-      const dataService = require('../services/DataService.js').default;
-      form = dataService.getForm(currentFormId);
+    if (isEditing && loadingEditForm) {
+      return (
+        <main className="container-responsive py-8">
+          <div className="text-center py-16">
+            <p className="text-muted-foreground">กำลังโหลดฟอร์ม...</p>
+          </div>
+        </main>
+      );
     }
 
     return (
@@ -518,7 +632,7 @@ function MainFormAppContent() {
           transition={{ duration: 0.6 }}
         >
           <EnhancedFormBuilder
-            initialForm={form}
+            initialForm={editFormData}
             onSave={(savedForm) => {
               console.log('Form saved successfully:', savedForm);
               // Toast notification is already handled in EnhancedFormBuilder.jsx, no need to duplicate
@@ -584,23 +698,39 @@ function MainFormAppContent() {
     </main>
   );
 
-  const renderSubmissionDetail = () => {
-    // Get all submissions for this form to determine navigation
-    const allSubmissions = dataService.getSubmissionsByFormId(currentFormId);
-    const currentIndex = allSubmissions.findIndex(sub => sub.id === currentSubmissionId);
-    const hasPrevious = currentIndex > 0;
-    const hasNext = currentIndex < allSubmissions.length - 1;
+  // Load submissions for navigation
+  useEffect(() => {
+    const loadSubmissions = async () => {
+      if (currentPage === 'submission-detail' && currentFormId) {
+        try {
+          const response = await apiClient.listSubmissions(currentFormId);
+          const submissions = response.data?.submissions || response.data || [];
+          setAllSubmissions(submissions);
 
+          const index = submissions.findIndex(sub => sub.id === currentSubmissionId);
+          setNavCurrentIndex(index);
+          setNavHasPrevious(index > 0);
+          setNavHasNext(index < submissions.length - 1);
+        } catch (error) {
+          console.error('Failed to load submissions for navigation:', error);
+        }
+      }
+    };
+
+    loadSubmissions();
+  }, [currentPage, currentFormId, currentSubmissionId]);
+
+  const renderSubmissionDetail = () => {
     const handleNavigatePrevious = () => {
-      if (hasPrevious) {
-        const previousSubmission = allSubmissions[currentIndex - 1];
+      if (navHasPrevious && navCurrentIndex > 0) {
+        const previousSubmission = allSubmissions[navCurrentIndex - 1];
         handleNavigate('submission-detail', currentFormId, false, previousSubmission.id);
       }
     };
 
     const handleNavigateNext = () => {
-      if (hasNext) {
-        const nextSubmission = allSubmissions[currentIndex + 1];
+      if (navHasNext && navCurrentIndex < allSubmissions.length - 1) {
+        const nextSubmission = allSubmissions[navCurrentIndex + 1];
         handleNavigate('submission-detail', currentFormId, false, nextSubmission.id);
       }
     };
@@ -627,8 +757,8 @@ function MainFormAppContent() {
         }}
         onNavigatePrevious={handleNavigatePrevious}
         onNavigateNext={handleNavigateNext}
-        hasPrevious={hasPrevious}
-        hasNext={hasNext}
+        hasPrevious={navHasPrevious}
+        hasNext={navHasNext}
       />
     );
   };
@@ -685,8 +815,8 @@ function MainFormAppContent() {
         onBack={() => handleNavigate('submission-detail', currentFormId, false, currentSubmissionId)}
         onNavigatePrevious={handleNavigatePrevious}
         onNavigateNext={handleNavigateNext}
-        hasPrevious={hasPrevious}
-        hasNext={hasNext}
+        hasPrevious={navHasPrevious}
+        hasNext={navHasNext}
       />
     );
   };
@@ -813,13 +943,12 @@ function MainFormAppContent() {
   );
 }
 
-// Main App Wrapper with Toast Provider and Breadcrumb Provider
+// Main App Wrapper with Breadcrumb Provider
+// Note: EnhancedToastProvider is already provided at App.js level
 export default function MainFormApp() {
   return (
-    <EnhancedToastProvider>
-      <BreadcrumbProvider>
-        <MainFormAppContent />
-      </BreadcrumbProvider>
-    </EnhancedToastProvider>
+    <BreadcrumbProvider>
+      <MainFormAppContent />
+    </BreadcrumbProvider>
   );
 }

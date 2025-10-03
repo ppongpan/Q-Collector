@@ -1429,13 +1429,6 @@ if (typeof window !== 'undefined') {
     }, { timeout: 1000 });
   }
 
-  // Preload haptic feedback capability detection
-  if ('vibrate' in navigator) {
-    // Test haptic capability
-    try {
-      navigator.vibrate(0);
-    } catch (e) {
-      console.log('Haptic feedback not available');
-    }
-  }
+  // Note: Haptic feedback detection removed to prevent Chrome intervention warning
+  // The vibration API is checked inline during user interactions (drag events)
 }

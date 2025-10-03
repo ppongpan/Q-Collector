@@ -17,6 +17,7 @@ const queueRoutes = require('./queue.routes');
 const analyticsRoutes = require('./analytics.routes');
 const emailRoutes = require('./email.routes');
 const telegramRoutes = require('./telegram.routes');
+const telegramSettingsRoutes = require('./telegram-settings.routes');
 
 const router = express.Router();
 
@@ -55,6 +56,7 @@ router.use('/queue', queueRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/email', emailRoutes);
 router.use('/telegram', telegramRoutes);
+router.use('/telegram-settings', telegramSettingsRoutes);
 
 /**
  * 404 handler for API routes

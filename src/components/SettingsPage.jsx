@@ -19,6 +19,7 @@ import ThemeSelector from './settings/ThemeSelector';
 import TwoFactorStatus from './settings/TwoFactorStatus';
 import TrustedDevices from './settings/TrustedDevices';
 import TrustedDeviceDuration from './settings/TrustedDeviceDuration';
+import TelegramSettings from './settings/TelegramSettings';
 import apiClient from '../services/ApiClient';
 import { USER_ROLES } from '../config/roles.config';
 import {
@@ -189,6 +190,18 @@ function SettingsPage({ onNavigate }) {
       >
         <TrustedDeviceDuration />
       </motion.div>
+
+      {/* Telegram Settings - Super Admin Only */}
+      {isSuperAdmin && (
+        <motion.div
+          variants={componentVariants.glassCard}
+          initial="initial"
+          animate="animate"
+          transition={{ delay: 0.5 }}
+        >
+          <TelegramSettings />
+        </motion.div>
+      )}
     </motion.div>
   );
 
@@ -232,39 +245,63 @@ function SettingsPage({ onNavigate }) {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 lg:gap-4">
-          {fonts.map((font, index) => (
-            <motion.button
-              key={font.id}
-              onClick={() => handleFontChange(font.id)}
-              className={`btn-glass flex-1 px-4 py-3 rounded-lg transition-all duration-200 text-center border-2 relative ${
-                selectedFont.id === font.id
-                  ? 'bg-primary/10 border-primary text-primary'
-                  : 'bg-background/60 border-border/40 text-foreground hover:bg-background/80 hover:border-border/60'
-              }`}
-              variants={componentVariants.glassButton}
-              whileHover={shouldReduceMotion ? {} : "hover"}
-              whileTap={shouldReduceMotion ? {} : "tap"}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                scale: isChanging ? 1.02 : 1,
-                transition: {
-                  delay: index * 0.1 + 0.2,
-                  duration: ANIMATION_CONFIG.timing.medium / 1000,
-                  ease: ANIMATION_CONFIG.easing.glass
-                }
-              }}
-              disabled={isChanging}
-            >
-              <div
-                className="font-medium"
-                style={{ fontFamily: selectedFont.id === font.id ? font.family : 'inherit' }}
+          {fonts.map((font, index) => {
+            const isActive = selectedFont.id === font.id;
+            return (
+              <motion.div
+                key={font.id}
+                className="flex-1 relative"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    delay: index * 0.1 + 0.2,
+                    duration: ANIMATION_CONFIG.timing.medium / 1000,
+                    ease: ANIMATION_CONFIG.easing.glass
+                  }
+                }}
               >
-                {font.thaiName} - {font.name}
-              </div>
-            </motion.button>
-          ))}
+                <button
+                  onClick={() => handleFontChange(font.id)}
+                  className={`btn-glass glass-interactive blur-edge w-full px-6 py-4 text-base min-h-12
+                    inline-flex items-center justify-center whitespace-nowrap font-medium
+                    rounded-3xl transition-all duration-300 ease-out
+                    focus-glass disabled:opacity-50 disabled:pointer-events-none
+                    relative overflow-visible will-change-transform
+                    ${isActive
+                      ? 'bg-primary/20 border-2 border-primary shadow-lg shadow-primary/30'
+                      : 'hover:scale-[1.02] hover:shadow-xl'
+                    }`}
+                  disabled={isChanging}
+                >
+                  {/* Active Indicator Check Icon */}
+                  {isActive && (
+                    <motion.div
+                      className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center shadow-lg"
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
+                      <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
+                    </motion.div>
+                  )}
+
+                  <div className="text-center w-full">
+                    <div
+                      className={`font-medium mb-1 ${isActive ? 'text-primary' : 'text-foreground'}`}
+                      style={{ fontFamily: font.family }}
+                    >
+                      {font.thaiName}
+                    </div>
+                    <div className={`text-sm ${isActive ? 'text-primary/80' : 'text-muted-foreground'}`}>
+                      {font.name}
+                    </div>
+                  </div>
+                </button>
+              </motion.div>
+            );
+          })}
         </div>
       </motion.div>
 

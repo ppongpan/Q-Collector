@@ -12,15 +12,12 @@ export const ThemeToggle = ({ className = "", showLabel = true }) => {
     <div className={`flex items-center gap-2 ${className}`}>
       <button
         onClick={toggleDarkMode}
-        className="theme-toggle-button group relative flex items-center justify-center w-10 h-10 rounded-lg"
+        className="theme-toggle-button group relative flex items-center justify-center w-10 h-10"
         title={isDarkMode ? 'สลับไปโหมดสว่าง' : 'สลับไปโหมดมืด'}
         aria-label={isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'}
       >
-        {/* Background glow effect on hover */}
-        <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-300 bg-primary"></div>
-
         {/* Icon container */}
-        <div className="relative z-10 flex items-center justify-center">
+        <div className="relative flex items-center justify-center">
           {isDarkMode ? (
             // Sun icon for light mode switch
             <svg
@@ -55,11 +52,6 @@ export const ThemeToggle = ({ className = "", showLabel = true }) => {
             </svg>
           )}
         </div>
-
-        {/* Subtle indicator dot */}
-        <div className={`absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-          isDarkMode ? 'bg-orange-400' : 'bg-blue-400'
-        }`}></div>
       </button>
 
       {showLabel && (

@@ -57,13 +57,14 @@ const DEFAULT_CONSTRAINTS = {
   primary_key: 'SERIAL PRIMARY KEY',
   created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
   updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
-  form_id: 'INTEGER NOT NULL',
-  user_id: 'INTEGER'
+  form_id: 'UUID NOT NULL',  // Changed from INTEGER to UUID
+  user_id: 'UUID'              // Changed from INTEGER to UUID
 };
 
 class SchemaGenerator {
   /**
    * Generate PostgreSQL CREATE TABLE statement from form definition
+   * 🔄 ASYNC: Now uses LibreTranslate API for accurate translation
    *
    * @param {Object} formDefinition - Form definition object
    * @param {string} formDefinition.id - Form ID
@@ -74,9 +75,9 @@ class SchemaGenerator {
    * @param {string} options.tablePrefix - Table name prefix (default: 'form_')
    * @param {boolean} options.includeMetadata - Include metadata columns (default: true)
    * @param {boolean} options.includeIndexes - Include CREATE INDEX statements (default: true)
-   * @returns {Object} Schema generation result
+   * @returns {Promise<Object>} Schema generation result
    */
-  static generateSchema(formDefinition, options = {}) {
+  static async generateSchema(formDefinition, options = {}) {
     const {
       tablePrefix = 'form_',
       includeMetadata = true,
@@ -99,17 +100,17 @@ class SchemaGenerator {
       }
     };
 
-    // Generate main table
-    result.mainTable = this.generateMainTable(formDefinition, {
+    // Generate main table (NOW ASYNC)
+    result.mainTable = await this.generateMainTable(formDefinition, {
       tablePrefix,
       includeMetadata,
       includeIndexes
     });
 
-    // Generate sub-form tables
+    // Generate sub-form tables (NOW ASYNC)
     if (formDefinition.subForms && formDefinition.subForms.length > 0) {
       for (const subForm of formDefinition.subForms) {
-        const subTable = this.generateSubFormTable(
+        const subTable = await this.generateSubFormTable(
           subForm,
           result.mainTable.tableName,
           {
@@ -142,20 +143,21 @@ class SchemaGenerator {
 
   /**
    * Generate main table schema
+   * 🔄 ASYNC: Now uses LibreTranslate API
    *
    * @param {Object} formDefinition - Form definition
    * @param {Object} options - Generation options
-   * @returns {Object} Main table schema
+   * @returns {Promise<Object>} Main table schema
    */
-  static generateMainTable(formDefinition, options = {}) {
+  static async generateMainTable(formDefinition, options = {}) {
     const {
       tablePrefix = 'form_',
       includeMetadata = true,
       includeIndexes = true
     } = options;
 
-    // Generate table name
-    const tableName = SQLNameNormalizer.generateTableName(
+    // Generate table name (NOW ASYNC)
+    const tableName = await SQLNameNormalizer.generateTableName(
       formDefinition.name,
       { prefix: tablePrefix }
     );
@@ -190,10 +192,10 @@ class SchemaGenerator {
       existingNames.add('user_id');
     }
 
-    // Form fields
+    // Form fields (NOW ASYNC)
     if (formDefinition.fields && formDefinition.fields.length > 0) {
       for (const field of formDefinition.fields) {
-        const column = this.generateColumnFromField(field, existingNames);
+        const column = await this.generateColumnFromField(field, existingNames);
         if (column) {
           columns.push(column);
           existingNames.add(column.name);
@@ -248,15 +250,15 @@ class SchemaGenerator {
    * @param {Object} options - Generation options
    * @returns {Object} Sub-form table schema
    */
-  static generateSubFormTable(subForm, mainTableName, options = {}) {
+  static async generateSubFormTable(subForm, mainTableName, options = {}) {
     const {
       tablePrefix = 'form_',
       includeMetadata = true,
       includeIndexes = true
     } = options;
 
-    // Generate table name
-    const tableName = SQLNameNormalizer.generateTableName(
+    // Generate table name (NOW ASYNC)
+    const tableName = await SQLNameNormalizer.generateTableName(
       subForm.name,
       { prefix: tablePrefix }
     );
@@ -289,10 +291,10 @@ class SchemaGenerator {
     });
     existingNames.add(foreignKeyColumn);
 
-    // Sub-form fields
+    // Sub-form fields (NOW ASYNC)
     if (subForm.fields && subForm.fields.length > 0) {
       for (const field of subForm.fields) {
-        const column = this.generateColumnFromField(field, existingNames);
+        const column = await this.generateColumnFromField(field, existingNames);
         if (column) {
           columns.push(column);
           existingNames.add(column.name);
@@ -342,18 +344,19 @@ class SchemaGenerator {
 
   /**
    * Generate column definition from field
+   * 🔄 ASYNC: Now uses LibreTranslate API
    *
    * @param {Object} field - Field definition
    * @param {Set<string>} existingNames - Set of existing column names
-   * @returns {Object|null} Column definition or null if invalid
+   * @returns {Promise<Object|null>} Column definition or null if invalid
    */
-  static generateColumnFromField(field, existingNames) {
+  static async generateColumnFromField(field, existingNames) {
     if (!field || !field.label) {
       return null;
     }
 
-    // Generate column name
-    let columnName = SQLNameNormalizer.generateColumnName(field.label);
+    // Generate column name (NOW ASYNC)
+    let columnName = await SQLNameNormalizer.generateColumnName(field.label);
 
     // Ensure uniqueness
     columnName = SQLNameNormalizer.ensureUnique(columnName, existingNames);

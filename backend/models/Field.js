@@ -83,14 +83,14 @@ module.exports = (sequelize, DataTypes) => {
     },
     show_condition: {
       type: DataTypes.JSONB,
-      allowNull: false,
-      defaultValue: { enabled: true },
+      allowNull: true,
+      defaultValue: null,
       comment: 'Conditional visibility rules',
     },
     telegram_config: {
       type: DataTypes.JSONB,
-      allowNull: false,
-      defaultValue: { enabled: false },
+      allowNull: true,
+      defaultValue: null,
       comment: 'Telegram notification configuration',
     },
     validation_rules: {
@@ -98,6 +98,34 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: {},
       comment: 'Custom validation rules',
+    },
+    show_in_table: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: 'show_in_table',
+      comment: 'Display this field in submission table',
+    },
+    send_telegram: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: 'send_telegram',
+      comment: 'Send this field value in Telegram notifications',
+    },
+    telegram_order: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      field: 'telegram_order',
+      comment: 'Order of this field in Telegram notifications',
+    },
+    telegram_prefix: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      defaultValue: null,
+      field: 'telegram_prefix',
+      comment: 'Custom prefix for this field in Telegram notifications',
     },
   }, {
     tableName: 'fields',
@@ -252,6 +280,36 @@ module.exports = (sequelize, DataTypes) => {
    */
   Field.prototype.hasTelegramNotification = function() {
     return this.telegram_config && this.telegram_config.enabled === true;
+  };
+
+  /**
+   * Override toJSON to convert snake_case to camelCase for frontend
+   */
+  Field.prototype.toJSON = function() {
+    const values = Object.assign({}, this.get());
+
+    // Map snake_case to camelCase
+    if (values.show_in_table !== undefined) {
+      values.showInTable = values.show_in_table;
+      delete values.show_in_table;
+    }
+
+    if (values.send_telegram !== undefined) {
+      values.sendTelegram = values.send_telegram;
+      delete values.send_telegram;
+    }
+
+    if (values.telegram_order !== undefined) {
+      values.telegramOrder = values.telegram_order;
+      delete values.telegram_order;
+    }
+
+    if (values.telegram_prefix !== undefined) {
+      values.telegramPrefix = values.telegram_prefix;
+      delete values.telegram_prefix;
+    }
+
+    return values;
   };
 
   /**

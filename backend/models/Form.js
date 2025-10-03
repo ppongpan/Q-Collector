@@ -106,7 +106,11 @@ module.exports = (sequelize, DataTypes) => {
     if (!this.roles_allowed || !Array.isArray(this.roles_allowed)) {
       return false;
     }
-    return this.roles_allowed.includes(userRole) || userRole === 'admin';
+    // super_admin, admin, and moderator have access to all forms
+    if (userRole === 'super_admin' || userRole === 'admin' || userRole === 'moderator') {
+      return true;
+    }
+    return this.roles_allowed.includes(userRole);
   };
 
   /**
@@ -349,28 +353,58 @@ module.exports = (sequelize, DataTypes) => {
   Form.addScope('full', {
     include: [
       {
-        model: sequelize.models.Field,
-        as: 'fields',
+        association: 'fields',
         where: { sub_form_id: null },
         required: false,
       },
       {
-        model: sequelize.models.SubForm,
-        as: 'subForms',
+        association: 'subForms',
         include: [
           {
-            model: sequelize.models.Field,
-            as: 'fields',
+            association: 'fields',
           },
         ],
       },
       {
-        model: sequelize.models.User,
-        as: 'creator',
+        association: 'creator',
         attributes: ['id', 'username', 'email', 'role'],
       },
     ],
   });
+
+  /**
+   * Override toJSON to ensure fields are properly serialized
+   * This ensures Field.toJSON() is called for each field
+   */
+  Form.prototype.toJSON = function() {
+    const values = Object.assign({}, this.get());
+
+    // Manually serialize fields array to ensure Field.toJSON() is called
+    if (values.fields && Array.isArray(values.fields)) {
+      values.fields = values.fields.map(field => {
+        // If field is a Sequelize instance, call its toJSON()
+        return field.toJSON ? field.toJSON() : field;
+      });
+    }
+
+    // Manually serialize subForms and their fields
+    if (values.subForms && Array.isArray(values.subForms)) {
+      values.subForms = values.subForms.map(subForm => {
+        const subFormData = subForm.toJSON ? subForm.toJSON() : subForm;
+
+        // Serialize sub-form fields
+        if (subFormData.fields && Array.isArray(subFormData.fields)) {
+          subFormData.fields = subFormData.fields.map(field => {
+            return field.toJSON ? field.toJSON() : field;
+          });
+        }
+
+        return subFormData;
+      });
+    }
+
+    return values;
+  };
 
   return Form;
 };

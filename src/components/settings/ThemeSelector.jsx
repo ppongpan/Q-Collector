@@ -30,25 +30,37 @@ const ThemeSelector = () => {
     }
   };
 
-  // Theme preview configuration
+  // Theme preview configuration with fixed colors for each theme
   const themePreview = {
     glass: {
       emoji: '✨',
       subtitle: 'กระจกเรืองแสง',
-      gradient: 'bg-gradient-to-br from-orange-500/20 via-orange-400/10 to-transparent backdrop-blur-sm border-orange-500/30',
-      textColor: 'text-orange-500'
+      // Fixed glass theme colors (orange + dark background)
+      previewBg: 'bg-gradient-to-br from-orange-500/20 via-orange-400/10 to-black/80',
+      previewBorder: 'border-orange-500/30',
+      backdropBlur: 'backdrop-blur-sm',
+      textColor: 'text-orange-400',
+      subtitleColor: 'text-orange-200/60'
     },
     minimal: {
       emoji: '⚡',
       subtitle: 'เรียบง่ายเร็ว',
-      gradient: 'bg-card border-border',
-      textColor: 'text-foreground'
+      // Fixed minimal theme colors (clean white/gray)
+      previewBg: 'bg-white dark:bg-gray-900',
+      previewBorder: 'border-gray-200 dark:border-gray-700',
+      backdropBlur: '',
+      textColor: 'text-gray-900 dark:text-gray-100',
+      subtitleColor: 'text-gray-500 dark:text-gray-400'
     },
     liquid: {
       emoji: '💧',
       subtitle: 'Liquid สีฟ้า',
-      gradient: 'bg-gradient-to-br from-cyan-400/30 via-blue-500/20 to-transparent backdrop-blur-xl border-cyan-400/40',
-      textColor: 'text-cyan-400'
+      // Fixed liquid theme colors (cyan + blue)
+      previewBg: 'bg-gradient-to-br from-cyan-400/30 via-blue-500/20 to-black/80',
+      previewBorder: 'border-cyan-400/40',
+      backdropBlur: 'backdrop-blur-xl',
+      textColor: 'text-cyan-400',
+      subtitleColor: 'text-cyan-200/60'
     }
   };
 
@@ -80,19 +92,30 @@ const ThemeSelector = () => {
                     onClick={() => handleThemeChange(themeOption.id)}
                     disabled={!isAvailable}
                     className={`
-                      relative p-3 rounded-lg border-2 transition-all duration-200
+                      relative p-3 transition-all duration-300 overflow-hidden
                       ${isActive
-                        ? 'border-primary bg-primary/5 shadow-lg'
+                        ? themeOption.id === 'glass'
+                          ? 'bg-gradient-to-br from-orange-500/20 via-orange-400/10 to-transparent backdrop-blur-sm shadow-lg shadow-orange-500/30 animate-pulse-glow'
+                          : 'bg-primary/10 shadow-lg shadow-primary/20'
                         : isAvailable
-                          ? 'border-border hover:border-primary/50 hover:bg-accent/5 hover:shadow-md'
-                          : 'border-border bg-muted/30 cursor-not-allowed opacity-50'
+                          ? themeOption.id === 'glass'
+                            ? 'bg-gradient-to-br from-orange-500/10 via-orange-400/5 to-transparent backdrop-blur-sm hover:from-orange-500/20 hover:shadow-md hover:shadow-orange-500/20 hover:scale-[1.02]'
+                            : 'bg-card/50 hover:bg-card/80 hover:shadow-md hover:scale-[1.02]'
+                          : 'bg-muted/30 cursor-not-allowed opacity-50'
                       }
                       text-left group
                     `}
+                    style={{
+                      borderRadius: '1.5rem'
+                    }}
                   >
                     {/* Active Indicator */}
                     {isActive && (
-                      <div className="absolute top-2 right-2 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                      <div className={`absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center
+                        ${themeOption.id === 'glass'
+                          ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/50'
+                          : 'bg-primary text-primary-foreground'
+                        }`}>
                         <Check className="h-3 w-3" />
                       </div>
                     )}
@@ -104,17 +127,19 @@ const ThemeSelector = () => {
                       </div>
                     )}
 
-                    {/* Theme Preview Box */}
+                    {/* Theme Preview Box - Fixed theme-specific styling */}
                     <div className={`
-                      h-20 rounded-md mb-2 border flex items-center justify-center
+                      h-20 rounded-2xl mb-2 border flex items-center justify-center
                       transition-all duration-300 group-hover:scale-[1.02]
-                      ${preview.gradient}
+                      ${preview.previewBg}
+                      ${preview.previewBorder}
+                      ${preview.backdropBlur}
                     `}>
                       <div className="text-center">
                         <div className={`text-3xl mb-1 ${preview.textColor}`}>
                           {preview.emoji}
                         </div>
-                        <div className="text-[10px] text-muted-foreground font-medium">
+                        <div className={`text-[10px] font-medium ${preview.subtitleColor}`}>
                           {preview.subtitle}
                         </div>
                       </div>

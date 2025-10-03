@@ -274,6 +274,12 @@ class QueueService {
       }
     };
 
+    // Check if processor already registered to avoid duplicate handler error
+    if (this.processors.has(queueName)) {
+      logger.warn(`Processor already registered for queue: ${queueName}, skipping...`);
+      return;
+    }
+
     queue.process(concurrency, wrappedProcessor);
     this.processors.set(queueName, processor);
 

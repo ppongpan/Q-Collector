@@ -43,45 +43,46 @@ export function UserMenu({ onSettingsClick }) {
     }
   };
 
+  // Import from central config for consistency
   const getRoleBadgeColor = (role) => {
     switch (role) {
       case 'super_admin':
-        return 'bg-purple-500/20 text-purple-500 border-purple-500/30';
+        return 'bg-red-500/20 text-red-500 border-red-500/30'; // RED: Form Settings
       case 'admin':
-        return 'bg-red-500/20 text-red-500 border-red-500/30';
+        return 'bg-pink-500/20 text-pink-500 border-pink-500/30'; // PINK: Form Settings
       case 'moderator':
-        return 'bg-blue-500/20 text-blue-500 border-blue-500/30';
+        return 'bg-purple-500/20 text-purple-500 border-purple-500/30'; // PURPLE: Form Settings
       case 'customer_service':
-        return 'bg-green-500/20 text-green-500 border-green-500/30';
+        return 'bg-blue-500/20 text-blue-500 border-blue-500/30'; // BLUE: Form Settings
       case 'sales':
-        return 'bg-orange-500/20 text-orange-500 border-orange-500/30';
+        return 'bg-green-500/20 text-green-500 border-green-500/30'; // GREEN: Form Settings
       case 'marketing':
-        return 'bg-pink-500/20 text-pink-500 border-pink-500/30';
+        return 'bg-orange-500/20 text-orange-500 border-orange-500/30'; // ORANGE: Form Settings
       case 'technic':
-        return 'bg-cyan-500/20 text-cyan-500 border-cyan-500/30';
+        return 'bg-cyan-500/20 text-cyan-500 border-cyan-500/30'; // CYAN: Form Settings
       default:
-        return 'bg-gray-500/20 text-gray-500 border-gray-500/30';
+        return 'bg-gray-500/20 text-gray-500 border-gray-500/30'; // GRAY: Form Settings
     }
   };
 
   const getRoleTextColor = (role) => {
     switch (role) {
       case 'super_admin':
-        return 'text-purple-400';
+        return 'text-red-500'; // RED: Form Settings
       case 'admin':
-        return 'text-red-400';
+        return 'text-pink-500'; // PINK: Form Settings
       case 'moderator':
-        return 'text-blue-400';
+        return 'text-purple-500'; // PURPLE: Form Settings
       case 'customer_service':
-        return 'text-green-400';
+        return 'text-blue-500'; // BLUE: Form Settings
       case 'sales':
-        return 'text-orange-400';
+        return 'text-green-500'; // GREEN: Form Settings
       case 'marketing':
-        return 'text-pink-400';
+        return 'text-orange-500'; // ORANGE: Form Settings
       case 'technic':
-        return 'text-cyan-400';
+        return 'text-cyan-500'; // CYAN: Form Settings
       default:
-        return 'text-gray-400';
+        return 'text-gray-500'; // GRAY: Form Settings
     }
   };
 

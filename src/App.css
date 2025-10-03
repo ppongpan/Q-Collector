@@ -327,20 +327,18 @@
   }
 
   .theme-toggle-button {
-    @apply relative p-2 rounded-lg border border-border bg-card hover:bg-accent hover:text-accent-foreground;
+    @apply relative p-2 rounded-lg;
     transition: all var(--theme-transition-duration) ease;
-    box-shadow: var(--shadow-elevation-low);
+    background: transparent;
+    border: none;
   }
 
   .theme-toggle-button:hover {
-    box-shadow: var(--shadow-elevation-medium);
-    transform: translateY(-1px);
-    @apply border-primary/50;
+    background: transparent;
   }
 
   .theme-toggle-button:active {
-    transform: translateY(0);
-    box-shadow: var(--shadow-elevation-low);
+    transform: scale(0.95);
   }
 
   .theme-toggle-button svg {
@@ -349,7 +347,7 @@
 
   .theme-toggle-button:hover svg {
     @apply text-primary;
-    transform: scale(1.1);
+    transform: scale(1.15) rotate(12deg);
   }
 
   /* Enhanced orange accent theming */
@@ -486,4 +484,25 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Orange Neon Glow Animation */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.3),
+                0 0 30px rgba(249, 115, 22, 0.2),
+                0 0 40px rgba(249, 115, 22, 0.1),
+                inset 0 0 20px rgba(249, 115, 22, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(249, 115, 22, 0.5),
+                0 0 50px rgba(249, 115, 22, 0.3),
+                0 0 70px rgba(249, 115, 22, 0.2),
+                inset 0 0 30px rgba(249, 115, 22, 0.08);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+  border-radius: 1.5rem !important;
 }

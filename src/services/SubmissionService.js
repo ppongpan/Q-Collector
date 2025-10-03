@@ -8,10 +8,11 @@
  * - GPS data processing (browser Geolocation API)
  * - Document number generation
  * - Data formatting and sanitization
- * - Telegram notification processing
+ * - API integration with backend
  */
 
 import dataService from './DataService.js';
+import apiClient from './ApiClient.js';
 import telegramService from './TelegramService.js';
 
 class SubmissionService {
@@ -55,8 +56,9 @@ class SubmissionService {
    */
   async submitForm(formId, formData, files = []) {
     try {
-      // Get form configuration
-      const form = dataService.getForm(formId);
+      // Get form configuration from API for validation
+      const formResponse = await apiClient.getForm(formId);
+      const form = formResponse.data?.form || formResponse.data;
       if (!form) {
         throw new Error(`Form with ID ${formId} not found`);
       }
@@ -82,11 +84,14 @@ class SubmissionService {
         ...processedFiles
       };
 
-      // Create submission
-      const submission = dataService.createSubmission(formId, completeData);
+      // Submit to backend API
+      const response = await apiClient.createSubmission(formId, completeData, {
+        ipAddress: await this.getClientIP(),
+        userAgent: navigator.userAgent
+      });
 
-      // Send Telegram notification if configured
-      await this.sendTelegramNotification(form, submission);
+      // Extract submission from response
+      const submission = response.data?.submission || response.data;
 
       return {
         success: true,
@@ -99,8 +104,21 @@ class SubmissionService {
       return {
         success: false,
         error: error.message,
-        message: 'เกิดข้อผิดพลาดในการบันทึกฟอร์ม'
+        message: error.message || 'เกิดข้อผิดพลาดในการบันทึกฟอร์ม'
       };
+    }
+  }
+
+  /**
+   * Get client IP address (best effort)
+   */
+  async getClientIP() {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip;
+    } catch (error) {
+      return 'unknown';
     }
   }
 
@@ -119,20 +137,15 @@ class SubmissionService {
         return this.updateSubFormSubmission(formId, submissionId, formData, files);
       }
 
-      // Get form configuration
-      const form = dataService.getForm(formId);
+      // Get form configuration from API for validation
+      const formResponse = await apiClient.getForm(formId);
+      const form = formResponse.data?.form || formResponse.data;
       if (!form) {
         throw new Error(`Form with ID ${formId} not found`);
       }
 
-      // Get existing submission
-      const existingSubmission = dataService.getSubmission(submissionId);
-      if (!existingSubmission) {
-        throw new Error(`Submission with ID ${submissionId} not found`);
-      }
-
-      // Validate form data including files and existing submission data
-      const validationResult = this.validateFormData(form, formData, files, existingSubmission.data);
+      // Validate form data including files
+      const validationResult = this.validateFormData(form, formData, files);
       if (!validationResult.isValid) {
         throw new Error(`Validation failed: ${validationResult.errors.join(', ')}`);
       }
@@ -143,41 +156,18 @@ class SubmissionService {
       // Process GPS data
       const processedData = await this.processGPSFields(form, formData);
 
-      // Merge file data, preserving existing files if no new files for a field
-      const existingFiles = {};
-      form.fields.forEach(field => {
-        if (field.type === this.FIELD_TYPES.FILE_UPLOAD || field.type === this.FIELD_TYPES.IMAGE_UPLOAD) {
-          const hasExistingFile = existingSubmission.data[field.id];
-          const hasNewFile = processedFiles[field.id];
-
-          // Keep existing files if no new files uploaded for this field
-          if (hasExistingFile && !hasNewFile) {
-            existingFiles[field.id] = existingSubmission.data[field.id];
-          }
-        }
-      });
-
-      // Merge file data properly - only use new files if they exist, otherwise keep existing files
-      const mergedFileData = { ...existingFiles };
-      Object.keys(processedFiles).forEach(fieldId => {
-        if (processedFiles[fieldId] && processedFiles[fieldId] !== undefined) {
-          mergedFileData[fieldId] = processedFiles[fieldId];
-        }
-      });
-
+      // Merge file data
       const completeData = {
         ...processedData,
-        ...mergedFileData,
-        // Preserve document number from original submission
-        documentNumber: existingSubmission.data.documentNumber
+        ...processedFiles
       };
 
-      // Update submission
-      const updatedSubmission = dataService.updateSubmission(submissionId, completeData);
+      // Update via backend API
+      const response = await apiClient.updateSubmission(submissionId, completeData);
 
       return {
         success: true,
-        submission: updatedSubmission,
+        submission: response,
         message: 'ข้อมูลถูกอัปเดตเรียบร้อยแล้ว'
       };
 
@@ -186,7 +176,7 @@ class SubmissionService {
       return {
         success: false,
         error: error.message,
-        message: 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล'
+        message: error.message || 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล'
       };
     }
   }
@@ -859,10 +849,28 @@ class SubmissionService {
    * @returns {Object} Formatted data
    */
   formatSubmissionForDisplay(submission, form) {
+    // If submission doesn't have data field (e.g., from listSubmissions API),
+    // return basic info only
+    if (!submission.data) {
+      return {
+        id: submission.id,
+        formId: submission.formId,
+        submittedAt: submission.submittedAt,
+        submittedBy: submission.submittedBy,
+        status: submission.status,
+        fields: {},
+        documentNumber: null
+      };
+    }
+
     const formatted = {};
 
     form.fields.forEach(field => {
-      const value = submission.data[field.id];
+      // Extract value from API response structure: {fieldId, fieldTitle, fieldType, value}
+      // Or use direct value from LocalStorage format
+      const fieldData = submission.data[field.id];
+      const value = fieldData?.value !== undefined ? fieldData.value : fieldData;
+
       formatted[field.id] = {
         title: field.title,
         value: this.formatValueForDisplay(value, field.type),
@@ -875,6 +883,8 @@ class SubmissionService {
       id: submission.id,
       formId: submission.formId,
       submittedAt: submission.submittedAt,
+      submittedBy: submission.submittedBy,
+      status: submission.status,
       fields: formatted,
       documentNumber: submission.data.documentNumber
     };

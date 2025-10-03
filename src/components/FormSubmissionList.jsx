@@ -13,6 +13,7 @@ import { PhoneIcon } from './ui/phone-icon';
 // Data services
 import dataService from '../services/DataService.js';
 import submissionService from '../services/SubmissionService.js';
+import apiClient from '../services/ApiClient.js';
 
 // Utilities
 import { formatNumberByContext } from '../utils/numberFormatter.js';
@@ -31,26 +32,54 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
   // Enhanced toast notifications
   const toast = useEnhancedToast();
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      // Load form details
-      const formData = dataService.getForm(formId);
+      // Load form from API first, fallback to LocalStorage
+      let formData = null;
+      try {
+        const response = await apiClient.getForm(formId);
+        formData = response.data?.form || response.data;
+        console.log('✅ Form loaded from API:', formData?.title);
+      } catch (apiError) {
+        console.warn('Failed to load form from API, trying LocalStorage:', apiError);
+        formData = dataService.getForm(formId);
+      }
+
       if (!formData) {
         console.error('Form not found:', formId);
+        toast.error('ไม่พบฟอร์มที่ต้องการ', {
+          title: 'เกิดข้อผิดพลาด',
+          duration: 5000
+        });
         return;
       }
       setForm(formData);
 
-      // Load submissions
-      const submissionsData = dataService.getSubmissionsByFormId(formId);
+      // Load submissions from API first, fallback to LocalStorage
+      let submissionsData = [];
+      try {
+        const response = await apiClient.listSubmissions(formId);
+        submissionsData = response.data?.submissions || response.data || [];
+        console.log('✅ Submissions loaded from API:', submissionsData.length, 'items');
+        console.log('📦 First submission structure:', submissionsData[0]);
+        console.log('📦 First submission JSON:', JSON.stringify(submissionsData[0], null, 2));
+      } catch (apiError) {
+        console.warn('Failed to load submissions from API, trying LocalStorage:', apiError);
+        submissionsData = dataService.getSubmissionsByFormId(formId);
+      }
+
       setSubmissions(submissionsData);
     } catch (error) {
       console.error('Error loading data:', error);
+      toast.error('เกิดข้อผิดพลาดในการโหลดข้อมูล', {
+        title: 'เกิดข้อผิดพลาด',
+        duration: 5000
+      });
     } finally {
       setLoading(false);
     }
-  }, [formId]);
+  }, [formId, toast]);
 
   // Load form and submissions data
   useEffect(() => {
@@ -875,7 +904,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                 }
               `}</style>
               <div className="overflow-x-auto">
-                <table className="w-full submission-table-override">
+                <table data-testid="submission-list" className="w-full submission-table-override">
                   <thead>
                     <tr className="border-b border-border/30 bg-muted/20">
                       {tableFields.map(field => (
@@ -892,6 +921,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                       return (
                         <motion.tr
                           key={submission.id}
+                          data-testid="submission-row"
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.3, delay: index * 0.05 }}

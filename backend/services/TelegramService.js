@@ -1034,6 +1034,168 @@ class TelegramService {
   }
 
   /**
+   * Send form submission notification with custom message format
+   * Uses form's telegram settings (message prefix and field ordering)
+   *
+   * @param {Object} form - Form configuration with telegramSettings
+   * @param {Object} submission - Submission data
+   * @param {Object} fieldData - Form field data (key: fieldId, value: field value)
+   */
+  async sendFormSubmissionNotification(form, submission, fieldData) {
+    try {
+      // Get global Telegram settings
+      const { TelegramSettings } = require('../models');
+      const globalSettings = await TelegramSettings.getCurrentSettings();
+
+      // Check if Telegram is enabled globally
+      if (!globalSettings || !globalSettings.enabled) {
+        logger.info('Telegram notifications disabled globally');
+        return { success: false, reason: 'disabled_globally' };
+      }
+
+      // Check if form has Telegram enabled
+      if (!form.telegramSettings || !form.telegramSettings.enabled) {
+        logger.info(`Telegram notifications disabled for form: ${form.title}`);
+        return { success: false, reason: 'disabled_for_form' };
+      }
+
+      // Use global bot token and group ID (override form settings)
+      const botToken = globalSettings.bot_token;
+      const groupId = globalSettings.group_id;
+
+      if (!botToken || !groupId) {
+        logger.warn('Telegram bot token or group ID not configured');
+        return { success: false, reason: 'missing_credentials' };
+      }
+
+      // Build message
+      const message = this.buildFormSubmissionMessage(form, submission, fieldData);
+
+      // Send message using global credentials
+      const telegramAPI = `https://api.telegram.org/bot${botToken}`;
+      await axios.post(`${telegramAPI}/sendMessage`, {
+        chat_id: groupId,
+        text: message,
+        parse_mode: 'HTML',
+      });
+
+      logger.info(`Telegram notification sent for submission: ${submission.id}`);
+      return { success: true };
+
+    } catch (error) {
+      logger.error('Failed to send Telegram notification:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Build message from form telegram settings
+   *
+   * @param {Object} form - Form with telegramSettings
+   * @param {Object} submission - Submission object
+   * @param {Object} fieldData - Field values
+   * @returns {string} Formatted message
+   */
+  buildFormSubmissionMessage(form, submission, fieldData) {
+    const settings = form.telegramSettings;
+
+    // Get message prefix template
+    let prefix = settings.messagePrefix || 'ข้อมูลใหม่จาก [FormName] [DateTime]';
+
+    // Replace placeholders
+    const now = new Date();
+    const dateTime = now.toLocaleString('th-TH', {
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    prefix = prefix
+      .replace(/\[FormName\]/g, form.title)
+      .replace(/\[DateTime\]/g, dateTime)
+      .replace(/\[SubmissionNumber\]/g, submission.submission_number || submission.id.substring(0, 8));
+
+    // Build field list (ordered by selectedFields)
+    const fieldLines = [];
+    const selectedFields = settings.selectedFields || [];
+
+    // Create field map for quick lookup
+    const fieldsById = {};
+    if (form.fields) {
+      form.fields.forEach(field => {
+        fieldsById[field.id] = field;
+      });
+    }
+
+    // Add fields in the order specified
+    selectedFields.forEach((fieldId, index) => {
+      const field = fieldsById[fieldId];
+      if (!field) return;
+
+      const value = fieldData[fieldId];
+      if (value === undefined || value === null || value === '') return;
+
+      // Format field line
+      const fieldNumber = index + 1;
+      const fieldLabel = field.label || field.title;
+      const fieldValue = this.formatFieldValue(field, value);
+
+      fieldLines.push(`${fieldNumber}. <b>${fieldLabel}:</b> ${fieldValue}`);
+    });
+
+    // Combine prefix and fields
+    const message = `${prefix}\n\n${fieldLines.join('\n')}`;
+
+    return message;
+  }
+
+  /**
+   * Format field value for display
+   *
+   * @param {Object} field - Field configuration
+   * @param {*} value - Field value
+   * @returns {string} Formatted value
+   */
+  formatFieldValue(field, value) {
+    // Handle arrays (multiple choice, file uploads)
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+
+    // Handle objects (lat_long, factory)
+    if (typeof value === 'object' && value !== null) {
+      if (field.type === 'lat_long') {
+        return `${value.lat}, ${value.lng}`;
+      }
+      if (field.type === 'factory') {
+        return value.name || value.id || JSON.stringify(value);
+      }
+      return JSON.stringify(value);
+    }
+
+    // Handle dates
+    if (field.type === 'date' || field.type === 'datetime') {
+      try {
+        const date = new Date(value);
+        return date.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+      } catch (e) {
+        return value;
+      }
+    }
+
+    // Handle phone numbers
+    if (field.type === 'phone') {
+      return value.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+    }
+
+    // Default: return as string
+    return String(value);
+  }
+
+  /**
    * Graceful shutdown
    */
   async shutdown() {

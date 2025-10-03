@@ -425,6 +425,134 @@ class ApiClient {
   async regenerateBackupCodes(code) {
     return this.post('/2fa/backup-codes', { token: code });
   }
+
+  // ===================================
+  // Form Methods
+  // ===================================
+
+  /**
+   * Create new form
+   * @param {Object} formData - Form data (title, description, fields, etc.)
+   * @returns {Promise} Created form with UUID
+   */
+  async createForm(formData) {
+    return this.post('/forms', formData);
+  }
+
+  /**
+   * Update existing form
+   * @param {string} formId - Form UUID
+   * @param {Object} formData - Updated form data
+   * @returns {Promise} Updated form
+   */
+  async updateForm(formId, formData) {
+    return this.put(`/forms/${formId}`, formData);
+  }
+
+  /**
+   * Get form by ID
+   * @param {string} formId - Form UUID
+   * @returns {Promise} Form data
+   */
+  async getForm(formId) {
+    return this.get(`/forms/${formId}`);
+  }
+
+  /**
+   * List all forms
+   * @param {Object} filters - Filter options (page, limit, search, etc.)
+   * @returns {Promise} List of forms with pagination
+   */
+  async listForms(filters = {}) {
+    const params = new URLSearchParams(filters);
+    return this.get(`/forms?${params.toString()}`);
+  }
+
+  /**
+   * Delete form
+   * @param {string} formId - Form UUID
+   * @returns {Promise} Success response
+   */
+  async deleteForm(formId) {
+    return this.delete(`/forms/${formId}`);
+  }
+
+  /**
+   * Duplicate form
+   * @param {string} formId - Form UUID to duplicate
+   * @returns {Promise} New duplicated form
+   */
+  async duplicateForm(formId) {
+    return this.post(`/forms/${formId}/duplicate`);
+  }
+
+  // ===================================
+  // Submission Methods
+  // ===================================
+
+  /**
+   * Create new submission
+   * @param {string} formId - Form ID
+   * @param {Object} fieldData - Form field data
+   * @param {Object} metadata - Additional metadata (optional)
+   * @returns {Promise} Created submission
+   */
+  async createSubmission(formId, fieldData, metadata = {}) {
+    return this.post(`/forms/${formId}/submissions`, {
+      fieldData,
+      status: 'submitted',
+      metadata
+    });
+  }
+
+  /**
+   * Get submission by ID
+   * @param {string} submissionId - Submission ID
+   * @returns {Promise} Submission data
+   */
+  async getSubmission(submissionId) {
+    return this.get(`/submissions/${submissionId}`);
+  }
+
+  /**
+   * List submissions for a form
+   * @param {string} formId - Form ID
+   * @param {Object} filters - Filter options (page, limit, status)
+   * @returns {Promise} List of submissions with pagination
+   */
+  async listSubmissions(formId, filters = {}) {
+    const params = new URLSearchParams(filters);
+    return this.get(`/forms/${formId}/submissions?${params.toString()}`);
+  }
+
+  /**
+   * Update existing submission
+   * @param {string} submissionId - Submission ID
+   * @param {Object} fieldData - Updated field data
+   * @returns {Promise} Updated submission
+   */
+  async updateSubmission(submissionId, fieldData) {
+    return this.put(`/submissions/${submissionId}`, { fieldData });
+  }
+
+  /**
+   * Delete submission
+   * @param {string} submissionId - Submission ID
+   * @returns {Promise} Success response
+   */
+  async deleteSubmission(submissionId) {
+    return this.delete(`/submissions/${submissionId}`);
+  }
+
+  /**
+   * Export submissions
+   * @param {string} formId - Form ID
+   * @param {string} format - Export format (csv or json)
+   * @returns {Promise} Exported data
+   */
+  async exportSubmissions(formId, format = 'csv') {
+    return this.get(`/forms/${formId}/submissions/export?format=${format}`);
+  }
 }
 
 // Create and export singleton instance

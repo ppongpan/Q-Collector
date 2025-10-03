@@ -114,7 +114,7 @@ const FIELD_TYPES = [
 ]; */
 
 // Inline Edit Component
-function InlineEdit({ value, onChange, placeholder, className = "", isTitle = false }) {
+function InlineEdit({ value, onChange, placeholder, className = "", isTitle = false, dataTestId }) {
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value);
   const inputRef = useRef(null);
@@ -165,6 +165,7 @@ function InlineEdit({ value, onChange, placeholder, className = "", isTitle = fa
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           placeholder={placeholder}
+          data-testid={dataTestId}
           className={`input-glass glass-interactive blur-edge rounded-xl text-xl font-semibold focus-orange-neon hover-orange-neon transition-all duration-300 ease-out w-full text-left ${className}`}
         />
       );
@@ -191,6 +192,7 @@ function InlineEdit({ value, onChange, placeholder, className = "", isTitle = fa
     return (
       <h1
         onClick={() => setIsEditing(true)}
+        data-testid={dataTestId}
         className={`text-xl font-semibold cursor-pointer transition-all duration-300 ease-out px-3 py-2 hover:text-primary/80 text-left ${isEmpty ? 'text-muted-foreground/60 italic' : 'text-foreground/90'} ${className}`}
         title="คลิกเพื่อแก้ไข"
       >
@@ -1063,7 +1065,14 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
     title: initialForm?.title || '',
     description: initialForm?.description || '',
     table_name: initialForm?.table_name || null,
-    fields: initialForm?.fields || [
+    fields: initialForm?.fields ? initialForm.fields.map(field => ({
+      ...field,
+      // Ensure new properties exist with default values if not present
+      showInTable: field.showInTable !== undefined ? field.showInTable : false,
+      sendTelegram: field.sendTelegram !== undefined ? field.sendTelegram : false,
+      telegramOrder: field.telegramOrder !== undefined ? field.telegramOrder : 0,
+      telegramPrefix: field.telegramPrefix !== undefined ? field.telegramPrefix : '',
+    })) : [
       {
         id: generateId(),
         title: "",
@@ -1076,7 +1085,17 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
         options: {}
       }
     ],
-    subForms: initialForm?.subForms || [],
+    subForms: initialForm?.subForms ? initialForm.subForms.map(subForm => ({
+      ...subForm,
+      fields: subForm.fields ? subForm.fields.map(field => ({
+        ...field,
+        // Ensure new properties exist with default values if not present
+        showInTable: field.showInTable !== undefined ? field.showInTable : false,
+        sendTelegram: field.sendTelegram !== undefined ? field.sendTelegram : false,
+        telegramOrder: field.telegramOrder !== undefined ? field.telegramOrder : 0,
+        telegramPrefix: field.telegramPrefix !== undefined ? field.telegramPrefix : '',
+      })) : []
+    })) : [],
     visibleRoles: initialForm?.visibleRoles || DEFAULT_VISIBLE_ROLES,
     settings: {
       telegram: {
@@ -1191,24 +1210,28 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
 
   // Helper function to reorder telegram fields sequentially
   const reorderTelegramFields = (fieldsArray) => {
-    const telegramFields = fieldsArray.filter(f => f.sendTelegram);
-    const nonTelegramFields = fieldsArray.filter(f => !f.sendTelegram);
+    // DON'T reorder fields - just update telegramOrder numbers
+    // Keep fields in their current position in the form
 
-    // Sort telegram fields by their current order, then assign sequential numbers
-    const orderedTelegramFields = telegramFields
-      .sort((a, b) => (a.telegramOrder || 0) - (b.telegramOrder || 0))
-      .map((field, index) => ({
-        ...field,
-        telegramOrder: index + 1
-      }));
+    // Get telegram fields in their original order
+    const telegramFields = [];
+    fieldsArray.forEach((field, index) => {
+      if (field.sendTelegram) {
+        telegramFields.push({ field, originalIndex: index });
+      }
+    });
 
-    // Reset non-telegram fields order to 0
-    const resetNonTelegramFields = nonTelegramFields.map(field => ({
+    // Create a map of field ID to new telegram order
+    const telegramOrderMap = {};
+    telegramFields.forEach(({ field }, index) => {
+      telegramOrderMap[field.id] = index + 1;
+    });
+
+    // Update all fields with new telegram orders without changing position
+    return fieldsArray.map(field => ({
       ...field,
-      telegramOrder: 0
+      telegramOrder: field.sendTelegram ? (telegramOrderMap[field.id] || 0) : 0
     }));
-
-    return [...orderedTelegramFields, ...resetNonTelegramFields];
   };
 
   const updateField = (fieldId, fieldData) => {
@@ -1255,10 +1278,22 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   const handleDragEnd = (event) => {
     const { active, over } = event;
 
+    // Safety check: over must exist and have valid id
+    if (!over || !over.id || !active || !active.id) {
+      console.warn('[DragEnd] Invalid drag event:', { active, over });
+      return;
+    }
+
     // Check if over exists and is different from active
-    if (over && active.id !== over.id) {
+    if (active.id !== over.id) {
       const oldIndex = form.fields.findIndex((field) => field.id === active.id);
       const newIndex = form.fields.findIndex((field) => field.id === over.id);
+
+      // Additional safety check for valid indices
+      if (oldIndex === -1 || newIndex === -1) {
+        console.warn('[DragEnd] Invalid field indices:', { oldIndex, newIndex, activeId: active.id, overId: over.id });
+        return;
+      }
 
       const reorderedFields = arrayMove(form.fields, oldIndex, newIndex);
 
@@ -1507,6 +1542,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                 </button>
 
                 <button
+                  data-testid="subform-tab"
                   onClick={() => setActiveSection('sub')}
                   title="ฟอร์มย่อย"
                   className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-xl border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
@@ -1636,6 +1672,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                         onChange={(value) => updateForm({ title: value })}
                         placeholder="คลิกเพื่อระบุชื่อฟอร์ม..."
                         isTitle={true}
+                        dataTestId="form-title-input"
                       />
                       <InlineEdit
                         value={form.description}

@@ -16,6 +16,9 @@ const SubmissionData = require('./SubmissionData');
 const File = require('./File');
 const AuditLog = require('./AuditLog');
 const Session = require('./Session');
+const Translation = require('./Translation');
+const APIUsage = require('./APIUsage');
+const TelegramSettings = require('./TelegramSettings');
 
 // Initialize models with sequelize instance
 const models = {
@@ -28,6 +31,9 @@ const models = {
   File: File(sequelize, Sequelize.DataTypes),
   AuditLog: AuditLog(sequelize, Sequelize.DataTypes),
   Session: Session(sequelize, Sequelize.DataTypes),
+  Translation: Translation(sequelize, Sequelize.DataTypes),
+  APIUsage: APIUsage(sequelize, Sequelize.DataTypes),
+  TelegramSettings: TelegramSettings(sequelize, Sequelize.DataTypes),
 };
 
 // Set up associations between models
