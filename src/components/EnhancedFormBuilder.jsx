@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 
 // Data services
 import dataService from '../services/DataService.js';
+import apiClient from '../services/ApiClient';
 
 // Auth context
 import { useAuth } from '../contexts/AuthContext';
@@ -52,7 +53,7 @@ import {
   faImage, faCalendarAlt, faClock, faCalendarDay, faListUl,
   faEllipsisV, faArrowUp, faArrowDown, faCopy,
   faQuestionCircle, faLayerGroup, faComments, faFileUpload, faCog, faHashtag as faNumbers,
-  faClipboardList, faSave, faUsers
+  faClipboardList, faSave, faUsers, faTrash
 } from '@fortawesome/free-solid-svg-icons';
 
 // User Role definitions with colors for access control
@@ -1054,10 +1055,14 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   // Check if user has permission to see PowerBI info
   const canSeePowerBIInfo = ['super_admin', 'admin', 'moderator'].includes(userRole);
 
+  // Check if user has permission to delete forms
+  const canDeleteForms = ['super_admin', 'admin', 'moderator'].includes(userRole);
+
   const [form, setForm] = useState({
     id: initialForm?.id || generateFormId(),
     title: initialForm?.title || '',
     description: initialForm?.description || '',
+    table_name: initialForm?.table_name || null,
     fields: initialForm?.fields || [
       {
         id: generateId(),
@@ -1073,32 +1078,32 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
     ],
     subForms: initialForm?.subForms || [],
     visibleRoles: initialForm?.visibleRoles || DEFAULT_VISIBLE_ROLES,
-    settings: initialForm?.settings || {
+    settings: {
       telegram: {
-        enabled: false,
-        botToken: '',
-        groupId: '',
-        fields: []
+        enabled: initialForm?.settings?.telegram?.enabled || false,
+        botToken: initialForm?.settings?.telegram?.botToken || '',
+        groupId: initialForm?.settings?.telegram?.groupId || '',
+        fields: initialForm?.settings?.telegram?.fields || []
       },
       documentNumber: {
-        enabled: false,
-        prefix: 'DOC',
-        format: 'prefix-number/year',
-        yearFormat: 'buddhist',
-        initialNumber: 1
+        enabled: initialForm?.settings?.documentNumber?.enabled || false,
+        prefix: initialForm?.settings?.documentNumber?.prefix || 'DOC',
+        format: initialForm?.settings?.documentNumber?.format || 'prefix-number/year',
+        yearFormat: initialForm?.settings?.documentNumber?.yearFormat || 'buddhist',
+        initialNumber: initialForm?.settings?.documentNumber?.initialNumber || 1
       },
       dateFormat: {
-        yearFormat: 'christian', // 'buddhist' or 'christian'
-        format: 'dd/mm/yyyy'     // Default to dd/mm/yyyy CE
+        yearFormat: initialForm?.settings?.dateFormat?.yearFormat || 'christian',
+        format: initialForm?.settings?.dateFormat?.format || 'dd/mm/yyyy'
       }
     },
     // New telegram settings structure for enhanced component
-    telegramSettings: initialForm?.telegramSettings || {
-      enabled: false,
-      botToken: '',
-      groupId: '',
-      messagePrefix: 'ข้อมูลใหม่จาก [FormName] [DateTime]',
-      selectedFields: []
+    telegramSettings: {
+      enabled: initialForm?.telegramSettings?.enabled || false,
+      botToken: initialForm?.telegramSettings?.botToken || '',
+      groupId: initialForm?.telegramSettings?.groupId || '',
+      messagePrefix: initialForm?.telegramSettings?.messagePrefix || 'ข้อมูลใหม่จาก [FormName] [DateTime]',
+      selectedFields: initialForm?.telegramSettings?.selectedFields || []
     }
   });
 
@@ -1123,16 +1128,22 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   const getPowerBIInfo = () => {
     // PostgreSQL Connection Details
     const server = 'localhost:5432';
-    const database = 'qcollector_dev_2025';
+    const database = 'qcollector_db';
 
-    // v0.7.0: Generate table name from form title (Thai→English translation)
-    const { generateTableName } = require('../utils/tableNameGenerator');
-    const mainTable = generateTableName(form.title, 'form_');
+    // Use actual table_name from database (with Thai→English translation)
+    // If table_name doesn't exist, fallback to old generator
+    const mainTable = form.table_name || (() => {
+      const { generateTableName } = require('../utils/tableNameGenerator');
+      return generateTableName(form.title, 'form_');
+    })();
 
-    // Generate sub-form tables from sub-form titles
+    // Use actual table_name from sub-forms
     const subFormTables = form.subForms?.map(sf => ({
       title: sf.title,
-      tableName: generateTableName(sf.title, 'form_')
+      tableName: sf.table_name || (() => {
+        const { generateTableName } = require('../utils/tableNameGenerator');
+        return generateTableName(sf.title, 'form_');
+      })()
     })) || [];
 
     return {
@@ -1244,7 +1255,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   const handleDragEnd = (event) => {
     const { active, over } = event;
 
-    if (active.id !== over.id) {
+    // Check if over exists and is different from active
+    if (over && active.id !== over.id) {
       const oldIndex = form.fields.findIndex((field) => field.id === active.id);
       const newIndex = form.fields.findIndex((field) => field.id === over.id);
 
@@ -1386,31 +1398,33 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       // ตรวจสอบว่าเป็นการแก้ไขหรือสร้างใหม่
       let savedForm;
       if (initialForm?.id) {
-        // แก้ไขฟอร์มที่มีอยู่
-        savedForm = dataService.updateForm(initialForm.id, {
+        // แก้ไขฟอร์มที่มีอยู่ - Use API
+        const response = await apiClient.updateForm(initialForm.id, {
           title: form.title,
           description: form.description,
           fields: form.fields,
-          subForms: form.subForms,
+          sub_forms: form.subForms, // Use snake_case for backend
           settings: form.settings,
-          telegramSettings: form.telegramSettings,
-          visibleRoles: form.visibleRoles
+          telegram_settings: form.telegramSettings, // Use snake_case for backend
+          roles_allowed: form.visibleRoles // JSONB array for backend
         });
+        savedForm = response.data?.form || response.data;
         toast.success('ฟอร์มถูกอัพเดทเรียบร้อยแล้ว', {
           title: "อัพเดทสำเร็จ",
           duration: 5000
         });
       } else {
-        // สร้างฟอร์มใหม่
-        savedForm = dataService.createForm({
+        // สร้างฟอร์มใหม่ - Use API
+        const response = await apiClient.createForm({
           title: form.title,
           description: form.description,
           fields: form.fields,
-          subForms: form.subForms,
+          sub_forms: form.subForms, // Use snake_case for backend
           settings: form.settings,
-          telegramSettings: form.telegramSettings,
-          visibleRoles: form.visibleRoles
+          telegram_settings: form.telegramSettings, // Use snake_case for backend
+          roles_allowed: form.visibleRoles // JSONB array for backend
         });
+        savedForm = response.data?.form || response.data;
         toast.success('ฟอร์มถูกบันทึกเรียบร้อยแล้ว', {
           title: "บันทึกสำเร็จ",
           duration: 5000
@@ -1524,42 +1538,32 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                 </button>
               </div>
 
-              {/* Action Buttons - Enhanced Responsive */}
-              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-
-                {/* Delete Button - Only show in edit mode */}
-                {initialForm && (
-                  <div
-                    onClick={async () => {
-                      const submissions = dataService.getSubmissionsByFormId(initialForm.id);
-                      const submissionCount = submissions.length;
-
-                      let confirmMessage = `คุณแน่ใจหรือไม่ที่จะลบฟอร์ม "${form.title}"?`;
-                      let warningMessage = "การลบจะไม่สามารถย้อนกลับได้";
-
-                      if (submissionCount > 0) {
-                        warningMessage += ` ฟอร์มนี้มีข้อมูล ${submissionCount} รายการ ข้อมูลทั้งหมดจะถูกลบด้วย`;
-                      }
-
-                      // Show confirmation toast with action buttons
-                      toast.error(warningMessage, {
-                        title: confirmMessage,
+              {/* Delete Form Button - Right side of tabs (only in edit mode) */}
+              {initialForm && activeSection === 'settings' && canDeleteForms && (
+                <div className="ml-auto">
+                  <motion.div
+                    onClick={() => {
+                      // Show confirmation toast with action button
+                      toast.error(`การลบฟอร์ม "${form.title}" จะลบข้อมูลที่เกี่ยวข้องทั้งหมด`, {
+                        title: 'ยืนยันการลบฟอร์ม',
                         duration: 10000,
                         action: {
-                          label: "ยืนยันการลบ",
+                          label: 'ยืนยันการลบ',
                           onClick: async () => {
                             try {
-                              dataService.deleteForm(initialForm.id);
-                              toast.success('ลบฟอร์มเรียบร้อยแล้ว', {
-                                title: "ลบสำเร็จ",
+                              await apiClient.deleteForm(initialForm.id);
+                              toast.success('ลบฟอร์มสำเร็จ', {
+                                title: 'ลบสำเร็จ',
                                 duration: 3000
                               });
                               // Navigate back to form list
-                              onCancel();
+                              if (onSave) {
+                                onSave(null, initialForm.id);
+                              }
                             } catch (error) {
-                              console.error('Delete error:', error);
-                              toast.error('เกิดข้อผิดพลาดในการลบฟอร์ม', {
-                                title: "ลบไม่สำเร็จ",
+                              console.error('Delete form error:', error);
+                              toast.error(`ไม่สามารถลบฟอร์มได้: ${error.message}`, {
+                                title: 'ลบไม่สำเร็จ',
                                 duration: 5000
                               });
                             }
@@ -1567,22 +1571,56 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                         }
                       });
                     }}
+                    className="relative flex items-center justify-center w-10 h-10 cursor-pointer group"
                     title="ลบฟอร์ม"
-                    className="p-2 text-red-500 hover:text-red-400 transition-all duration-300 touch-target-comfortable cursor-pointer"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
                     style={{
                       background: 'transparent',
-                      border: 'none'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'scale(1.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
+                      border: 'none',
+                      outline: 'none'
                     }}
                   >
-                    <FontAwesomeIcon icon={faTrashAlt} className="w-4 h-4" />
-                  </div>
-                )}
+                    {/* Pulsing danger glow on hover */}
+                    <motion.div
+                      className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100"
+                      animate={{
+                        scale: [1, 1.3, 1],
+                        opacity: [0, 0.3, 0]
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                      style={{
+                        background: 'radial-gradient(circle, rgba(239, 68, 68, 0.4) 0%, rgba(220, 38, 38, 0.2) 50%, transparent 70%)',
+                        filter: 'blur(6px)'
+                      }}
+                    />
+
+                    {/* Icon with shake animation on hover */}
+                    <motion.div
+                      className="relative z-10"
+                      whileHover={{
+                        rotate: [0, -10, 10, -10, 10, 0],
+                        transition: { duration: 0.5 }
+                      }}
+                    >
+                      <FontAwesomeIcon
+                        icon={faTrash}
+                        className="text-xl text-red-500 group-hover:text-red-600 transition-colors duration-300"
+                        style={{
+                          filter: 'drop-shadow(0 0 6px rgba(239, 68, 68, 0.5))'
+                        }}
+                      />
+                    </motion.div>
+                  </motion.div>
+                </div>
+              )}
+
+              {/* Action Buttons - Enhanced Responsive */}
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               </div>
             </div>
 

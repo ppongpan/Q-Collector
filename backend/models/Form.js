@@ -25,14 +25,14 @@ module.exports = (sequelize, DataTypes) => {
     roles_allowed: {
       type: DataTypes.JSONB,
       allowNull: false,
-      defaultValue: ['user'],
+      defaultValue: ['general_user'],
       comment: 'Array of roles that can access this form',
       validate: {
         isValidRoles(value) {
           if (!Array.isArray(value)) {
             throw new Error('roles_allowed must be an array');
           }
-          const validRoles = ['admin', 'manager', 'user', 'viewer'];
+          const validRoles = ['super_admin', 'admin', 'moderator', 'customer_service', 'technic', 'sale', 'marketing', 'general_user'];
           const invalidRoles = value.filter(role => !validRoles.includes(role));
           if (invalidRoles.length > 0) {
             throw new Error(`Invalid roles: ${invalidRoles.join(', ')}`);
@@ -75,6 +75,11 @@ module.exports = (sequelize, DataTypes) => {
         min: 1,
       },
     },
+    table_name: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: 'PostgreSQL dynamic table name (generated from form title with Thai→English translation)',
+    },
   }, {
     tableName: 'forms',
     timestamps: true,
@@ -84,6 +89,7 @@ module.exports = (sequelize, DataTypes) => {
       { fields: ['is_active'] },
       { fields: ['createdAt'] },
       { fields: ['title'] },
+      { fields: ['table_name'] },
     ],
   });
 

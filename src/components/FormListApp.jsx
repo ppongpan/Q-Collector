@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
@@ -8,10 +8,11 @@ import {
   faFileAlt, faUsers, faCalendarAlt, faBuilding, faBell, faLink
 } from '@fortawesome/free-solid-svg-icons';
 import dataService from '../services/DataService.js';
+import apiClient from '../services/ApiClient';
 import { useEnhancedToast } from './ui/enhanced-toast';
 import { useAuth } from '../contexts/AuthContext';
 
-// USER_ROLES from version 0.1.5
+// USER_ROLES - Matches Form Settings (EnhancedFormBuilder.jsx)
 const USER_ROLES = {
   SUPER_ADMIN: { id: 'super_admin', color: 'text-red-500', bgColor: 'bg-red-500/10', name: 'Super Admin', isDefault: true },
   ADMIN: { id: 'admin', color: 'text-pink-500', bgColor: 'bg-pink-500/10', name: 'Admin', isDefault: true },
@@ -19,13 +20,14 @@ const USER_ROLES = {
   CUSTOMER_SERVICE: { id: 'customer_service', color: 'text-blue-500', bgColor: 'bg-blue-500/10', name: 'Customer Service', isDefault: false },
   TECHNIC: { id: 'technic', color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', name: 'Technic', isDefault: false },
   SALE: { id: 'sale', color: 'text-green-500', bgColor: 'bg-green-500/10', name: 'Sale', isDefault: false },
-  MARKETING: { id: 'marketing', color: 'text-yellow-500', bgColor: 'bg-yellow-500/10', name: 'Marketing', isDefault: false }, // FIXED v0.6.6: Changed from orange to yellow
+  MARKETING: { id: 'marketing', color: 'text-orange-500', bgColor: 'bg-orange-500/10', name: 'Marketing', isDefault: false },
   GENERAL_USER: { id: 'general_user', color: 'text-gray-500', bgColor: 'bg-gray-500/10', name: 'General User', isDefault: false }
 };
 
 export default function FormListApp({ onCreateForm, onEditForm, onViewSubmissions, onFormView }) {
   const [forms, setForms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false); // Prevent duplicate calls
 
   // Enhanced toast notifications
   const toast = useEnhancedToast();
@@ -97,18 +99,31 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
     loadForms();
   }, []);
 
-  const loadForms = () => {
+  const loadForms = async () => {
+    // Prevent duplicate calls
+    if (loadingRef.current) {
+      console.log('loadForms already in progress, skipping...');
+      return;
+    }
+
+    loadingRef.current = true;
     setLoading(true);
+
     try {
-      const formsData = dataService.getFormsArray();
+      // Fetch forms from database API
+      const response = await apiClient.listForms();
+
+      // Check if response is successful
+      if (!response || !response.data) {
+        throw new Error('ไม่ได้รับข้อมูลจาก server');
+      }
+
+      const formsData = response.data?.forms || response.data || [];
 
       // Process forms with submission counts and enhanced display data
       const formsWithStats = formsData.map(form => {
-        const submissions = dataService.getSubmissionsByFormId(form.id);
-        const submissionCount = submissions.length;
-
         // Extract category from form settings or default
-        const category = form.settings?.category || 'General';
+        const category = form.settings?.category || form.category || 'General';
 
         // Get appropriate icon based on form type or category
         const icon = getFormIcon(form, category);
@@ -126,27 +141,71 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
             return 'Invalid Date';
           }
         };
-        const lastUpdated = formatDate(form.updatedAt || form.createdAt);
+        const lastUpdated = formatDate(form.updatedAt || form.updated_at || form.createdAt || form.created_at);
 
         return {
           ...form,
           category,
           icon,
-          submissions: submissionCount,
+          submissions: form.submission_count || 0,
           lastUpdated,
-          status: 'active',
+          status: form.is_active ? 'active' : 'inactive',
           // Extract user roles and Telegram settings from form data
-          selectedRoles: form.visibleRoles || ['general_user'],
-          telegramEnabled: form.settings?.telegram?.enabled || false
+          selectedRoles: form.roles_allowed || form.visible_roles || form.visibleRoles || ['general_user'],
+          telegramEnabled: form.telegram_enabled || form.settings?.telegram?.enabled || false
         };
       });
 
       setForms(formsWithStats);
+
+      // Log success for debugging
+      console.log(`✅ Loaded ${formsWithStats.length} forms successfully`);
+
     } catch (error) {
-      console.error('Error loading forms:', error);
+      console.error('❌ Error loading forms from API:', error);
+
+      // Determine error type and show appropriate message
+      let errorTitle = 'เกิดข้อผิดพลาด';
+      let errorMessage = 'กรุณาลองใหม่อีกครั้ง';
+
+      if (error.response) {
+        // Server responded with error
+        const status = error.response.status;
+
+        if (status === 401) {
+          errorTitle = 'ไม่มีสิทธิ์เข้าถึง';
+          errorMessage = 'กรุณาเข้าสู่ระบบใหม่';
+        } else if (status === 403) {
+          errorTitle = 'ไม่มีสิทธิ์ดูฟอร์ม';
+          errorMessage = 'คุณไม่มีสิทธิ์ในการดูฟอร์ม';
+        } else if (status === 500) {
+          errorTitle = 'ปัญหาเซิร์ฟเวอร์';
+          errorMessage = 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์';
+        } else {
+          errorMessage = error.response.data?.error?.message || error.message || errorMessage;
+        }
+      } else if (error.request) {
+        // Request made but no response (network error, backend down)
+        errorTitle = 'ไม่สามารถเชื่อมต่อ';
+        errorMessage = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้';
+      } else {
+        // Other errors
+        errorMessage = error.message || errorMessage;
+      }
+
+      // Only show error toast if this is a real error (not empty DB)
+      // Empty DB returns success with empty array, not an error
+      if (loadingRef.current) {
+        toast.error(errorMessage, {
+          title: errorTitle,
+          duration: 5000
+        });
+      }
+
       setForms([]);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 

@@ -28,14 +28,14 @@ class FormService {
       const {
         title,
         description,
-        roles_allowed = ['user'],
+        roles_allowed = ['general_user'],
         settings = {},
         fields = [],
         subForms = [],
       } = formData;
 
       // Validate roles
-      const validRoles = ['admin', 'manager', 'user', 'viewer'];
+      const validRoles = ['super_admin', 'admin', 'moderator', 'customer_service', 'technic', 'sale', 'marketing', 'general_user'];
       if (!Array.isArray(roles_allowed) || roles_allowed.some(r => !validRoles.includes(r))) {
         throw new ApiError(400, 'Invalid roles specified', 'INVALID_ROLES');
       }
@@ -441,7 +441,25 @@ class FormService {
    */
   static async getForm(formId, userId) {
     try {
-      const form = await Form.scope('full').findByPk(formId);
+      const form = await Form.findByPk(formId, {
+        include: [
+          {
+            association: 'fields',
+            separate: true,
+            order: [['order_index', 'ASC']]
+          },
+          {
+            association: 'subForms',
+            separate: true,
+            order: [['order_index', 'ASC']],
+            include: [{
+              association: 'fields',
+              separate: true,
+              order: [['order_index', 'ASC']]
+            }]
+          }
+        ]
+      });
 
       if (!form) {
         throw new ApiError(404, 'Form not found', 'FORM_NOT_FOUND');

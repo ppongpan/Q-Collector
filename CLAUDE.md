@@ -4,8 +4,8 @@
 
 ## Version Information
 
-- **Version**: 0.6.4
-- **Release Date**: 2025-10-02
+- **Version**: 0.6.5
+- **Release Date**: 2025-10-03
 - **Framework**: React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 - **Target**: Thai Business Forms & Data Collection
 - **Architecture**: Full-Stack Enterprise Application
@@ -104,6 +104,59 @@ toast.error("Error!", { action: { label: "Retry", onClick: retry } });
 **Accessibility:** WCAG 2.1 AA compliance, ARIA labels, keyboard navigation
 
 ## Version History
+
+### v0.6.5 (2025-10-03) - Database Schema Fix & Role System Update
+
+**Major Fixes:**
+- ✅ **Database Schema Alignment** - Fixed column mismatches between Model and Database
+- ✅ **Role System Update** - Migrated from 4 roles to 8 roles with proper validation
+- ✅ **Migration System** - Added roles_allowed (JSONB) and version (INTEGER) columns
+- ✅ **Drag-and-Drop Fix** - Fixed null pointer error in form builder
+- ✅ **Form Creation Fix** - Updated role validation in FormService
+
+**Technical Changes:**
+
+*Database Migrations:*
+- `20251003000001-add-roles-allowed-column.js` - Migrated visible_roles → roles_allowed (JSONB)
+- `20251003000002-add-version-column.js` - Added version column for form versioning
+
+*Role System Updates:*
+- **Old Roles:** admin, manager, user, viewer (4 roles)
+- **New Roles:** super_admin, admin, moderator, customer_service, technic, sale, marketing, general_user (8 roles)
+- Updated validation in: Form.js, FormService.js, form.routes.js
+
+*Frontend Updates:*
+- `EnhancedFormBuilder.jsx` - Send roles_allowed instead of visible_roles
+- `FormListApp.jsx` - Support both roles_allowed and visible_roles
+- `DataService.js` - Backward compatibility for role fields
+- Fixed drag-and-drop null pointer in handleDragEnd()
+
+*Backend Updates:*
+- `Form.js` - Updated validRoles and defaultValue to general_user
+- `FormService.js` - Updated role validation and default value
+- `form.routes.js` - Updated role validation rules
+
+**Database Schema:**
+```sql
+-- New columns added
+roles_allowed JSONB NOT NULL DEFAULT '["general_user"]'::jsonb
+version INTEGER NOT NULL DEFAULT 1
+
+-- Indexes added
+CREATE INDEX idx_forms_roles_allowed ON forms USING GIN (roles_allowed)
+CREATE INDEX idx_forms_version ON forms (version)
+```
+
+**Breaking Changes:**
+- ⚠️ Old test files using admin/manager/user/viewer roles need updating
+- ⚠️ Fixtures using old roles need updating
+
+**Migration Path:**
+1. Run `npx sequelize-cli db:migrate` to apply schema changes
+2. Restart backend server to load new Model definitions
+3. Update test files and fixtures to use new role names
+
+---
 
 ### v0.6.4 (2025-10-02) - User Management UX & Future Feature Planning
 
@@ -966,3 +1019,4 @@ CREATE TABLE {sub_form_table_name} (
 - Telegram Bot Token และ Group ID ตั้งค่าใน .env (ไม่เปิดเผยใน repository)
 - Super Admin Account: สร้างผ่าน script หรือ seed data
 - Claude Code Process: ตรวจสอบ process ก่อน restart servers
+- ตรวจสอบ claude process ทำงานที่ใด เมื่อทำการ kill redundant อย่าหยุดการทำงานของ claude

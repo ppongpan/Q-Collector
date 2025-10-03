@@ -97,7 +97,7 @@ router.get(
 router.post(
   '/',
   authenticate,
-  authorize('admin', 'manager'),
+  authorize('super_admin', 'admin', 'moderator'),
   [
     body('title')
       .trim()
@@ -110,7 +110,7 @@ router.post(
       .isArray()
       .withMessage('roles_allowed must be an array')
       .custom((value) => {
-        const validRoles = ['admin', 'manager', 'user', 'viewer'];
+        const validRoles = ['super_admin', 'admin', 'moderator', 'customer_service', 'technic', 'sale', 'marketing', 'general_user'];
         return value.every((role) => validRoles.includes(role));
       })
       .withMessage('Invalid role in roles_allowed'),
@@ -182,7 +182,7 @@ router.get(
 router.put(
   '/:id',
   authenticate,
-  authorize('admin', 'manager'),
+  authorize('super_admin', 'admin', 'moderator'),
   [
     param('id')
       .isUUID()
@@ -239,7 +239,7 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  authorize('admin', 'manager'),
+  authorize('super_admin', 'admin', 'moderator'),
   [
     param('id')
       .isUUID()
@@ -265,7 +265,7 @@ router.delete(
 router.post(
   '/:id/duplicate',
   authenticate,
-  authorize('admin', 'manager'),
+  authorize('super_admin', 'admin', 'moderator'),
   [
     param('id')
       .isUUID()
@@ -299,7 +299,7 @@ router.post(
 router.patch(
   '/:id/toggle-status',
   authenticate,
-  authorize('admin', 'manager'),
+  authorize('super_admin', 'admin', 'moderator'),
   [
     param('id')
       .isUUID()
