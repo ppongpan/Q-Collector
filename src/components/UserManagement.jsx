@@ -11,39 +11,27 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle } from './ui/glass-card';
+import { motion } from 'framer-motion';
+import { GlassCard, GlassCardContent } from './ui/glass-card';
 import { useEnhancedToast } from './ui/enhanced-toast';
-import { ConfirmModal } from './ui/alert-modal';
 import CustomSelect from './ui/custom-select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUser,
-  faEnvelope,
-  faUserTag,
-  faKey,
-  faEdit,
-  faSave,
-  faTimes,
   faSearch,
   faFilter,
   faLock,
   faUnlock,
-  faFileAlt,
-  faPlus,
   faTrash,
-  faBriefcase,
-  faShieldAlt,
-  faRotateRight,
-  faCheckCircle,
-  faTimesCircle
+  faChevronDown,
+  faPlus
 } from '@fortawesome/free-solid-svg-icons';
 import { ALL_ROLES, getRoleLabel, getRoleBadgeColor, getRoleTextColor } from '../config/roles.config';
 import { useAuth } from '../contexts/AuthContext';
-import User2FAManagement from './admin/User2FAManagement';
 import ApiClient from '../services/ApiClient';
+import { Switch } from './ui/switch';
 
-export default function UserManagement() {
+export default function UserManagement({ onEditUser }) {
   const { user: currentUser } = useAuth();
   const toast = useEnhancedToast();
 
@@ -51,27 +39,17 @@ export default function UserManagement() {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [confirmDialog, setConfirmDialog] = useState({ show: false, type: null, user: null });
-
-  // Edit form state
-  const [editForm, setEditForm] = useState({
+  const [showFilterPopup, setShowFilterPopup] = useState(false);
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [newUser, setNewUser] = useState({
     username: '',
     email: '',
     full_name: '',
-    role: '',
-    is_active: true,
-    special_forms: '' // Comma-separated form names with brackets
+    password: '',
+    role: 'general_user'
   });
 
-  // Password reset state
-  const [passwordForm, setPasswordForm] = useState({
-    newPassword: '',
-    confirmPassword: ''
-  });
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
 
   // Check if current user is Super Admin
   const isSuperAdmin = currentUser?.role === 'super_admin';
@@ -90,29 +68,52 @@ export default function UserManagement() {
     try {
       setIsLoading(true);
 
-      // Fetch users from API
-      const response = await ApiClient.get('/users', {
-        params: {
-          page: 1,
-          limit: 1000 // Get all users
-        }
-      });
+      // Fetch users from API (with 2FA status)
+      const [usersResponse, twoFAResponse] = await Promise.all([
+        ApiClient.get('/users', {
+          params: {
+            page: 1,
+            limit: 1000 // Get all users
+          }
+        }),
+        ApiClient.get('/admin/users/2fa-status')
+      ]);
 
       // Extract users from response
-      const fetchedUsers = response.data?.users || response.users || [];
+      const fetchedUsers = usersResponse.data?.users || usersResponse.users || [];
+      const twoFAUsers = twoFAResponse.data?.users || [];
+
+      // Create a map of 2FA status by user ID
+      const twoFAMap = new Map(
+        twoFAUsers.map(user => [user.id, {
+          twoFactorEnabled: user.twoFactorEnabled || false,
+          requires_2fa_setup: user.requires_2fa_setup || false,
+          requires2FASetup: user.requires_2fa_setup || false // Support both naming conventions
+        }])
+      );
 
       // Transform users to match expected format
-      const transformedUsers = fetchedUsers.map(user => ({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        full_name: user.full_name,
-        role: user.role,
-        is_active: user.is_active !== undefined ? user.is_active : true,
-        createdAt: user.created_at || user.createdAt,
-        special_forms: user.special_forms || [],
-        twoFactorEnabled: user.two_factor_enabled || user.twoFactorEnabled || false
-      }));
+      const transformedUsers = fetchedUsers.map(user => {
+        const twoFAStatus = twoFAMap.get(user.id) || {
+          twoFactorEnabled: false,
+          requires_2fa_setup: false,
+          requires2FASetup: false
+        };
+
+        return {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          full_name: user.full_name,
+          role: user.role,
+          is_active: user.is_active !== undefined ? user.is_active : true,
+          createdAt: user.created_at || user.createdAt,
+          special_forms: user.special_forms || [],
+          twoFactorEnabled: twoFAStatus.twoFactorEnabled,
+          requires_2fa_setup: twoFAStatus.requires_2fa_setup,
+          requires2FASetup: twoFAStatus.requires2FASetup
+        };
+      });
 
       setUsers(transformedUsers);
       setIsLoading(false);
@@ -147,160 +148,151 @@ export default function UserManagement() {
     setFilteredUsers(filtered);
   };
 
-  const handleEditUser = (user) => {
-    setSelectedUser(user);
-    setEditForm({
-      username: user.username,
-      email: user.email,
-      full_name: user.full_name || '',
-      role: user.role,
-      is_active: user.is_active,
-      special_forms: user.special_forms ? user.special_forms.join(', ') : ''
-    });
-    setShowPasswordReset(false);
-    setPasswordForm({ newPassword: '', confirmPassword: '' });
-    setIsEditModalOpen(true);
-
-    // Scroll to top to ensure modal is visible
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 100);
+  const handleUserClick = (user) => {
+    // Navigate to user edit page instead of opening modal
+    if (onEditUser) {
+      onEditUser(user.id);
+    }
   };
 
-  const handleSaveUser = async () => {
-    try {
-      // Validate
-      if (!editForm.username || !editForm.email) {
-        toast.error('กรุณากรอกข้อมูลให้ครบถ้วน');
-        return;
+  // Get 2FA status (disabled/pending/enabled)
+  const get2FAStatus = (user) => {
+    if (user.twoFactorEnabled) return 'enabled'; // 🟢 เขียว - 2FA เปิดใช้งาน
+    if (user.requires_2fa_setup || user.requires2FASetup) {
+      console.log(`User ${user.username} is PENDING:`, { requires_2fa_setup: user.requires_2fa_setup, requires2FASetup: user.requires2FASetup });
+      return 'pending'; // 🟡 เหลือง - รอตั้งค่า 2FA
+    }
+    return 'disabled'; // 🔴 แดง - 2FA ปิด
+  };
+
+  // Get 2FA color based on status
+  const get2FAColor = (user) => {
+    const status = get2FAStatus(user);
+    if (status === 'enabled') return 'bg-green-500';
+    if (status === 'pending') return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
+  const handleToggle2FA = (user) => {
+    const status = get2FAStatus(user);
+    const isEnabling = status === 'disabled'; // Only enable if fully disabled
+
+    const confirmAction = async (toastId) => {
+      try {
+        if (isEnabling) {
+          // Call API to force 2FA setup on next login
+          await ApiClient.post(`/admin/users/${user.id}/force-2fa`);
+
+          toast.success('บังคับตั้งค่า 2FA สำเร็จ', {
+            description: `${user.username} จะต้องตั้งค่า 2FA ในครั้งต่อไปที่เข้าสู่ระบบ (แสกน QR Code)`
+          });
+        } else {
+          // Call API to completely disable 2FA
+          await ApiClient.post(`/admin/users/${user.id}/reset-2fa`);
+
+          toast.success('ปิด 2FA สำเร็จ', {
+            description: `${user.username} สามารถเข้าสู่ระบบด้วยรหัสผ่านเท่านั้น (ไม่ต้องใช้ 2FA)`
+          });
+        }
+
+        // Reload users to get updated 2FA status
+        await loadUsers();
+      } catch (error) {
+        toast.error(`ไม่สามารถ${isEnabling ? 'เปิด' : 'ปิด'} 2FA ได้`, {
+          description: error.response?.data?.message || error.message
+        });
       }
+    };
 
-      // Parse special forms
-      const specialForms = editForm.special_forms
-        .split(',')
-        .map(f => f.trim())
-        .filter(f => f.length > 0);
-
-      // TODO: Replace with actual API call
-      const updatedUser = {
-        ...selectedUser,
-        username: editForm.username,
-        email: editForm.email,
-        full_name: editForm.full_name,
-        role: editForm.role,
-        is_active: editForm.is_active,
-        special_forms: specialForms
-      };
-
-      // Update local state
-      setUsers(users.map(u => u.id === selectedUser.id ? updatedUser : u));
-
-      toast.success('บันทึกข้อมูลผู้ใช้สำเร็จ', {
-        description: `อัปเดตข้อมูลของ ${editForm.username} เรียบร้อยแล้ว`
+    if (isEnabling) {
+      toast.warning(`ยืนยันการบังคับตั้งค่า 2FA สำหรับ "${user.username}"`, {
+        title: '⚠️ บังคับตั้งค่า 2FA',
+        description: 'ผู้ใช้จะต้องแสกน QR Code และยืนยัน OTP ในครั้งต่อไปที่ล็อกอิน',
+        persistent: true,
+        action: {
+          label: 'บังคับตั้งค่า 2FA',
+          onClick: confirmAction
+        }
       });
-
-      setIsEditModalOpen(false);
-    } catch (error) {
-      toast.error('ไม่สามารถบันทึกข้อมูลได้', {
-        description: error.message
+    } else {
+      toast.error(`ยืนยันการปิด 2FA สำหรับ "${user.username}"`, {
+        title: '🔴 ยืนยันการปิด 2FA',
+        description: 'ผู้ใช้จะสามารถเข้าสู่ระบบด้วยรหัสผ่านเท่านั้น (ไม่ต้องใช้ 2FA) จะลบ secret, backup codes และ trusted devices ทั้งหมด',
+        persistent: true,
+        action: {
+          label: 'ปิด 2FA',
+          onClick: confirmAction
+        }
       });
     }
   };
 
-  const handleResetPassword = async () => {
-    try {
-      // Validate
-      if (!passwordForm.newPassword || !passwordForm.confirmPassword) {
-        toast.error('กรุณากรอกรหัสผ่านให้ครบถ้วน');
-        return;
-      }
-
-      if (passwordForm.newPassword.length < 8) {
-        toast.error('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
-        return;
-      }
-
-      if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-        toast.error('รหัสผ่านไม่ตรงกัน');
-        return;
-      }
-
-      // TODO: Replace with actual API call
-      toast.success('รีเซ็ตรหัสผ่านสำเร็จ', {
-        description: `รีเซ็ตรหัสผ่านของ ${selectedUser.username} เรียบร้อยแล้ว`
+  const handleDeleteUser = (user) => {
+    // ป้องกันการลบตัวเอง
+    if (user.id === currentUser?.id) {
+      toast.error('ไม่สามารถลบบัญชีของตัวเองได้', {
+        description: 'กรุณาใช้บัญชี Super Admin อื่นเพื่อลบบัญชีนี้'
       });
-
-      setPasswordForm({ newPassword: '', confirmPassword: '' });
-      setShowPasswordReset(false);
-    } catch (error) {
-      toast.error('ไม่สามารถรีเซ็ตรหัสผ่านได้', {
-        description: error.message
-      });
+      return;
     }
-  };
 
-  const handleForceEnable2FA = async (user) => {
-    setConfirmDialog({
-      show: true,
-      type: 'force',
-      user: user
+    const toastId = toast.warning(`คุณแน่ใจหรือไม่ที่จะลบผู้ใช้ "${user.username}"?`, {
+      title: '⚠️ ยืนยันการลบผู้ใช้',
+      description: 'การดำเนินการนี้ไม่สามารถย้อนกลับได้',
+      duration: 10000,
+      action: {
+        label: 'ยืนยันการลบ',
+        onClick: async () => {
+          // ปิด toast ทันทีเมื่อกดปุ่มยืนยัน
+          toast.dismiss(toastId);
+
+          try {
+            console.log('Deleting user with ID:', user.id);
+            const response = await ApiClient.delete(`/admin/users/${user.id}`);
+            console.log('Delete response:', response);
+
+            toast.success('ลบผู้ใช้เรียบร้อยแล้ว', {
+              title: 'สำเร็จ'
+            });
+
+            await loadUsers();
+          } catch (error) {
+            console.error('Failed to delete user:', error);
+            console.error('Error details:', error.response?.data);
+            const errorMessage = error.response?.data?.error?.message || error.message || 'เกิดข้อผิดพลาด';
+            toast.error(errorMessage, {
+              title: 'ลบไม่สำเร็จ'
+            });
+          }
+        }
+      }
     });
   };
 
-  const confirmForceEnable2FA = async () => {
-    const user = confirmDialog.user;
-
+  const handleCreateUser = async () => {
     try {
-      setConfirmDialog({ show: false, type: null, user: null });
-      // TODO: Replace with actual API call
-      // await ApiClient.post(`/admin/users/${user.id}/force-2fa`);
-
-      // Update local state
-      setUsers(users.map(u =>
-        u.id === user.id ? { ...u, twoFactorEnabled: true } : u
-      ));
-
-      toast.success('บังคับเปิด 2FA สำเร็จ', {
-        title: '✅ สำเร็จ',
-        description: `${user.username} จะต้องตั้งค่า 2FA ในครั้งต่อไปที่เข้าสู่ระบบ`
+      const response = await ApiClient.post('/admin/users', {
+        ...newUser,
+        requires_2fa_setup: true // Force 2FA setup on first login
       });
+
+      toast.success('สร้างผู้ใช้สำเร็จ', {
+        description: `สร้างผู้ใช้ ${newUser.username} เรียบร้อยแล้ว ผู้ใช้จะต้องตั้งค่า 2FA ในการเข้าใช้งานครั้งแรก`
+      });
+
+      setShowCreateUserModal(false);
+      setNewUser({
+        username: '',
+        email: '',
+        full_name: '',
+        password: '',
+        role: 'general_user'
+      });
+
+      await loadUsers();
     } catch (error) {
-      toast.error('ไม่สามารถบังคับเปิด 2FA ได้', {
-        title: '❌ ข้อผิดพลาด',
-        description: error.message
-      });
-    }
-  };
-
-  const handleReset2FA = async (user) => {
-    setConfirmDialog({
-      show: true,
-      type: 'reset',
-      user: user
-    });
-  };
-
-  const confirmReset2FA = async () => {
-    const user = confirmDialog.user;
-
-    try {
-      setConfirmDialog({ show: false, type: null, user: null });
-      // TODO: Replace with actual API call
-      // await ApiClient.post(`/admin/users/${user.id}/reset-2fa`);
-
-      // Update local state
-      setUsers(users.map(u =>
-        u.id === user.id ? { ...u, twoFactorEnabled: false } : u
-      ));
-
-      toast.success('รีเซ็ต 2FA สำเร็จ', {
-        title: '✅ สำเร็จ',
-        description: `รีเซ็ต 2FA ของ ${user.username} เรียบร้อยแล้ว`
-      });
-    } catch (error) {
-      toast.error('ไม่สามารถรีเซ็ต 2FA ได้', {
-        title: '❌ ข้อผิดพลาด',
-        description: error.message
+      toast.error('ไม่สามารถสร้างผู้ใช้ได้', {
+        description: error.response?.data?.message || error.message
       });
     }
   };
@@ -326,15 +318,6 @@ export default function UserManagement() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90">
       <div className="container-responsive px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6 sm:py-8 lg:py-12 space-y-8">
-        {/* User 2FA Management Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <User2FAManagement />
-        </motion.div>
-
         {/* User Management Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -343,9 +326,9 @@ export default function UserManagement() {
           className="mb-8"
         >
           {/* Search and Filter Row */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            {/* Search */}
-            <div className="relative w-full sm:w-80">
+          <div className="flex items-center gap-2 mb-6">
+            {/* Search Box */}
+            <div className="relative flex-1">
               <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60">
                 <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
               </div>
@@ -358,8 +341,46 @@ export default function UserManagement() {
               />
             </div>
 
-            {/* Role Filter */}
-            <div className="relative w-full sm:w-auto">
+            {/* Add User Button */}
+            <motion.div className="flex-shrink-0">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowCreateUserModal(true)}
+                className="flex items-center justify-center border border-primary/40 hover:bg-primary/20 transition-all backdrop-blur-sm bg-primary/10"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  minWidth: '40px',
+                  minHeight: '40px',
+                  padding: 0
+                }}
+              >
+                <FontAwesomeIcon icon={faPlus} className="w-4 h-4 text-primary" />
+              </motion.button>
+            </motion.div>
+
+            {/* Filter Icon Button (Mobile/Tablet) - Circular */}
+            <div className="sm:hidden flex-shrink-0">
+              <button
+                onClick={() => setShowFilterPopup(true)}
+                className="flex items-center justify-center border border-border/40 hover:bg-muted/20 transition-all backdrop-blur-sm bg-background/80"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  minWidth: '40px',
+                  minHeight: '40px',
+                  padding: 0
+                }}
+              >
+                <FontAwesomeIcon icon={faFilter} className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            {/* Role Filter (Desktop) */}
+            <div className="hidden sm:block relative w-auto">
               <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60 pointer-events-none z-10">
                 <FontAwesomeIcon icon={faFilter} className="w-4 h-4" />
               </div>
@@ -374,7 +395,7 @@ export default function UserManagement() {
                   }))
                 ]}
                 placeholder="ทุกบทบาท"
-                className="w-full sm:w-auto pl-10"
+                className="w-auto pl-10"
               />
             </div>
           </div>
@@ -408,11 +429,10 @@ export default function UserManagement() {
                   <table className="w-full text-[12px]">
                     <thead className="bg-muted/30 border-b border-border/40">
                       <tr>
-                        <th className="px-2 py-2 text-left font-semibold text-foreground/80 w-[15%]">ชื่อผู้ใช้</th>
-                        <th className="px-2 py-2 text-left font-semibold text-foreground/80 w-[25%]">อีเมล</th>
-                        <th className="px-2 py-2 text-left font-semibold text-foreground/80 w-[25%]">ชื่อ-นามสกุล</th>
-                        <th className="px-2 py-2 text-center font-semibold text-foreground/80 w-[20%]">บทบาท</th>
-                        <th className="px-2 py-2 text-center font-semibold text-foreground/80 w-[15%]">สถานะ</th>
+                        <th className="px-2 py-2 text-left font-semibold text-foreground/80 w-20">ชื่อผู้ใช้</th>
+                        <th className="px-2 py-2 text-center font-semibold text-foreground/80 w-36">บทบาท</th>
+                        <th className="px-2 py-2 text-center font-semibold text-foreground/80 w-28">สถานะ</th>
+                        <th className="px-2 py-2 text-center font-semibold text-foreground/80 w-24">2FA</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -422,27 +442,29 @@ export default function UserManagement() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.03 }}
-                          onClick={() => handleEditUser(user)}
-                          className="border-b border-border/30 hover:bg-muted/30 transition-colors cursor-pointer"
+                          className="border-b border-border/30 hover:bg-muted/30 transition-colors"
                         >
-                          <td className="px-2 py-2">
-                            <div className="flex items-center gap-2">
-                              <FontAwesomeIcon icon={faUser} className="text-primary text-[10px]" />
-                              <span className="font-medium">{user.username}</span>
+                          <td
+                            className="px-2 py-3 cursor-pointer w-20"
+                            onClick={() => handleUserClick(user)}
+                          >
+                            <div className="flex items-start gap-1.5">
+                              <FontAwesomeIcon icon={faUser} className="text-primary text-[10px] mt-0.5 flex-shrink-0" />
+                              <span className="font-medium leading-tight break-words text-[11px]">{user.username}</span>
                             </div>
                           </td>
-                          <td className="px-2 py-2 text-muted-foreground">
-                            <div className="line-clamp-2 break-words">{user.email}</div>
-                          </td>
-                          <td className="px-2 py-2">
-                            <div className="line-clamp-2 break-words">{user.full_name || '-'}</div>
-                          </td>
-                          <td className="px-2 py-2 text-center">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getRoleBadgeColor(user.role)}`}>
+                          <td
+                            className="px-2 py-3 text-center cursor-pointer"
+                            onClick={() => handleUserClick(user)}
+                          >
+                            <span className={`text-[11px] font-semibold ${getRoleTextColor(user.role)}`}>
                               {getRoleLabel(user.role)}
                             </span>
                           </td>
-                          <td className="px-2 py-2 text-center">
+                          <td
+                            className="px-2 py-3 text-center cursor-pointer"
+                            onClick={() => handleUserClick(user)}
+                          >
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${
                               user.is_active
                                 ? 'bg-green-500/20 text-green-700 dark:text-green-300'
@@ -451,6 +473,22 @@ export default function UserManagement() {
                               <FontAwesomeIcon icon={user.is_active ? faUnlock : faLock} className="text-[8px]" />
                               {user.is_active ? 'ใช้งาน' : 'ระงับ'}
                             </span>
+                          </td>
+                          <td className="px-2 py-3">
+                            <div className="flex justify-center items-center gap-2">
+                              <Switch
+                                checked={get2FAStatus(user) !== 'disabled'}
+                                onCheckedChange={() => handleToggle2FA(user)}
+                                onClick={(e) => e.stopPropagation()}
+                                className={
+                                  get2FAStatus(user) === 'enabled'
+                                    ? 'data-[state=checked]:bg-green-500'
+                                    : get2FAStatus(user) === 'pending'
+                                    ? 'data-[state=checked]:bg-yellow-500'
+                                    : 'data-[state=unchecked]:bg-red-500'
+                                }
+                              />
+                            </div>
                           </td>
                         </motion.tr>
                       ))}
@@ -463,260 +501,190 @@ export default function UserManagement() {
         </motion.div>
       </div>
 
-      {/* Edit User Modal */}
-      <AnimatePresence>
-        {isEditModalOpen && (
+      {/* Filter Popup (Mobile) */}
+      {showFilterPopup && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-24 p-4"
+          onClick={() => setShowFilterPopup(false)}
+        >
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-            onClick={() => setIsEditModalOpen(false)}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm"
           >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-            >
-              <GlassCard>
-                <GlassCardHeader>
-                  <div className="flex items-center justify-between">
-                    <GlassCardTitle>แก้ไขข้อมูลผู้ใช้</GlassCardTitle>
-                    <button
-                      onClick={() => setIsEditModalOpen(false)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-background/50 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <FontAwesomeIcon icon={faTimes} />
-                    </button>
-                  </div>
-                </GlassCardHeader>
+            <GlassCard>
+              <GlassCardContent className="p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">กรองตามบทบาท</h3>
 
-                <GlassCardContent className="space-y-4">
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      setRoleFilter('all');
+                      setShowFilterPopup(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                      roleFilter === 'all'
+                        ? 'bg-primary/20 border-2 border-primary'
+                        : 'bg-muted/20 border-2 border-transparent hover:bg-muted/30'
+                    }`}
+                  >
+                    <span className="text-base font-medium">ทุกบทบาท</span>
+                  </button>
+
+                  {ALL_ROLES.map(role => (
+                    <button
+                      key={role.value}
+                      onClick={() => {
+                        setRoleFilter(role.value);
+                        setShowFilterPopup(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                        roleFilter === role.value
+                          ? 'bg-primary/20 border-2 border-primary'
+                          : 'bg-muted/20 border-2 border-transparent hover:bg-muted/30'
+                      }`}
+                    >
+                      <span className={`text-base font-semibold ${getRoleTextColor(role.value)}`}>
+                        {role.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setShowFilterPopup(false)}
+                  className="w-full mt-4 px-4 py-2 rounded-lg bg-muted/30 hover:bg-muted/40 transition-colors text-sm font-medium"
+                >
+                  ปิด
+                </button>
+              </GlassCardContent>
+            </GlassCard>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {showCreateUserModal && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-24 p-4"
+          onClick={() => setShowCreateUserModal(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md"
+          >
+            <GlassCard>
+              <GlassCardContent className="p-6">
+                <h3 className="text-xl font-semibold text-foreground mb-6">สร้างผู้ใช้ใหม่</h3>
+
+                <div className="space-y-4">
                   {/* Username */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      <FontAwesomeIcon icon={faUser} className="mr-2" />
+                    <label className="block text-sm font-medium text-foreground/80 mb-2">
                       ชื่อผู้ใช้
                     </label>
                     <input
                       type="text"
-                      value={editForm.username}
-                      onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
-                      className="w-full px-4 py-2 rounded-lg bg-background/50 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      value={newUser.username}
+                      onChange={(e) => setNewUser({...newUser, username: e.target.value})}
+                      className="w-full px-4 py-2 rounded-lg input-glass border border-border/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      placeholder="username"
                     />
                   </div>
 
                   {/* Email */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      <FontAwesomeIcon icon={faEnvelope} className="mr-2" />
+                    <label className="block text-sm font-medium text-foreground/80 mb-2">
                       อีเมล
                     </label>
                     <input
                       type="email"
-                      value={editForm.email}
-                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                      className="w-full px-4 py-2 rounded-lg bg-background/50 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      className="w-full px-4 py-2 rounded-lg input-glass border border-border/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      placeholder="user@example.com"
                     />
                   </div>
 
                   {/* Full Name */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      <FontAwesomeIcon icon={faUser} className="mr-2" />
+                    <label className="block text-sm font-medium text-foreground/80 mb-2">
                       ชื่อ-นามสกุล
                     </label>
                     <input
                       type="text"
-                      value={editForm.full_name}
-                      onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
-                      className="w-full px-4 py-2 rounded-lg bg-background/50 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      value={newUser.full_name}
+                      onChange={(e) => setNewUser({...newUser, full_name: e.target.value})}
+                      className="w-full px-4 py-2 rounded-lg input-glass border border-border/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      placeholder="ชื่อ นามสกุล"
+                    />
+                  </div>
+
+                  {/* Password */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground/80 mb-2">
+                      รหัสผ่านเริ่มต้น
+                    </label>
+                    <input
+                      type="password"
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                      className="w-full px-4 py-2 rounded-lg input-glass border border-border/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      placeholder="รหัสผ่าน"
                     />
                   </div>
 
                   {/* Role */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      <FontAwesomeIcon icon={faUserTag} className="mr-2" />
+                    <label className="block text-sm font-medium text-foreground/80 mb-2">
                       บทบาท
                     </label>
-                    <select
-                      value={editForm.role}
-                      onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                      className="w-full px-4 py-2 rounded-lg bg-background text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    >
-                      {ALL_ROLES.map(role => (
-                        <option key={role.value} value={role.value}>
-                          {role.label}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      เฉพาะ Super Admin เท่านั้นที่สามารถเปลี่ยนบทบาทได้
-                    </p>
-                  </div>
-
-                  {/* Active Status */}
-                  <div>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={editForm.is_active}
-                        onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
-                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary/50"
-                      />
-                      <span className="text-sm font-medium">
-                        <FontAwesomeIcon icon={faUnlock} className="mr-2" />
-                        บัญชีใช้งานได้
-                      </span>
-                    </label>
-                  </div>
-
-                  {/* Special Form Access */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      <FontAwesomeIcon icon={faFileAlt} className="mr-2" />
-                      สิทธิ์พิเศษเข้าถึงฟอร์ม
-                    </label>
-                    <textarea
-                      value={editForm.special_forms}
-                      onChange={(e) => setEditForm({ ...editForm, special_forms: e.target.value })}
-                      placeholder="[Technic Request], [บันทึกการเข้าไซต์งาน]"
-                      rows={3}
-                      className="w-full px-4 py-2 rounded-lg bg-background/50 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
+                    <CustomSelect
+                      value={newUser.role}
+                      onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                      options={ALL_ROLES.map(role => ({
+                        value: role.value,
+                        label: role.label
+                      }))}
+                      className="w-full"
                     />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      ใส่ชื่อฟอร์มในวงเล็บ [] คั่นด้วยเครื่องหมาย , เช่น [Technic Request], [Sales Report]
+                  </div>
+
+                  {/* Info */}
+                  <div className="bg-primary/10 border border-primary/30 rounded-lg p-3">
+                    <p className="text-sm text-foreground/80">
+                      ⓘ ผู้ใช้จะถูกบังคับให้ตั้งค่า 2FA ในการเข้าใช้งานครั้งแรก
                     </p>
-                    <p className="mt-1 text-xs text-primary">
-                      💡 ผู้ใช้จะสามารถเข้าถึงฟอร์มที่ระบุได้ นอกเหนือจากฟอร์มที่ tag Role ของตนเองไว้
-                    </p>
                   </div>
-
-                  {/* Password Reset Section */}
-                  <div className="border-t border-border pt-4">
-                    <button
-                      onClick={() => setShowPasswordReset(!showPasswordReset)}
-                      className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-                    >
-                      <FontAwesomeIcon icon={faKey} />
-                      {showPasswordReset ? 'ซ่อนการรีเซ็ตรหัสผ่าน' : 'รีเซ็ตรหัสผ่าน'}
-                    </button>
-
-                    {showPasswordReset && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-4 space-y-3"
-                      >
-                        <div>
-                          <label className="block text-sm font-medium mb-2">รหัสผ่านใหม่</label>
-                          <input
-                            type="password"
-                            value={passwordForm.newPassword}
-                            onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                            placeholder="อย่างน้อย 8 ตัวอักษร"
-                            className="w-full px-4 py-2 rounded-lg bg-background/50 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">ยืนยันรหัสผ่านใหม่</label>
-                          <input
-                            type="password"
-                            value={passwordForm.confirmPassword}
-                            onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                            placeholder="กรอกรหัสผ่านอีกครั้ง"
-                            className="w-full px-4 py-2 rounded-lg bg-background/50 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                          />
-                        </div>
-                        <button
-                          onClick={handleResetPassword}
-                          className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                        >
-                          <FontAwesomeIcon icon={faKey} />
-                          รีเซ็ตรหัสผ่าน
-                        </button>
-                      </motion.div>
-                    )}
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-4">
-                    <button
-                      onClick={handleSaveUser}
-                      className="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                    >
-                      <FontAwesomeIcon icon={faSave} />
-                      บันทึก
-                    </button>
-                    <button
-                      onClick={() => setIsEditModalOpen(false)}
-                      className="px-4 py-2 bg-background/50 hover:bg-background border border-border rounded-lg font-medium transition-colors"
-                    >
-                      ยกเลิก
-                    </button>
-                  </div>
-                </GlassCardContent>
-              </GlassCard>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Confirmation Modals */}
-      <ConfirmModal
-        isOpen={confirmDialog.show && confirmDialog.type === 'force'}
-        onClose={() => setConfirmDialog({ show: false, type: null, user: null })}
-        onConfirm={confirmForceEnable2FA}
-        title="ยืนยันการบังคับเปิด 2FA"
-        message={
-          <div className="space-y-2">
-            {confirmDialog.user && (
-              <>
-                <p>คุณแน่ใจหรือไม่ที่จะบังคับเปิด 2FA สำหรับ</p>
-                <p className="font-semibold text-primary">"{confirmDialog.user.username}"</p>
-                <p className="text-sm text-muted-foreground">
-                  ผู้ใช้จะต้องตั้งค่า 2FA ในครั้งต่อไปที่เข้าสู่ระบบ
-                </p>
-              </>
-            )}
-          </div>
-        }
-        confirmText="บังคับเปิด 2FA"
-        cancelText="ยกเลิก"
-        variant="warning"
-      />
-
-      <ConfirmModal
-        isOpen={confirmDialog.show && confirmDialog.type === 'reset'}
-        onClose={() => setConfirmDialog({ show: false, type: null, user: null })}
-        onConfirm={confirmReset2FA}
-        title="ยืนยันการรีเซ็ต 2FA"
-        message={
-          <div className="space-y-2">
-            {confirmDialog.user && (
-              <>
-                <p>คุณแน่ใจหรือไม่ที่จะรีเซ็ต 2FA สำหรับ</p>
-                <p className="font-semibold text-primary">"{confirmDialog.user.username}"</p>
-                <div className="mt-3 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
-                  <p className="font-semibold text-orange-500 mb-2">⚠️ การดำเนินการนี้จะ:</p>
-                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                    <li>ลบ 2FA secret และ backup codes ทั้งหมด</li>
-                    <li>ผู้ใช้จะต้องตั้งค่า 2FA ใหม่ทั้งหมด</li>
-                    <li>Trusted devices ทั้งหมดจะถูกลบ</li>
-                  </ul>
                 </div>
-              </>
-            )}
-          </div>
-        }
-        confirmText="รีเซ็ต 2FA"
-        cancelText="ยกเลิก"
-        variant="danger"
-      />
+
+                {/* Actions */}
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => setShowCreateUserModal(false)}
+                    className="flex-1 px-4 py-2 rounded-lg bg-muted/30 hover:bg-muted/40 transition-colors text-sm font-medium"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    onClick={handleCreateUser}
+                    className="flex-1 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white transition-colors text-sm font-medium"
+                  >
+                    สร้างผู้ใช้
+                  </button>
+                </div>
+              </GlassCardContent>
+            </GlassCard>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

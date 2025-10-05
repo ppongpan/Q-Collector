@@ -2,10 +2,11 @@
 
 **Enterprise Form Builder & Data Collection System**
 
-## Version: 0.7.1 (2025-10-03)
+## Version: 0.7.2-dev (2025-10-05)
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection
+**Status:** 🟢 2FA Three-State Toggle Complete
 
 ## Core Features
 
@@ -34,7 +35,61 @@ npm run build && npm run lint
 
 **Design:** Orange primary (#f97316) • 8px grid • 44px touch targets • Glass morphism • Responsive (mobile-first)
 
-## Latest Release
+## Latest Updates
+
+### v0.7.2-dev (2025-10-05) - 2FA Three-State Toggle System
+
+**New Features:**
+- ✅ **3-State 2FA Toggle**: Visual admin interface with color-coded status indicators
+  - 🔴 Red: 2FA disabled (password-only login)
+  - 🟡 Yellow: 2FA setup pending (admin forced, waiting for user QR scan)
+  - 🟢 Green: 2FA fully enabled
+- ✅ **Complete Documentation**: `docs/2FA-Three-State-Toggle-System.md` (comprehensive guide)
+- ✅ **Enhanced Admin Control**: Toggle between states, force 2FA setup, reset 2FA completely
+
+**Technical:**
+- `src/components/UserManagement.jsx` - 3-state logic with color mapping
+- `backend/api/routes/admin.routes.js` - Verified endpoints for force/reset
+- Status determination: `get2FAStatus()` checks `twoFactorEnabled` + `requires_2fa_setup`
+- Color mapping: `get2FAColor()` returns Tailwind classes based on status
+
+**Workflow:**
+- Admin forces 2FA (Red → Yellow) → User scans QR & verifies OTP (Yellow → Green)
+- Admin resets 2FA (Green/Yellow → Red) → User can login with password only
+
+---
+
+### v0.7.2-dev (2025-10-04) - Service Layer Cleanup & FileService Migration
+
+**Phase 1: Service Layer Improvements (Complete):**
+- ✅ **DataService Deprecation**: Added warnings to all methods pointing to API alternatives
+- ✅ **File Cleanup**: Removed unused services (FormService.js, SubmissionService.new.js, FileService.new.js)
+- ✅ **Component Migration**: 8/8 critical components now 100% API-based
+- ✅ **LocalStorage Reduction**: From 122 → 93 occurrences (29 removed, 74% reduction in dataService calls)
+
+**Phase 2: FileService Migration to MinIO (Complete):**
+- ✅ **FileService.api.js Created**: New MinIO-based file service (436 lines)
+- ✅ **FileService.js Deprecated**: Added warnings to all methods
+- ✅ **Migration Guide**: Comprehensive guide at `docs/FileService-Migration-Guide.md`
+- ✅ **Backend Verified**: 7 MinIO endpoints ready (upload, download, delete, list, stats)
+- 📋 **Ready to Migrate**: 6 components waiting for migration
+
+**Migration Status:**
+- Component Layer (Forms/Submissions): **100% Complete** ✅
+- Service Layer Cleanup: **100% Complete** ✅
+- FileService Infrastructure: **100% Ready** ✅
+- FileService Component Migration: **0% (Ready to start)** 📋
+
+**New Services:**
+- `FileService.api.js` - MinIO-based file management (uploadFile, getFileWithUrl, deleteFile)
+- Migration methods: uploadFile(), uploadMultipleFiles(), getFileWithUrl(), downloadFile()
+
+**Breaking Changes:**
+- ⚠️ DataService.js shows deprecation warnings (will be removed in v0.8.0)
+- ⚠️ FileService.js shows deprecation warnings (will be removed in v0.8.0)
+- ✅ All components should use apiClient, submissionService, and fileServiceAPI
+
+---
 
 ### v0.7.1 (2025-10-03) - Form Activation Fix & E2E Testing
 
