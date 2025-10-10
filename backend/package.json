@@ -1,6 +1,6 @@
 {
   "name": "qcollector-backend",
-  "version": "0.6.3",
+  "version": "0.7.3-dev",
   "description": "Q-Collector Backend API Server - Enterprise Form Builder & Data Collection System",
   "main": "api/server.js",
   "scripts": {
@@ -44,6 +44,7 @@
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "cron": "^4.3.3",
+    "deepl-node": "^1.19.1",
     "dotenv": "^16.4.5",
     "exceljs": "^4.4.0",
     "express": "^4.21.1",

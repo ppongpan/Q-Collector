@@ -165,6 +165,7 @@ class FileService {
       return {
         ...file.toJSON(),
         downloadUrl,
+        presignedUrl: downloadUrl,  // ✅ Add presignedUrl as alias for frontend compatibility
         expiresAt: new Date(Date.now() + expirySeconds * 1000),
       };
     } catch (error) {
@@ -290,42 +291,117 @@ class FileService {
         where.mime_type = filters.mimeType;
       }
 
-      if (filters.submissionId) {
-        where.submission_id = filters.submissionId;
-      }
+      // ✅ NOTE: We don't filter by submission_id here because:
+      // 1. Files uploaded during form creation have submission_id = NULL
+      // 2. We need to include those files when editing the submission
+      // 3. The sub-form filtering happens post-query based on field.sub_form_id
+      // if (filters.submissionId) {
+      //   where.submission_id = filters.submissionId;
+      // }
 
       // Pagination
       const page = parseInt(filters.page) || 1;
       const limit = parseInt(filters.limit) || 20;
       const offset = (page - 1) * limit;
 
+      // Build includes with optional sub-form filtering
+      const includes = [
+        {
+          model: User,
+          as: 'uploader',
+          attributes: ['id', 'username', 'email'],
+        },
+        {
+          model: Field,
+          as: 'field',
+          attributes: ['id', 'title', 'type', 'sub_form_id'],
+          required: false  // LEFT JOIN - include files even without field
+        },
+      ];
+
       const { count, rows } = await File.findAndCountAll({
         where,
-        include: [
-          {
-            model: User,
-            as: 'uploader',
-            attributes: ['id', 'username', 'email'],
-          },
-          {
-            model: Field,
-            as: 'field',
-            attributes: ['id', 'title', 'type'],
-          },
-        ],
+        include: includes,
         order: [['uploaded_at', 'DESC']],
         limit,
         offset,
       });
 
+      // 🔍 DEBUG: Log query results
+      logger.info(`📊 Query results: count=${count}, rows.length=${rows.length}`);
+      logger.info(`📋 WHERE clause: ${JSON.stringify(where)}`);
+      logger.info(`👤 User: ${userId}, Role: ${user.role}`);
+
+      // ✅ Filter files when submissionId is provided
+      // This ensures only files related to this submission are returned
+      let filteredFiles = rows;
+      if (filters.submissionId) {
+        logger.info(`Filtering files for submission ${filters.submissionId}:`);
+        logger.info(`Total files from query: ${rows.length}`);
+
+        // Get the submission and its form's field IDs
+        const submission = await Submission.findByPk(filters.submissionId, {
+          include: [{
+            model: require('../models').Form,
+            as: 'form',
+            include: [{
+              model: Field,
+              as: 'fields',
+              attributes: ['id', 'sub_form_id'],
+            }]
+          }]
+        });
+
+        if (!submission || !submission.form) {
+          logger.warn(`Submission ${filters.submissionId} or its form not found`);
+          return {
+            files: [],
+            pagination: {
+              total: 0,
+              page,
+              limit,
+              totalPages: 0,
+              hasMore: false,
+            },
+          };
+        }
+
+        // Get main form field IDs (exclude sub-form fields)
+        const mainFormFieldIds = submission.form.fields
+          .filter(field => !field.sub_form_id)
+          .map(field => field.id);
+
+        logger.info(`Main form field IDs: ${JSON.stringify(mainFormFieldIds)}`);
+        logger.info(`🔎 Starting to filter ${rows.length} files...`);
+
+        filteredFiles = rows.filter(file => {
+          // ✅ FIX: Use dataValues to avoid Sequelize UUID serialization bug
+          const fileData = file.dataValues || file;
+          const fileId = fileData.id || file.id;
+          const submissionId = fileData.submission_id || file.submission_id;
+          const fieldId = fileData.field_id || file.field_id;
+
+          // Check if file matches submission_id OR belongs to main form fields
+          const matchesSubmission = submissionId === filters.submissionId;
+          const belongsToMainForm = fieldId && mainFormFieldIds.includes(fieldId);
+          const shouldKeep = matchesSubmission || belongsToMainForm;
+
+          logger.info(`📄 File ${fileId ? fileId.substring(0, 8) : 'NO-ID'}: submission_id=${submissionId ? submissionId.substring(0, 8) : 'NULL'}, field_id=${fieldId ? fieldId.substring(0, 8) : 'NULL'}, shouldKeep=${shouldKeep}`);
+
+          return shouldKeep;
+        });
+
+        logger.info(`✅ Files after filtering: ${filteredFiles.length}`);
+      }
+
       return {
-        files: rows.map((f) => f.toJSON()),
+        files: filteredFiles.map((f) => f.toJSON()),
         pagination: {
-          total: count,
+          total: filteredFiles.length,  // Use filtered count
           page,
           limit,
-          totalPages: Math.ceil(count / limit),
-          hasMore: page * limit < count,
+          totalPages: Math.ceil(filteredFiles.length / limit),
+          hasMore: page * limit < filteredFiles.length,
         },
       };
     } catch (error) {

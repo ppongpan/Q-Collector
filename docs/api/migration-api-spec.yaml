@@ -1,0 +1,1431 @@
+openapi: 3.0.3
+info:
+  title: Q-Collector Migration System API
+  description: |
+    Comprehensive RESTful API for managing field migrations in the Q-Collector Form Builder System v0.8.0.
+
+    The Migration System provides safe, reversible schema changes to dynamic tables with automatic backups,
+    rollback capabilities, and comprehensive audit trails. All migrations are queue-based for reliability.
+
+    ## Features
+    - **Preview Mode**: Dry-run migrations before execution
+    - **Queue-Based Execution**: Asynchronous processing with retry logic
+    - **Automatic Backups**: Data snapshots before destructive operations
+    - **Rollback Support**: Undo migrations with generated SQL
+    - **Audit Trail**: Complete history of all schema changes
+    - **Permission-Based**: Role-based access control (super_admin, admin, moderator)
+
+    ## Migration Types
+    - **ADD_FIELD**: Add new column to dynamic table
+    - **DELETE_FIELD**: Remove column (with automatic backup)
+    - **RENAME_FIELD**: Rename existing column
+    - **CHANGE_TYPE**: Modify column data type (with validation)
+
+    ## Authentication
+    All endpoints require JWT Bearer token authentication.
+
+    ## Rate Limits
+    - Preview: 100 requests/minute
+    - Execute: 20 requests/minute
+    - Other endpoints: 60 requests/minute
+
+  version: 0.8.0
+  contact:
+    name: Q-Collector Support
+    email: support@qcollector.com
+  license:
+    name: Internal Use - Q-Collector Enterprise
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://staging.qcollector.com/api/v1
+    description: Staging server
+  - url: https://api.qcollector.com/api/v1
+    description: Production server
+
+tags:
+  - name: Migration
+    description: Field migration operations (preview, execute, rollback)
+  - name: History
+    description: Migration audit trail and history
+  - name: Backup
+    description: Data backup and restoration
+  - name: Queue
+    description: Migration queue management
+  - name: Maintenance
+    description: Cleanup and maintenance operations
+
+security:
+  - BearerAuth: []
+
+paths:
+  /migrations/preview:
+    post:
+      summary: Preview migration without executing (dry-run)
+      description: |
+        Validate and preview migration changes before execution. Returns SQL statements,
+        rollback SQL, validation status, warnings, and estimated row counts.
+
+        **Permissions**: super_admin, admin, moderator
+
+        **Use Cases**:
+        - Validate migration before execution
+        - Check for conflicts (e.g., column already exists)
+        - Estimate backup size for destructive operations
+        - Review generated SQL statements
+      operationId: previewMigration
+      tags:
+        - Migration
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MigrationPreviewRequest'
+            examples:
+              addField:
+                summary: Add new email field
+                value:
+                  formId: "550e8400-e29b-41d4-a716-446655440000"
+                  changes:
+                    - type: ADD_FIELD
+                      fieldId: "660e8400-e29b-41d4-a716-446655440001"
+                      columnName: "email"
+                      dataType: "email"
+              deleteField:
+                summary: Delete field with backup
+                value:
+                  formId: "550e8400-e29b-41d4-a716-446655440000"
+                  changes:
+                    - type: DELETE_FIELD
+                      fieldId: "660e8400-e29b-41d4-a716-446655440001"
+                      columnName: "old_column"
+              renameField:
+                summary: Rename field
+                value:
+                  formId: "550e8400-e29b-41d4-a716-446655440000"
+                  changes:
+                    - type: RENAME_FIELD
+                      fieldId: "660e8400-e29b-41d4-a716-446655440001"
+                      oldColumnName: "old_name"
+                      newColumnName: "new_name"
+              changeType:
+                summary: Change field type
+                value:
+                  formId: "550e8400-e29b-41d4-a716-446655440000"
+                  changes:
+                    - type: CHANGE_TYPE
+                      fieldId: "660e8400-e29b-41d4-a716-446655440001"
+                      columnName: "age"
+                      oldType: "text"
+                      newType: "number"
+      responses:
+        '200':
+          description: Migration preview generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationPreviewResponse'
+              examples:
+                validPreview:
+                  summary: Valid migration preview
+                  value:
+                    success: true
+                    data:
+                      formId: "550e8400-e29b-41d4-a716-446655440000"
+                      tableName: "contact_form_123"
+                      preview:
+                        - change:
+                            type: ADD_FIELD
+                            fieldId: "660e8400-e29b-41d4-a716-446655440001"
+                            columnName: "email"
+                            dataType: "email"
+                          sql: 'ALTER TABLE "contact_form_123" ADD COLUMN "email" VARCHAR(255)'
+                          rollbackSQL: 'ALTER TABLE "contact_form_123" DROP COLUMN "email"'
+                          valid: true
+                          warnings: []
+                          requiresBackup: false
+                          estimatedRows: 150
+                      summary:
+                        totalChanges: 1
+                        validChanges: 1
+                        invalidChanges: 0
+                        requiresBackup: false
+                invalidPreview:
+                  summary: Invalid migration (column exists)
+                  value:
+                    success: true
+                    data:
+                      formId: "550e8400-e29b-41d4-a716-446655440000"
+                      tableName: "contact_form_123"
+                      preview:
+                        - change:
+                            type: ADD_FIELD
+                            fieldId: "660e8400-e29b-41d4-a716-446655440001"
+                            columnName: "email"
+                            dataType: "email"
+                          sql: 'ALTER TABLE "contact_form_123" ADD COLUMN "email" VARCHAR(255)'
+                          rollbackSQL: 'ALTER TABLE "contact_form_123" DROP COLUMN "email"'
+                          valid: false
+                          warnings:
+                            - 'Column "email" already exists'
+                          requiresBackup: false
+                          estimatedRows: 150
+                      summary:
+                        totalChanges: 1
+                        validChanges: 0
+                        invalidChanges: 1
+                        requiresBackup: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/FormNotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /migrations/execute:
+    post:
+      summary: Execute migration (queue-based)
+      description: |
+        Queue migration changes for asynchronous execution. Migrations are processed sequentially
+        per form to maintain consistency. Returns job IDs for tracking progress.
+
+        **Permissions**: super_admin, admin
+
+        **Important Notes**:
+        - Migrations are executed asynchronously via Bull queue
+        - Always preview migrations before execution
+        - Destructive operations (DELETE, CHANGE_TYPE) automatically create backups
+        - Failed migrations are logged with detailed error messages
+        - Maximum 10 migrations per request
+      operationId: executeMigration
+      tags:
+        - Migration
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MigrationExecuteRequest'
+            examples:
+              single:
+                summary: Execute single migration
+                value:
+                  formId: "550e8400-e29b-41d4-a716-446655440000"
+                  changes:
+                    - type: ADD_FIELD
+                      fieldId: "660e8400-e29b-41d4-a716-446655440001"
+                      columnName: "email"
+                      dataType: "email"
+              multiple:
+                summary: Execute multiple migrations
+                value:
+                  formId: "550e8400-e29b-41d4-a716-446655440000"
+                  changes:
+                    - type: ADD_FIELD
+                      fieldId: "660e8400-e29b-41d4-a716-446655440001"
+                      columnName: "email"
+                      dataType: "email"
+                    - type: ADD_FIELD
+                      fieldId: "660e8400-e29b-41d4-a716-446655440002"
+                      columnName: "phone"
+                      dataType: "phone"
+      responses:
+        '201':
+          description: Migrations queued successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationExecuteResponse'
+              example:
+                success: true
+                data:
+                  formId: "550e8400-e29b-41d4-a716-446655440000"
+                  tableName: "contact_form_123"
+                  queuedJobs:
+                    - jobId: "form_123_field_001_1696704000000"
+                      type: "ADD_FIELD"
+                      fieldId: "660e8400-e29b-41d4-a716-446655440001"
+                      columnName: "email"
+                      status: "queued"
+                      queuePosition: 1
+                    - jobId: "form_123_field_002_1696704001000"
+                      type: "ADD_FIELD"
+                      fieldId: "660e8400-e29b-41d4-a716-446655440002"
+                      columnName: "phone"
+                      status: "queued"
+                      queuePosition: 2
+                  message: "2 migration(s) queued for execution"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/FormNotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /migrations/history/{formId}:
+    get:
+      summary: Get migration history for a form
+      description: |
+        Retrieve complete audit trail of all migrations for a specific form.
+        Includes migration details, executor information, backup references, and rollback status.
+
+        **Permissions**: super_admin, admin, moderator
+
+        **Features**:
+        - Pagination support (limit/offset)
+        - Filter by success status (all, success, failed)
+        - Sorted by execution time (newest first)
+        - Includes executor user information
+        - Shows backup availability and rollback capability
+      operationId: getMigrationHistory
+      tags:
+        - History
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          description: Form UUID
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: limit
+          in: query
+          description: Number of records to return (1-500)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+          example: 50
+        - name: offset
+          in: query
+          description: Number of records to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+        - name: status
+          in: query
+          description: Filter by migration status
+          schema:
+            type: string
+            enum: [all, success, failed]
+            default: all
+          example: "all"
+      responses:
+        '200':
+          description: Migration history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationHistoryResponse'
+              example:
+                success: true
+                data:
+                  formId: "550e8400-e29b-41d4-a716-446655440000"
+                  migrations:
+                    - id: "770e8400-e29b-41d4-a716-446655440003"
+                      type: "ADD_COLUMN"
+                      tableName: "contact_form_123"
+                      columnName: "email"
+                      oldValue: null
+                      newValue:
+                        columnName: "email"
+                        dataType: "VARCHAR(255)"
+                      success: true
+                      errorMessage: null
+                      executedAt: "2025-10-07T10:30:00.000Z"
+                      executedBy:
+                        id: "110e8400-e29b-41d4-a716-446655440004"
+                        username: "admin"
+                      backup: null
+                      canRollback: false
+                      description: 'Added column "email" in table "contact_form_123"'
+                  total: 15
+                  limit: 50
+                  offset: 0
+                  hasMore: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/FormNotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /migrations/rollback/{migrationId}:
+    post:
+      summary: Rollback a completed migration
+      description: |
+        Reverse a successful migration using the stored rollback SQL. Creates a new migration
+        record to track the rollback operation.
+
+        **Permissions**: super_admin only
+
+        **Rollback Rules**:
+        - Only successful migrations can be rolled back
+        - Migration must have rollback SQL
+        - ADD_COLUMN cannot be rolled back if field still exists (delete field first)
+        - Rollback creates a new migration record (with reversed old/new values)
+        - Rollback of rollback is not supported
+
+        **Use Cases**:
+        - Undo incorrect migration
+        - Revert breaking changes
+        - Recover from schema errors
+      operationId: rollbackMigration
+      tags:
+        - Migration
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: migrationId
+          in: path
+          required: true
+          description: Migration UUID to rollback
+          schema:
+            type: string
+            format: uuid
+          example: "770e8400-e29b-41d4-a716-446655440003"
+      responses:
+        '200':
+          description: Migration rolled back successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RollbackResponse'
+              example:
+                success: true
+                data:
+                  migrationId: "770e8400-e29b-41d4-a716-446655440003"
+                  rollbackMigrationId: "880e8400-e29b-41d4-a716-446655440005"
+                  message: "Migration rolled back successfully"
+                  description: 'Added column "email" in table "contact_form_123"'
+        '400':
+          $ref: '#/components/responses/RollbackNotAllowed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/MigrationNotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /migrations/backups/{formId}:
+    get:
+      summary: List backups for a form
+      description: |
+        Retrieve all data backups associated with a form. Backups are created automatically
+        before destructive operations (DELETE_FIELD, CHANGE_TYPE) or manually by admins.
+
+        **Permissions**: super_admin, admin, moderator
+
+        **Features**:
+        - Filter expired backups (optional)
+        - Pagination support
+        - Shows record counts and retention periods
+        - Includes creator information
+      operationId: listBackups
+      tags:
+        - Backup
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          description: Form UUID
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: limit
+          in: query
+          description: Number of records to return (1-500)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+          example: 50
+        - name: offset
+          in: query
+          description: Number of records to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+        - name: includeExpired
+          in: query
+          description: Include expired backups
+          schema:
+            type: boolean
+            default: false
+          example: false
+      responses:
+        '200':
+          description: Backups retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupListResponse'
+              example:
+                success: true
+                data:
+                  formId: "550e8400-e29b-41d4-a716-446655440000"
+                  backups:
+                    - id: "990e8400-e29b-41d4-a716-446655440006"
+                      fieldId: "660e8400-e29b-41d4-a716-446655440001"
+                      formId: "550e8400-e29b-41d4-a716-446655440000"
+                      tableName: "contact_form_123"
+                      columnName: "old_column"
+                      backupType: "AUTO_DELETE"
+                      recordCount: 150
+                      retentionUntil: "2026-01-05T10:30:00.000Z"
+                      createdAt: "2025-10-07T10:30:00.000Z"
+                      isExpired: false
+                      daysUntilExpiration: 90
+                      createdBy:
+                        id: "110e8400-e29b-41d4-a716-446655440004"
+                        username: "admin"
+                  total: 3
+                  limit: 50
+                  offset: 0
+                  hasMore: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/FormNotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /migrations/restore/{backupId}:
+    post:
+      summary: Restore data from backup
+      description: |
+        Restore backed up column data to the dynamic table. Backup must not be expired
+        and the target column must exist in the table.
+
+        **Permissions**: super_admin only
+
+        **Important Notes**:
+        - Backup must not be expired (retention_until not passed)
+        - Target column must exist (recreate column first if needed)
+        - Restores all backed up records
+        - Creates a migration record for the restore operation
+        - Uses batch updates (100 records per batch) for performance
+
+        **Use Cases**:
+        - Recover deleted column data
+        - Undo failed type conversion
+        - Restore data after incorrect modification
+      operationId: restoreBackup
+      tags:
+        - Backup
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: backupId
+          in: path
+          required: true
+          description: Backup UUID to restore
+          schema:
+            type: string
+            format: uuid
+          example: "990e8400-e29b-41d4-a716-446655440006"
+      responses:
+        '200':
+          description: Backup restored successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreResponse'
+              example:
+                success: true
+                data:
+                  backupId: "990e8400-e29b-41d4-a716-446655440006"
+                  restoredRows: 150
+                  tableName: "contact_form_123"
+                  columnName: "old_column"
+                  message: "Restored 150 records"
+        '400':
+          $ref: '#/components/responses/BackupExpired'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/BackupNotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /migrations/queue/status:
+    get:
+      summary: Get migration queue status
+      description: |
+        Retrieve real-time status of the migration queue. Can filter by specific form
+        or get global queue metrics.
+
+        **Permissions**: super_admin, admin, moderator
+
+        **Metrics**:
+        - **waiting**: Jobs queued but not started
+        - **active**: Jobs currently being processed
+        - **completed**: Successfully completed jobs (last 24 hours)
+        - **failed**: Failed jobs (last 24 hours)
+        - **delayed**: Jobs scheduled for later execution
+
+        **Use Cases**:
+        - Monitor queue health
+        - Check form-specific migration status
+        - Diagnose stuck migrations
+      operationId: getQueueStatus
+      tags:
+        - Queue
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: formId
+          in: query
+          description: Filter by specific form (optional)
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Queue status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueStatusResponse'
+              examples:
+                global:
+                  summary: Global queue status
+                  value:
+                    success: true
+                    data:
+                      queue:
+                        waiting: 5
+                        active: 1
+                        completed: 100
+                        failed: 2
+                        delayed: 0
+                formSpecific:
+                  summary: Form-specific queue status
+                  value:
+                    success: true
+                    data:
+                      formId: "550e8400-e29b-41d4-a716-446655440000"
+                      queue:
+                        waiting: 2
+                        active: 1
+                        completed: 10
+                        failed: 0
+                        delayed: 0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/FormNotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /migrations/cleanup:
+    delete:
+      summary: Cleanup old backups
+      description: |
+        Delete expired backups older than specified number of days. Supports dry-run mode
+        for preview before deletion.
+
+        **Permissions**: super_admin only
+
+        **Default Retention**: 90 days
+        **Minimum Retention**: 30 days
+        **Maximum Retention**: 365 days
+
+        **Dry Run Mode**: Preview backups that would be deleted without actually deleting them.
+        Shows sample backups and total count.
+
+        **Use Cases**:
+        - Regular maintenance (run monthly)
+        - Free up database storage
+        - Comply with data retention policies
+      operationId: cleanupBackups
+      tags:
+        - Maintenance
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: days
+          in: query
+          description: Delete backups older than X days
+          schema:
+            type: integer
+            minimum: 30
+            maximum: 365
+            default: 90
+          example: 90
+        - name: dryRun
+          in: query
+          description: Preview cleanup without executing
+          schema:
+            type: boolean
+            default: false
+          example: false
+      responses:
+        '200':
+          description: Cleanup completed or previewed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupResponse'
+              examples:
+                executed:
+                  summary: Cleanup executed
+                  value:
+                    success: true
+                    data:
+                      deletedCount: 5
+                      cutoffDate: "2025-07-09T10:30:00.000Z"
+                      days: 90
+                      message: "Deleted 5 expired backups older than 90 days"
+                dryRun:
+                  summary: Cleanup preview (dry-run)
+                  value:
+                    success: true
+                    data:
+                      dryRun: true
+                      wouldDeleteCount: 5
+                      cutoffDate: "2025-07-09T10:30:00.000Z"
+                      days: 90
+                      samples:
+                        - id: "990e8400-e29b-41d4-a716-446655440006"
+                          tableName: "old_form_456"
+                          columnName: "deprecated_field"
+                          retentionUntil: "2025-07-01T10:30:00.000Z"
+                          backupType: "AUTO_DELETE"
+                      message: "Would delete 5 backups older than 90 days"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /api/v1/auth/login
+
+  schemas:
+    MigrationPreviewRequest:
+      type: object
+      required:
+        - formId
+        - changes
+      properties:
+        formId:
+          type: string
+          format: uuid
+          description: Form UUID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        changes:
+          type: array
+          minItems: 1
+          maxItems: 10
+          description: Array of migration changes to preview
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/AddFieldChange'
+              - $ref: '#/components/schemas/DeleteFieldChange'
+              - $ref: '#/components/schemas/RenameFieldChange'
+              - $ref: '#/components/schemas/ChangeTypeChange'
+
+    MigrationExecuteRequest:
+      type: object
+      required:
+        - formId
+        - changes
+      properties:
+        formId:
+          type: string
+          format: uuid
+          description: Form UUID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        changes:
+          type: array
+          minItems: 1
+          maxItems: 10
+          description: Array of migration changes to execute
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/AddFieldChange'
+              - $ref: '#/components/schemas/DeleteFieldChange'
+              - $ref: '#/components/schemas/RenameFieldChange'
+              - $ref: '#/components/schemas/ChangeTypeChange'
+
+    AddFieldChange:
+      type: object
+      required:
+        - type
+        - fieldId
+        - columnName
+        - dataType
+      properties:
+        type:
+          type: string
+          enum: [ADD_FIELD]
+          description: Migration type
+        fieldId:
+          type: string
+          format: uuid
+          description: Field UUID
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        columnName:
+          type: string
+          pattern: '^[a-z_][a-z0-9_]*$'
+          maxLength: 63
+          description: PostgreSQL column name (snake_case)
+          example: "email_address"
+        dataType:
+          type: string
+          description: Q-Collector field type or PostgreSQL type
+          enum:
+            - short_answer
+            - paragraph
+            - email
+            - phone
+            - number
+            - url
+            - file_upload
+            - image_upload
+            - date
+            - time
+            - datetime
+            - multiple_choice
+            - rating
+            - slider
+            - lat_long
+            - province
+            - factory
+            - VARCHAR(255)
+            - TEXT
+            - INTEGER
+            - NUMERIC
+            - DATE
+            - TIME
+            - TIMESTAMP
+            - JSONB
+          example: "email"
+
+    DeleteFieldChange:
+      type: object
+      required:
+        - type
+        - fieldId
+        - columnName
+      properties:
+        type:
+          type: string
+          enum: [DELETE_FIELD]
+          description: Migration type
+        fieldId:
+          type: string
+          format: uuid
+          description: Field UUID
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        columnName:
+          type: string
+          description: Column name to delete
+          example: "old_field"
+
+    RenameFieldChange:
+      type: object
+      required:
+        - type
+        - fieldId
+        - oldColumnName
+        - newColumnName
+      properties:
+        type:
+          type: string
+          enum: [RENAME_FIELD]
+          description: Migration type
+        fieldId:
+          type: string
+          format: uuid
+          description: Field UUID
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        oldColumnName:
+          type: string
+          description: Current column name
+          example: "old_name"
+        newColumnName:
+          type: string
+          pattern: '^[a-z_][a-z0-9_]*$'
+          maxLength: 63
+          description: New column name (snake_case)
+          example: "new_name"
+
+    ChangeTypeChange:
+      type: object
+      required:
+        - type
+        - fieldId
+        - columnName
+        - oldType
+        - newType
+      properties:
+        type:
+          type: string
+          enum: [CHANGE_TYPE]
+          description: Migration type
+        fieldId:
+          type: string
+          format: uuid
+          description: Field UUID
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        columnName:
+          type: string
+          description: Column name to modify
+          example: "age"
+        oldType:
+          type: string
+          description: Current data type
+          example: "text"
+        newType:
+          type: string
+          description: Target data type
+          example: "number"
+
+    MigrationPreviewResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            formId:
+              type: string
+              format: uuid
+            tableName:
+              type: string
+            preview:
+              type: array
+              items:
+                type: object
+                properties:
+                  change:
+                    oneOf:
+                      - $ref: '#/components/schemas/AddFieldChange'
+                      - $ref: '#/components/schemas/DeleteFieldChange'
+                      - $ref: '#/components/schemas/RenameFieldChange'
+                      - $ref: '#/components/schemas/ChangeTypeChange'
+                  sql:
+                    type: string
+                    description: SQL statement to execute
+                  rollbackSQL:
+                    type: string
+                    description: SQL to rollback this change
+                  valid:
+                    type: boolean
+                    description: Whether migration is valid
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+                    description: Validation warnings
+                  requiresBackup:
+                    type: boolean
+                    description: Whether backup is required
+                  estimatedRows:
+                    type: integer
+                    description: Number of rows affected
+            summary:
+              type: object
+              properties:
+                totalChanges:
+                  type: integer
+                validChanges:
+                  type: integer
+                invalidChanges:
+                  type: integer
+                requiresBackup:
+                  type: boolean
+
+    MigrationExecuteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            formId:
+              type: string
+              format: uuid
+            tableName:
+              type: string
+            queuedJobs:
+              type: array
+              items:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                    description: Unique job ID
+                  type:
+                    type: string
+                    enum: [ADD_FIELD, DELETE_FIELD, RENAME_FIELD, CHANGE_TYPE]
+                  fieldId:
+                    type: string
+                    format: uuid
+                  columnName:
+                    type: string
+                  status:
+                    type: string
+                    enum: [queued]
+                  queuePosition:
+                    type: integer
+            message:
+              type: string
+
+    MigrationHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            formId:
+              type: string
+              format: uuid
+            migrations:
+              type: array
+              items:
+                $ref: '#/components/schemas/MigrationRecord'
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+            hasMore:
+              type: boolean
+
+    MigrationRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [ADD_COLUMN, DROP_COLUMN, RENAME_COLUMN, MODIFY_COLUMN]
+        tableName:
+          type: string
+        columnName:
+          type: string
+        oldValue:
+          type: object
+          nullable: true
+        newValue:
+          type: object
+          nullable: true
+        success:
+          type: boolean
+        errorMessage:
+          type: string
+          nullable: true
+        executedAt:
+          type: string
+          format: date-time
+        executedBy:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            username:
+              type: string
+        backup:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            type:
+              type: string
+            retentionUntil:
+              type: string
+              format: date-time
+        canRollback:
+          type: boolean
+        description:
+          type: string
+
+    RollbackResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            migrationId:
+              type: string
+              format: uuid
+            rollbackMigrationId:
+              type: string
+              format: uuid
+            message:
+              type: string
+            description:
+              type: string
+
+    BackupListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            formId:
+              type: string
+              format: uuid
+            backups:
+              type: array
+              items:
+                $ref: '#/components/schemas/BackupRecord'
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+            hasMore:
+              type: boolean
+
+    BackupRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fieldId:
+          type: string
+          format: uuid
+          nullable: true
+        formId:
+          type: string
+          format: uuid
+        tableName:
+          type: string
+        columnName:
+          type: string
+        backupType:
+          type: string
+          enum: [MANUAL, AUTO_DELETE, AUTO_MODIFY, AUTO_RENAME]
+        recordCount:
+          type: integer
+        retentionUntil:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        isExpired:
+          type: boolean
+        daysUntilExpiration:
+          type: integer
+          nullable: true
+        createdBy:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            username:
+              type: string
+
+    RestoreResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            backupId:
+              type: string
+              format: uuid
+            restoredRows:
+              type: integer
+            tableName:
+              type: string
+            columnName:
+              type: string
+            message:
+              type: string
+
+    QueueStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            formId:
+              type: string
+              format: uuid
+              description: Only present when filtering by form
+            queue:
+              type: object
+              properties:
+                waiting:
+                  type: integer
+                  description: Jobs queued but not started
+                active:
+                  type: integer
+                  description: Jobs currently being processed
+                completed:
+                  type: integer
+                  description: Successfully completed jobs (last 24h)
+                failed:
+                  type: integer
+                  description: Failed jobs (last 24h)
+                delayed:
+                  type: integer
+                  description: Jobs scheduled for later
+
+    CleanupResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            dryRun:
+              type: boolean
+              description: Whether this was a dry-run
+            deletedCount:
+              type: integer
+              description: Number of backups deleted (if executed)
+            wouldDeleteCount:
+              type: integer
+              description: Number of backups that would be deleted (if dry-run)
+            cutoffDate:
+              type: string
+              format: date-time
+            days:
+              type: integer
+            samples:
+              type: array
+              description: Sample backups (for dry-run preview)
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  tableName:
+                    type: string
+                  columnName:
+                    type: string
+                  retentionUntil:
+                    type: string
+                    format: date-time
+                  backupType:
+                    type: string
+            message:
+              type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+            message:
+              type: string
+              description: Human-readable error message
+            details:
+              type: object
+              description: Additional error details
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "VALIDATION_ERROR"
+              message: "Validation failed"
+              details:
+                errors:
+                  - msg: "formId must be a valid UUID"
+                    param: "formId"
+                    location: "body"
+
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "UNAUTHORIZED"
+              message: "No token provided"
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "FORBIDDEN"
+              message: "User does not have required role"
+              details:
+                requiredRoles: ["super_admin", "admin"]
+                userRole: "moderator"
+
+    FormNotFound:
+      description: Form not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "FORM_NOT_FOUND"
+              message: "Form not found"
+
+    MigrationNotFound:
+      description: Migration record not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "MIGRATION_NOT_FOUND"
+              message: "Migration not found"
+
+    BackupNotFound:
+      description: Backup record not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "BACKUP_NOT_FOUND"
+              message: "Backup not found"
+
+    BackupExpired:
+      description: Backup has expired and cannot be restored
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "BACKUP_EXPIRED"
+              message: "Backup has expired and cannot be restored"
+              details:
+                retentionUntil: "2025-07-01T10:30:00.000Z"
+                expiredDaysAgo: 98
+
+    RollbackNotAllowed:
+      description: Migration cannot be rolled back
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "ROLLBACK_NOT_ALLOWED"
+              message: "Cannot rollback migration: Migration was not successful"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: "INTERNAL_ERROR"
+              message: "An unexpected error occurred"

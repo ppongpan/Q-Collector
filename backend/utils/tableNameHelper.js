@@ -2,39 +2,132 @@
  * Table Name Helper - Convert form names to valid PostgreSQL table names
  *
  * Features:
- * - Translate Thai to meaningful English using dictionary
+ * - Translate Thai to meaningful English using Dictionary + MyMemory API
  * - Sanitize form titles to valid table names
  * - Handle Thai characters, spaces, special characters
- * - Ensure unique table names
+ * - Ensure unique table names with hash suffix
  * - Maximum 63 characters (PostgreSQL limit)
+ *
+ * Version: 0.7.7-dev (Context-Aware Translation + Quality Validation)
+ * NEW in v0.7.7:
+ * - Context hints passed to MyMemory API for better accuracy
+ * - Quality validation (reject match < 0.5)
+ * - Enhanced logging with quality metrics
  */
 
-const {
-  translateFormTitle,
-  translateFieldLabel
-} = require('./thaiTranslator');
+const logger = require('./logger.util');
+
+// Initialize translation services (MyMemory first for consistency, Dictionary as smart fallback)
+// Note: DictionaryTranslationService is a singleton
+const dictionaryService = require('../services/DictionaryTranslationService');
+const MyMemoryTranslationService = require('../services/MyMemoryTranslationService');
+const myMemoryService = new MyMemoryTranslationService();
 
 /**
  * Sanitize text to valid PostgreSQL identifier
- * Now uses intelligent Thai translation instead of simple romanization
+ * Uses MyMemory API first for consistency, Dictionary as smart fallback
+ *
+ * Strategy:
+ * 1. MyMemory API (high-quality translation, consistent with main forms)
+ * 2. Dictionary (only if MyMemory fails AND result is actual translation, not transliteration)
+ * 3. Unique hash fallback (if both fail or Dictionary returns transliteration)
  *
  * @param {string} text - Input text (form title or field label)
+ * @param {string} context - Translation context ('form', 'field', 'general')
  * @param {string} prefix - Prefix to add (e.g., 'form_', 'field_')
  * @param {number} maxLength - Maximum length (default 63 for PostgreSQL)
- * @param {boolean} isFormTitle - True if this is a form title (for translation context)
- * @returns {string} - Valid PostgreSQL identifier
+ * @returns {Promise<string>} - Valid PostgreSQL identifier
  */
-const sanitizeIdentifier = (text, prefix = '', maxLength = 63, isFormTitle = false) => {
+const sanitizeIdentifier = async (text, context = 'general', prefix = '', maxLength = 63) => {
   if (!text || typeof text !== 'string') {
     return prefix + 'unnamed';
   }
 
-  // Use intelligent translation for Thai text
   let sanitized;
-  if (isFormTitle) {
-    sanitized = translateFormTitle(text);
+
+  // Check if text contains Thai characters
+  const containsThai = /[\u0E00-\u0E7F]/.test(text);
+
+  if (containsThai) {
+    // ⚡ FIXED PRIORITY (v0.7.7): MyMemory FIRST (better coverage) → Dictionary (fallback) → Hash
+    // Reason: Dictionary coverage only 7.7%, produces transliterations for 92.3% of terms
+
+    // Step 1: Try MyMemory API FIRST (best quality, context-aware, 80-90% meaningful translations)
+    // ✨ v0.7.7: Pass context hints for better translation accuracy
+    try {
+      const result = await myMemoryService.translateToEnglish(text, {
+        context: context,  // ✨ 'form', 'field', 'department', 'action', 'general'
+        minQuality: 0.5,   // ✨ Reject translations with match < 0.5
+        rejectTransliteration: true  // ✨ Reject phonetic conversions
+      });
+
+      // ⚡ NEW FIX (v0.7.7.1): Reject "translated_field" as it's MyMemory's fallback value, not actual translation
+      // This happens for very short Thai words like "ชื่อ" where API can't determine meaning
+      if (result.slug === 'translated_field') {
+        logger.warn(`⚠️ MyMemory returned fallback "translated_field" for "${text}", trying Dictionary`);
+        throw new Error('MyMemory returned fallback value');
+      }
+
+      sanitized = result.slug; // Already in snake_case and PostgreSQL-safe
+      logger.info(`✅ MyMemory translated "${text}" → "${sanitized}" (quality: ${result.quality}, match: ${result.match}, context: ${context})`);
+    } catch (myMemoryError) {
+      logger.warn(`⚠️ MyMemory translation failed for "${text}": ${myMemoryError.message}`);
+
+      // Step 2: Try Dictionary as fallback (instant, no rate limit, but limited vocabulary)
+      try {
+        const dictionaryResult = dictionaryService.translate(text, context);
+        if (dictionaryResult && dictionaryResult !== text) {
+          const cleanResult = dictionaryResult
+            .toLowerCase()
+            .replace(/[^a-z0-9\s_-]/g, '')
+            .replace(/[-\s]+/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_+|_+$/g, '');
+
+          // ⚡ IMPROVED (v0.7.7.1): Better transliteration detection
+          // Whitelist common English words that might be flagged incorrectly
+          const commonEnglishWords = [
+            'name', 'title', 'form', 'email', 'phone', 'address', 'date', 'time',
+            'age', 'gender', 'status', 'type', 'note', 'comment', 'description',
+            'number', 'code', 'id', 'user', 'admin', 'contact', 'message', 'file',
+            'image', 'location', 'province', 'district', 'post', 'zip'
+          ];
+
+          const isCommonWord = commonEnglishWords.some(word => cleanResult.includes(word));
+
+          // Check if dictionary result is transliteration (basic detection)
+          // BUT: Skip check if it's a common English word
+          const isTranslit = !isCommonWord &&
+                            /[aeioubptkdgmnlrwyhjfsv]{3,}/.test(cleanResult) &&
+                            cleanResult.length > text.length * 0.8;
+
+          if (!isTranslit) {
+            sanitized = cleanResult;
+            logger.info(`✅ Dictionary translated "${text}" → "${sanitized}" (fallback, trusted translation)`);
+          } else {
+            logger.warn(`⚠️ Dictionary returned transliteration for "${text}" → "${cleanResult}", rejected`);
+          }
+        }
+      } catch (dictError) {
+        logger.warn(`Dictionary translation failed for "${text}": ${dictError.message}`);
+      }
+    }
+
+    // Step 3: Last resort - Use readable transliteration with short hash
+    if (!sanitized) {
+      const hash = Math.abs(hashString(text)).toString(36).substring(0, 6);
+      sanitized = '_' + hash; // Just use short hash
+
+      logger.warn(`⚠️ Using hash fallback for "${text}" → "${sanitized}"`);
+    }
   } else {
-    sanitized = translateFieldLabel(text);
+    // Already in English or Latin characters
+    sanitized = text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s_-]/g, '')
+      .replace(/[-\s]+/g, '_')  // Convert hyphens and spaces to underscores
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
   }
 
   // Add prefix if specified and not already present
@@ -42,21 +135,9 @@ const sanitizeIdentifier = (text, prefix = '', maxLength = 63, isFormTitle = fal
     sanitized = prefix + sanitized;
   }
 
-  // Convert to lowercase
-  sanitized = sanitized.toLowerCase();
-
-  // Replace any remaining invalid characters with underscore
-  sanitized = sanitized.replace(/[^a-z0-9_]/g, '_');
-
-  // Remove consecutive underscores
-  sanitized = sanitized.replace(/_+/g, '_');
-
-  // Remove leading/trailing underscores
-  sanitized = sanitized.replace(/^_+|_+$/g, '');
-
-  // Ensure it starts with a letter (PostgreSQL requirement)
-  if (!/^[a-z]/.test(sanitized)) {
-    sanitized = 'tbl_' + sanitized;
+  // Ensure starts with letter or underscore
+  if (sanitized && !/^[a-z_]/.test(sanitized)) {
+    sanitized = '_' + sanitized;
   }
 
   // Truncate to max length
@@ -67,7 +148,7 @@ const sanitizeIdentifier = (text, prefix = '', maxLength = 63, isFormTitle = fal
     sanitized = sanitized.substring(0, keepLength) + '_' + hash;
   }
 
-  return sanitized;
+  return sanitized || prefix + 'unnamed';
 };
 
 /**
@@ -85,19 +166,19 @@ const hashString = (str) => {
 
 /**
  * Generate table name from form title
- * Now uses intelligent Thai-to-English translation
+ * Uses MyMemory API for Thai-English translation
  *
  * @param {string} formTitle - Form title (Thai or English)
  * @param {string} formId - Form ID (for uniqueness)
- * @returns {string} - Valid table name with meaningful English name
+ * @returns {Promise<string>} - Valid table name with meaningful English name
  *
  * Examples:
- * - "แบบฟอร์มติดต่อ" -> "form_contact_abcdef"
- * - "ใบลา" -> "form_leave_abcdef"
- * - "แบบสอบถาม" -> "form_survey_abcdef"
+ * - "แบบฟอร์มติดต่อ" -> "contact_form_abcdef"
+ * - "ใบลา" -> "sick_leaves_abcdef"
+ * - "แบบสอบถาม" -> "questionnaire_abcdef"
  */
-const generateTableName = (formTitle, formId = null) => {
-  const tableName = sanitizeIdentifier(formTitle, '', 50, true); // isFormTitle = true
+const generateTableName = async (formTitle, formId = null) => {
+  const tableName = await sanitizeIdentifier(formTitle, 'form', '', 50);
 
   // Add short form ID suffix for uniqueness if provided
   if (formId) {
@@ -110,28 +191,29 @@ const generateTableName = (formTitle, formId = null) => {
 
 /**
  * Generate column name from field label
- * Now uses intelligent Thai-to-English translation
+ * Uses MyMemory API for Thai-English translation
  *
  * @param {string} fieldLabel - Field label/title (Thai or English)
- * @param {string} fieldId - Field ID (for uniqueness)
- * @returns {string} - Valid column name with meaningful English name
+ * @param {string} fieldId - Field ID (not used - kept for backward compatibility)
+ * @returns {Promise<string>} - Valid column name with meaningful English name
  *
  * Examples:
- * - "ชื่อเต็ม" -> "full_name_abc123"
- * - "อีเมล" -> "email_abc123"
- * - "เบอร์โทร" -> "phone_number_abc123"
- * - "ที่อยู่" -> "address_abc123"
+ * - "ชื่อเต็ม" -> "full_name"
+ * - "อีเมล" -> "email"
+ * - "เบอร์โทร" -> "phone_number"
+ * - "ที่อยู่" -> "address"
+ *
+ * NEW BEHAVIOR (v0.7.5):
+ * - Returns clean English translation without hash suffix
+ * - Duplicate column names will be caught by DynamicTableService
+ * - User will be notified to rename duplicate fields
  */
-const generateColumnName = (fieldLabel, fieldId = null) => {
-  const columnName = sanitizeIdentifier(fieldLabel, '', 50, false); // isFormTitle = false
+const generateColumnName = async (fieldLabel, fieldId = null) => {
+  const columnName = await sanitizeIdentifier(fieldLabel, 'field', '', 50);
 
-  // Add short field ID suffix for uniqueness if provided
-  if (fieldId) {
-    const shortId = fieldId.substring(fieldId.lastIndexOf('-') + 1).substring(0, 6);
-    return columnName + '_' + shortId;
-  }
-
-  return columnName;
+  // Return clean column name without hash suffix
+  // Duplicates will be detected during ALTER TABLE ADD COLUMN
+  return columnName || 'unnamed_field';
 };
 
 /**

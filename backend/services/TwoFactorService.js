@@ -34,8 +34,10 @@ class TwoFactorService {
   async generateSecret(user) {
     try {
       // Generate secret
+      // Format: issuer:accountName
+      // This will display as "Q-Collector" on top line and email on bottom line
       const secret = speakeasy.generateSecret({
-        name: `${this.APP_NAME} (${user.email})`,
+        name: user.email,
         issuer: this.APP_NAME,
         length: 32
       });

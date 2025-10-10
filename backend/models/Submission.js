@@ -55,6 +55,16 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
+    parent_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'submissions',
+        key: 'id',
+      },
+      onDelete: 'SET NULL', // ✅ FIX: Deleting child should NOT delete parent
+      comment: 'Parent submission ID for sub-form submissions',
+    },
   }, {
     tableName: 'submissions',
     timestamps: true,
@@ -65,6 +75,7 @@ module.exports = (sequelize, DataTypes) => {
       { fields: ['status'] },
       { fields: ['submitted_at'] },
       { fields: ['createdAt'] },
+      { fields: ['parent_id'] },
     ],
   });
 
@@ -319,6 +330,21 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'submission_id',
       as: 'files',
       onDelete: 'CASCADE',
+    });
+
+    // Self-referential association for sub-form submissions
+    // Parent submission has many sub-submissions
+    Submission.hasMany(models.Submission, {
+      foreignKey: 'parent_id',
+      as: 'subSubmissions',
+      onDelete: 'CASCADE', // ✅ CORRECT: Deleting parent deletes children
+    });
+
+    // Sub-submission belongs to parent submission
+    Submission.belongsTo(models.Submission, {
+      foreignKey: 'parent_id',
+      as: 'parentSubmission',
+      onDelete: 'SET NULL', // ✅ FIX: Deleting child does NOT delete parent
     });
   };
 

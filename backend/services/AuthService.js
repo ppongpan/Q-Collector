@@ -41,9 +41,11 @@ class AuthService {
 
       if (existingUser) {
         if (existingUser.email === email) {
+          logger.warn(`Registration failed - Email already exists: ${email}`);
           throw new ApiError(409, 'Email already registered', 'DUPLICATE_EMAIL');
         }
         if (existingUser.username === username) {
+          logger.warn(`Registration failed - Username already exists: ${username}`);
           throw new ApiError(409, 'Username already taken', 'DUPLICATE_USERNAME');
         }
       }
@@ -57,6 +59,7 @@ class AuthService {
         phone,
         role,
         is_active: true,
+        requires_2fa_setup: true, // Force 2FA setup on first login
       });
 
       // Create audit log

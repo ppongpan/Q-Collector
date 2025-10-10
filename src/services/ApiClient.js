@@ -29,23 +29,71 @@ class ApiClient {
   /**
    * Request Interceptor
    * Adds authentication token and logs requests in development
+   * CRITICAL FIX: Excludes public endpoints (login, register, refresh) from token header
    */
   setupRequestInterceptor() {
     this.client.interceptors.request.use(
       (config) => {
-        // Add authentication token if available
-        const token = this.getToken();
-        if (token) {
-          config.headers[API_CONFIG.token.headerName] =
-            `${API_CONFIG.token.headerPrefix} ${token}`;
+        // Public endpoints that should NOT have Authorization header
+        const publicEndpoints = [
+          '/auth/login',
+          '/auth/register',
+          '/auth/refresh'
+        ];
+
+        // Check if this is a public endpoint
+        const isPublicEndpoint = publicEndpoints.some(endpoint =>
+          config.url?.includes(endpoint)
+        );
+
+        // Only add token for protected endpoints (NOT for login/register/refresh)
+        if (!isPublicEndpoint) {
+          // IMPORTANT: Always read token from localStorage (not cached)
+          // This ensures we use the latest token after login
+          // ✅ FIX: Use consistent storage key from config
+          const token = localStorage.getItem(API_CONFIG.token.storageKey);
+          if (token) {
+            config.headers[API_CONFIG.token.headerName] =
+              `${API_CONFIG.token.headerPrefix} ${token}`;
+          }
         }
 
         // Log requests in development mode
         if (process.env.REACT_APP_ENV === 'development') {
+          const hasAuthHeader = !!config.headers[API_CONFIG.token.headerName];
+          // ✅ FIX: Use consistent storage key from config
+          const token = localStorage.getItem(API_CONFIG.token.storageKey);
+
+          // SPECIAL DEBUG LOG FOR LOGIN
+          if (config.url?.includes('/auth/login')) {
+            console.log('🔐 LOGIN REQUEST DEBUG:', {
+              url: config.url,
+              isPublic: isPublicEndpoint,
+              hasToken: hasAuthHeader,
+              authHeader: config.headers[API_CONFIG.token.headerName] || 'NONE',
+              data: config.data
+            });
+          }
+
+          // SPECIAL DEBUG LOG FOR GET /forms - Track exact token being used
+          if (config.url?.includes('/forms') && config.method === 'get') {
+            console.log('📋 GET /forms REQUEST DEBUG:', {
+              url: config.url,
+              hasToken: hasAuthHeader,
+              tokenInLocalStorage: token ? `${token.substring(0, 20)}...` : 'NONE',
+              tokenInHeader: config.headers[API_CONFIG.token.headerName] ?
+                config.headers[API_CONFIG.token.headerName].substring(0, 30) + '...' : 'NONE',
+              allLocalStorageKeys: Object.keys(localStorage),
+              userInLocalStorage: !!localStorage.getItem('user')
+            });
+          }
+
           console.log('[API Request]', {
             method: config.method?.toUpperCase(),
             url: config.url,
             baseURL: config.baseURL,
+            isPublic: isPublicEndpoint,
+            hasToken: hasAuthHeader,
             data: config.data,
             params: config.params,
           });
@@ -67,10 +115,41 @@ class ApiClient {
    * Handles errors, token refresh, and retry logic
    */
   setupResponseInterceptor() {
+    // Circuit breaker for refresh token failures
+    let refreshFailureCount = 0;
+    const MAX_REFRESH_FAILURES = 3;
+    let isRefreshing = false;
+    let failedQueue = [];
+
+    const processQueue = (error, token = null) => {
+      failedQueue.forEach((prom) => {
+        if (error) {
+          prom.reject(error);
+        } else {
+          prom.resolve(token);
+        }
+      });
+
+      failedQueue = [];
+    };
+
     this.client.interceptors.response.use(
       (response) => {
         // Log successful responses in development
         if (process.env.REACT_APP_ENV === 'development') {
+          // SPECIAL DEBUG LOG FOR LOGIN RESPONSE
+          if (response.config.url?.includes('/auth/login')) {
+            console.log('✅ LOGIN RESPONSE DEBUG:', {
+              status: response.status,
+              hasUser: !!response.data?.user,
+              hasToken: !!response.data?.token,
+              hasTokens: !!response.data?.tokens,
+              requires2FA: response.data?.requires2FA,
+              requires2FASetup: response.data?.requires2FASetup,
+              data: response.data
+            });
+          }
+
           console.log('[API Response]', {
             status: response.status,
             url: response.config.url,
@@ -81,6 +160,9 @@ class ApiClient {
         // Clear retry count on success
         const requestId = this.getRequestId(response.config);
         this.retryCount.delete(requestId);
+
+        // Reset refresh failure count on any successful request
+        refreshFailureCount = 0;
 
         return response;
       },
@@ -97,17 +179,79 @@ class ApiClient {
           });
         }
 
+        // Circuit breaker: Stop if too many refresh failures
+        if (refreshFailureCount >= MAX_REFRESH_FAILURES) {
+          console.info('[ApiClient] Session expired - triggering logout');
+
+          // ✅ FIX: Save current URL before logout
+          const currentPath = window.location.pathname + window.location.search;
+          if (currentPath !== '/login' && currentPath !== '/register') {
+            sessionStorage.setItem('redirectAfterLogin', currentPath);
+            console.log('[ApiClient] Saved redirect path:', currentPath);
+          }
+
+          // Clear auth data
+          this.clearAuth();
+
+          // ✅ FIX: Dispatch custom event for AuthContext to handle logout
+          // This prevents hard reload and allows React Router to handle navigation
+          window.dispatchEvent(new CustomEvent('auth:session-expired'));
+
+          return Promise.reject(new Error('Session expired. Please login again.'));
+        }
+
         // Handle 401 Unauthorized - Token expired
         if (error.response?.status === 401 && !originalRequest._retry) {
+          // Don't retry refresh endpoint itself
+          if (originalRequest.url?.includes('/auth/refresh')) {
+            refreshFailureCount++;
+
+            // ✅ FIX: Save current URL before logout
+            const currentPath = window.location.pathname + window.location.search;
+            if (currentPath !== '/login' && currentPath !== '/register') {
+              sessionStorage.setItem('redirectAfterLogin', currentPath);
+              console.log('[ApiClient] Saved redirect path (refresh failed):', currentPath);
+            }
+
+            this.clearAuth();
+
+            // ✅ FIX: Dispatch custom event instead of hard redirect
+            window.dispatchEvent(new CustomEvent('auth:session-expired'));
+
+            return Promise.reject(error);
+          }
+
+          // If already refreshing, queue this request
+          if (isRefreshing) {
+            return new Promise((resolve, reject) => {
+              failedQueue.push({ resolve, reject });
+            })
+              .then((token) => {
+                originalRequest.headers[API_CONFIG.token.headerName] =
+                  `${API_CONFIG.token.headerPrefix} ${token}`;
+                return this.client(originalRequest);
+              })
+              .catch((err) => {
+                return Promise.reject(err);
+              });
+          }
+
           originalRequest._retry = true;
+          isRefreshing = true;
 
           try {
             // Attempt to refresh token
             const newToken = await this.refreshToken();
 
             if (newToken) {
+              // Reset failure count on success
+              refreshFailureCount = 0;
+
               // Update token in storage
               this.setToken(newToken);
+
+              // Process queued requests
+              processQueue(null, newToken);
 
               // Retry original request with new token
               originalRequest.headers[API_CONFIG.token.headerName] =
@@ -116,10 +260,29 @@ class ApiClient {
               return this.client(originalRequest);
             }
           } catch (refreshError) {
-            // Refresh failed, clear auth and redirect to login
+            // Increment failure count
+            refreshFailureCount++;
+
+            // Process queued requests with error
+            processQueue(refreshError, null);
+
+            // ✅ FIX: Save current URL before logout
+            const currentPath = window.location.pathname + window.location.search;
+            if (currentPath !== '/login' && currentPath !== '/register') {
+              sessionStorage.setItem('redirectAfterLogin', currentPath);
+              console.log('[ApiClient] Saved redirect path (refresh error):', currentPath);
+            }
+
+            // Clear auth and dispatch logout event
+            console.info('[ApiClient] Session expired - clearing auth');
             this.clearAuth();
-            window.location.href = '/login';
+
+            // ✅ FIX: Dispatch custom event instead of hard redirect
+            window.dispatchEvent(new CustomEvent('auth:session-expired'));
+
             return Promise.reject(refreshError);
+          } finally {
+            isRefreshing = false;
           }
         }
 
@@ -154,21 +317,24 @@ class ApiClient {
    * Get authentication token from storage
    */
   getToken() {
-    return localStorage.getItem('access_token');
+    // ✅ FIX: Use consistent storage key from config
+    return localStorage.getItem(API_CONFIG.token.storageKey);
   }
 
   /**
    * Set authentication token in storage
    */
   setToken(token) {
-    localStorage.setItem('access_token', token);
+    // ✅ FIX: Use consistent storage key from config
+    localStorage.setItem(API_CONFIG.token.storageKey, token);
   }
 
   /**
    * Get refresh token from storage
    */
   getRefreshToken() {
-    return localStorage.getItem('refresh_token');
+    // ✅ FIX: Use consistent storage key from config
+    return localStorage.getItem(API_CONFIG.token.refreshStorageKey);
   }
 
   /**

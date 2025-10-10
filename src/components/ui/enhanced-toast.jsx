@@ -154,7 +154,7 @@ const EnhancedToast = ({ toast, onDismiss }) => {
       case 'loading':
         return {
           container: 'border-l-blue-500 bg-blue-50/95 dark:bg-blue-950/80 text-blue-900 dark:text-blue-100',
-          icon: 'text-blue-600 dark:text-blue-400 animate-spin',
+          icon: 'text-blue-600 dark:text-blue-400 animate-pulse-scale',
           title: 'text-blue-900 dark:text-blue-100',
           message: 'text-blue-700 dark:text-blue-300'
         };

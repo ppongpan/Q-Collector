@@ -68,6 +68,17 @@ export default function UserManagement({ onEditUser }) {
     try {
       setIsLoading(true);
 
+      // DEBUG: Check authentication state
+      const token = localStorage.getItem('access_token');
+      const user = localStorage.getItem('user');
+      console.log('🔍 UserManagement loadUsers() - Auth Check:', {
+        hasToken: !!token,
+        tokenLength: token?.length,
+        hasUser: !!user,
+        currentUser: currentUser,
+        currentUserRole: currentUser?.role
+      });
+
       // Fetch users from API (with 2FA status)
       const [usersResponse, twoFAResponse] = await Promise.all([
         ApiClient.get('/users', {
@@ -79,9 +90,21 @@ export default function UserManagement({ onEditUser }) {
         ApiClient.get('/admin/users/2fa-status')
       ]);
 
+      // DEBUG: Log API responses
+      console.log('📡 UserManagement API Responses:', {
+        usersResponse: usersResponse,
+        twoFAResponse: twoFAResponse
+      });
+
       // Extract users from response
       const fetchedUsers = usersResponse.data?.users || usersResponse.users || [];
       const twoFAUsers = twoFAResponse.data?.users || [];
+
+      console.log('✅ Extracted users:', {
+        fetchedUsersCount: fetchedUsers.length,
+        twoFAUsersCount: twoFAUsers.length,
+        fetchedUsers: fetchedUsers
+      });
 
       // Create a map of 2FA status by user ID
       const twoFAMap = new Map(

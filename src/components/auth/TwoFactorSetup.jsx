@@ -27,13 +27,16 @@ import {
 import { GlassCard, GlassCardContent } from '../ui/glass-card';
 import { useEnhancedToast } from '../ui/enhanced-toast';
 
-const TwoFactorSetup = ({ onComplete, onCancel, apiClient }) => {
+const TwoFactorSetup = ({ onComplete, onCancel, apiClient, tempToken, username }) => {
   const [step, setStep] = useState(1); // 1: QR Code, 2: Backup Codes, 3: Verification
   const [setupData, setSetupData] = useState(null);
   const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const toast = useEnhancedToast();
+
+  // Check if this is forced setup (from admin)
+  const isForcedSetup = !!tempToken;
 
   // Initialize 2FA setup
   useEffect(() => {
@@ -44,14 +47,25 @@ const TwoFactorSetup = ({ onComplete, onCancel, apiClient }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.post('/2fa/setup');
+      let response;
+
+      if (isForcedSetup) {
+        // Mandatory setup for requires_2fa_setup users - use tempToken
+        response = await apiClient.post('/auth/2fa/init-mandatory-setup', {
+          tempToken
+        });
+      } else {
+        // Normal setup - use authenticated endpoint
+        response = await apiClient.post('/auth/2fa/setup');
+      }
+
       if (response.success) {
         setSetupData(response.data);
       } else {
         throw new Error(response.message || 'Failed to initialize 2FA setup');
       }
     } catch (err) {
-      const errorMessage = err.message || 'Failed to initialize 2FA setup';
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to initialize 2FA setup';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -111,21 +125,42 @@ const TwoFactorSetup = ({ onComplete, onCancel, apiClient }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.post('/2fa/enable', {
-        token: verificationCode
-      });
+      let response;
+
+      if (isForcedSetup) {
+        // Mandatory setup for requires_2fa_setup users
+        response = await apiClient.post('/auth/2fa/complete-mandatory-setup', {
+          tempToken,
+          verificationCode
+        });
+
+        // Save tokens from response - backend returns data: { user, tokens }
+        if (response.data?.tokens) {
+          localStorage.setItem('access_token', response.data.tokens.accessToken);
+          if (response.data.tokens.refreshToken) {
+            localStorage.setItem('refresh_token', response.data.tokens.refreshToken);
+          }
+        }
+        // Save user data
+        if (response.data?.user) {
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+        }
+      } else {
+        // Normal setup - use authenticated endpoint
+        response = await apiClient.post('/auth/2fa/enable', {
+          token: verificationCode
+        });
+      }
 
       if (response.success) {
-        toast.success('เปิดใช้งาน 2FA สำเร็จ!', {
-          title: '🎉 สำเร็จ',
-          description: 'บัญชีของคุณมีความปลอดภัยมากขึ้นแล้ว'
-        });
-        onComplete?.();
+        // Don't show toast here - let parent component (TwoFactorSetupPage) handle it
+        // This prevents duplicate toast notifications
+        onComplete?.(response.data);
       } else {
         throw new Error(response.message || 'Failed to enable 2FA');
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || 'รหัสยืนยันไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'รหัสยืนยันไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
       setError(errorMessage);
     } finally {
       setLoading(false);

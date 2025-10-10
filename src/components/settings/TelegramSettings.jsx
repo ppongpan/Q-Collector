@@ -48,8 +48,10 @@ const TelegramSettings = () => {
       const response = await apiClient.get('/telegram-settings');
 
       if (response.success) {
+        // Backend returns masked token (***...xyz) for security
+        // Use empty string if no token exists, otherwise show masked version as placeholder
         const data = {
-          bot_token: response.settings.bot_token || '',
+          bot_token: response.settings.has_token ? response.settings.bot_token : '',
           group_id: response.settings.group_id || '',
           enabled: response.settings.enabled || false,
         };
@@ -74,8 +76,10 @@ const TelegramSettings = () => {
       const response = await apiClient.put('/telegram-settings', settings);
 
       if (response.success) {
+        // ⚠️ IMPORTANT: Backend hides bot_token in response (***...xyz)
+        // We must keep the original bot_token from user input, not overwrite with masked version
         const data = {
-          bot_token: response.settings.bot_token || '',
+          bot_token: response.settings.has_token ? settings.bot_token : '', // Keep original token
           group_id: response.settings.group_id || '',
           enabled: response.settings.enabled || false,
         };

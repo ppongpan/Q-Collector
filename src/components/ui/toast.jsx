@@ -87,7 +87,7 @@ const Toast = React.forwardRef(({ id, type, message, onClose }, ref) => {
       <div className="flex-shrink-0">
         <FontAwesomeIcon
           icon={config.icon}
-          className={`w-5 h-5 ${config.iconClass}`}
+          className={`w-5 h-5 ${config.iconClass} ${type === 'info' ? 'animate-pulse-scale' : ''}`}
         />
       </div>
 

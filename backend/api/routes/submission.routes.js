@@ -104,6 +104,7 @@ router.get(
       page: req.query.page,
       limit: req.query.limit,
       status: req.query.status,
+      onlyMainForm: true, // ✅ FIX: Only show main form submissions (parent_id IS NULL)
     };
 
     const result = await SubmissionService.listSubmissions(formId, req.userId, filters);
@@ -274,6 +275,41 @@ router.patch(
       success: true,
       message: 'Submission status updated successfully',
       data: { submission },
+    });
+  })
+);
+
+/**
+ * GET /api/v1/submissions/:mainFormSubId/sub-forms/:subFormId
+ * Get sub-form submissions by main form submission ID (from dynamic table)
+ * Uses main_form_subid column to correctly link sub-forms to parent main form
+ */
+router.get(
+  '/:mainFormSubId/sub-forms/:subFormId',
+  authenticate,
+  [
+    param('mainFormSubId')
+      .isUUID()
+      .withMessage('Invalid main form submission ID'),
+    param('subFormId')
+      .isUUID()
+      .withMessage('Invalid sub-form ID'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { mainFormSubId, subFormId } = req.params;
+
+    const subFormSubmissions = await SubmissionService.getSubFormSubmissionsByMainFormSubId(
+      mainFormSubId,
+      subFormId,
+      req.userId
+    );
+
+    logger.info(`Retrieved ${subFormSubmissions.length} sub-form submissions for main form ${mainFormSubId}`);
+
+    res.status(200).json({
+      success: true,
+      data: { subFormSubmissions },
     });
   })
 );

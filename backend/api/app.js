@@ -50,12 +50,16 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", 'data:', 'https:'],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      frameSrc: ["'self'"],
+      frameAncestors: ["'self'"], // ✅ Replaces X-Frame-Options
     },
   },
   crossOriginEmbedderPolicy: false,
+  xssFilter: false, // ✅ Disable deprecated X-XSS-Protection
 }));
 
 // CORS configuration
@@ -97,6 +101,27 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Compress all responses
 app.use(compression());
+
+// ============================================
+// Cache Control Middleware
+// ============================================
+
+// Set Cache-Control headers (replaces deprecated Expires header)
+app.use((req, res, next) => {
+  // Static assets - cache 1 year with immutable flag
+  if (req.url.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+  // HTML - no cache
+  else if (req.url.match(/\.html$/)) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  }
+  // API responses - no cache by default
+  else if (req.url.startsWith('/api/')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  }
+  next();
+});
 
 // ============================================
 // Logging Middleware

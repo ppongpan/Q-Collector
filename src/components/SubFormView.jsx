@@ -11,8 +11,9 @@ import ThaiPhoneInput from './ui/thai-phone-input';
 import { useEnhancedToast } from './ui/enhanced-toast';
 
 // Data services
-import dataService from '../services/DataService.js';
 import submissionService from '../services/SubmissionService.js';
+import fileServiceAPI from '../services/FileService.api.js';
+import apiClient from '../services/ApiClient';
 
 export default function SubFormView({
   formId,
@@ -66,8 +67,10 @@ export default function SubFormView({
   const loadFormData = async () => {
     setLoading(true);
     try {
-      // Load main form
-      const formData = dataService.getForm(formId);
+      // Load main form from API
+      const formResponse = await apiClient.getForm(formId);
+      const formData = formResponse.data?.form || formResponse.data;
+
       if (!formData) {
         console.error('Form not found:', formId);
         return;
@@ -84,9 +87,23 @@ export default function SubFormView({
 
       // Load existing sub submission for editing
       if (subSubmissionId) {
-        const subSubmission = dataService.getSubSubmission(subSubmissionId);
-        if (subSubmission) {
-          setFormData(subSubmission.data || {});
+        const subSubmissionResponse = await apiClient.get(`/subforms/${subFormId}/submissions/${subSubmissionId}`);
+        const subSubmission = subSubmissionResponse.data?.submission || subSubmissionResponse.data;
+
+        if (subSubmission && subSubmission.data) {
+          // 🔧 CRITICAL FIX: Backend returns data in format {fieldId: {fieldId, fieldTitle, fieldType, value}}
+          // Extract just the values for form editing
+          const extractedFormData = {};
+          Object.entries(subSubmission.data).forEach(([fieldId, fieldData]) => {
+            // If fieldData is an object with 'value' property, extract it
+            if (fieldData && typeof fieldData === 'object' && 'value' in fieldData) {
+              extractedFormData[fieldId] = fieldData.value;
+            } else {
+              // Otherwise use the raw value
+              extractedFormData[fieldId] = fieldData;
+            }
+          });
+          setFormData(extractedFormData);
         }
       }
     } catch (error) {
@@ -103,17 +120,60 @@ export default function SubFormView({
     }));
   };
 
-  const handleFileChange = (fieldId, files) => {
-    const updatedFiles = [...uploadedFiles];
-    const existingIndex = updatedFiles.findIndex(f => f.fieldId === fieldId);
-
-    if (existingIndex >= 0) {
-      updatedFiles[existingIndex] = { fieldId, files: Array.from(files) };
-    } else {
-      updatedFiles.push({ fieldId, files: Array.from(files) });
+  const handleFileChange = async (fieldId, files) => {
+    if (!files || files.length === 0) {
+      handleInputChange(fieldId, null);
+      return;
     }
 
-    setUploadedFiles(updatedFiles);
+    try {
+      const fileArray = Array.from(files);
+      const allowMultiple = subForm.fields.find(f => f.id === fieldId)?.options?.allowMultiple;
+
+      if (allowMultiple) {
+        // Upload multiple files
+        const results = await fileServiceAPI.uploadMultipleFiles(
+          fileArray,
+          submissionId,
+          fieldId,
+          (progress) => console.log(`Upload progress: ${progress}%`)
+        );
+
+        const successfulFileIds = results
+          .filter(result => result.success)
+          .map(result => result.file.id);
+
+        if (successfulFileIds.length > 0) {
+          handleInputChange(fieldId, successfulFileIds);
+          toast.success(`อัปโหลด ${successfulFileIds.length} ไฟล์เรียบร้อยแล้ว`, {
+            title: "อัปโหลดสำเร็จ",
+            duration: 3000
+          });
+        }
+      } else {
+        // Upload single file
+        const result = await fileServiceAPI.uploadFile(
+          fileArray[0],
+          submissionId,
+          fieldId,
+          (progress) => console.log(`Upload progress: ${progress}%`)
+        );
+
+        if (result.success) {
+          handleInputChange(fieldId, result.file.id);
+          toast.success('อัปโหลดไฟล์เรียบร้อยแล้ว', {
+            title: "อัปโหลดสำเร็จ",
+            duration: 3000
+          });
+        }
+      }
+    } catch (error) {
+      console.error('File upload error:', error);
+      toast.error('เกิดข้อผิดพลาดในการอัปโหลดไฟล์', {
+        title: "อัปโหลดไม่สำเร็จ",
+        duration: 5000
+      });
+    }
   };
 
   const handleGPSLocation = async (fieldId) => {
@@ -145,15 +205,40 @@ export default function SubFormView({
   const handleSubmit = async () => {
     if (submitting) return;
 
+    // Show "saving" toast notification
+    toast.info('อยู่ระหว่างการบันทึกข้อมูล...', {
+      title: "กำลังบันทึก",
+      duration: 2000
+    });
+
     setSubmitting(true);
     try {
       let result;
       if (subSubmissionId) {
         // Update existing sub submission
-        result = dataService.updateSubSubmission(subSubmissionId, formData);
+        console.log('📝 Updating sub-form submission:', {
+          subFormId,
+          subSubmissionId,
+          dataKeys: Object.keys(formData)
+        });
+        const updateResponse = await apiClient.put(`/subforms/${subFormId}/submissions/${subSubmissionId}`, {
+          data: formData
+        });
+        result = updateResponse.data?.submission || updateResponse.data;
       } else {
         // Create new sub submission
-        result = dataService.createSubSubmission(submissionId, subFormId, formData);
+        console.log('📝 Creating new sub-form submission:', {
+          subFormId,
+          parentId: submissionId,
+          submissionIdProp: submissionId,
+          dataKeys: Object.keys(formData)
+        });
+        const createResponse = await apiClient.post(`/subforms/${subFormId}/submissions`, {
+          parentId: submissionId,
+          data: formData
+        });
+        result = createResponse.data?.submission || createResponse.data;
+        console.log('✅ Sub-form submission created:', result);
       }
 
       toast.success('บันทึกข้อมูลเรียบร้อยแล้ว', {
@@ -412,19 +497,110 @@ export default function SubFormView({
 
       case 'file_upload':
       case 'image_upload':
+        // ✅ SINGLE FILE MODE: Only show the first file (1 file per field)
+        const fieldFiles = uploadedFiles.find(f => f.fieldId === field.id)?.files || [];
+        const currentFile = fieldFiles.length > 0 ? fieldFiles[0] : null;
+
         return (
-          <div key={field.id} className="space-y-2">
+          <div key={field.id} className="space-y-3">
             <label className="block text-sm font-medium text-foreground/80">
               {field.title}
               {field.required && <span className="text-destructive ml-1">*</span>}
             </label>
+
+            {/* ✅ File Input - Always visible */}
             <input
               type="file"
               accept={field.type === 'image_upload' ? 'image/*' : undefined}
-              multiple={field.options?.allowMultiple}
               onChange={(e) => handleFileChange(field.id, e.target.files)}
               className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 transition-colors"
             />
+
+            {/* ✅ Display current filename next to button area if file exists */}
+            {currentFile && (
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border/40 bg-muted/10">
+                {/* File Icon/Preview */}
+                {currentFile.isImage && currentFile.presignedUrl ? (
+                  <img
+                    src={currentFile.presignedUrl}
+                    alt={currentFile.name}
+                    className="w-10 h-10 rounded object-cover flex-shrink-0"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-muted/40 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                )}
+
+                {/* Filename and Size */}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-foreground truncate">
+                    {currentFile.name}
+                  </div>
+                  {currentFile.size && (
+                    <div className="text-xs text-muted-foreground">
+                      {fileServiceAPI.formatFileSize(currentFile.size)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Download Button */}
+                  {currentFile.presignedUrl && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          // Get file with presigned URL
+                          const fileData = await fileServiceAPI.getFileWithUrl(currentFile.id);
+                          // Open in new tab without switching focus
+                          window.open(fileData.presignedUrl, '_blank', 'noopener,noreferrer');
+                        } catch (error) {
+                          console.error('Download error:', error);
+                          toast.error('ไม่สามารถดาวน์โหลดไฟล์ได้', {
+                            title: 'เกิดข้อผิดพลาด',
+                            duration: 3000
+                          });
+                        }
+                      }}
+                      className="p-2 rounded hover:bg-muted/40 transition-colors"
+                      title="ดาวน์โหลด"
+                    >
+                      <svg className="w-4 h-4 text-muted-foreground hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Remove Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Remove file from uploadedFiles state
+                      setUploadedFiles(prev => prev.filter(f => f.fieldId !== field.id));
+                      // Clear form data for this field
+                      handleInputChange(field.id, null);
+                      toast.info('ไฟล์ถูกลบแล้ว', {
+                        title: "ลบไฟล์",
+                        duration: 2000
+                      });
+                    }}
+                    className="p-2 rounded hover:bg-destructive/10 transition-colors"
+                    title="ลบไฟล์"
+                  >
+                    <svg className="w-4 h-4 text-muted-foreground hover:text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         );
 

@@ -1,0 +1,826 @@
+{
+  "scanDate": "2025-10-04T03:37:21.931Z",
+  "stats": {
+    "totalFiles": 140,
+    "filesWithMatches": 9,
+    "totalMatches": 88,
+    "byCategory": {
+      "localStorage": 57,
+      "dataService": 31
+    },
+    "byType": {
+      "localStorage.getItem": 14,
+      "localStorage.setItem": 30,
+      "localStorage.removeItem": 12,
+      "localStorage.clear": 1,
+      "dataService.call": 30,
+      "dataService.import": 1
+    },
+    "byFile": {
+      "contexts\\FontContext.jsx": 4,
+      "contexts\\StorageContext.jsx": 2,
+      "services\\ApiClient.js": 6,
+      "services\\ApiClient.test.js": 1,
+      "services\\DataService.js": 42,
+      "services\\FileService.js": 6,
+      "services\\SubmissionService.js": 9,
+      "services\\ThemeService.js": 6,
+      "utils\\tokenManager.js": 12
+    }
+  },
+  "matches": [
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "contexts\\FontContext.jsx",
+      "line": 65,
+      "context": "savedFontId",
+      "snippet": "const savedFontId = localStorage.getItem('preferred-font');",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "contexts\\FontContext.jsx",
+      "line": 100,
+      "context": "newFont",
+      "snippet": "localStorage.setItem('preferred-font', fontId);",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "removeItem",
+      "file": "contexts\\FontContext.jsx",
+      "line": 68,
+      "context": "savedFontId",
+      "snippet": "localStorage.removeItem('preferred-font-size');",
+      "matchText": "localStorage.removeItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "removeItem",
+      "file": "contexts\\FontContext.jsx",
+      "line": 112,
+      "context": "defaultFont",
+      "snippet": "localStorage.removeItem('preferred-font');",
+      "matchText": "localStorage.removeItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "contexts\\StorageContext.jsx",
+      "line": 47,
+      "context": "stored",
+      "snippet": "const stored = localStorage.getItem(STORAGE_CONFIG_KEY);",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "contexts\\StorageContext.jsx",
+      "line": 58,
+      "context": "stored",
+      "snippet": "localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(config));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "services\\ApiClient.js",
+      "line": 157,
+      "context": "transformedError",
+      "snippet": "return localStorage.getItem('access_token');",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "services\\ApiClient.js",
+      "line": 171,
+      "context": "Unknown",
+      "snippet": "return localStorage.getItem('refresh_token');",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\ApiClient.js",
+      "line": 164,
+      "context": "transformedError",
+      "snippet": "localStorage.setItem('access_token', token);",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\ApiClient.js",
+      "line": 178,
+      "context": "Unknown",
+      "snippet": "localStorage.setItem(API_CONFIG.token.refreshStorageKey, token);",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "removeItem",
+      "file": "services\\ApiClient.js",
+      "line": 185,
+      "context": "Unknown",
+      "snippet": "localStorage.removeItem(API_CONFIG.token.storageKey);",
+      "matchText": "localStorage.removeItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "removeItem",
+      "file": "services\\ApiClient.js",
+      "line": 186,
+      "context": "Unknown",
+      "snippet": "localStorage.removeItem(API_CONFIG.token.refreshStorageKey);",
+      "matchText": "localStorage.removeItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "clear",
+      "file": "services\\ApiClient.test.js",
+      "line": 38,
+      "context": "Unknown",
+      "snippet": "localStorage.clear();",
+      "matchText": "localStorage.clear"
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "services\\DataService.js",
+      "line": 61,
+      "context": "Unknown",
+      "snippet": "if (!localStorage.getItem(key)) {",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "services\\DataService.js",
+      "line": 123,
+      "context": "formsData",
+      "snippet": "const formsData = localStorage.getItem(this.STORAGE_KEYS.FORMS);",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "services\\DataService.js",
+      "line": 261,
+      "context": "submissionsData",
+      "snippet": "const submissionsData = localStorage.getItem(this.STORAGE_KEYS.SUBMISSIONS);",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "services\\DataService.js",
+      "line": 405,
+      "context": "subSubmissionsData",
+      "snippet": "const subSubmissionsData = localStorage.getItem(this.STORAGE_KEYS.SUB_SUBMISSIONS);",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 62,
+      "context": "Unknown",
+      "snippet": "localStorage.setItem(key, JSON.stringify({}));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 110,
+      "context": "forms",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.FORMS, JSON.stringify(forms));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 183,
+      "context": "updatedForm",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.FORMS, JSON.stringify(forms));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 207,
+      "context": "forms",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.FORMS, JSON.stringify(forms));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 250,
+      "context": "submissions",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.SUBMISSIONS, JSON.stringify(submissions));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 318,
+      "context": "updatedSubmission",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.SUBMISSIONS, JSON.stringify(submissions));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 341,
+      "context": "submissions",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.SUBMISSIONS, JSON.stringify(submissions));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 365,
+      "context": "submissionsToDelete",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.SUBMISSIONS, JSON.stringify(submissions));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 394,
+      "context": "subSubmissions",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.SUB_SUBMISSIONS, JSON.stringify(subSubmissions));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 474,
+      "context": "updatedSubSubmission",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.SUB_SUBMISSIONS, JSON.stringify(subSubmissions));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 492,
+      "context": "subSubmissions",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.SUB_SUBMISSIONS, JSON.stringify(subSubmissions));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 511,
+      "context": "subSubmissionsToDelete",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.SUB_SUBMISSIONS, JSON.stringify(subSubmissions));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 576,
+      "context": "Unknown",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.FORMS, JSON.stringify(data.forms));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 579,
+      "context": "Unknown",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.SUBMISSIONS, JSON.stringify(data.submissions));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 582,
+      "context": "Unknown",
+      "snippet": "localStorage.setItem(this.STORAGE_KEYS.SUB_SUBMISSIONS, JSON.stringify(data.subSubmissions));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\DataService.js",
+      "line": 598,
+      "context": "Unknown",
+      "snippet": "localStorage.setItem(key, JSON.stringify({}));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 10,
+      "context": "Unknown",
+      "snippet": "* - dataService.createForm() → apiClient.createForm()",
+      "matchText": "dataService.createForm("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 11,
+      "context": "Unknown",
+      "snippet": "* - dataService.getForm() → apiClient.getForm()",
+      "matchText": "dataService.getForm("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 12,
+      "context": "Unknown",
+      "snippet": "* - dataService.updateForm() → apiClient.updateForm()",
+      "matchText": "dataService.updateForm("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 13,
+      "context": "Unknown",
+      "snippet": "* - dataService.deleteForm() → apiClient.deleteForm()",
+      "matchText": "dataService.deleteForm("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 14,
+      "context": "Unknown",
+      "snippet": "* - dataService.createSubmission() → submissionService.createSubmission()",
+      "matchText": "dataService.createSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 15,
+      "context": "Unknown",
+      "snippet": "* - dataService.getSubmission() → apiClient.getSubmission()",
+      "matchText": "dataService.getSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 16,
+      "context": "Unknown",
+      "snippet": "* - dataService.updateSubmission() → submissionService.updateSubmission()",
+      "matchText": "dataService.updateSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 17,
+      "context": "Unknown",
+      "snippet": "* - dataService.deleteSubmission() → apiClient.deleteSubmission()",
+      "matchText": "dataService.deleteSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 86,
+      "context": "random",
+      "snippet": "this._logDeprecationWarning('dataService.createForm() - Use apiClient.createForm()');",
+      "matchText": "dataService.createForm("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 121,
+      "context": "forms",
+      "snippet": "this._logDeprecationWarning('dataService.getAllForms() - Use apiClient.listForms()');",
+      "matchText": "dataService.getAllForms("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 149,
+      "context": "forms",
+      "snippet": "this._logDeprecationWarning('dataService.getForm() - Use apiClient.getForm()');",
+      "matchText": "dataService.getForm("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 162,
+      "context": "forms",
+      "snippet": "this._logDeprecationWarning('dataService.updateForm() - Use apiClient.updateForm()');",
+      "matchText": "dataService.updateForm("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 195,
+      "context": "Unknown",
+      "snippet": "this._logDeprecationWarning('dataService.deleteForm() - Use apiClient.deleteForm()');",
+      "matchText": "dataService.deleteForm("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 237,
+      "context": "Unknown",
+      "snippet": "this._logDeprecationWarning('dataService.createSubmission() - Use submissionService.createSubmission()');",
+      "matchText": "dataService.createSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 276,
+      "context": "submissionsData",
+      "snippet": "this._logDeprecationWarning('dataService.getSubmissionsByFormId() - Use apiClient.listSubmissions()');",
+      "matchText": "dataService.getSubmissionsByFormId("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 290,
+      "context": "submissions",
+      "snippet": "this._logDeprecationWarning('dataService.getSubmission() - Use apiClient.getSubmission()');",
+      "matchText": "dataService.getSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 303,
+      "context": "submissions",
+      "snippet": "this._logDeprecationWarning('dataService.updateSubmission() - Use submissionService.updateSubmission()');",
+      "matchText": "dataService.updateSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 330,
+      "context": "updatedSubmission",
+      "snippet": "this._logDeprecationWarning('dataService.deleteSubmission() - Use apiClient.deleteSubmission()');",
+      "matchText": "dataService.deleteSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 380,
+      "context": "Unknown",
+      "snippet": "this._logDeprecationWarning('dataService.createSubSubmission() - Use API endpoint');",
+      "matchText": "dataService.createSubSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 420,
+      "context": "subSubmissionsData",
+      "snippet": "this._logDeprecationWarning('dataService.getSubSubmissionsByParentId() - Use API endpoint');",
+      "matchText": "dataService.getSubSubmissionsByParentId("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 446,
+      "context": "subSubmissions",
+      "snippet": "this._logDeprecationWarning('dataService.getSubSubmission() - Use API endpoint');",
+      "matchText": "dataService.getSubSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\DataService.js",
+      "line": 459,
+      "context": "subSubmissions",
+      "snippet": "this._logDeprecationWarning('dataService.updateSubSubmission() - Use API endpoint');",
+      "matchText": "dataService.updateSubSubmission("
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "services\\FileService.js",
+      "line": 409,
+      "context": "stored",
+      "snippet": "const stored = localStorage.getItem(this.FILE_STORAGE_KEY);",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\FileService.js",
+      "line": 187,
+      "context": "files",
+      "snippet": "localStorage.setItem(this.FILE_STORAGE_KEY, JSON.stringify(files));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\FileService.js",
+      "line": 214,
+      "context": "deletedCount",
+      "snippet": "localStorage.setItem(this.FILE_STORAGE_KEY, JSON.stringify(files));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\FileService.js",
+      "line": 437,
+      "context": "dataSizeInMB",
+      "snippet": "localStorage.setItem(this.FILE_STORAGE_KEY, dataToStore);",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\FileService.js",
+      "line": 505,
+      "context": "file",
+      "snippet": "localStorage.setItem(this.FILE_STORAGE_KEY, JSON.stringify(files));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\FileService.js",
+      "line": 549,
+      "context": "uploadDate",
+      "snippet": "localStorage.setItem(this.FILE_STORAGE_KEY, JSON.stringify(files));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "dataService",
+      "type": "import",
+      "file": "services\\SubmissionService.js",
+      "line": 14,
+      "context": "Unknown",
+      "snippet": "import dataService from './DataService.js';",
+      "matchText": "import dataService from"
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\SubmissionService.js",
+      "line": 195,
+      "context": "existingSubSubmission",
+      "snippet": "const existingSubSubmission = dataService.getSubSubmission(subSubmissionId);",
+      "matchText": "dataService.getSubSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\SubmissionService.js",
+      "line": 201,
+      "context": "parentSubmission",
+      "snippet": "const parentSubmission = dataService.getSubmission(existingSubSubmission.parentSubmissionId);",
+      "matchText": "dataService.getSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\SubmissionService.js",
+      "line": 207,
+      "context": "mainForm",
+      "snippet": "const mainForm = dataService.getForm(parentSubmission.formId);",
+      "matchText": "dataService.getForm("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\SubmissionService.js",
+      "line": 246,
+      "context": "updatedSubSubmission",
+      "snippet": "const updatedSubSubmission = dataService.updateSubSubmission(subSubmissionId, completeData);",
+      "matchText": "dataService.updateSubSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\SubmissionService.js",
+      "line": 275,
+      "context": "parentSubmission",
+      "snippet": "const parentSubmission = dataService.getSubmission(parentSubmissionId);",
+      "matchText": "dataService.getSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\SubmissionService.js",
+      "line": 281,
+      "context": "mainForm",
+      "snippet": "const mainForm = dataService.getForm(parentSubmission.formId);",
+      "matchText": "dataService.getForm("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\SubmissionService.js",
+      "line": 311,
+      "context": "subSubmission",
+      "snippet": "const subSubmission = dataService.createSubSubmission(",
+      "matchText": "dataService.createSubSubmission("
+    },
+    {
+      "category": "dataService",
+      "type": "call",
+      "file": "services\\SubmissionService.js",
+      "line": 724,
+      "context": "submissions",
+      "snippet": "const submissions = dataService.getSubmissionsByFormId(form.id);",
+      "matchText": "dataService.getSubmissionsByFormId("
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "services\\ThemeService.js",
+      "line": 51,
+      "context": "stored",
+      "snippet": "const stored = localStorage.getItem(storageKey);",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "services\\ThemeService.js",
+      "line": 56,
+      "context": "globalStored",
+      "snippet": "const globalStored = localStorage.getItem(getStorageKey(null));",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\ThemeService.js",
+      "line": 120,
+      "context": "dataToSave",
+      "snippet": "localStorage.setItem(storageKey, dataToSave);",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "services\\ThemeService.js",
+      "line": 224,
+      "context": "test",
+      "snippet": "localStorage.setItem(test, test);",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "removeItem",
+      "file": "services\\ThemeService.js",
+      "line": 208,
+      "context": "storageKey",
+      "snippet": "localStorage.removeItem(storageKey);",
+      "matchText": "localStorage.removeItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "removeItem",
+      "file": "services\\ThemeService.js",
+      "line": 225,
+      "context": "test",
+      "snippet": "localStorage.removeItem(test);",
+      "matchText": "localStorage.removeItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "utils\\tokenManager.js",
+      "line": 32,
+      "context": "getAccessToken",
+      "snippet": "return localStorage.getItem(ACCESS_TOKEN_KEY);",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "utils\\tokenManager.js",
+      "line": 52,
+      "context": "getRefreshToken",
+      "snippet": "return localStorage.getItem(REFRESH_TOKEN_KEY);",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "getItem",
+      "file": "utils\\tokenManager.js",
+      "line": 91,
+      "context": "userStr",
+      "snippet": "const userStr = localStorage.getItem(USER_KEY);",
+      "matchText": "localStorage.getItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "utils\\tokenManager.js",
+      "line": 21,
+      "context": "setAccessToken",
+      "snippet": "localStorage.setItem(ACCESS_TOKEN_KEY, token);",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "utils\\tokenManager.js",
+      "line": 41,
+      "context": "setRefreshToken",
+      "snippet": "localStorage.setItem(REFRESH_TOKEN_KEY, token);",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "setItem",
+      "file": "utils\\tokenManager.js",
+      "line": 80,
+      "context": "setUser",
+      "snippet": "localStorage.setItem(USER_KEY, JSON.stringify(user));",
+      "matchText": "localStorage.setItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "removeItem",
+      "file": "utils\\tokenManager.js",
+      "line": 23,
+      "context": "setAccessToken",
+      "snippet": "localStorage.removeItem(ACCESS_TOKEN_KEY);",
+      "matchText": "localStorage.removeItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "removeItem",
+      "file": "utils\\tokenManager.js",
+      "line": 43,
+      "context": "setRefreshToken",
+      "snippet": "localStorage.removeItem(REFRESH_TOKEN_KEY);",
+      "matchText": "localStorage.removeItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "removeItem",
+      "file": "utils\\tokenManager.js",
+      "line": 69,
+      "context": "clearTokens",
+      "snippet": "localStorage.removeItem(ACCESS_TOKEN_KEY);",
+      "matchText": "localStorage.removeItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "removeItem",
+      "file": "utils\\tokenManager.js",
+      "line": 70,
+      "context": "clearTokens",
+      "snippet": "localStorage.removeItem(REFRESH_TOKEN_KEY);",
+      "matchText": "localStorage.removeItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "removeItem",
+      "file": "utils\\tokenManager.js",
+      "line": 71,
+      "context": "clearTokens",
+      "snippet": "localStorage.removeItem(USER_KEY);",
+      "matchText": "localStorage.removeItem"
+    },
+    {
+      "category": "localStorage",
+      "type": "removeItem",
+      "file": "utils\\tokenManager.js",
+      "line": 82,
+      "context": "setUser",
+      "snippet": "localStorage.removeItem(USER_KEY);",
+      "matchText": "localStorage.removeItem"
+    }
+  ],
+  "summary": "# LocalStorage Usage Audit Summary\n\n**Scan Date:** 2025-10-04T03:37:21.932Z\n**Total Files Scanned:** 140\n**Files with Matches:** 9\n**Total Matches:** 88\n\n## Breakdown by Category:\n- localStorage: 57 occurrences\n- dataService: 31 occurrences\n\n## Breakdown by Type:\n- localStorage.getItem: 14 occurrences\n- localStorage.setItem: 30 occurrences\n- localStorage.removeItem: 12 occurrences\n- localStorage.clear: 1 occurrences\n- dataService.call: 30 occurrences\n- dataService.import: 1 occurrences\n\n## Top 10 Files with Most Matches:\n1. services\\DataService.js (42 matches)\n2. utils\\tokenManager.js (12 matches)\n3. services\\SubmissionService.js (9 matches)\n4. services\\ApiClient.js (6 matches)\n5. services\\FileService.js (6 matches)\n6. services\\ThemeService.js (6 matches)\n7. contexts\\FontContext.jsx (4 matches)\n8. contexts\\StorageContext.jsx (2 matches)\n9. services\\ApiClient.test.js (1 matches)"
+}

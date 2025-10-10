@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 
-const AnimatedAddButton = ({ onClick, tooltip = "เพิ่มฟิลด์ใหม่", className = "", size = "default" }) => {
+const AnimatedAddButton = ({ onClick, tooltip = "เพิ่มฟิลด์ใหม่", className = "", size = "default", testId = "add-field-btn" }) => {
   // Size configurations
   const sizes = {
     small: { container: "w-12 h-12", icon: "w-4 h-4", text: "text-base" },
@@ -14,8 +14,11 @@ const AnimatedAddButton = ({ onClick, tooltip = "เพิ่มฟิลด์�
   const sizeConfig = sizes[size] || sizes.default;
   return (
     <motion.div
+      data-testid={testId}
       className={`relative group cursor-pointer ${className}`}
       onClick={onClick}
+      title={tooltip}
+      aria-label={tooltip}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.95 }}
       initial={{ opacity: 0, scale: 0.8 }}
@@ -152,15 +155,15 @@ const AnimatedAddButton = ({ onClick, tooltip = "เพิ่มฟิลด์�
         }}
       />
 
-      {/* Tooltip */}
+      {/* Tooltip - with higher z-index to prevent being covered by field cards */}
       <div className="absolute -top-12 left-1/2 transform -translate-x-1/2
-                      bg-black/80 text-white text-sm px-3 py-1 rounded-lg
+                      bg-black/90 text-white text-sm px-3 py-1.5 rounded-lg shadow-lg
                       opacity-0 group-hover:opacity-100 transition-opacity duration-200
-                      pointer-events-none whitespace-nowrap z-50">
+                      pointer-events-none whitespace-nowrap z-[99999]">
         {tooltip}
         <div className="absolute top-full left-1/2 transform -translate-x-1/2
                         w-0 h-0 border-l-4 border-r-4 border-t-4
-                        border-transparent border-t-black/80" />
+                        border-transparent border-t-black/90" />
       </div>
     </motion.div>
   );

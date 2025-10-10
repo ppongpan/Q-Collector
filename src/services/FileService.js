@@ -1,7 +1,21 @@
 /**
- * File Storage Service
- * จัดการการบันทึก อ่าน และลบไฟล์ใน localStorage
- * รองรับรูปภาพและไฟล์ทั่วไป พร้อม compression สำหรับรูปภาพ
+ * File Storage Service - DEPRECATED
+ *
+ * ⚠️ DEPRECATED - DO NOT USE IN NEW CODE ⚠️
+ *
+ * This service uses localStorage for file storage and is being phased out.
+ * All components should use FileService.api.js (MinIO-based) instead.
+ *
+ * Migration Guide:
+ * - saveFile() → fileServiceAPI.uploadFile()
+ * - saveMultipleFiles() → fileServiceAPI.uploadMultipleFiles()
+ * - getFile() → fileServiceAPI.getFileWithUrl()
+ * - getSubmissionFiles() → fileServiceAPI.getSubmissionFiles()
+ * - deleteFile() → fileServiceAPI.deleteFile()
+ *
+ * See: src/services/FileService.api.js
+ *
+ * This service will be removed in v0.8.0
  */
 
 class FileService {
@@ -12,7 +26,22 @@ class FileService {
   static IMAGE_MAX_HEIGHT = 1080;
 
   /**
+   * Log deprecation warning
+   * @private
+   */
+  static _logDeprecationWarning(method) {
+    console.warn(
+      `%c⚠️ DEPRECATED: FileService.${method}`,
+      'color: #f97316; font-weight: bold; font-size: 12px;',
+      '\n📝 FileService (localStorage) is deprecated and will be removed in v0.8.0',
+      '\n✅ Use fileServiceAPI (MinIO) instead',
+      '\n📖 See migration guide in FileService.js header'
+    );
+  }
+
+  /**
    * บันทึกไฟล์ลง localStorage
+   * @deprecated Use fileServiceAPI.uploadFile() instead
    * @param {File} file - ไฟล์ที่จะบันทึก
    * @param {string} fieldId - ID ของ field
    * @param {string} submissionId - ID ของ submission
@@ -20,6 +49,7 @@ class FileService {
    * @returns {Promise<Object>} ข้อมูลไฟล์ที่บันทึกแล้ว
    */
   static async saveFile(file, fieldId, submissionId, onProgress = null) {
+    this._logDeprecationWarning('saveFile() - Use fileServiceAPI.uploadFile()');
     try {
       // ตรวจสอบขนาดไฟล์
       if (file.size > this.MAX_FILE_SIZE) {
@@ -100,6 +130,7 @@ class FileService {
 
   /**
    * บันทึกหลายไฟล์พร้อมกัน
+   * @deprecated Use fileServiceAPI.uploadMultipleFiles() instead
    * @param {FileList} files - รายการไฟล์
    * @param {string} fieldId - ID ของ field
    * @param {string} submissionId - ID ของ submission
@@ -107,6 +138,7 @@ class FileService {
    * @returns {Promise<Array>} รายการผลลัพธ์การบันทึก
    */
   static async saveMultipleFiles(files, fieldId, submissionId, onProgress = null) {
+    this._logDeprecationWarning('saveMultipleFiles() - Use fileServiceAPI.uploadMultipleFiles()');
     const results = [];
     const totalFiles = files.length;
 
@@ -128,10 +160,12 @@ class FileService {
 
   /**
    * ดึงข้อมูลไฟล์จาก localStorage
+   * @deprecated Use fileServiceAPI.getFileWithUrl() instead
    * @param {string} fileId - ID ของไฟล์
    * @returns {Object|null} ข้อมูลไฟล์
    */
   static getFile(fileId) {
+    this._logDeprecationWarning('getFile() - Use fileServiceAPI.getFileWithUrl()');
     try {
       const files = this.getAllStoredFiles();
       return files[fileId] || null;
@@ -143,11 +177,13 @@ class FileService {
 
   /**
    * ดึงไฟล์ทั้งหมดของ submission
+   * @deprecated Use fileServiceAPI.getSubmissionFiles() instead
    * @param {string} submissionId - ID ของ submission
    * @returns {Array} รายการไฟล์
    */
   static getSubmissionFiles(submissionId) {
-    try {
+    this._logDeprecationWarning('getSubmissionFiles() - Use fileServiceAPI.getSubmissionFiles()');
+    try{
       const files = this.getAllStoredFiles();
       return Object.values(files).filter(file => file.submissionId === submissionId);
     } catch (error) {
@@ -176,10 +212,12 @@ class FileService {
 
   /**
    * ลบไฟล์
+   * @deprecated Use fileServiceAPI.deleteFile() instead
    * @param {string} fileId - ID ของไฟล์
    * @returns {boolean} ผลลัพธ์การลบ
    */
   static deleteFile(fileId) {
+    this._logDeprecationWarning('deleteFile() - Use fileServiceAPI.deleteFile()');
     try {
       const files = this.getAllStoredFiles();
       if (files[fileId]) {

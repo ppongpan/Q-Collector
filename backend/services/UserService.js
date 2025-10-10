@@ -51,6 +51,9 @@ class UserService {
           where.role = role;
         }
 
+        // Only show active users (exclude soft-deleted users)
+        where.is_active = true;
+
         // Query users
         const { rows: users, count: total } = await User.findAndCountAll({
           where,

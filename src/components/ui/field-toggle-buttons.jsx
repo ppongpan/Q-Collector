@@ -23,51 +23,88 @@ const FieldToggleButtons = ({
   maxTableFields = 5
 }) => {
   // Local state for immediate visual feedback
+  // ✅ Support both camelCase and snake_case
   const [localSettings, setLocalSettings] = useState({
     required: field.required || false,
-    showInTable: field.showInTable || false,
-    sendTelegram: field.sendTelegram || false,
+    showInTable: field.showInTable || field.show_in_table || false,
+    sendTelegram: field.sendTelegram || field.send_telegram || false,
   });
 
   // Sync local state when field prop changes
   useEffect(() => {
     setLocalSettings({
       required: field.required || false,
-      showInTable: field.showInTable || false,
-      sendTelegram: field.sendTelegram || false,
+      showInTable: field.showInTable || field.show_in_table || false,
+      sendTelegram: field.sendTelegram || field.send_telegram || false,
     });
-  }, [field.required, field.showInTable, field.sendTelegram]);
 
+    // Debug log
+    console.log('🔍 FieldToggleButtons field:', {
+      id: field.id,
+      title: field.title,
+      required: field.required,
+      showInTable: field.showInTable,
+      show_in_table: field.show_in_table,
+      computed_showInTable: field.showInTable || field.show_in_table || false
+    });
+  }, [field.required, field.showInTable, field.show_in_table, field.sendTelegram, field.send_telegram, field.id, field.title]);
+
+
+  // Track pending updates to apply in useEffect (fixes React warning)
+  const [pendingUpdate, setPendingUpdate] = useState(null);
 
   // Optimized update handler
   const handleSettingChange = useCallback((setting, value) => {
     // Update local state immediately for instant visual feedback
-    setLocalSettings(prev => ({
-      ...prev,
-      [setting]: value
-    }));
+    setLocalSettings(prev => {
+      const newSettings = {
+        ...prev,
+        [setting]: value
+      };
 
-    // Update parent state
-    onUpdate({
-      ...field,
-      [setting]: value
+      // Schedule update for useEffect (not in render phase)
+      setPendingUpdate({
+        fieldId: field.id,
+        settings: newSettings
+      });
+
+      return newSettings;
     });
-  }, [field, onUpdate]);
+  }, [field.id]);
+
+  // Apply pending updates in useEffect (outside render phase)
+  useEffect(() => {
+    if (pendingUpdate && pendingUpdate.fieldId === field.id) {
+      const updatedField = {
+        ...field,
+        required: pendingUpdate.settings.required,
+        showInTable: pendingUpdate.settings.showInTable,
+        sendTelegram: pendingUpdate.settings.sendTelegram
+      };
+
+      onUpdate(updatedField);
+      setPendingUpdate(null); // Clear after applying
+    }
+  }, [pendingUpdate, field, onUpdate]);
 
   // Enhanced update handler for complex updates
   const handleComplexUpdate = useCallback((updates) => {
     // Update local state immediately
-    setLocalSettings(prev => ({
-      ...prev,
-      ...updates
-    }));
+    setLocalSettings(prev => {
+      const newSettings = {
+        ...prev,
+        ...updates
+      };
 
-    // Update parent state
-    onUpdate({
-      ...field,
-      ...updates
+      // Schedule update for useEffect (not in render phase)
+      setPendingUpdate({
+        fieldId: field.id,
+        settings: newSettings
+      });
+
+      return newSettings;
     });
-  }, [field, onUpdate]);
+  }, [field.id]);
 
   // Toggle handlers
   const handleRequiredToggle = useCallback((e) => {
@@ -109,23 +146,20 @@ const FieldToggleButtons = ({
 
 
   return (
-    <div className="flex items-center gap-1 px-1" data-interactive="true">
+    <div className="flex items-center gap-5 px-1" data-interactive="true">
       {/* Required Toggle */}
       <button
         type="button"
         onClick={handleRequiredToggle}
-        className={`relative flex items-center justify-center w-6 h-6 rounded transition-all duration-200 ${
+        className={`relative flex items-center justify-center w-12 h-12 rounded transition-all duration-200 ${
           localSettings.required
-            ? 'bg-red-500/20 text-red-600 hover:bg-red-500/30'
-            : 'bg-muted/20 text-muted-foreground hover:bg-red-500/10 hover:text-red-500'
+            ? 'text-red-600 hover:text-red-700'
+            : 'text-muted-foreground/60 hover:text-red-500'
         }`}
         title={localSettings.required ? 'ฟิลด์จำเป็น (คลิกเพื่อยกเลิก)' : 'ทำให้เป็นฟิลด์จำเป็น'}
         data-interactive="true"
       >
-        <FontAwesomeIcon icon={faExclamationTriangle} className="w-3 h-3" />
-        {localSettings.required && (
-          <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></div>
-        )}
+        <FontAwesomeIcon icon={faExclamationTriangle} className="w-6 h-6" />
       </button>
 
       {/* Table Display Toggle - only when required */}
@@ -134,12 +168,12 @@ const FieldToggleButtons = ({
           type="button"
           onClick={handleTableToggle}
           disabled={!localSettings.required || (!localSettings.showInTable && tableFieldCount >= maxTableFields)}
-          className={`relative flex items-center justify-center w-6 h-6 rounded transition-all duration-200 ${
+          className={`relative flex items-center justify-center w-12 h-12 rounded transition-all duration-200 ${
             localSettings.showInTable
-              ? 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30'
+              ? 'text-blue-600 hover:text-blue-700'
               : (!localSettings.required || tableFieldCount >= maxTableFields)
-                ? 'bg-muted/10 text-muted-foreground/50 cursor-not-allowed'
-                : 'bg-muted/20 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500'
+                ? 'text-muted-foreground/30 cursor-not-allowed'
+                : 'text-muted-foreground/60 hover:text-blue-500'
           }`}
           title={
             !localSettings.required
@@ -152,10 +186,7 @@ const FieldToggleButtons = ({
           }
           data-interactive="true"
         >
-          <FontAwesomeIcon icon={faTable} className="w-3 h-3" />
-          {localSettings.showInTable && (
-            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full"></div>
-          )}
+          <FontAwesomeIcon icon={faTable} className="w-6 h-6" />
         </button>
       )}
 
@@ -164,18 +195,15 @@ const FieldToggleButtons = ({
         <button
           type="button"
           onClick={handleTelegramToggle}
-          className={`relative flex items-center justify-center w-6 h-6 rounded transition-all duration-200 ${
+          className={`relative flex items-center justify-center w-12 h-12 rounded transition-all duration-200 ${
             localSettings.sendTelegram
-              ? 'bg-green-500/20 text-green-600 hover:bg-green-500/30'
-              : 'bg-muted/20 text-muted-foreground hover:bg-green-500/10 hover:text-green-500'
+              ? 'text-green-600 hover:text-green-700'
+              : 'text-muted-foreground/60 hover:text-green-500'
           }`}
           title={localSettings.sendTelegram ? 'แจ้งเตือน Telegram (คลิกเพื่อยกเลิก)' : 'เปิดแจ้งเตือน Telegram'}
           data-interactive="true"
         >
-          <FontAwesomeIcon icon={faComments} className="w-3 h-3" />
-          {localSettings.sendTelegram && (
-            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full"></div>
-          )}
+          <FontAwesomeIcon icon={faComments} className="w-6 h-6" />
         </button>
       )}
     </div>

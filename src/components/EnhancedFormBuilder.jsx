@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion } from 'framer-motion';
 
 // Data services
-import dataService from '../services/DataService.js';
 import apiClient from '../services/ApiClient';
+// ✅ NEW: Migration service for field change detection and migration operations
+import MigrationService from '../services/MigrationService';
 
 // Auth context
 import { useAuth } from '../contexts/AuthContext';
@@ -37,6 +38,8 @@ import FieldToggleButtons from "./ui/field-toggle-buttons";
 import { useEnhancedToast } from './ui/enhanced-toast';
 import AnimatedAddButton from './ui/animated-add-button';
 import TelegramNotificationSettings from './ui/telegram-notification-settings';
+// ✅ NEW: Migration preview modal for field change confirmation
+import MigrationPreviewModal from './ui/MigrationPreviewModal';
 // import EnhancedSlider from "./ui/enhanced-slider"; // Commented out - not used
 
 // ShadCN UI components
@@ -53,7 +56,8 @@ import {
   faImage, faCalendarAlt, faClock, faCalendarDay, faListUl,
   faEllipsisV, faArrowUp, faArrowDown, faCopy,
   faQuestionCircle, faLayerGroup, faComments, faFileUpload, faCog, faHashtag as faNumbers,
-  faClipboardList, faSave, faUsers, faTrash
+  faClipboardList, faSave, faUsers, faTrash,
+  faDatabase, faCheck, faTimes
 } from '@fortawesome/free-solid-svg-icons';
 
 // User Role definitions with colors for access control
@@ -239,7 +243,7 @@ function SortableFieldEditor(props) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} data-field-id={props.field.id}>
+    <div ref={setNodeRef} style={style} data-field-id={props.field.id} data-testid="field-item">
       <FieldEditor
         {...props}
         dragHandleProps={{ ...attributes, ...listeners }}
@@ -263,6 +267,7 @@ function FieldEditor({
   isDragging,
   isSubForm = false,
   allFields = [],
+  tableFieldCount: propTableFieldCount,
   maxTableFields = 5,
   formTitle = ''
 }) {
@@ -289,8 +294,11 @@ function FieldEditor({
   // Check if field title is too long (roughly 50 characters for single line)
   const isTitleTooLong = (field.title || '').length > 50;
 
-  // Count fields with showInTable enabled for validation
-  const tableFieldCount = allFields.filter(f => f.showInTable).length;
+  // Use prop if provided, otherwise calculate from allFields
+  // Support both camelCase and snake_case for compatibility
+  const tableFieldCount = propTableFieldCount !== undefined
+    ? propTableFieldCount
+    : allFields.filter(f => f.showInTable === true || f.show_in_table === true).length;
 
   const updateField = (updates) => {
     onChange({ ...field, ...updates });
@@ -414,6 +422,7 @@ function FieldEditor({
                 tooltip={isTitleTooLong ? "ชื่อฟิลด์ยาวเกินไป - จะแสดงเป็น 2 บรรทัด" : "ชื่อฟิลด์ที่จะแสดงให้ผู้ใช้เห็น"}
                 minimal
                 className={isTitleTooLong ? "text-amber-600 placeholder:text-amber-400/70 border-amber-300/50" : ""}
+                data-testid="field-title-input"
               />
               {isTitleTooLong && (
                 <div className="flex items-center gap-2 text-xs text-amber-600">
@@ -701,7 +710,7 @@ function MultipleChoiceOptions({ options = [], onChange }) {
 }
 
 // Enhanced Sub Form Builder with Main Form Structure
-function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, onMoveUp, onMoveDown, onDuplicate, isDefaultEmpty = false }) {
+function SubFormBuilder({ subForm, onChange, onFieldUpdate, onRemove, canMoveUp, canMoveDown, onMoveUp, onMoveDown, onDuplicate, isDefaultEmpty = false }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentTab, setCurrentTab] = useState('fields'); // 'fields' or 'settings'
   const subFormCardRef = useRef(null);
@@ -734,6 +743,14 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
     })
   );
 
+  // Calculate table field count (max 5 fields)
+  // Support both camelCase and snake_case for compatibility
+  const tableFieldCount = useMemo(() => {
+    return (subForm.fields || []).filter(f => f.showInTable === true || f.show_in_table === true).length;
+  }, [subForm.fields]);
+
+  const maxTableFields = 5; // Maximum fields allowed in table
+
   const updateSubForm = (updates) => {
     onChange({ ...subForm, ...updates });
   };
@@ -746,19 +763,27 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
       const oldIndex = subForm.fields.findIndex((field) => field.id === active.id);
       const newIndex = subForm.fields.findIndex((field) => field.id === over.id);
 
+      // ✅ FIX: Update order property after sub-form field reordering
+      const reorderedFields = arrayMove(subForm.fields, oldIndex, newIndex)
+        .map((field, index) => ({ ...field, order: index }));
+
       updateSubForm({
-        fields: arrayMove(subForm.fields, oldIndex, newIndex),
+        fields: reorderedFields,
       });
     }
   };
 
   const addField = () => {
+    // Check if we already have 5 fields with showInTable enabled
+    const currentTableFieldCount = (subForm.fields || []).filter(f => f.showInTable === true || f.show_in_table === true).length;
+    const canAddToTable = currentTableFieldCount < maxTableFields;
+
     const newField = {
       id: generateId(),
       title: "",
       type: "short_answer",
-      required: false,
-      showInTable: false,
+      required: true, // Default to true to allow showInTable
+      showInTable: canAddToTable, // Only enable if under limit (5 fields max)
       sendTelegram: false,
       telegramPrefix: '',
       telegramOrder: 0,
@@ -782,10 +807,37 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
   };
 
   const updateField = (fieldId, fieldData) => {
+    // ✅ FIX: Preserve all existing field properties when updating
+    const updatedFields = subForm.fields.map(field => {
+      if (field.id === fieldId) {
+        // Merge new data with existing field to preserve settings like required, showInTable
+        return { ...field, ...fieldData };
+      }
+      return field;
+    });
+
+    console.log('🔄 SubFormBuilder.updateField:', {
+      fieldId,
+      fieldData,
+      updatedField: updatedFields.find(f => f.id === fieldId)
+    });
+
+    // ✅ NEW: If onFieldUpdate callback provided, use it for immediate propagation to main form state
+    if (onFieldUpdate) {
+      const mergedFieldData = { ...subForm.fields.find(f => f.id === fieldId), ...fieldData };
+      onFieldUpdate(subForm.id, fieldId, mergedFieldData);
+      console.log('✅ Field update propagated to main form via onFieldUpdate:', {
+        subFormId: subForm.id,
+        fieldId,
+        fieldData: mergedFieldData,
+        showInTable: mergedFieldData.showInTable,  // ✅ Explicitly log showInTable
+        required: mergedFieldData.required
+      });
+    }
+
+    // Also update local SubFormBuilder state for UI responsiveness
     updateSubForm({
-      fields: subForm.fields.map(field =>
-        field.id === fieldId ? fieldData : field
-      )
+      fields: updatedFields
     });
   };
 
@@ -991,7 +1043,8 @@ function SubFormBuilder({ subForm, onChange, onRemove, canMoveUp, canMoveDown, o
                             onDuplicate={() => duplicateField(field.id)}
                             isSubForm={true}
                             allFields={subForm.fields}
-                            maxTableFields={5}
+                            tableFieldCount={tableFieldCount}
+                            maxTableFields={maxTableFields}
                             formTitle={subForm.title}
                           />
                         ))}
@@ -1065,20 +1118,24 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
     title: initialForm?.title || '',
     description: initialForm?.description || '',
     table_name: initialForm?.table_name || null,
-    fields: initialForm?.fields ? initialForm.fields.map(field => ({
-      ...field,
-      // Ensure new properties exist with default values if not present
-      showInTable: field.showInTable !== undefined ? field.showInTable : false,
-      sendTelegram: field.sendTelegram !== undefined ? field.sendTelegram : false,
-      telegramOrder: field.telegramOrder !== undefined ? field.telegramOrder : 0,
-      telegramPrefix: field.telegramPrefix !== undefined ? field.telegramPrefix : '',
-    })) : [
+    // ⚠️ CRITICAL FIX: Filter out sub-form fields (sub_form_id !== null)
+    // Only include main form fields in the form builder
+    fields: initialForm?.fields ? initialForm.fields
+      .filter(field => !field.sub_form_id && !field.subFormId)
+      .map(field => ({
+        ...field,
+        // Ensure new properties exist with default values if not present
+        showInTable: field.showInTable !== undefined ? field.showInTable : false,
+        sendTelegram: field.sendTelegram !== undefined ? field.sendTelegram : false,
+        telegramOrder: field.telegramOrder !== undefined ? field.telegramOrder : 0,
+        telegramPrefix: field.telegramPrefix !== undefined ? field.telegramPrefix : '',
+      })) : [
       {
         id: generateId(),
         title: "",
         type: "short_answer",
         required: false,
-        showInTable: false,
+        showInTable: true, // Default to true so fields are visible in table
         sendTelegram: false,
         telegramPrefix: '',
         telegramOrder: 0,
@@ -1087,16 +1144,32 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
     ],
     subForms: initialForm?.subForms ? initialForm.subForms.map(subForm => ({
       ...subForm,
-      fields: subForm.fields ? subForm.fields.map(field => ({
-        ...field,
-        // Ensure new properties exist with default values if not present
-        showInTable: field.showInTable !== undefined ? field.showInTable : false,
-        sendTelegram: field.sendTelegram !== undefined ? field.sendTelegram : false,
-        telegramOrder: field.telegramOrder !== undefined ? field.telegramOrder : 0,
-        telegramPrefix: field.telegramPrefix !== undefined ? field.telegramPrefix : '',
-      })) : []
+      fields: subForm.fields ? subForm.fields.map(field => {
+        // ✅ CRITICAL: Clean snake_case properties when loading from backend
+        const {
+          show_in_table,
+          send_telegram,
+          telegram_order,
+          telegram_prefix,
+          show_condition,
+          telegram_config,
+          validation_rules,
+          createdAt,
+          updatedAt,
+          ...cleanField
+        } = field;
+
+        return {
+          ...cleanField,
+          // Ensure camelCase properties exist with correct values
+          showInTable: field.showInTable !== undefined ? field.showInTable : (field.show_in_table ?? false),
+          sendTelegram: field.sendTelegram !== undefined ? field.sendTelegram : (field.send_telegram ?? false),
+          telegramOrder: field.telegramOrder !== undefined ? field.telegramOrder : (field.telegram_order ?? 0),
+          telegramPrefix: field.telegramPrefix !== undefined ? field.telegramPrefix : (field.telegram_prefix ?? ''),
+        };
+      }) : []
     })) : [],
-    visibleRoles: initialForm?.visibleRoles || DEFAULT_VISIBLE_ROLES,
+    visibleRoles: initialForm?.roles_allowed || initialForm?.visibleRoles || DEFAULT_VISIBLE_ROLES,
     settings: {
       telegram: {
         enabled: initialForm?.settings?.telegram?.enabled || false,
@@ -1131,9 +1204,86 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   // Enhanced toast notifications
   const toast = useEnhancedToast();
 
+  // ✅ NEW: Migration state for field change detection and preview
+  const [showMigrationPreview, setShowMigrationPreview] = useState(false);
+  const [detectedChanges, setDetectedChanges] = useState([]);
+  const [pendingMigrationChanges, setPendingMigrationChanges] = useState(null);
+  const [migrationQueueStatus, setMigrationQueueStatus] = useState({
+    waiting: 0,
+    active: 0,
+    completed: 0,
+    failed: 0
+  });
+  const [isPollingQueue, setIsPollingQueue] = useState(false);
+
+  // ✅ FIX: Store original FILTERED fields snapshot for accurate change detection
+  // This ensures we compare against what was actually displayed in the form builder,
+  // not the raw backend data which may include sub-form fields
+  const originalFieldsSnapshot = useRef(
+    initialForm?.fields
+      ? initialForm.fields
+          .filter(field => !field.sub_form_id && !field.subFormId)
+          .map(field => ({
+            id: field.id,
+            title: field.title,
+            type: field.type,
+            columnName: field.columnName || field.column_name || null,
+            required: field.required || false
+          }))
+      : []
+  );
+
   const updateForm = (updates) => {
     setForm(prev => ({ ...prev, ...updates }));
   };
+
+  // ✅ NEW: Poll migration queue status every 5 seconds if there are pending migrations
+  useEffect(() => {
+    let intervalId;
+
+    const pollQueueStatus = async () => {
+      if (!initialForm?.id) return; // Only poll for existing forms
+
+      try {
+        const response = await MigrationService.getQueueStatus(initialForm.id);
+        const status = response.data?.queue || {};
+
+        setMigrationQueueStatus({
+          waiting: status.waiting || 0,
+          active: status.active || 0,
+          completed: status.completed || 0,
+          failed: status.failed || 0
+        });
+
+        // Stop polling if no active or waiting migrations
+        const hasPendingMigrations = (status.waiting || 0) > 0 || (status.active || 0) > 0;
+        setIsPollingQueue(hasPendingMigrations);
+
+        if (!hasPendingMigrations && intervalId) {
+          clearInterval(intervalId);
+        }
+      } catch (error) {
+        console.error('Failed to poll queue status:', error);
+        // Continue polling even on error (might be temporary network issue)
+      }
+    };
+
+    // Start polling if we detect migrations were triggered
+    if (isPollingQueue || (migrationQueueStatus.waiting > 0 || migrationQueueStatus.active > 0)) {
+      // Poll immediately
+      pollQueueStatus();
+
+      // Then poll every 5 seconds
+      intervalId = setInterval(pollQueueStatus, 5000);
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isPollingQueue, initialForm?.id, migrationQueueStatus.waiting, migrationQueueStatus.active]);
 
   // Copy to clipboard function
   const copyToClipboard = (text) => {
@@ -1182,12 +1332,17 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   };
 
   const addField = () => {
+    // Check if we already have 5 fields with showInTable enabled
+    const maxTableFields = 5; // Maximum fields allowed in table for main form
+    const currentTableFieldCount = form.fields.filter(f => f.showInTable === true || f.show_in_table === true).length;
+    const canAddToTable = currentTableFieldCount < maxTableFields;
+
     const newField = {
       id: generateId(),
       title: "",
       type: "short_answer",
-      required: false,
-      showInTable: false,
+      required: true, // Default to true to allow showInTable
+      showInTable: canAddToTable, // Only enable if under limit (5 fields max)
       sendTelegram: false,
       telegramPrefix: '',
       telegramOrder: 0,
@@ -1295,7 +1450,9 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
         return;
       }
 
-      const reorderedFields = arrayMove(form.fields, oldIndex, newIndex);
+      // ✅ FIX: Update order property after reordering
+      const reorderedFields = arrayMove(form.fields, oldIndex, newIndex)
+        .map((field, index) => ({ ...field, order: index }));
 
       // Check if any telegram fields were moved, if so reorder telegram numbers
       const hasTelegramFields = reorderedFields.some(f => f.sendTelegram);
@@ -1316,11 +1473,14 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
     const newFields = [...form.fields];
     [newFields[currentIndex], newFields[newIndex]] = [newFields[newIndex], newFields[currentIndex]];
 
+    // ✅ FIX: Update order property after arrow-button reordering
+    const reorderedWithOrder = newFields.map((field, index) => ({ ...field, order: index }));
+
     // Check if any telegram fields were moved, if so reorder telegram numbers
-    const hasTelegramFields = newFields.some(f => f.sendTelegram);
+    const hasTelegramFields = reorderedWithOrder.some(f => f.sendTelegram);
 
     updateForm({
-      fields: hasTelegramFields ? reorderTelegramFields(newFields) : newFields
+      fields: hasTelegramFields ? reorderTelegramFields(reorderedWithOrder) : reorderedWithOrder
     });
   };
 
@@ -1344,8 +1504,10 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       id: generateId(),
       title: "",
       description: "",
-      fields: []
+      fields: [],
+      order: form.subForms.length // Add order field
     };
+    console.log('➕ Adding new sub-form with order:', newSubForm.order);
     updateForm({ subForms: [...form.subForms, newSubForm] });
 
     // Scroll to the new sub-form after a short delay to ensure DOM is updated
@@ -1362,12 +1524,60 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   };
 
   const updateSubForm = (subFormId, subFormData) => {
+    console.log('🔄 updateSubForm called:', {
+      subFormId,
+      title: subFormData.title,
+      fieldsCount: subFormData.fields?.length || 0,
+      currentSubFormsCount: form.subForms.length
+    });
+
+    const updatedSubForms = form.subForms.map(subForm =>
+      subForm.id === subFormId ? subFormData : subForm
+    );
+
+    console.log('✅ Updated subForms array:', updatedSubForms.map(sf => ({
+      id: sf.id,
+      title: sf.title,
+      fields: sf.fields?.length || 0
+    })));
+
     updateForm({
-      subForms: form.subForms.map(subForm =>
-        subForm.id === subFormId ? subFormData : subForm
-      )
+      subForms: updatedSubForms
     });
   };
+
+  // ✅ NEW: Update specific field within a sub-form (for field settings like required, showInTable)
+  const updateSubFormField = useCallback((subFormId, fieldId, fieldUpdates) => {
+    console.log('🔄 updateSubFormField called:', {
+      subFormId,
+      fieldId,
+      updates: fieldUpdates
+    });
+
+    const updatedSubForms = form.subForms.map(subForm => {
+      if (subForm.id === subFormId) {
+        const updatedFields = subForm.fields.map(field =>
+          field.id === fieldId ? { ...field, ...fieldUpdates } : field
+        );
+
+        console.log('✅ Updated field in sub-form:', {
+          subFormId,
+          fieldId,
+          field: updatedFields.find(f => f.id === fieldId)
+        });
+
+        return {
+          ...subForm,
+          fields: updatedFields
+        };
+      }
+      return subForm;
+    });
+
+    updateForm({
+      subForms: updatedSubForms
+    });
+  }, [form.subForms, updateForm]);
 
   const removeSubForm = (subFormId) => {
     updateForm({
@@ -1408,11 +1618,32 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   };
 
   const handleSave = useCallback(async () => {
+    // Show loading toast immediately
+    const loadingToastId = toast.loading('กำลังบันทึกฟอร์ม...', {
+      title: "กรุณารอสักครู่"
+    });
+
     try {
+      // Debug: Log form data before save
+      console.log('💾 Saving form:', {
+        title: form.title,
+        mainFields: form.fields.length,
+        subForms: form.subForms.length,
+        subFormsData: form.subForms.map(sf => ({
+          id: sf.id,
+          title: sf.title,
+          fields: sf.fields?.length || 0
+        }))
+      });
+
       // ตรวจสอบว่ามีการเลือกฟิลด์สำหรับแสดงในตารางหรือไม่ (หลังจากกดปุ่ม save)
-      const tableFields = form.fields.filter(field => field.showInTable);
+      // Support both camelCase and snake_case for compatibility
+      const tableFields = form.fields.filter(field => field.showInTable === true || field.show_in_table === true);
 
       if (tableFields.length === 0) {
+        // Dismiss loading toast
+        toast.dismiss(loadingToastId);
+
         toast.error('กรุณาเลือกฟิลด์อย่างน้อย 1 ฟิลด์เพื่อแสดงในตาราง Submission', {
           title: "ข้อมูลไม่ครบถ้วน",
           duration: 8000,
@@ -1430,20 +1661,167 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
         return;
       }
 
+      // ✅ NEW: Detect field changes for existing forms (migration preview)
+      // ✅ FIX: Use originalFieldsSnapshot instead of initialForm.fields
+      // This ensures we only detect changes to fields that were actually displayed in the form builder
+      if (initialForm?.id && originalFieldsSnapshot.current.length > 0) {
+        const changes = MigrationService.detectFieldChanges(
+          originalFieldsSnapshot.current,
+          form.fields
+        );
+
+        console.log('🔍 Migration detection:', {
+          isExistingForm: !!initialForm?.id,
+          oldFieldsCount: originalFieldsSnapshot.current.length,
+          newFieldsCount: form.fields.length,
+          changesDetected: changes.length,
+          changes
+        });
+
+        if (changes.length > 0) {
+          // Dismiss loading toast
+          toast.dismiss(loadingToastId);
+
+          // Show migration preview modal
+          setDetectedChanges(changes);
+          setPendingMigrationChanges({
+            formId: initialForm.id,
+            changes
+          });
+          setShowMigrationPreview(true);
+
+          console.log('⚠️ Field changes detected - showing preview modal');
+          return; // Stop save process, wait for user confirmation
+        }
+      }
+
+      // ✅ Helper function to clean field data (remove snake_case duplicates)
+      const cleanFieldData = (field) => {
+        // 🔍 Debug: Log raw field before cleaning
+        console.log('📋 cleanFieldData - BEFORE:', {
+          id: field.id,
+          title: field.title,
+          showInTable: field.showInTable,
+          show_in_table: field.show_in_table,
+          required: field.required,
+          sendTelegram: field.sendTelegram,
+          send_telegram: field.send_telegram
+        });
+
+        // First, ensure camelCase versions exist by copying from snake_case if needed
+        // ✅ CRITICAL: Use !== undefined to preserve false values
+        const normalizedField = {
+          ...field,
+          showInTable: field.showInTable !== undefined ? field.showInTable : (field.show_in_table ?? false),
+          sendTelegram: field.sendTelegram !== undefined ? field.sendTelegram : (field.send_telegram ?? false),
+          telegramOrder: field.telegramOrder !== undefined ? field.telegramOrder : (field.telegram_order ?? null),
+          telegramPrefix: field.telegramPrefix !== undefined ? field.telegramPrefix : (field.telegram_prefix ?? ''),
+          showCondition: field.showCondition !== undefined ? field.showCondition : (field.show_condition ?? null),
+          telegramConfig: field.telegramConfig !== undefined ? field.telegramConfig : (field.telegram_config ?? null),
+          validationRules: field.validationRules !== undefined ? field.validationRules : (field.validation_rules ?? null)
+        };
+
+        // Then remove snake_case duplicates and timestamps
+        const {
+          show_in_table,
+          send_telegram,
+          telegram_order,
+          telegram_prefix,
+          show_condition,
+          telegram_config,
+          validation_rules,
+          createdAt,
+          updatedAt,
+          ...cleanedField
+        } = normalizedField;
+
+        // 🔍 Debug: Log cleaned field after cleaning
+        console.log('✅ cleanFieldData - AFTER:', {
+          id: cleanedField.id,
+          title: cleanedField.title,
+          showInTable: cleanedField.showInTable,
+          required: cleanedField.required,
+          sendTelegram: cleanedField.sendTelegram
+        });
+
+        return cleanedField;
+      };
+
+      // 🔍 Debug: Log form.subForms before cleaning
+      console.log('📦 SubForms BEFORE cleaning:', form.subForms.map(sf => ({
+        id: sf.id,
+        title: sf.title,
+        fieldsCount: sf.fields?.length,
+        fields: sf.fields?.map(f => ({
+          id: f.id,
+          title: f.title,
+          showInTable: f.showInTable,
+          show_in_table: f.show_in_table
+        }))
+      })));
+
+      // ✅ Clean sub-forms fields before sending
+      const cleanedSubForms = form.subForms.map(subForm => ({
+        ...subForm,
+        fields: subForm.fields?.map(cleanFieldData) || []
+      }));
+
+      // 🔍 Debug: Log cleanedSubForms after cleaning
+      console.log('✨ SubForms AFTER cleaning:', cleanedSubForms.map(sf => ({
+        id: sf.id,
+        title: sf.title,
+        fieldsCount: sf.fields?.length,
+        fields: sf.fields?.map(f => ({
+          id: f.id,
+          title: f.title,
+          showInTable: f.showInTable
+        }))
+      })));
+
       // ตรวจสอบว่าเป็นการแก้ไขหรือสร้างใหม่
       let savedForm;
       if (initialForm?.id) {
         // แก้ไขฟอร์มที่มีอยู่ - Use API
-        const response = await apiClient.updateForm(initialForm.id, {
+        const payload = {
           title: form.title,
           description: form.description,
-          fields: form.fields,
-          sub_forms: form.subForms, // Use snake_case for backend
+          fields: form.fields.map(cleanFieldData),
+          sub_forms: cleanedSubForms, // Use snake_case for backend
           settings: form.settings,
           telegram_settings: form.telegramSettings, // Use snake_case for backend
           roles_allowed: form.visibleRoles // JSONB array for backend
+        };
+
+        console.log('📤 Sending UPDATE payload to backend:', {
+          title: payload.title,
+          fields: payload.fields.length,
+          sub_forms_count: payload.sub_forms.length,
+          sub_forms_detail: payload.sub_forms.map(sf => ({
+            id: sf.id,
+            title: sf.title,
+            description: sf.description,
+            order: sf.order,
+            fields: sf.fields?.map(f => ({
+              id: f.id,
+              title: f.title,
+              type: f.type,
+              required: f.required,
+              showInTable: f.showInTable,
+              hasSnakeCaseFields: ('show_in_table' in f) // ✅ Check if snake_case still exists
+            }))
+          }))
         });
+
+        // ✅ Log first sub-form field to verify cleaning
+        if (payload.sub_forms[0]?.fields?.[0]) {
+          console.log('🧹 Cleaned field sample:', payload.sub_forms[0].fields[0]);
+        }
+
+        const response = await apiClient.updateForm(initialForm.id, payload);
         savedForm = response.data?.form || response.data;
+
+        // Dismiss loading toast and show success
+        toast.dismiss(loadingToastId);
         toast.success('ฟอร์มถูกอัพเดทเรียบร้อยแล้ว', {
           title: "อัพเดทสำเร็จ",
           duration: 5000
@@ -1453,13 +1831,16 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
         const response = await apiClient.createForm({
           title: form.title,
           description: form.description,
-          fields: form.fields,
-          sub_forms: form.subForms, // Use snake_case for backend
+          fields: form.fields.map(cleanFieldData),
+          sub_forms: cleanedSubForms, // Use snake_case for backend
           settings: form.settings,
           telegram_settings: form.telegramSettings, // Use snake_case for backend
           roles_allowed: form.visibleRoles // JSONB array for backend
         });
         savedForm = response.data?.form || response.data;
+
+        // Dismiss loading toast and show success
+        toast.dismiss(loadingToastId);
         toast.success('ฟอร์มถูกบันทึกเรียบร้อยแล้ว', {
           title: "บันทึกสำเร็จ",
           duration: 5000
@@ -1473,6 +1854,9 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
 
     } catch (error) {
       console.error('Form save error:', error);
+
+      // Dismiss loading toast and show error
+      toast.dismiss(loadingToastId);
       toast.error(`เกิดข้อผิดพลาดในการบันทึกฟอร์ม: ${error.message}`, {
         title: "บันทึกไม่สำเร็จ",
         duration: 8000,
@@ -1483,6 +1867,151 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       });
     }
   }, [form, initialForm, onSave]);
+
+  // ✅ NEW: Handle confirmed save after migration preview
+  const handleConfirmedSave = useCallback(async () => {
+    console.log('✅ User confirmed migration - proceeding with save and migration execution');
+
+    // Close preview modal
+    setShowMigrationPreview(false);
+
+    // Show loading toast
+    const loadingToastId = toast.loading('กำลังบันทึกฟอร์มและประมวลผล migrations...', {
+      title: "กรุณารอสักครู่"
+    });
+
+    try {
+      // ✅ Step 1: Save form first (same logic as handleSave but without migration detection)
+      const cleanFieldData = (field) => {
+        const normalizedField = {
+          ...field,
+          showInTable: field.showInTable !== undefined ? field.showInTable : (field.show_in_table ?? false),
+          sendTelegram: field.sendTelegram !== undefined ? field.sendTelegram : (field.send_telegram ?? false),
+          telegramOrder: field.telegramOrder !== undefined ? field.telegramOrder : (field.telegram_order ?? null),
+          telegramPrefix: field.telegramPrefix !== undefined ? field.telegramPrefix : (field.telegram_prefix ?? ''),
+          showCondition: field.showCondition !== undefined ? field.showCondition : (field.show_condition ?? null),
+          telegramConfig: field.telegramConfig !== undefined ? field.telegramConfig : (field.telegram_config ?? null),
+          validationRules: field.validationRules !== undefined ? field.validationRules : (field.validation_rules ?? null)
+        };
+
+        const {
+          show_in_table,
+          send_telegram,
+          telegram_order,
+          telegram_prefix,
+          show_condition,
+          telegram_config,
+          validation_rules,
+          createdAt,
+          updatedAt,
+          ...cleanedField
+        } = normalizedField;
+
+        return cleanedField;
+      };
+
+      const cleanedSubForms = form.subForms.map(subForm => ({
+        ...subForm,
+        fields: subForm.fields?.map(cleanFieldData) || []
+      }));
+
+      const payload = {
+        title: form.title,
+        description: form.description,
+        fields: form.fields.map(cleanFieldData),
+        sub_forms: cleanedSubForms,
+        settings: form.settings,
+        telegram_settings: form.telegramSettings,
+        roles_allowed: form.visibleRoles
+      };
+
+      let savedForm;
+      if (initialForm?.id) {
+        const response = await apiClient.updateForm(initialForm.id, payload);
+        savedForm = response.data?.form || response.data;
+      } else {
+        const response = await apiClient.createForm(payload);
+        savedForm = response.data?.form || response.data;
+      }
+
+      console.log('✅ Form saved successfully');
+
+      // ✅ Step 2: Execute migrations if there are pending changes
+      if (pendingMigrationChanges && pendingMigrationChanges.changes.length > 0) {
+        console.log('🚀 Executing migrations:', pendingMigrationChanges.changes);
+
+        try {
+          const migrationResponse = await MigrationService.executeMigration(
+            pendingMigrationChanges.formId,
+            pendingMigrationChanges.changes
+          );
+
+          console.log('✅ Migrations queued:', migrationResponse.data);
+
+          // Start polling for queue status
+          setIsPollingQueue(true);
+
+          // Dismiss loading toast
+          toast.dismiss(loadingToastId);
+
+          // Show success with migration info
+          toast.success(
+            `ฟอร์มถูกอัพเดทเรียบร้อยแล้ว - กำลังประมวลผล ${pendingMigrationChanges.changes.length} migrations ใน background`,
+            {
+              title: "บันทึกสำเร็จ",
+              duration: 8000
+            }
+          );
+
+          // Clear pending changes
+          setPendingMigrationChanges(null);
+          setDetectedChanges([]);
+
+        } catch (migrationError) {
+          console.error('Migration execution error:', migrationError);
+
+          // Dismiss loading toast
+          toast.dismiss(loadingToastId);
+
+          // Show warning (form saved but migrations failed)
+          toast.warning(
+            `ฟอร์มถูกบันทึกแล้ว แต่เกิดข้อผิดพลาดในการ queue migrations: ${migrationError.message}`,
+            {
+              title: "บันทึกสำเร็จ แต่ migration ล้มเหลว",
+              duration: 10000
+            }
+          );
+        }
+      } else {
+        // No migrations needed
+        toast.dismiss(loadingToastId);
+        toast.success('ฟอร์มถูกอัพเดทเรียบร้อยแล้ว', {
+          title: "อัพเดทสำเร็จ",
+          duration: 5000
+        });
+      }
+
+      // Call onSave callback
+      if (onSave) {
+        onSave(savedForm, initialForm?.id);
+      }
+
+    } catch (error) {
+      console.error('Confirmed save error:', error);
+
+      // Dismiss loading toast
+      toast.dismiss(loadingToastId);
+
+      toast.error(`เกิดข้อผิดพลาดในการบันทึกฟอร์ม: ${error.message}`, {
+        title: "บันทึกไม่สำเร็จ",
+        duration: 8000,
+        action: {
+          label: "ลองอีกครั้ง",
+          onClick: () => handleConfirmedSave()
+        }
+      });
+    }
+  }, [form, initialForm, onSave, pendingMigrationChanges, toast]);
 
   const isFormValid = () => {
     return form.title.trim() !== '' && form.fields.some(field => field.title.trim() !== '');
@@ -1727,58 +2256,47 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
             )}
 
             {/* Sub Forms - 8px Grid */}
-            {activeSection === 'sub' && (
-              <div className="space-y-6">
-                {(() => {
-                  // Always ensure there's at least one empty subForm
-                  const subFormsToShow = form.subForms.length > 0 ? form.subForms : [{
-                    id: generateId(),
-                    title: "",
-                    description: "",
-                    fields: []
-                  }];
+            {activeSection === 'sub' && (() => {
+              // Always ensure there's at least one subForm to show
+              // Use form.subForms if not empty, otherwise show existing subForms
+              const subFormsToShow = form.subForms.length > 0 ? form.subForms : [];
 
-                  return (
-                    <div className="space-y-6">
-                      {subFormsToShow.map((subForm, index) => (
-                        <div key={subForm.id} data-subform-id={subForm.id}>
-                          <SubFormBuilder
-                            subForm={subForm}
-                          onChange={(subFormData) => {
-                            if (form.subForms.length === 0) {
-                              // If this is the default empty subForm, add it to the form
-                              updateForm({ subForms: [subFormData] });
-                            } else {
-                              updateSubForm(subForm.id, subFormData);
-                            }
-                          }}
-                          onRemove={() => {
-                            if (form.subForms.length > 0) {
-                              removeSubForm(subForm.id);
-                            }
-                          }}
-                          canMoveUp={index > 0}
-                          canMoveDown={index < subFormsToShow.length - 1}
-                          onMoveUp={() => moveSubForm(subForm.id, 'up')}
-                          onMoveDown={() => moveSubForm(subForm.id, 'down')}
-                          onDuplicate={() => duplicateSubForm(subForm.id)}
-                          isDefaultEmpty={form.subForms.length === 0 && index === 0}
-                          />
-                        </div>
-                      ))}
-
-                      {/* Add SubForm Button - Positioned after all subforms - 8px Grid */}
-                      <div className="pt-8 flex justify-center">
-                        <AnimatedAddButton
-                          onClick={addSubForm}
-                          tooltip="เพิ่มฟอร์มย่อย"
+              return (
+                <div className="space-y-6">
+                  <div className="space-y-6">
+                    {subFormsToShow.map((subForm, index) => (
+                      <div key={subForm.id} data-subform-id={subForm.id}>
+                        <SubFormBuilder
+                          subForm={subForm}
+                        onChange={(subFormData) => {
+                          // Always update existing sub-form
+                          console.log('📝 Updating subForm:', subFormData.title);
+                          updateSubForm(subForm.id, subFormData);
+                        }}
+                        onFieldUpdate={updateSubFormField}
+                        onRemove={() => {
+                          removeSubForm(subForm.id);
+                        }}
+                        canMoveUp={index > 0}
+                        canMoveDown={index < subFormsToShow.length - 1}
+                        onMoveUp={() => moveSubForm(subForm.id, 'up')}
+                        onMoveDown={() => moveSubForm(subForm.id, 'down')}
+                        onDuplicate={() => duplicateSubForm(subForm.id)}
                         />
                       </div>
-                    </div>
-                  );
-                })()}
+                  ))}
+
+                  {/* Add SubForm Button - Positioned after all subforms - 8px Grid */}
+                  <div className="pt-8 flex justify-center">
+                    <AnimatedAddButton
+                      onClick={addSubForm}
+                      tooltip="เพิ่มฟอร์มย่อย"
+                    />
+                  </div>
+                </div>
               </div>
-            )}
+              );
+            })()}
 
             {/* Settings - 8px Grid */}
             {activeSection === 'settings' && (
@@ -2164,6 +2682,108 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
             )}
         </div>
       </div>
+
+      {/* ✅ NEW: Migration Preview Modal */}
+      <MigrationPreviewModal
+        isOpen={showMigrationPreview}
+        onClose={() => {
+          setShowMigrationPreview(false);
+          setPendingMigrationChanges(null);
+          setDetectedChanges([]);
+        }}
+        onConfirm={handleConfirmedSave}
+        changes={detectedChanges}
+        isLoading={false}
+        formTitle={form.title}
+      />
+
+      {/* ✅ NEW: Floating Migration Status Indicator */}
+      {(migrationQueueStatus.waiting > 0 || migrationQueueStatus.active > 0 || migrationQueueStatus.failed > 0) && (
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.9 }}
+          className="fixed bottom-6 right-6 z-40 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-orange-200 dark:border-orange-700 p-4 min-w-[280px]"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              >
+                <FontAwesomeIcon icon={faDatabase} className="text-orange-500" />
+              </motion.div>
+              สถานะ Migration
+            </h3>
+            {migrationQueueStatus.waiting === 0 && migrationQueueStatus.active === 0 && (
+              <button
+                onClick={() => setMigrationQueueStatus({ waiting: 0, active: 0, completed: 0, failed: 0 })}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            {migrationQueueStatus.waiting > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                  รอดำเนินการ
+                </span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                  {migrationQueueStatus.waiting}
+                </span>
+              </div>
+            )}
+
+            {migrationQueueStatus.active > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
+                  กำลังประมวลผล
+                </span>
+                <span className="font-semibold text-orange-600 dark:text-orange-400">
+                  {migrationQueueStatus.active}
+                </span>
+              </div>
+            )}
+
+            {migrationQueueStatus.failed > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                  ล้มเหลว
+                </span>
+                <span className="font-semibold text-red-600 dark:text-red-400">
+                  {migrationQueueStatus.failed}
+                </span>
+              </div>
+            )}
+
+            {migrationQueueStatus.completed > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCheck} className="text-green-500 text-xs" />
+                  สำเร็จ
+                </span>
+                <span className="font-semibold text-green-600 dark:text-green-400">
+                  {migrationQueueStatus.completed}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {(migrationQueueStatus.waiting > 0 || migrationQueueStatus.active > 0) && (
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                กำลังอัพเดทฐานข้อมูล... อาจใช้เวลา 5-30 วินาที
+              </p>
+            </div>
+          )}
+        </motion.div>
+      )}
     </div>
   );
 }

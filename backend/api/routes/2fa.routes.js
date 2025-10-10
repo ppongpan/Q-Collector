@@ -14,6 +14,9 @@ const { body, validationResult } = require('express-validator');
 const twoFactorService = require('../../services/TwoFactorService');
 const { authenticate } = require('../../middleware/auth.middleware');
 const logger = require('../../utils/logger.util');
+const jwt = require('jsonwebtoken');
+const { Session } = require('../../models');
+const { ApiError } = require('../../middleware/error.middleware');
 
 // Rate limiters for different endpoints
 // TEMPORARY: Increased limits for testing - restore to production values before deploy
@@ -322,6 +325,190 @@ router.post('/backup-codes',
         });
       }
 
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/2fa/setup-required
+ * Setup 2FA when forced by admin (uses tempToken)
+ *
+ * @access Public (uses tempToken for authentication)
+ * @body {string} tempToken - Temporary token from login response
+ * @returns {Object} QR code and setup data
+ */
+router.post('/setup-required',
+  setupLimiter,
+  [
+    body('tempToken').notEmpty().withMessage('กรุณาใส่ temporary token'),
+  ],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array()
+        });
+      }
+
+      const { tempToken } = req.body;
+
+      // Verify temporary token
+      let decoded;
+      try {
+        decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+      } catch (error) {
+        logger.error('Invalid or expired temporary token:', error.message);
+        throw new ApiError(401, 'Temporary token expired or invalid');
+      }
+
+      // Verify token type
+      if (decoded.type !== 'temp_2fa_setup') {
+        throw new ApiError(401, 'Invalid token type');
+      }
+
+      // Get user data
+      const { User } = require('../../models');
+      const user = await User.findByPk(decoded.userId);
+      if (!user) {
+        throw new ApiError(404, 'User not found');
+      }
+
+      // Generate 2FA setup data for this user
+      const setupData = await twoFactorService.generateSecret(user);
+
+      logger.info(`2FA forced setup initiated for user ${user.username}`);
+
+      res.status(200).json({
+        success: true,
+        message: 'สร้างข้อมูลการตั้งค่า 2FA สำเร็จ',
+        data: setupData,
+      });
+    } catch (error) {
+      logger.error('2FA setup-required error:', error);
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/2fa/enable-required
+ * Enable 2FA when forced by admin (uses tempToken + OTP)
+ *
+ * @access Public (uses tempToken for authentication)
+ * @body {string} tempToken - Temporary token from login response
+ * @body {string} token - 6-digit TOTP token from authenticator app
+ * @body {string} deviceFingerprint - Device fingerprint for session
+ * @returns {Object} Full access tokens and user data
+ */
+router.post('/enable-required',
+  setupLimiter,
+  [
+    body('tempToken').notEmpty().withMessage('กรุณาใส่ temporary token'),
+    body('token').notEmpty().withMessage('กรุณาใส่รหัสยืนยัน'),
+    body('deviceFingerprint').notEmpty().withMessage('กรุณาใส่ device fingerprint'),
+  ],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array()
+        });
+      }
+
+      const { tempToken, token, deviceFingerprint } = req.body;
+
+      // Verify temporary token
+      let decoded;
+      try {
+        decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+      } catch (error) {
+        logger.error('Invalid or expired temporary token:', error.message);
+        throw new ApiError(401, 'Temporary token expired or invalid');
+      }
+
+      // Verify token type (support both temp_2fa_setup and mandatory_2fa_setup)
+      if (decoded.type !== 'temp_2fa_setup' && decoded.type !== 'mandatory_2fa_setup') {
+        throw new ApiError(401, 'Invalid token type');
+      }
+
+      const userId = decoded.userId;
+      const { User } = require('../../models');
+
+      // Enable 2FA with the provided OTP
+      await twoFactorService.enableTwoFactor(userId, token);
+
+      // Clear requires_2fa_setup flag after successful setup
+      await User.update(
+        { requires_2fa_setup: false },
+        { where: { id: userId } }
+      );
+
+      // Get user data
+      const user = await User.findByPk(userId);
+      if (!user) {
+        throw new ApiError(404, 'User not found');
+      }
+
+      // Generate full access tokens
+      const accessToken = jwt.sign(
+        {
+          userId: user.id,
+          username: user.username,
+          role: user.role
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
+      );
+
+      const refreshToken = jwt.sign(
+        { userId: user.id, type: 'refresh' },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
+      );
+
+      // Calculate expiration time
+      const expiresAt = new Date();
+      expiresAt.setTime(expiresAt.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      // Store refresh token
+      await Session.createSession({
+        userId: user.id,
+        token: accessToken,
+        refreshToken,
+        expiresAt,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+
+      logger.info(`2FA enabled successfully for user ${user.username} (forced setup)`);
+
+      res.status(200).json({
+        success: true,
+        message: 'ตั้งค่า 2FA สำเร็จ',
+        data: {
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            isActive: user.isActive,
+            twoFactorEnabled: user.twoFactorEnabled
+          },
+          tokens: {
+            accessToken,
+            refreshToken
+          }
+        }
+      });
+    } catch (error) {
+      logger.error('2FA enable-required error:', error);
       next(error);
     }
   }

@@ -7,17 +7,20 @@ import {
   faCalendarAlt, faEdit
 } from '@fortawesome/free-solid-svg-icons';
 import { FileDisplay } from './ui/file-display';
-import { FileGallery } from './ui/image-thumbnail';
+import { ImageThumbnail, FileGallery } from './ui/image-thumbnail';
 import { PhoneIcon } from './ui/phone-icon';
 import { LocationMap } from './ui/location-map';
 
 // Data services
-import dataService from '../services/DataService.js';
-import FileService from '../services/FileService.js';
+import fileServiceAPI from '../services/FileService.api.js';
+import apiClient from '../services/ApiClient';
 
 // Utilities
 import { formatNumberByContext } from '../utils/numberFormatter.js';
 import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../utils/phoneFormatter.js';
+
+// Hooks
+import { useDelayedLoading } from '../hooks/useDelayedLoading';
 
 export default function SubFormDetail({
   formId,
@@ -32,12 +35,23 @@ export default function SubFormDetail({
   hasPrevious,
   hasNext
 }) {
+  console.log('🎯 SubFormDetail props received:', {
+    hasPrevious,
+    hasNext,
+    hasOnNavigatePrevious: !!onNavigatePrevious,
+    hasOnNavigateNext: !!onNavigateNext,
+    subSubmissionId
+  });
+
   const [form, setForm] = useState(null);
   const [subForm, setSubForm] = useState(null);
   const [subSubmission, setSubSubmission] = useState(null);
   const [loading, setLoading] = useState(true);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+
+  // Show loading UI only if loading takes longer than 1 second
+  const showLoading = useDelayedLoading(loading, 1000);
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
@@ -74,8 +88,10 @@ export default function SubFormDetail({
   const loadSubSubmissionData = async () => {
     setLoading(true);
     try {
-      // Load main form
-      const formData = dataService.getForm(formId);
+      // Load main form from API
+      const formResponse = await apiClient.getForm(formId);
+      const formData = formResponse.data?.form || formResponse.data;
+
       if (!formData) {
         console.error('Form not found:', formId);
         return;
@@ -90,9 +106,17 @@ export default function SubFormDetail({
       }
       setSubForm(subFormData);
 
+      // Load sub submission from API
+      const subSubmissionResponse = await apiClient.get(`/subforms/${subFormId}/submissions/${subSubmissionId}`);
+      const subSubmissionData = subSubmissionResponse.data?.submission || subSubmissionResponse.data;
 
-      // Load sub submission
-      const subSubmissionData = dataService.getSubSubmission(subSubmissionId);
+      console.log('🔍 Sub-form submission data from API:', {
+        response: subSubmissionResponse.data,
+        submission: subSubmissionData,
+        dataKeys: subSubmissionData ? Object.keys(subSubmissionData) : null,
+        dataField: subSubmissionData?.data
+      });
+
       if (!subSubmissionData) {
         console.error('SubSubmission not found:', subSubmissionId);
         return;
@@ -176,98 +200,240 @@ export default function SubFormDetail({
     }
   };
 
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Create separate component for file fields to use hooks properly
+  const FileFieldDisplay = ({ field, value }) => {
+    const isEmpty = !value && value !== 0;
+
+    // ✅ DEBUG: Log incoming value
+    console.log(`🔍 [FileFieldDisplay] Field "${field.title}":`, {
+      value,
+      valueType: typeof value,
+      isObject: value && typeof value === 'object',
+      isArray: Array.isArray(value),
+      hasId: value && typeof value === 'object' && 'id' in value,
+      hasName: value && typeof value === 'object' && 'name' in value
+    });
+
+    // ✅ Handle different value formats:
+    // 1. File object {id, name, type, size} - use directly
+    // 2. Array of file objects/IDs
+    // 3. Single file ID (string)
+    let fileIds = [];
+    let fileObjects = [];
+
+    if (value && typeof value === 'object' && !Array.isArray(value) && value.id) {
+      // Single file object with metadata
+      console.log(`✅ [FileFieldDisplay] Detected file object with metadata:`, value);
+      fileObjects = [value];
+      fileIds = [value.id];
+    } else if (Array.isArray(value)) {
+      // Array of files
+      console.log(`✅ [FileFieldDisplay] Detected array of files:`, value);
+      fileIds = value.map(item => {
+        if (typeof item === 'string') return item;
+        if (typeof item === 'object' && item?.id) {
+          fileObjects.push(item);
+          return item.id;
+        }
+        return null;
+      }).filter(id => id);
+    } else if (typeof value === 'string') {
+      // Single file ID
+      console.log(`✅ [FileFieldDisplay] Detected single file ID:`, value);
+      fileIds = [value];
+    }
+
+    console.log(`🔍 [FileFieldDisplay] Processing result:`, {
+      fileIds,
+      fileObjects,
+      hasMetadata: fileObjects.length > 0
+    });
+
+    const [files, setFiles] = useState([]);
+    const [filesLoading, setFilesLoading] = useState(true);
+
+    useEffect(() => {
+      const loadFiles = async () => {
+        setFilesLoading(true);
+
+        // ✅ If we already have file objects with names, use them directly
+        if (fileObjects.length > 0) {
+          const filesWithUrls = await Promise.all(
+            fileObjects.map(async (fileObj) => {
+              try {
+                // Only fetch URL, we already have the metadata
+                const fileData = await fileServiceAPI.getFileWithUrl(fileObj.id);
+                return {
+                  id: fileObj.id,
+                  name: fileObj.name,
+                  type: fileObj.type,
+                  size: fileObj.size,
+                  uploadedAt: fileObj.uploadedAt,
+                  isImage: fileObj.type?.startsWith('image/') || fileServiceAPI.isImage(fileObj.type),
+                  presignedUrl: fileData.presignedUrl
+                };
+              } catch (error) {
+                console.error('Error loading file URL:', error);
+                return null;
+              }
+            })
+          );
+          setFiles(filesWithUrls.filter(file => file));
+          setFilesLoading(false);
+          return;
+        }
+
+        // Otherwise, fetch full file info from backend
+        const loadedFiles = await Promise.all(
+          fileIds.map(async (fileId) => {
+            try {
+              // Get file from MinIO API with presigned URL
+              const fileData = await fileServiceAPI.getFileWithUrl(fileId);
+
+              return {
+                id: fileData.id,
+                name: fileData.originalName || fileData.filename,
+                type: fileData.mimeType,
+                size: fileData.size,
+                uploadedAt: fileData.uploadedAt,
+                isImage: fileServiceAPI.isImage(fileData.mimeType),
+                presignedUrl: fileData.presignedUrl
+              };
+            } catch (error) {
+              console.error('Error loading file:', error);
+              return null;
+            }
+          })
+        );
+
+        setFiles(loadedFiles.filter(file => file)); // Remove null/undefined files
+        setFilesLoading(false);
+      };
+
+      loadFiles();
+    }, [JSON.stringify(fileIds), JSON.stringify(fileObjects)]); // Dependency on fileIds and fileObjects
+
+    return (
+      <div className="space-y-3">
+        <label className="block text-sm font-bold text-orange-300">
+          {field.title}
+          {field.required && <span className="text-destructive ml-1">*</span>}
+        </label>
+        <div className={`w-full border border-border/50 rounded-lg p-4 backdrop-blur-sm ${
+          isEmpty || files.length === 0
+            ? 'bg-muted/40'
+            : 'bg-background/50'
+        }`}>
+          {filesLoading ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <div className="text-sm">กำลังโหลดไฟล์...</div>
+            </div>
+          ) : files.length > 0 ? (
+            <div className="space-y-3">
+              {field.type === 'image_upload' ? (
+                // ✅ Left-right layout สำหรับรูปภาพ (เหมือน main form)
+                <div className="space-y-2">
+                  {files.map((file, index) => (
+                    <div key={file.id || index} className="flex items-start gap-4">
+                      {/* รูปภาพด้านซ้าย */}
+                      <div className="flex-shrink-0">
+                        <ImageThumbnail
+                          file={file}
+                          size="lg"
+                          showFileName={false}
+                        />
+                      </div>
+
+                      {/* รายละเอียดด้านขวา */}
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="text-sm font-medium text-foreground truncate" title={file.name}>
+                          {file.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatFileSize(file.size)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // ไฟล์ทั่วไป
+                <FileDisplay
+                  value={files}
+                  maxDisplay={10}
+                  onFileClick={async (file) => {
+                    console.log('FileDisplay click:', file);
+                    if (file && file.presignedUrl) {
+                      // Use presigned URL for download
+                      const link = document.createElement('a');
+                      link.href = file.presignedUrl;
+                      link.download = file.name;
+                      link.click();
+                    } else {
+                      console.warn('Invalid file object for download:', file);
+                    }
+                  }}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <div className="text-4xl mb-2 opacity-30">📁</div>
+              <div className="text-sm">ไม่มีไฟล์</div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderFieldValue = (field, value) => {
     const isEmpty = !value && value !== 0;
 
-    // Special handling for file upload fields
+    // Special handling for file upload fields - use component with hooks
     if (field.type === 'file_upload' || field.type === 'image_upload') {
-      // Debug log to see the raw value
-      console.log(`File field ${field.title} (${field.id}):`, {
-        fieldType: field.type,
-        rawValue: value,
-        valueType: typeof value,
-        isEmpty: isEmpty
-      });
-
-      // Get actual files from FileService
-      const fileIds = Array.isArray(value) ? value : (value ? [value] : []);
-      console.log('File IDs extracted:', fileIds);
-
-      const files = fileIds
-        .filter(item => item) // Remove empty items
-        .map(item => {
-          // Check if item is already a file object or needs to be fetched
-          if (typeof item === 'object' && item !== null) {
-            console.log(`File item is already an object:`, item);
-            // If it's already a file object, use it directly
-            if (item.name || item.fileName) {
-              return {
-                id: item.id || 'temp-' + Date.now(),
-                name: item.name || item.fileName,
-                type: item.type,
-                size: item.size,
-                uploadedAt: item.uploadedAt || new Date().toISOString(),
-                isImage: item.isImage || (item.type && item.type.startsWith('image/'))
-              };
-            }
-          } else if (typeof item === 'string') {
-            // If it's a string ID, try to get from FileService
-            const file = FileService.getFile(item);
-            console.log(`Getting file for ID "${item}":`, file);
-            return file ? {
-              id: file.id,
-              name: file.name,
-              type: file.type,
-              size: file.size,
-              uploadedAt: file.uploadedAt,
-              isImage: file.isImage
-            } : null;
-          }
-          return null;
-        })
-        .filter(file => file); // Remove null/undefined files
-
-      console.log('Final processed files:', files);
-
-      return (
-        <div key={field.id} className="space-y-2 sm:space-y-3">
-          <label className="block text-sm font-medium text-foreground/80">
-            {field.title}
-            {field.required && <span className="text-destructive ml-1">*</span>}
-          </label>
-          <div className={`w-full border border-border/50 rounded-lg p-2 sm:p-3 backdrop-blur-sm ${
-            isEmpty || files.length === 0
-              ? 'bg-muted/40'
-              : 'bg-background/50'
-          }`}>
-            {files.length > 0 ? (
-              <FileGallery
-                files={files}
-                maxDisplay={6}
-                size="sm"
-                showFileNames={true}
-                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3"
-              />
-            ) : (
-              <div className="text-center py-3 sm:py-4 text-muted-foreground text-sm">
-                ไม่มีไฟล์
-              </div>
-            )}
-          </div>
-        </div>
-      );
+      return <FileFieldDisplay key={field.id} field={field} value={value} />;
     }
 
     // Special handling for LatLong fields
     if (field.type === 'lat_long') {
-      const hasValidCoordinates = value && typeof value === 'object' && value.lat && value.lng;
-      const lat = hasValidCoordinates ? parseFloat(value.lat) : null;
-      const lng = hasValidCoordinates ? parseFloat(value.lng) : null;
+      // ✅ Support both {lat, lng} and {x, y} coordinate formats
+      let lat = null;
+      let lng = null;
+
+      if (value && typeof value === 'object') {
+        // Standard format: {lat, lng}
+        if (value.lat !== undefined && value.lng !== undefined) {
+          lat = parseFloat(value.lat);
+          lng = parseFloat(value.lng);
+        }
+        // ✅ CRITICAL FIX: Alternative format {x, y} where x=lng, y=lat (GIS standard)
+        // In GIS systems: x-axis = longitude (east-west), y-axis = latitude (north-south)
+        else if (value.x !== undefined && value.y !== undefined) {
+          lng = parseFloat(value.x);  // ✅ x = longitude (100.5...)
+          lat = parseFloat(value.y);  // ✅ y = latitude (13.8...)
+        }
+      }
+
+      console.log('🗺️ [SubFormDetail] Coordinate parsing:', {
+        originalValue: value,
+        parsedLat: lat,
+        parsedLng: lng
+      });
+
       const isValidCoordinates = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng);
 
       return (
-        <div key={field.id} className="space-y-2 sm:space-y-3">
-          <label className="block text-sm font-medium text-foreground/80">
+        <div key={field.id} className="space-y-3">
+          <label className="block text-sm font-bold text-orange-300">
             {field.title}
             {field.required && <span className="text-destructive ml-1">*</span>}
           </label>
@@ -277,7 +443,7 @@ export default function SubFormDetail({
               : 'bg-background/50'
           }`}>
             {isValidCoordinates ? (
-              <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
+              <div className="p-3 space-y-3">
                 {/* Map Display */}
                 <LocationMap
                   latitude={lat}
@@ -285,11 +451,10 @@ export default function SubFormDetail({
                   responsive={true}
                   showCoordinates={true}
                   className="w-full"
-                  height="180px"
                 />
               </div>
             ) : (
-              <div className="p-2 sm:p-3 text-center text-muted-foreground text-sm">
+              <div className="p-3 text-center text-muted-foreground">
                 {isEmpty ? 'ไม่มีพิกัด' : 'พิกัดไม่ถูกต้อง'}
                 {value && !isValidCoordinates && (
                   <div className="text-xs mt-1 text-muted-foreground/70">
@@ -303,149 +468,215 @@ export default function SubFormDetail({
       );
     }
 
-    // Special handling for URL fields
-    if (field.type === 'url') {
-      // Helper function to validate and format URL
-      const formatUrlForDisplay = (url) => {
-        if (!url || typeof url !== 'string') return null;
-
-        const trimmedUrl = url.trim();
-        if (!trimmedUrl) return null;
-
-        // Check if it's a valid URL pattern
-        const urlPattern = /^(https?:\/\/|ftp:\/\/|www\.)/i;
-        const domainPattern = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}/;
-
-        let formattedUrl = trimmedUrl;
-
-        // If it doesn't start with protocol, add https://
-        if (!urlPattern.test(trimmedUrl)) {
-          // Check if it looks like a domain
-          if (domainPattern.test(trimmedUrl)) {
-            formattedUrl = `https://${trimmedUrl}`;
-          } else {
-            return null; // Invalid URL
-          }
-        }
-
-        // Additional validation
-        try {
-          new URL(formattedUrl);
-          return formattedUrl;
-        } catch {
-          return null;
-        }
-      };
-
-      const validUrl = formatUrlForDisplay(value);
-      const displayText = value && value.length > 30 ? `${value.substring(0, 30)}...` : value;
+    // Special handling for email fields - simple format เหมือน main form
+    if (field.type === 'email') {
+      const isValidEmail = value && typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
       return (
-        <div key={field.id} className="space-y-2">
-          <label className="block text-sm font-medium text-foreground/80">
-            {field.title}
-            {field.required && <span className="text-destructive ml-1">*</span>}
-          </label>
-          <div className={`w-full border border-border/50 rounded-lg px-2 sm:px-3 py-2 text-sm backdrop-blur-sm ${
-            isEmpty
-              ? 'bg-muted/40 text-muted-foreground/50'
-              : 'bg-background/50 text-foreground'
-          }`}>
-            {validUrl ? (
-              <div className="flex items-center gap-2">
-                <svg
-                  className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                  />
-                </svg>
+        <div key={field.id}>
+          <div className="flex items-center gap-3 py-0.5">
+            <label className="text-sm font-bold shrink-0 text-orange-300">
+              {field.title}{field.required && <span className="text-destructive ml-1">*</span>} :
+            </label>
+            <div className={`text-sm min-w-0 flex-1 ${
+              isEmpty ? 'text-muted-foreground/50' : 'text-foreground'
+            }`}>
+              {isValidEmail ? (
                 <a
-                  href={validUrl}
+                  href={`mailto:${value}`}
+                  className="text-primary break-all"
+                  style={{
+                    transition: 'all 200ms ease-out',
+                    display: 'inline-block',
+                    fontSize: '14px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.fontSize = '16.8px';
+                    e.target.style.fontWeight = '600';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.fontSize = '14px';
+                    e.target.style.fontWeight = '400';
+                  }}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:text-primary/80 hover:underline transition-colors duration-200 break-all text-xs sm:text-sm"
-                  title={value}
-                  onClick={(e) => e.stopPropagation()}
                 >
-                  {displayText}
+                  {value}
                 </a>
-              </div>
-            ) : (
-              <span className="text-foreground break-all text-xs sm:text-sm">{value || '-'}</span>
-            )}
+              ) : (
+                value || '-'
+              )}
+            </div>
           </div>
         </div>
       );
     }
 
-    // Special handling for phone fields
-    if (field.type === 'phone' || shouldFormatAsPhone(value, field.type)) {
+    // Special handling for phone fields - simple format เหมือน main form
+    const isPhoneField = field.type === 'phone' ||
+                        shouldFormatAsPhone(value, field.type) ||
+                        field.title?.toLowerCase().includes('เบอร์') ||
+                        field.title?.toLowerCase().includes('โทร') ||
+                        field.title?.toLowerCase().includes('phone') ||
+                        field.title?.toLowerCase().includes('tel') ||
+                        field.title?.toLowerCase().includes('mobile') ||
+                        field.title?.toLowerCase().includes('contact');
+
+    if (isPhoneField) {
       const phoneProps = createPhoneLink(value, {
         includeIcon: true,
         size: 'md',
         showTooltip: true
       });
 
+      const formattedPhone = formatPhoneDisplay(value);
+
       return (
-        <div key={field.id} className="space-y-2">
-          <label className="block text-sm font-medium text-foreground/80">
-            {field.title}
-            {field.required && <span className="text-destructive ml-1">*</span>}
-          </label>
-          <div className={`w-full border border-border/50 rounded-lg px-2 sm:px-3 py-2 text-sm backdrop-blur-sm ${
-            isEmpty
-              ? 'bg-muted/40 text-muted-foreground/50'
-              : 'bg-background/50 text-foreground'
-          }`}>
-            {phoneProps.isClickable ? (
-              <div className="flex items-center gap-2">
-                <PhoneIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                <a
-                  href={phoneProps.telLink}
-                  className={`${phoneProps.className} text-xs sm:text-sm`}
-                  title={phoneProps.title}
-                  aria-label={phoneProps.ariaLabel}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {phoneProps.display}
-                </a>
-              </div>
-            ) : (
-              <span className="text-foreground break-all text-xs sm:text-sm">{formatPhoneDisplay(value) || value || '-'}</span>
-            )}
+        <div key={field.id}>
+          <div className="flex items-center gap-3 py-0.5">
+            <label className="text-sm font-bold shrink-0 text-orange-300">
+              {field.title}{field.required && <span className="text-destructive ml-1">*</span>} :
+            </label>
+            <div className={`text-sm min-w-0 flex-1 ${
+              isEmpty ? 'text-muted-foreground/50' : 'text-foreground'
+            }`}>
+              {phoneProps.isClickable ? (
+                <div className="flex items-center gap-2">
+                  <PhoneIcon />
+                  <a
+                    href={phoneProps.telLink}
+                    className="text-primary break-all hover:underline transition-all duration-200"
+                    style={{
+                      display: 'inline-block',
+                      fontSize: '14px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.fontSize = '16.8px';
+                      e.target.style.fontWeight = '600';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.fontSize = '14px';
+                      e.target.style.fontWeight = '400';
+                    }}
+                    title={phoneProps.title}
+                    aria-label={phoneProps.ariaLabel}
+                  >
+                    {phoneProps.display}
+                  </a>
+                </div>
+              ) : (
+                <span>{formattedPhone || value || '-'}</span>
+              )}
+            </div>
           </div>
         </div>
       );
     }
 
-    // Standard handling for other field types
-    const formattedValue = formatFieldValue(field, value);
+    // Special handling for URL/website fields - simple format เหมือน main form
+    const isUrlField = field.type === 'url' ||
+                      field.title?.toLowerCase().includes('url') ||
+                      field.title?.toLowerCase().includes('link') ||
+                      field.title?.toLowerCase().includes('เว็บ') ||
+                      field.title?.toLowerCase().includes('website') ||
+                      field.title?.toLowerCase().includes('web') ||
+                      field.title?.toLowerCase().includes('site');
+
+    if (isUrlField) {
+      const formatUrlForDisplay = (url) => {
+        if (!url || typeof url !== 'string') return null;
+        const trimmedUrl = url.trim();
+        if (!trimmedUrl) return null;
+
+        // If it doesn't start with protocol, add https://
+        if (!/^https?:\/\//i.test(trimmedUrl) && !/^ftp:\/\//i.test(trimmedUrl)) {
+          return `https://${trimmedUrl}`;
+        }
+        return trimmedUrl;
+      };
+
+      const validUrl = formatUrlForDisplay(value);
+
+      return (
+        <div key={field.id}>
+          <div className="flex items-center gap-3 py-0.5">
+            <label className="text-sm font-bold shrink-0 text-orange-300">
+              {field.title}{field.required && <span className="text-destructive ml-1">*</span>} :
+            </label>
+            <div className={`text-sm min-w-0 flex-1 ${
+              isEmpty ? 'text-muted-foreground/50' : 'text-foreground'
+            }`}>
+              {validUrl ? (
+                <a
+                  href={validUrl}
+                  className="text-primary break-all"
+                  style={{
+                    transition: 'all 200ms ease-out',
+                    display: 'inline-block',
+                    fontSize: '14px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.fontSize = '16.8px';
+                    e.target.style.fontWeight = '600';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.fontSize = '14px';
+                    e.target.style.fontWeight = '400';
+                  }}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {value}
+                </a>
+              ) : (
+                value || '-'
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Standard handling for other field types - simple format เหมือน main form
+    const rawFormattedValue = formatFieldValue(field, value);
+
+    // Defensive conversion for objects to prevent React rendering errors
+    const formattedValue = (() => {
+      if (rawFormattedValue && typeof rawFormattedValue === 'object' && !Array.isArray(rawFormattedValue)) {
+        // If it's an object with toString method, use it
+        if (typeof rawFormattedValue.toString === 'function' && rawFormattedValue.toString !== Object.prototype.toString) {
+          return rawFormattedValue.toString();
+        }
+        // If it's a file object with fileName, use that
+        if (rawFormattedValue.fileName) {
+          return rawFormattedValue.fileName;
+        }
+        // Otherwise convert to JSON string to prevent React error
+        return JSON.stringify(rawFormattedValue);
+      }
+      return rawFormattedValue;
+    })();
 
     return (
-      <div key={field.id} className="space-y-2">
-        <label className="block text-sm font-medium text-foreground/80">
-          {field.title}
-          {field.required && <span className="text-destructive ml-1">*</span>}
-        </label>
-        <div className={`w-full border border-border/50 rounded-lg px-2 sm:px-3 py-2 text-sm backdrop-blur-sm ${
-          isEmpty
-            ? 'bg-muted/40 text-muted-foreground/50'
-            : 'bg-background/50 text-foreground'
-        }`}>
-          <span className="text-xs sm:text-sm break-words">{formattedValue}</span>
+      <div key={field.id}>
+        <div className="flex items-center gap-3 py-1">
+          <label className="text-sm font-bold shrink-0 text-orange-300">
+            {field.title}{field.required && <span className="text-destructive ml-1">*</span>} :
+          </label>
+          <div className={`text-sm min-w-0 flex-1 ${
+            isEmpty
+              ? 'text-muted-foreground/50'
+              : 'text-foreground'
+          }`}>
+            {formattedValue || '-'}
+          </div>
         </div>
       </div>
     );
   };
 
-  if (loading) {
+  // Show loading only after 1 second delay
+  if (showLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
         <GlassCard className="glass-container">
@@ -457,7 +688,8 @@ export default function SubFormDetail({
     );
   }
 
-  if (!form || !subForm || !subSubmission) {
+  // Only show "not found" error if loading is complete AND data is still missing
+  if (!loading && (!form || !subForm || !subSubmission)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
         <GlassCard className="glass-container">
@@ -472,6 +704,11 @@ export default function SubFormDetail({
         </GlassCard>
       </div>
     );
+  }
+
+  // Don't render main content until data is loaded
+  if (!form || !subForm || !subSubmission) {
+    return null;
   }
 
   return (
@@ -506,18 +743,7 @@ export default function SubFormDetail({
               </div>
             </div>
 
-            {/* Edit button */}
-            {onEdit && (
-              <GlassButton
-                onClick={() => onEdit(subSubmissionId)}
-                size="sm"
-                className="orange-neon-button flex items-center gap-2"
-                title="แก้ไขข้อมูล"
-              >
-                <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
-                <span className="hidden sm:inline">แก้ไข</span>
-              </GlassButton>
-            )}
+            {/* ✅ Edit button removed - now in top menu (MainFormApp.jsx) */}
           </div>
         </motion.div>
 
@@ -529,34 +755,52 @@ export default function SubFormDetail({
           className="max-w-3xl mx-auto mb-6 sm:mb-8 relative"
         >
           {/* Previous Arrow - Outside on large screens, hidden on mobile */}
-          {hasPrevious && onNavigatePrevious && (
-            <div
-              onClick={onNavigatePrevious}
-              className="hidden lg:flex absolute -left-20 top-1/2 -translate-y-1/2 w-16 h-16 cursor-pointer group items-center justify-center"
-              title="คลิกเพื่อดูข้อมูลก่อนหน้า"
-            >
-              <div className="w-12 h-12 rounded-full bg-orange-500/10 dark:bg-orange-500/20 hover:bg-orange-500/80 dark:hover:bg-orange-500/60 backdrop-blur-md border border-orange-500/40 dark:border-orange-500/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-[0_0_0_0_rgba(249,115,22,0)] group-hover:shadow-[0_0_20px_8px_rgba(249,115,22,0.4)]">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-600 dark:text-orange-400 group-hover:text-white dark:group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                </svg>
-              </div>
+          {/* Show enabled version when hasPrevious, disabled version when !hasPrevious */}
+          <div
+            onClick={hasPrevious && onNavigatePrevious ? onNavigatePrevious : undefined}
+            className={`hidden lg:flex absolute -left-20 top-1/2 -translate-y-1/2 w-16 h-16 items-center justify-center ${
+              hasPrevious && onNavigatePrevious ? 'cursor-pointer group' : 'cursor-not-allowed opacity-40'
+            }`}
+            title={hasPrevious ? "คลิกเพื่อดูข้อมูลก่อนหน้า" : "ไม่มีข้อมูลก่อนหน้า"}
+          >
+            <div className={`w-12 h-12 rounded-full backdrop-blur-md border flex items-center justify-center transition-all duration-300 ${
+              hasPrevious && onNavigatePrevious
+                ? 'bg-orange-500/10 dark:bg-orange-500/20 hover:bg-orange-500/80 dark:hover:bg-orange-500/60 border-orange-500/40 dark:border-orange-500/30 group-hover:scale-110 shadow-[0_0_0_0_rgba(249,115,22,0)] group-hover:shadow-[0_0_20px_8px_rgba(249,115,22,0.4)]'
+                : 'bg-gray-400/10 dark:bg-gray-600/20 border-gray-400/40 dark:border-gray-500/30'
+            }`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors duration-300 ${
+                hasPrevious && onNavigatePrevious
+                  ? 'text-orange-600 dark:text-orange-400 group-hover:text-white dark:group-hover:text-white'
+                  : 'text-gray-400 dark:text-gray-600'
+              }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              </svg>
             </div>
-          )}
+          </div>
 
           {/* Next Arrow - Outside on large screens, hidden on mobile */}
-          {hasNext && onNavigateNext && (
-            <div
-              onClick={onNavigateNext}
-              className="hidden lg:flex absolute -right-20 top-1/2 -translate-y-1/2 w-16 h-16 cursor-pointer group items-center justify-center"
-              title="คลิกเพื่อดูข้อมูลถัดไป"
-            >
-              <div className="w-12 h-12 rounded-full bg-orange-500/10 dark:bg-orange-500/20 hover:bg-orange-500/80 dark:hover:bg-orange-500/60 backdrop-blur-md border border-orange-500/40 dark:border-orange-500/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-[0_0_0_0_rgba(249,115,22,0)] group-hover:shadow-[0_0_20px_8px_rgba(249,115,22,0.4)]">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-600 dark:text-orange-400 group-hover:text-white dark:group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
+          {/* Show enabled version when hasNext, disabled version when !hasNext */}
+          <div
+            onClick={hasNext && onNavigateNext ? onNavigateNext : undefined}
+            className={`hidden lg:flex absolute -right-20 top-1/2 -translate-y-1/2 w-16 h-16 items-center justify-center ${
+              hasNext && onNavigateNext ? 'cursor-pointer group' : 'cursor-not-allowed opacity-40'
+            }`}
+            title={hasNext ? "คลิกเพื่อดูข้อมูลถัดไป" : "ไม่มีข้อมูลถัดไป"}
+          >
+            <div className={`w-12 h-12 rounded-full backdrop-blur-md border flex items-center justify-center transition-all duration-300 ${
+              hasNext && onNavigateNext
+                ? 'bg-orange-500/10 dark:bg-orange-500/20 hover:bg-orange-500/80 dark:hover:bg-orange-500/60 border-orange-500/40 dark:border-orange-500/30 group-hover:scale-110 shadow-[0_0_0_0_rgba(249,115,22,0)] group-hover:shadow-[0_0_20px_8px_rgba(249,115,22,0.4)]'
+                : 'bg-gray-400/10 dark:bg-gray-600/20 border-gray-400/40 dark:border-gray-500/30'
+            }`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors duration-300 ${
+                hasNext && onNavigateNext
+                  ? 'text-orange-600 dark:text-orange-400 group-hover:text-white dark:group-hover:text-white'
+                  : 'text-gray-400 dark:text-gray-600'
+              }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              </svg>
             </div>
-          )}
+          </div>
 
           {/* Previous Click Area - Arrows on narrow screens */}
           {hasPrevious && onNavigatePrevious && (
@@ -599,7 +843,26 @@ export default function SubFormDetail({
             <div className="p-3 sm:p-4">
               <div className="space-y-3 sm:space-y-4 lg:space-y-6">
                 {(subForm.fields || []).map(field => {
-                  const value = subSubmission.data[field.id];
+                  let value = subSubmission.data[field.id];
+
+                  console.log(`🔍 Field "${field.title}" (${field.type}):`, {
+                    fieldId: field.id,
+                    rawValue: value,
+                    valueType: typeof value,
+                    isObject: value && typeof value === 'object',
+                    isArray: Array.isArray(value),
+                    hasFieldId: value && typeof value === 'object' && 'fieldId' in value
+                  });
+
+                  // 🔧 Fix: Backend returns object {fieldId, fieldTitle, fieldType, value}
+                  // Extract the actual value from the wrapper object
+                  if (value && typeof value === 'object' && !Array.isArray(value) && 'fieldId' in value) {
+                    console.log(`🔧 Extracting value from wrapper object for field "${field.title}":`, value);
+                    // Extract the actual value, defaulting to null if undefined
+                    value = value.value !== undefined ? value.value : null;
+                    console.log(`✅ Extracted value:`, value);
+                  }
+
                   return renderFieldValue(field, value);
                 })}
               </div>

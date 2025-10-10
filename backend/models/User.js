@@ -90,6 +90,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'When 2FA was first enabled',
     },
+    requires_2fa_setup: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+      comment: 'Flag to force user to setup 2FA on first login (for admin-created accounts)',
+    },
     // Telegram Integration Fields
     telegramUserId: {
       type: DataTypes.STRING(50),

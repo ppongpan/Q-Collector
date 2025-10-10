@@ -237,9 +237,9 @@ module.exports = (sequelize, DataTypes) => {
   /**
    * Increment version
    */
-  Form.prototype.incrementVersion = async function() {
+  Form.prototype.incrementVersion = async function(options = {}) {
     this.version += 1;
-    await this.save();
+    await this.save(options);
     return this;
   };
 
@@ -305,6 +305,8 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'form_id',
       as: 'fields',
       onDelete: 'CASCADE',
+      // IMPORTANT: Use 'order' column, NOT 'order_index'
+      order: [['order', 'ASC']]
     });
 
     // Form has many SubForms
@@ -312,6 +314,8 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'form_id',
       as: 'subForms',
       onDelete: 'CASCADE',
+      // IMPORTANT: Use 'order' column, NOT 'order_index'
+      order: [['order', 'ASC']]
     });
 
     // Form has many Submissions
@@ -401,6 +405,11 @@ module.exports = (sequelize, DataTypes) => {
 
         return subFormData;
       });
+    }
+
+    // Extract telegram settings from settings.telegram for frontend compatibility
+    if (values.settings && values.settings.telegram) {
+      values.telegramSettings = values.settings.telegram;
     }
 
     return values;

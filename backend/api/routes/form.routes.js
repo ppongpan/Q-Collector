@@ -115,6 +115,7 @@ router.post(
       .optional()
       .trim(),
     body('roles_allowed')
+      .optional()
       .isArray()
       .withMessage('roles_allowed must be an array')
       .custom((value) => {

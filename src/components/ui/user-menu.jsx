@@ -87,7 +87,7 @@ export function UserMenu({ onSettingsClick }) {
   };
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className="relative" ref={menuRef} data-testid="user-menu">
       {/* User Button */}
       <button
         data-testid="user-menu-button"

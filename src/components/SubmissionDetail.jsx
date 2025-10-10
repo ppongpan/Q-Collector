@@ -13,12 +13,14 @@ import { PhoneIcon } from './ui/phone-icon';
 import { LocationMap } from './ui/location-map';
 
 // Data services
-import dataService from '../services/DataService.js';
-import FileService from '../services/FileService.js';
+import fileServiceAPI from '../services/FileService.api.js';
 import apiClient from '../services/ApiClient';
 
 // Auth context
 import { useAuth } from '../contexts/AuthContext';
+
+// Hooks
+import { useDelayedLoading } from '../hooks/useDelayedLoading';
 
 // Utilities
 import { formatNumberByContext } from '../utils/numberFormatter.js';
@@ -252,6 +254,9 @@ export default function SubmissionDetail({
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
 
+  // Show loading UI only if loading takes longer than 1 second
+  const showLoading = useDelayedLoading(loading, 1000);
+
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
 
@@ -285,60 +290,81 @@ export default function SubmissionDetail({
   }, [formId, submissionId]);
 
   // Add effect to reload data when component is focused (for file updates)
+  // ✅ CRITICAL FIX: Include formId and submissionId in dependencies to prevent stale closure
+  // Without dependencies, the listener captures old formId/submissionId values and never updates
   useEffect(() => {
     const handleFocus = () => {
+      console.log('🔄 Window focused - reloading submission data:', { formId, submissionId });
       loadSubmissionData();
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, []);
+  }, [formId, submissionId]); // ← Re-create listener when IDs change to fix stale closure
 
   const loadSubmissionData = async () => {
     setLoading(true);
     try {
-      // Load form from API first, fallback to localStorage
-      let formData = null;
-      try {
-        const response = await apiClient.getForm(formId);
-        formData = response.data?.form || response.data;
-        console.log('✅ Form loaded from API:', formData?.title);
-      } catch (apiError) {
-        console.warn('Failed to load form from API, trying localStorage:', apiError);
-        formData = dataService.getForm(formId);
-      }
+      // Load form from API
+      const response = await apiClient.getForm(formId);
+      const formData = response.data?.form || response.data;
 
       if (!formData) {
         console.error('Form not found:', formId);
         return;
       }
       setForm(formData);
+      console.log('✅ Form loaded from API:', formData?.title);
 
-      // Load submission from API first, fallback to localStorage
-      let submissionData = null;
-      try {
-        const response = await apiClient.getSubmission(submissionId);
-        submissionData = response.data?.submission || response.data;
-        console.log('✅ Submission loaded from API:', submissionData?.id);
-      } catch (apiError) {
-        console.warn('Failed to load submission from API, trying localStorage:', apiError);
-        submissionData = dataService.getSubmission(submissionId);
-      }
+      // Load submission from API
+      const submissionResponse = await apiClient.getSubmission(submissionId);
+      const submissionData = submissionResponse.data?.submission || submissionResponse.data;
 
       if (!submissionData) {
         console.error('Submission not found:', submissionId);
         return;
       }
       setSubmission(submissionData);
+      console.log('✅ Submission loaded from API:', submissionData?.id);
 
       // Load sub form submissions for each sub form
       const subSubmissionsData = {};
       if (formData.subForms && formData.subForms.length > 0) {
+        // ✅ CRITICAL FIX: Use submissionData.data.id (main form submission ID from dynamic table)
+        // This is the actual parent ID we need for querying sub-forms
+        const mainFormSubId = submissionData.data?.id || submissionData.id;
+
+        console.log('🔍 Loading sub-form submissions:', {
+          mainFormSubId,
+          submissionId,
+          submissionDataId: submissionData.data?.id,
+          submissionDataKeys: Object.keys(submissionData.data || {})
+        });
+
         for (const subForm of formData.subForms) {
-          const subSubs = dataService.getSubSubmissionsByParentId(submissionId)
-            .filter(sub => sub.subFormId === subForm.id)
-            .slice(0, 10); // Latest 10 entries
-          subSubmissionsData[subForm.id] = subSubs;
+          try {
+            // ✅ NEW: Use the new endpoint with main_form_subid
+            const subSubsResponse = await apiClient.get(`/submissions/${mainFormSubId}/sub-forms/${subForm.id}`);
+            const subSubs = subSubsResponse.data?.subFormSubmissions || subSubsResponse.data?.submissions || subSubsResponse.data || [];
+
+            console.log(`✅ Loaded ${subSubs.length} sub-form submissions for ${subForm.title}:`, {
+              subFormId: subForm.id,
+              mainFormSubId,
+              count: subSubs.length,
+              sampleData: subSubs[0]
+            });
+
+            subSubmissionsData[subForm.id] = subSubs;
+          } catch (apiError) {
+            console.error(`❌ Failed to load sub-submissions for subForm ${subForm.id}:`, {
+              error: apiError.message,
+              response: apiError.response?.data,
+              mainFormSubId,
+              subFormId: subForm.id
+            });
+            // Set empty array if API fails
+            subSubmissionsData[subForm.id] = [];
+          }
         }
       }
       setSubSubmissions(subSubmissionsData);
@@ -373,6 +399,11 @@ export default function SubmissionDetail({
   };
 
   const formatFieldValue = (field, value) => {
+    // ✅ CRITICAL FIX: If value is wrapped in backend structure, extract it
+    if (value && typeof value === 'object' && 'value' in value && 'fieldId' in value) {
+      value = value.value;
+    }
+
     if (!value && value !== 0) return '-';
 
     // Handle error objects
@@ -412,8 +443,24 @@ export default function SubmissionDetail({
         const emptyStars = Math.max(0, maxRating - ratingValue);
         return '⭐'.repeat(ratingValue) + '☆'.repeat(emptyStars);
       case 'lat_long':
-        if (typeof value === 'object' && value.lat && value.lng) {
-          return `${value.lat}, ${value.lng}`;
+        // Handle both {lat, lng} and {x, y} formats
+        if (typeof value === 'object' && value !== null) {
+          // Check for lat/lng format
+          if (value.lat !== undefined && value.lng !== undefined) {
+            // ✅ Format coordinates to 4 decimal places for display
+            const lat = parseFloat(value.lat).toFixed(4);
+            const lng = parseFloat(value.lng).toFixed(4);
+            return `${lat}, ${lng}`;
+          }
+          // Check for x/y format (alternative coordinate format)
+          if (value.x !== undefined && value.y !== undefined) {
+            // ✅ Format coordinates to 4 decimal places for display
+            const x = parseFloat(value.x).toFixed(4);
+            const y = parseFloat(value.y).toFixed(4);
+            return `${x}, ${y}`;
+          }
+          // Fallback: convert object to JSON string to prevent React error
+          return JSON.stringify(value);
         }
         return value;
       case 'multiple_choice':
@@ -448,122 +495,241 @@ export default function SubmissionDetail({
     }
   };
 
+  // Create separate component for file fields to use hooks properly
+  const FileFieldDisplay = ({ field, value, submissionId }) => {
+    // ✅ CRITICAL FIX: Declare ALL hooks FIRST before any conditional logic or early returns
+    const [files, setFiles] = useState([]);
+    const [filesLoading, setFilesLoading] = useState(true);
+
+    // ✅ Check for error objects AFTER hooks are declared
+    const hasError = value && typeof value === 'object' && 'error' in value;
+
+    // ✅ CRITICAL FIX: Backend wraps values in {value: actualValue, fieldId: '...'}
+    // Extract the actual value first
+    let actualValue = value;
+    if (value && typeof value === 'object' && 'value' in value && 'fieldId' in value) {
+      actualValue = value.value;
+    }
+
+    const isEmpty = !actualValue && actualValue !== 0;
+
+    // Extract file IDs from various formats
+    let fileIds = [];
+    if (!hasError && Array.isArray(actualValue)) {
+      // If it's already an array of IDs or objects
+      fileIds = actualValue.map(item => {
+        if (typeof item === 'string') return item;
+        if (typeof item === 'object' && item?.id) return item.id;
+        return null;
+      }).filter(id => id);
+    } else if (!hasError && typeof actualValue === 'string') {
+      // Single file ID as string
+      fileIds = [actualValue];
+    } else if (!hasError && typeof actualValue === 'object' && actualValue?.id) {
+      // ✅ CRITICAL FIX: Single file object (from SubmissionService line 603-609)
+      // When there's only 1 file, it's stored as {id, name, type, size} instead of [{...}]
+      fileIds = [actualValue.id];
+    }
+
+    console.log('📁 FileFieldDisplay:', {
+      fieldId: field.id,
+      fieldTitle: field.title,
+      rawValue: value,
+      rawValueType: typeof value,
+      rawValueKeys: value && typeof value === 'object' ? Object.keys(value) : null,
+      actualValue: actualValue,
+      actualValueType: typeof actualValue,
+      extractedFileIds: fileIds,
+      submissionId,
+      hasError
+    });
+
+    useEffect(() => {
+      const loadFiles = async () => {
+        // ✅ Skip loading if there's an error
+        if (hasError) {
+          console.log('⚠️ Error object detected for field:', field.title, value.error);
+          setFilesLoading(false);
+          return;
+        }
+
+        if (!fileIds || fileIds.length === 0) {
+          console.log('⚠️ No file IDs to load for field:', field.title);
+          setFilesLoading(false);
+          return;
+        }
+
+        setFilesLoading(true);
+        console.log('📥 Loading files from MinIO:', fileIds);
+
+        try {
+          // ✅ OPTIMIZATION: If actualValue already has file info (name, type, size), use it directly
+          // This happens when file is stored as single object with all metadata
+          if (!hasError && typeof actualValue === 'object' && actualValue?.id && actualValue?.name) {
+            console.log('✅ Using file metadata from submission data:', actualValue);
+            const fileWithUrl = await fileServiceAPI.getFileWithUrl(actualValue.id);
+            setFiles([{
+              id: actualValue.id,
+              name: actualValue.name,
+              type: actualValue.type,
+              size: actualValue.size,
+              uploadedAt: actualValue.uploadedAt,
+              isImage: actualValue.isImage || actualValue.type?.startsWith('image/'),
+              presignedUrl: fileWithUrl.presignedUrl
+            }]);
+            setFilesLoading(false);
+            return;
+          }
+
+          // Try to get files for this submission and field
+          const submissionFiles = await fileServiceAPI.getSubmissionFiles(submissionId);
+          console.log('📦 All submission files:', submissionFiles);
+
+          // Filter files for this specific field
+          const fieldFiles = submissionFiles
+            .filter(file => file.fieldId === field.id || fileIds.includes(file.id))
+            .map(fileData => ({
+              id: fileData.id,
+              name: fileData.originalName || fileData.filename,
+              type: fileData.mimeType,
+              size: fileData.size,
+              uploadedAt: fileData.uploadedAt,
+              isImage: fileServiceAPI.isImage(fileData.mimeType),
+              presignedUrl: fileData.presignedUrl
+            }));
+
+          console.log('✅ Field files loaded:', {
+            fieldId: field.id,
+            fieldTitle: field.title,
+            filesCount: fieldFiles.length,
+            files: fieldFiles
+          });
+
+          setFiles(fieldFiles);
+        } catch (error) {
+          console.error('❌ Error loading files from MinIO:', error);
+          // Fallback: try loading files individually by ID
+          try {
+            const loadedFiles = await Promise.all(
+              fileIds.map(async (fileId) => {
+                try {
+                  const fileData = await fileServiceAPI.getFileWithUrl(fileId);
+                  return {
+                    id: fileData.id,
+                    name: fileData.originalName || fileData.filename,
+                    type: fileData.mimeType,
+                    size: fileData.size,
+                    uploadedAt: fileData.uploadedAt,
+                    isImage: fileServiceAPI.isImage(fileData.mimeType),
+                    presignedUrl: fileData.presignedUrl
+                  };
+                } catch (err) {
+                  console.error('Error loading individual file:', fileId, err);
+                  return null;
+                }
+              })
+            );
+
+            const validFiles = loadedFiles.filter(file => file);
+            console.log('✅ Files loaded individually:', validFiles.length);
+            setFiles(validFiles);
+          } catch (fallbackError) {
+            console.error('❌ Fallback file loading failed:', fallbackError);
+            setFiles([]);
+          }
+        } finally {
+          setFilesLoading(false);
+        }
+      };
+
+      loadFiles();
+    }, [JSON.stringify(fileIds), submissionId, field.id]); // Dependency on fileIds and submissionId
+
+    return (
+      <div className="space-y-3">
+        <label className="block text-sm font-bold text-orange-300">
+          {field.title}
+          {field.required && <span className="text-destructive ml-1">*</span>}
+        </label>
+        <div className={`w-full border border-border/50 rounded-lg p-4 backdrop-blur-sm ${
+          isEmpty || files.length === 0 || hasError
+            ? 'bg-muted/40'
+            : 'bg-background/50'
+        }`}>
+          {hasError ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <div className="text-4xl mb-2 opacity-30">⚠️</div>
+              <div className="text-sm font-medium text-orange-500">ไม่สามารถโหลดไฟล์ได้</div>
+              <div className="text-xs mt-1">{value.error || 'ข้อมูลไฟล์สูญหาย'}</div>
+            </div>
+          ) : filesLoading ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <div className="text-sm">กำลังโหลดไฟล์...</div>
+            </div>
+          ) : files.length > 0 ? (
+            <div className="space-y-3">
+              {field.type === 'image_upload' ? (
+                // แสดงแบบ left-right layout สำหรับรูปภาพ
+                <div className="space-y-2">
+                  {files.map((file, index) => (
+                    <div key={file.id || index} className="flex items-start gap-4">
+                      {/* รูปภาพด้านซ้าย */}
+                      <div className="flex-shrink-0">
+                        <ImageThumbnail
+                          file={file}
+                          size="lg"
+                          showFileName={false}
+                        />
+                      </div>
+
+                      {/* รายละเอียดด้านขวา */}
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="text-sm font-medium text-foreground truncate" title={file.name || file.originalName || 'ไฟล์ที่แนบ'}>
+                          {file.name || file.originalName || file.filename || 'ไฟล์ที่แนบ'}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {file.size ? formatFileSize(file.size) : 'ไม่ทราบขนาด'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <FileDisplay
+                  value={files}
+                  maxDisplay={10}
+                  onFileClick={async (file) => {
+                    console.log('FileDisplay click:', file);
+                    if (file && file.presignedUrl) {
+                      // Use presigned URL for download
+                      const link = document.createElement('a');
+                      link.href = file.presignedUrl;
+                      link.download = file.name;
+                      link.click();
+                    } else {
+                      console.warn('Invalid file object for download:', file);
+                    }
+                  }}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <div className="text-4xl mb-2 opacity-30">📁</div>
+              <div className="text-sm">ไม่มีไฟล์</div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderFieldValue = (field, value) => {
     const isEmpty = !value && value !== 0;
 
-
-    // Special handling for file upload fields
+    // Special handling for file upload fields - use component with hooks
     if (field.type === 'file_upload' || field.type === 'image_upload') {
-      // Get actual files from FileService
-      const fileIds = Array.isArray(value) ? value : (value ? [value] : []);
-
-      const files = fileIds
-        .filter(item => item) // Remove empty items
-        .map(item => {
-          let fileData = null;
-
-          // If it's a string ID, get from FileService
-          if (typeof item === 'string') {
-            fileData = FileService.getFile(item);
-          }
-          // If it's already an object with ID, try to get from FileService
-          else if (typeof item === 'object' && item !== null && item.id) {
-            fileData = FileService.getFile(item.id);
-          }
-          // If it's an object with name but no ID, try to find by name
-          else if (typeof item === 'object' && item !== null && (item.name || item.fileName)) {
-            const allFiles = FileService.getAllStoredFiles();
-            fileData = Object.values(allFiles).find(file =>
-              file.name === (item.name || item.fileName) &&
-              file.fieldId === field.id &&
-              file.submissionId === submissionId
-            );
-          }
-
-          // Return processed file data if found
-          if (fileData) {
-            return {
-              id: fileData.id,
-              name: fileData.name,
-              type: fileData.type,
-              size: fileData.size,
-              uploadedAt: fileData.uploadedAt,
-              isImage: fileData.isImage || (fileData.type && fileData.type.startsWith('image/')),
-              data: fileData.data // Include data for images
-            };
-          }
-
-          return null;
-        })
-        .filter(file => file); // Remove null/undefined files
-
-      return (
-        <div key={field.id} className="space-y-3">
-          <label className="block text-sm font-bold text-orange-300">
-            {field.title}
-            {field.required && <span className="text-destructive ml-1">*</span>}
-          </label>
-          <div className={`w-full border border-border/50 rounded-lg p-4 backdrop-blur-sm ${
-            isEmpty || files.length === 0
-              ? 'bg-muted/40'
-              : 'bg-background/50'
-          }`}>
-            {files.length > 0 ? (
-              <div className="space-y-3">
-                {field.type === 'image_upload' ? (
-                  // แสดงแบบ left-right layout สำหรับรูปภาพ
-                  <div className="space-y-2">
-                    {files.map((file, index) => (
-                      <div key={file.id || index} className="flex items-start gap-4">
-                        {/* รูปภาพด้านซ้าย */}
-                        <div className="flex-shrink-0">
-                          <ImageThumbnail
-                            file={file}
-                            size="lg"
-                            showFileName={false}
-                          />
-                        </div>
-
-                        {/* รายละเอียดด้านขวา */}
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="text-sm font-medium text-foreground truncate" title={file.name}>
-                            {file.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {formatFileSize(file.size)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <FileDisplay
-                    value={files}
-                    maxDisplay={10}
-                    onFileClick={(file) => {
-                      console.log('FileDisplay click:', file);
-                      if (file && file.id) {
-                        const success = FileService.downloadFile(file.id);
-                        console.log('Download result:', success);
-                        if (!success) {
-                          console.warn('Failed to download file:', file);
-                        }
-                      } else {
-                        console.warn('Invalid file object for download:', file);
-                      }
-                    }}
-                  />
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-muted-foreground">
-                <div className="text-4xl mb-2 opacity-30">📁</div>
-                <div className="text-sm">ไม่มีไฟล์</div>
-              </div>
-            )}
-          </div>
-        </div>
-      );
+      return <FileFieldDisplay key={field.id} field={field} value={value} submissionId={submissionId} />;
     }
 
     // Special handling for LatLong fields
@@ -656,6 +822,7 @@ export default function SubmissionDetail({
 
     // Special handling for phone fields - simple format with clickable links
     const isPhoneField = field.type === 'phone' ||
+                        shouldFormatAsPhone(value, field.type) ||
                         field.title?.toLowerCase().includes('เบอร์') ||
                         field.title?.toLowerCase().includes('โทร') ||
                         field.title?.toLowerCase().includes('phone') ||
@@ -664,9 +831,13 @@ export default function SubmissionDetail({
                         field.title?.toLowerCase().includes('contact');
 
     if (isPhoneField) {
-      const isValidPhone = value && typeof value === 'string' && value.trim().length > 0;
-      const phoneNumber = isValidPhone ? value.replace(/\D/g, '') : '';
-      const isClickablePhone = phoneNumber && phoneNumber.length >= 9;
+      const phoneProps = createPhoneLink(value, {
+        includeIcon: true,
+        size: 'md',
+        showTooltip: true
+      });
+
+      const formattedPhone = formatPhoneDisplay(value);
 
       return (
         <div key={field.id}>
@@ -677,30 +848,32 @@ export default function SubmissionDetail({
             <div className={`text-sm min-w-0 flex-1 ${
               isEmpty ? 'text-muted-foreground/50' : 'text-foreground'
             }`}>
-              {isClickablePhone ? (
-                <a
-                  href={`tel:${phoneNumber}`}
-                  className="text-primary break-all"
-                  style={{
-                    transition: 'all 200ms ease-out',
-                    display: 'inline-block',
-                    fontSize: '14px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.fontSize = '16.8px';
-                    e.target.style.fontWeight = '600';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.fontSize = '14px';
-                    e.target.style.fontWeight = '400';
-                  }}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {value}
-                </a>
+              {phoneProps.isClickable ? (
+                <div className="flex items-center gap-2">
+                  <PhoneIcon />
+                  <a
+                    href={phoneProps.telLink}
+                    className="text-primary break-all hover:underline transition-all duration-200"
+                    style={{
+                      display: 'inline-block',
+                      fontSize: '14px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.fontSize = '16.8px';
+                      e.target.style.fontWeight = '600';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.fontSize = '14px';
+                      e.target.style.fontWeight = '400';
+                    }}
+                    title={phoneProps.title}
+                    aria-label={phoneProps.ariaLabel}
+                  >
+                    {phoneProps.display}
+                  </a>
+                </div>
               ) : (
-                value || '-'
+                <span>{formattedPhone || value || '-'}</span>
               )}
             </div>
           </div>
@@ -830,9 +1003,36 @@ export default function SubmissionDetail({
       );
     }
 
-    // Get first few fields for table display (max 3-4)
-    const displayFields = subForm.fields?.slice(0, 3) || [];
-    const hasMoreFields = subForm.fields?.length > 3;
+    // ✅ Filter fields by showInTable setting, show up to 5 fields (max allowed)
+    // Support both camelCase (showInTable) and snake_case (show_in_table) from backend
+    const visibleFields = (subForm.fields || []).filter(field =>
+      field.showInTable === true || field.show_in_table === true
+    );
+    const maxDisplayFields = 5; // Maximum fields to display in table
+    const displayFields = visibleFields.slice(0, maxDisplayFields);
+    const hasMoreFields = visibleFields.length > maxDisplayFields;
+
+    // 🔍 DEBUG: Log sub-form table data structure
+    console.log('🔍 Sub-form table debug:', {
+      subForm: {
+        id: subForm.id,
+        title: subForm.title,
+        totalFields: subForm.fields?.length,
+        fields: subForm.fields?.map(f => ({
+          id: f.id,
+          title: f.title,
+          showInTable: f.showInTable
+        }))
+      },
+      visibleFields: visibleFields.map(f => ({ id: f.id, title: f.title })),
+      displayFields: displayFields.map(f => ({ id: f.id, title: f.title })),
+      subSubmissions: subSubs.map(s => ({
+        id: s.id,
+        submittedAt: s.submittedAt,
+        dataKeys: Object.keys(s.data || {}),
+        sampleData: s.data
+      }))
+    });
 
     return (
       <div className="space-y-2">
@@ -852,16 +1052,17 @@ export default function SubmissionDetail({
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/30">
-                <th className="p-2 text-[12px] font-medium text-foreground/70 text-center">#</th>
                 {displayFields.map((field) => (
-                  <th key={field.id} className="p-2 text-[12px] font-medium text-foreground/70 text-center">
+                  <th key={field.id} className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] font-medium text-foreground/70 text-center">
                     {field.title}
                   </th>
                 ))}
                 {hasMoreFields && (
-                  <th className="p-2 text-[12px] font-medium text-foreground/70 text-center">อื่นๆ</th>
+                  <th className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] font-medium text-foreground/70 text-center">อื่นๆ</th>
                 )}
-                <th className="p-2 text-[12px] font-medium text-foreground/70 text-center">วันที่บันทึก</th>
+                {displayFields.length < 5 && (
+                  <th className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] font-medium text-foreground/70 text-center">วันที่บันทึก</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -871,29 +1072,86 @@ export default function SubmissionDetail({
                   className="border-b border-border/20 cursor-pointer"
                   onClick={() => handleViewSubFormDetail(subForm.id, subSub.id)}
                 >
-                  <td className="p-2 text-[12px] text-center">
-                    {index + 1}
-                  </td>
                   {displayFields.map((field) => {
-                    const value = subSub.data[field.id];
+                    // 🔧 CRITICAL FIX: Backend returns data with field_id as key, extract value properly
+                    let rawValue = subSub.data?.[field.id];
+                    let value = rawValue;
 
-                    // Use FileDisplayCompact for file fields in table
+                    // Backend returns format: {fieldId, fieldTitle, fieldType, value}
+                    // Extract the actual value if it's wrapped in an object
+                    if (rawValue && typeof rawValue === 'object' && 'value' in rawValue) {
+                      value = rawValue.value;
+                    }
+
+                    // 🔍 DEBUG: Log each field value lookup to diagnose data display issues
+                    console.log(`🔍 SubForm Field "${field.title}" (${field.id}):`, {
+                      fieldId: field.id,
+                      rawValue: rawValue,
+                      extractedValue: value,
+                      hasData: !!subSub.data,
+                      dataKeys: Object.keys(subSub.data || {}),
+                      allData: subSub.data
+                    });
+
+                    // ✅ Display file names in table for file/image upload fields
                     if (field.type === 'file_upload' || field.type === 'image_upload') {
-                      const fileIds = Array.isArray(value) ? value : (value ? [value] : []);
-                      const fileCount = fileIds.filter(id => FileService.getFile(id)).length;
+                      // ✅ CRITICAL FIX: Value could be:
+                      // 1. File object: {id, name, type, size} - Use name directly
+                      // 2. File ID (UUID string) - Need to fetch file info from backend
+                      // 3. File path string: "uploads/filename.jpg" - Extract filename
+
+                      if (!value || value === '-') {
+                        return (
+                          <td key={field.id} className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center">
+                            -
+                          </td>
+                        );
+                      }
+
+                      let displayName = '-';
+                      let fullFileName = '';
+
+                      // Case 1: Value is a file object with name property
+                      if (typeof value === 'object' && value?.name) {
+                        fullFileName = value.name;
+                        displayName = value.name;
+                      }
+                      // Case 2: Value is a string (could be file path or UUID)
+                      else if (typeof value === 'string') {
+                        // Check if it's a UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+                        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+                        if (isUUID) {
+                          // It's a file ID - show a loading indicator or "File" text
+                          // In a real scenario, you'd fetch the file info from backend
+                          displayName = '📎 ไฟล์';
+                          fullFileName = value; // Use ID as fallback
+                        } else {
+                          // It's a file path - extract filename
+                          const parts = value.split('/');
+                          fullFileName = parts[parts.length - 1];
+                          displayName = fullFileName;
+                        }
+                      }
+
+                      // ✅ Truncate long filenames to max 8 characters + extension for table display
+                      if (displayName && displayName.length > 12 && !displayName.startsWith('📎')) {
+                        const ext = displayName.split('.').pop();
+                        const nameWithoutExt = displayName.substring(0, displayName.lastIndexOf('.'));
+                        // Shorten to 8 characters max
+                        displayName = nameWithoutExt.substring(0, 8) + '...' + ext;
+                      }
 
                       return (
-                        <td key={field.id} className="p-2 text-[12px] text-center">
-                          {fileCount > 0 ? (
-                            <div className="flex items-center justify-center gap-1">
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                              <span>{fileCount}</span>
-                            </div>
-                          ) : (
-                            '-'
-                          )}
+                        <td key={field.id} className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span className="truncate" title={fullFileName}>
+                              {displayName}
+                            </span>
+                          </div>
                         </td>
                       );
                     }
@@ -903,7 +1161,7 @@ export default function SubmissionDetail({
                       const isValidEmail = value && typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
                       return (
-                        <td key={field.id} className="p-2 text-[12px] text-center">
+                        <td key={field.id} className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center">
                           {isValidEmail ? (
                             <div className="flex items-center justify-center gap-1">
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -945,7 +1203,7 @@ export default function SubmissionDetail({
                       });
 
                       return (
-                        <td key={field.id} className="p-2 text-[12px] text-center">
+                        <td key={field.id} className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center">
                           {phoneProps.isClickable ? (
                             <div className="flex items-center justify-center gap-1">
                               <PhoneIcon />
@@ -962,6 +1220,52 @@ export default function SubmissionDetail({
                             </div>
                           ) : (
                             <span>{formatPhoneDisplay(value) || value || '-'}</span>
+                          )}
+                        </td>
+                      );
+                    }
+
+                    // Handle lat_long (coordinates) fields in table
+                    if (field.type === 'lat_long') {
+                      // Handle both {lat, lng} and {x, y} formats
+                      let lat = null;
+                      let lng = null;
+
+                      if (value && typeof value === 'object') {
+                        // Standard format: {lat, lng}
+                        if (value.lat !== undefined && value.lng !== undefined) {
+                          lat = parseFloat(value.lat);
+                          lng = parseFloat(value.lng);
+                        }
+                        // Alternative format: {x, y}
+                        else if (value.x !== undefined && value.y !== undefined) {
+                          lat = parseFloat(value.x);
+                          lng = parseFloat(value.y);
+                        }
+                      }
+
+                      const isValidCoordinates = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng);
+
+                      return (
+                        <td key={field.id} className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center">
+                          {isValidCoordinates ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <svg className="w-3 h-3 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <a
+                                href={`https://www.google.com/maps?q=${lat},${lng}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline"
+                                title={`ดูแผนที่: ${lat.toFixed(6)}, ${lng.toFixed(6)}`}
+                              >
+                                {`${lat.toFixed(4)}, ${lng.toFixed(4)}`}
+                              </a>
+                            </div>
+                          ) : (
+                            <span>{typeof value === 'object' ? JSON.stringify(value) : (value || '-')}</span>
                           )}
                         </td>
                       );
@@ -1007,7 +1311,7 @@ export default function SubmissionDetail({
                       const displayText = value && value.length > 20 ? `${value.substring(0, 20)}...` : value;
 
                       return (
-                        <td key={field.id} className="p-2 text-[12px] text-center">
+                        <td key={field.id} className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center">
                           {validUrl ? (
                             <div className="flex items-center justify-center gap-1">
                               <svg className="w-3 h-3 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1037,7 +1341,7 @@ export default function SubmissionDetail({
                       formattedValue = formatFieldValue(field, value);
                     }
                     return (
-                      <td key={field.id} className="p-2 text-[12px] text-center ">
+                      <td key={field.id} className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center ">
                         {formattedValue}
                       </td>
                     );
@@ -1047,12 +1351,13 @@ export default function SubmissionDetail({
                       <span className="text-muted-foreground">...</span>
                     </td>
                   )}
-                  <td className="p-1 sm:p-2 text-[10px] sm:text-[12px] text-center ">
-                    <span className="truncate block">
-                      {(() => {
-                        try {
-                          const date = new Date(subSub.submittedAt);
-                          if (isNaN(date.getTime())) return 'Invalid Date';
+                  {displayFields.length < 5 && (
+                    <td className="p-1 sm:p-2 text-[10px] sm:text-[12px] text-center ">
+                      <span className="truncate block">
+                        {(() => {
+                          try {
+                            const date = new Date(subSub.submittedAt);
+                            if (isNaN(date.getTime())) return 'Invalid Date';
                           const day = date.getDate().toString().padStart(2, '0');
                           const month = (date.getMonth() + 1).toString().padStart(2, '0');
                           const year = date.getFullYear();
@@ -1062,7 +1367,8 @@ export default function SubmissionDetail({
                         }
                       })()}
                     </span>
-                  </td>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -1078,7 +1384,8 @@ export default function SubmissionDetail({
     );
   };
 
-  if (loading) {
+  // Show loading only after 1 second delay
+  if (showLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
         <GlassCard className="glass-container">
@@ -1090,7 +1397,8 @@ export default function SubmissionDetail({
     );
   }
 
-  if (!form || !submission) {
+  // Only show "not found" error if loading is complete AND data is still missing
+  if (!loading && (!form || !submission)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
         <GlassCard className="glass-container">
@@ -1107,6 +1415,10 @@ export default function SubmissionDetail({
     );
   }
 
+  // Don't render main content until data is loaded
+  if (!form || !submission) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 relative">
@@ -1133,19 +1445,6 @@ export default function SubmissionDetail({
               )}
             </div>
 
-            {/* Edit button */}
-            {onEdit && (
-              <GlassButton
-                data-testid="edit-btn"
-                onClick={() => onEdit(submissionId)}
-                size="sm"
-                className="orange-neon-button flex items-center gap-2"
-                title="แก้ไขข้อมูล"
-              >
-                <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
-                <span className="hidden sm:inline">แก้ไข</span>
-              </GlassButton>
-            )}
           </div>
         </motion.div>
 
@@ -1157,64 +1456,96 @@ export default function SubmissionDetail({
           className="max-w-3xl mx-auto mb-8 relative"
         >
           {/* Previous Arrow - Floating Glass Button (Desktop) */}
-          {hasPrevious && onNavigatePrevious && (
-            <motion.div
-              onClick={onNavigatePrevious}
-              className="hidden lg:flex absolute -left-24 top-1/2 -translate-y-1/2 w-20 h-20 cursor-pointer group items-center justify-center"
-              title="คลิกเพื่อดูข้อมูลก่อนหน้า"
-              whileHover={{ scale: 1.1, x: -4 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {/* Glow Effect */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500/20 to-orange-600/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          {/* Show enabled version when hasPrevious, disabled version when !hasPrevious */}
+          <motion.div
+            onClick={hasPrevious && onNavigatePrevious ? onNavigatePrevious : undefined}
+            className={`hidden lg:flex absolute -left-24 top-1/2 -translate-y-1/2 w-20 h-20 items-center justify-center ${
+              hasPrevious && onNavigatePrevious ? 'cursor-pointer group' : 'cursor-not-allowed opacity-40'
+            }`}
+            title={hasPrevious ? "คลิกเพื่อดูข้อมูลก่อนหน้า" : "ไม่มีข้อมูลก่อนหน้า"}
+            whileHover={hasPrevious && onNavigatePrevious ? { scale: 1.15 } : {}}
+            whileTap={hasPrevious && onNavigatePrevious ? { scale: 0.9 } : {}}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+          >
+            {/* Glow Effect - Only show on enabled buttons */}
+            {hasPrevious && onNavigatePrevious && (
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500/30 to-orange-600/30 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            )}
 
-              {/* Glass Button */}
-              <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-white/10 to-white/5 dark:from-white/20 dark:to-white/10 backdrop-blur-xl border border-white/20 dark:border-white/30 shadow-2xl flex items-center justify-center overflow-hidden group-hover:border-orange-400/60 transition-all duration-300">
-                {/* Inner Glow */}
+            {/* Glass Button */}
+            <div className={`relative w-16 h-16 rounded-full bg-gradient-to-br backdrop-blur-xl border shadow-2xl flex items-center justify-center overflow-hidden transition-all duration-300 ${
+              hasPrevious && onNavigatePrevious
+                ? 'from-white/10 to-white/5 dark:from-white/20 dark:to-white/10 border-white/20 dark:border-white/30 group-hover:border-orange-400/60'
+                : 'from-gray-400/10 to-gray-500/5 dark:from-gray-600/20 dark:to-gray-700/10 border-gray-400/20 dark:border-gray-500/30'
+            }`}>
+              {/* Inner Glow - Only on enabled buttons */}
+              {hasPrevious && onNavigatePrevious && (
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-400/0 to-orange-600/0 group-hover:from-orange-400/30 group-hover:to-orange-600/30 transition-all duration-500" />
+              )}
 
-                {/* Icon */}
-                <svg xmlns="http://www.w3.org/2000/svg" className="relative h-7 w-7 text-gray-700 dark:text-gray-300 group-hover:text-orange-500 dark:group-hover:text-orange-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
-                </svg>
+              {/* Icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" className={`relative h-7 w-7 transition-colors duration-300 ${
+                hasPrevious && onNavigatePrevious
+                  ? 'text-gray-700 dark:text-gray-300 group-hover:text-orange-500 dark:group-hover:text-orange-400'
+                  : 'text-gray-400 dark:text-gray-600'
+              }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+              </svg>
 
-                {/* Shimmer Effect */}
+              {/* Shimmer Effect - Only on enabled buttons */}
+              {hasPrevious && onNavigatePrevious && (
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
                 </div>
-              </div>
-            </motion.div>
-          )}
+              )}
+            </div>
+          </motion.div>
 
           {/* Next Arrow - Floating Glass Button (Desktop) */}
-          {hasNext && onNavigateNext && (
-            <motion.div
-              onClick={onNavigateNext}
-              className="hidden lg:flex absolute -right-24 top-1/2 -translate-y-1/2 w-20 h-20 cursor-pointer group items-center justify-center"
-              title="คลิกเพื่อดูข้อมูลถัดไป"
-              whileHover={{ scale: 1.1, x: 4 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {/* Glow Effect */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-l from-orange-500/20 to-orange-600/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          {/* Show enabled version when hasNext, disabled version when !hasNext */}
+          <motion.div
+            onClick={hasNext && onNavigateNext ? onNavigateNext : undefined}
+            className={`hidden lg:flex absolute -right-24 top-1/2 -translate-y-1/2 w-20 h-20 items-center justify-center ${
+              hasNext && onNavigateNext ? 'cursor-pointer group' : 'cursor-not-allowed opacity-40'
+            }`}
+            title={hasNext ? "คลิกเพื่อดูข้อมูลถัดไป" : "ไม่มีข้อมูลถัดไป"}
+            whileHover={hasNext && onNavigateNext ? { scale: 1.15 } : {}}
+            whileTap={hasNext && onNavigateNext ? { scale: 0.9 } : {}}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+          >
+            {/* Glow Effect - Only show on enabled buttons */}
+            {hasNext && onNavigateNext && (
+              <div className="absolute inset-0 rounded-full bg-gradient-to-l from-orange-500/30 to-orange-600/30 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            )}
 
-              {/* Glass Button */}
-              <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-white/10 to-white/5 dark:from-white/20 dark:to-white/10 backdrop-blur-xl border border-white/20 dark:border-white/30 shadow-2xl flex items-center justify-center overflow-hidden group-hover:border-orange-400/60 transition-all duration-300">
-                {/* Inner Glow */}
+            {/* Glass Button */}
+            <div className={`relative w-16 h-16 rounded-full bg-gradient-to-br backdrop-blur-xl border shadow-2xl flex items-center justify-center overflow-hidden transition-all duration-300 ${
+              hasNext && onNavigateNext
+                ? 'from-white/10 to-white/5 dark:from-white/20 dark:to-white/10 border-white/20 dark:border-white/30 group-hover:border-orange-400/60'
+                : 'from-gray-400/10 to-gray-500/5 dark:from-gray-600/20 dark:to-gray-700/10 border-gray-400/20 dark:border-gray-500/30'
+            }`}>
+              {/* Inner Glow - Only on enabled buttons */}
+              {hasNext && onNavigateNext && (
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-400/0 to-orange-600/0 group-hover:from-orange-400/30 group-hover:to-orange-600/30 transition-all duration-500" />
+              )}
 
-                {/* Icon */}
-                <svg xmlns="http://www.w3.org/2000/svg" className="relative h-7 w-7 text-gray-700 dark:text-gray-300 group-hover:text-orange-500 dark:group-hover:text-orange-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                </svg>
+              {/* Icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" className={`relative h-7 w-7 transition-colors duration-300 ${
+                hasNext && onNavigateNext
+                  ? 'text-gray-700 dark:text-gray-300 group-hover:text-orange-500 dark:group-hover:text-orange-400'
+                  : 'text-gray-400 dark:text-gray-600'
+              }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+              </svg>
 
-                {/* Shimmer Effect */}
+              {/* Shimmer Effect - Only on enabled buttons */}
+              {hasNext && onNavigateNext && (
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
                 </div>
-              </div>
-            </motion.div>
-          )}
+              )}
+            </div>
+          </motion.div>
 
           {/* Previous Click Area - Arrows on narrow screens */}
           {hasPrevious && onNavigatePrevious && (
@@ -1256,12 +1587,17 @@ export default function SubmissionDetail({
           >
             <div className="p-4">
               <div className="space-y-2 sm:space-y-3">
-                {(form.fields || []).map(field => {
-                  // Extract value from API response structure: {fieldId, fieldTitle, fieldType, value}
-                  const fieldData = submission.data[field.id];
-                  const value = fieldData?.value !== undefined ? fieldData.value : fieldData;
-                  return renderFieldValue(field, value);
-                })}
+                {/* ⚠️ CRITICAL FIX: Filter out sub-form fields (sub_form_id !== null) and sort by order */}
+                {/* Only display main form fields in the main form section */}
+                {(form.fields || [])
+                  .filter(field => !field.sub_form_id && !field.subFormId)
+                  .sort((a, b) => (a.order || 0) - (b.order || 0))
+                  .map(field => {
+                    // Extract value from API response structure: {fieldId, fieldTitle, fieldType, value}
+                    const fieldData = submission.data[field.id];
+                    const value = fieldData?.value !== undefined ? fieldData.value : fieldData;
+                    return renderFieldValue(field, value);
+                  })}
               </div>
             </div>
           </GlassCard>

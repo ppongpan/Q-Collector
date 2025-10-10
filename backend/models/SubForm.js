@@ -90,6 +90,8 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'sub_form_id',
       as: 'fields',
       onDelete: 'CASCADE',
+      // IMPORTANT: Use 'order' column, NOT 'order_index'
+      order: [['order', 'ASC']]
     });
   };
 

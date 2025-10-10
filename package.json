@@ -1,6 +1,6 @@
 {
   "name": "q-collector",
-  "version": "0.6.6",
+  "version": "0.7.5-dev",
   "private": true,
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -64,6 +64,7 @@
     "@craco/craco": "^7.1.0",
     "@playwright/test": "^1.55.1",
     "autoprefixer": "^10.4.14",
+    "pg": "^8.16.3",
     "postcss": "^8.4.24",
     "shadcn": "^3.3.1",
     "tailwindcss": "^3.3.0"

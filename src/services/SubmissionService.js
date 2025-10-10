@@ -84,8 +84,24 @@ class SubmissionService {
         ...processedFiles
       };
 
-      // Submit to backend API
-      const response = await apiClient.createSubmission(formId, completeData, {
+      // ⚠️ CRITICAL FIX: Filter out sub-form fields before sending to API
+      // Only send main form fields (where sub_form_id is null/undefined)
+      const mainFormFieldData = {};
+      const mainFormFieldIds = new Set(
+        form.fields
+          .filter(field => !field.sub_form_id && !field.subFormId)
+          .map(field => field.id)
+      );
+
+      // Only include data for main form fields
+      Object.keys(completeData).forEach(key => {
+        if (mainFormFieldIds.has(key) || key === 'documentNumber') {
+          mainFormFieldData[key] = completeData[key];
+        }
+      });
+
+      // Submit to backend API with filtered data
+      const response = await apiClient.createSubmission(formId, mainFormFieldData, {
         ipAddress: await this.getClientIP(),
         userAgent: navigator.userAgent
       });
@@ -343,7 +359,11 @@ class SubmissionService {
   validateFormData(form, formData, files = [], existingData = null) {
     const errors = [];
 
-    form.fields.forEach(field => {
+    // ⚠️ CRITICAL FIX: Filter out sub-form fields (sub_form_id !== null)
+    // Only validate main form fields during main form submission
+    const mainFormFields = form.fields.filter(field => !field.sub_form_id && !field.subFormId);
+
+    mainFormFields.forEach(field => {
       const value = formData[field.id];
       const fieldErrors = this.validateField(field, value, files, existingData);
       errors.push(...fieldErrors);
@@ -534,8 +554,10 @@ class SubmissionService {
 
     for (const fileInfo of files) {
       try {
-        // If this is already processed file data from FileService, use it directly
-        if (fileInfo.data && fileInfo.uploadedAt) {
+        // ✅ FIX: Check if this is a pre-uploaded file from MinIO (has id property)
+        // Pre-uploaded files from FileService/MinIO have: id, fieldId, name, type, size
+        if (fileInfo.id && fileInfo.fieldId) {
+          // This is already uploaded to MinIO - use it directly
           // Group files by fieldId
           if (!processedFiles[fileInfo.fieldId]) {
             processedFiles[fileInfo.fieldId] = [];
@@ -547,16 +569,23 @@ class SubmissionService {
             name: fileInfo.name,
             type: fileInfo.type,
             size: fileInfo.size,
-            data: fileInfo.data,
-            uploadedAt: fileInfo.uploadedAt,
+            uploadedAt: fileInfo.uploadedAt || new Date().toISOString(),
             isImage: fileInfo.isImage || fileInfo.type?.startsWith('image/')
           };
 
           processedFiles[fileInfo.fieldId].push(processedFile);
-        } else {
-          // If this is a raw File object, process it normally
+          console.log(`✅ Using pre-uploaded file: ${fileInfo.name} (ID: ${fileInfo.id})`);
+        } else if (fileInfo instanceof File || fileInfo instanceof Blob) {
+          // This is a raw File object from browser - process it
+          console.log(`⚠️ Raw File object detected: ${fileInfo.name} - should be uploaded via FileService first`);
           const fileData = await this.processFile(fileInfo);
-          processedFiles[fileInfo.fieldId] = fileData;
+          if (!processedFiles[fileInfo.fieldId]) {
+            processedFiles[fileInfo.fieldId] = [];
+          }
+          processedFiles[fileInfo.fieldId].push(fileData);
+        } else {
+          console.error('Invalid file object - neither pre-uploaded nor File instance:', fileInfo);
+          throw new Error('Invalid file object provided');
         }
       } catch (error) {
         console.error(`Error processing file for field ${fileInfo.fieldId}:`, error);

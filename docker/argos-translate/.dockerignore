@@ -1,0 +1,11 @@
+# Ignore files not needed in Docker image
+*.md
+.git
+.gitignore
+*.log
+logs/
+__pycache__/
+*.pyc
+.env
+.vscode/
+.idea/

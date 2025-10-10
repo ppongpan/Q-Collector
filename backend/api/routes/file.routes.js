@@ -53,6 +53,18 @@ const fileFilter = (req, file, cb) => {
     'application/zip',
     'application/x-zip-compressed',
     'application/x-rar-compressed',
+    // CAD/Design Files
+    'application/acad',                    // .dwg AutoCAD files
+    'application/x-acad',                  // .dwg alternate MIME
+    'application/autocad_dwg',             // .dwg alternate MIME
+    'image/vnd.dwg',                       // .dwg alternate MIME
+    'image/x-dwg',                         // .dwg alternate MIME
+    'application/dwg',                     // .dwg generic
+    'application/x-dwg',                   // .dwg generic
+    'application/vnd.sketchup.skp',        // .skp SketchUp files
+    'application/sketchup',                // .skp alternate MIME
+    'model/vnd.sketchup.skp',              // .skp alternate MIME
+    'application/octet-stream',            // Generic binary (fallback for .dwg, .skp if browser doesn't recognize)
   ];
 
   if (allowedMimeTypes.includes(file.mimetype)) {

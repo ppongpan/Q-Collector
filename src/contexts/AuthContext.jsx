@@ -39,23 +39,54 @@ export function AuthProvider({ children }) {
       try {
         if (AuthService.isAuthenticated()) {
           const storedUser = AuthService.getStoredUser();
-          setUser(storedUser);
 
-          // Check if token needs refresh
-          if (AuthService.shouldRefresh()) {
-            try {
-              await AuthService.refreshToken();
-              const updatedUser = AuthService.getStoredUser();
-              setUser(updatedUser);
-            } catch (error) {
-              console.error('Token refresh failed:', error);
-              setUser(null);
+          // ✅ FIX: Set user immediately from localStorage to prevent logout on refresh
+          // This prevents the flash of login screen during token validation
+          if (storedUser) {
+            setUser(storedUser);
+          }
+
+          // Validate token with backend in the background (non-blocking)
+          try {
+            // Try to fetch current user to validate token
+            const validUser = await AuthService.getCurrentUser();
+            // Update user with fresh data from backend
+            if (validUser) {
+              setUser(validUser);
+            }
+          } catch (error) {
+            // ⚠️ Only clear session if token is definitely invalid
+            // Network errors or temporary backend issues should NOT logout the user
+
+            if (error.response?.status === 401 || error.response?.status === 403) {
+              // Token is invalid (401) or forbidden (403) - try to refresh
+              console.info('Token validation failed - attempting refresh');
+
+              try {
+                await AuthService.refreshToken();
+                const updatedUser = await AuthService.getCurrentUser();
+                setUser(updatedUser);
+                console.info('Token refreshed successfully');
+              } catch (refreshError) {
+                // Only logout if refresh also fails
+                console.info('Token refresh failed - session expired');
+                AuthService.clearTokens();
+                setUser(null);
+              }
+            } else {
+              // Network error or server error - keep user logged in
+              console.warn('Token validation failed (network/server error) - keeping session:', error.message);
+              // Keep the stored user - don't logout on network errors
             }
           }
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        setUser(null);
+        // Only clear tokens if there's a critical error
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          AuthService.clearTokens();
+          setUser(null);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -85,6 +116,26 @@ export function AuthProvider({ children }) {
     return () => clearInterval(interval);
   }, [user]);
 
+  // ✅ FIX: Listen for session expiry events from ApiClient
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      console.info('[AuthContext] Session expired event received - logging out');
+      // Clear user state and tokens
+      setUser(null);
+      // Clear tokens using localStorage directly (AuthService uses tokenManager.clearTokens())
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      // Note: No need to navigate here - React Router will handle redirect via PrivateRoute
+    };
+
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+
+    return () => {
+      window.removeEventListener('auth:session-expired', handleSessionExpired);
+    };
+  }, []);
+
   /**
    * Login with username/email and password
    */
@@ -92,8 +143,8 @@ export function AuthProvider({ children }) {
     setIsAuthenticating(true);
     try {
       const response = await AuthService.login(identifier, password, deviceFingerprint);
-      // Only set user if not requiring 2FA
-      if (!response.requires2FA && response.user) {
+      // Only set user if not requiring 2FA or 2FA setup
+      if (!response.requires2FA && !response.requires2FASetup && response.user) {
         setUser(response.user);
       }
       return response;
@@ -111,7 +162,12 @@ export function AuthProvider({ children }) {
     setIsAuthenticating(true);
     try {
       const response = await AuthService.register(userData);
-      setUser(response.user);
+
+      // Only set user if 2FA setup is not required
+      if (response.data?.requires_2fa_setup !== true) {
+        setUser(response.user);
+      }
+
       return response;
     } catch (error) {
       throw error;

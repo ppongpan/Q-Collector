@@ -19,6 +19,8 @@ const Session = require('./Session');
 const Translation = require('./Translation');
 const APIUsage = require('./APIUsage');
 const TelegramSettings = require('./TelegramSettings');
+const FieldMigration = require('./FieldMigration');
+const FieldDataBackup = require('./FieldDataBackup');
 
 // Initialize models with sequelize instance
 const models = {
@@ -34,6 +36,8 @@ const models = {
   Translation: Translation(sequelize, Sequelize.DataTypes),
   APIUsage: APIUsage(sequelize, Sequelize.DataTypes),
   TelegramSettings: TelegramSettings(sequelize, Sequelize.DataTypes),
+  FieldMigration: FieldMigration(sequelize, Sequelize.DataTypes),
+  FieldDataBackup: FieldDataBackup(sequelize, Sequelize.DataTypes),
 };
 
 // Set up associations between models

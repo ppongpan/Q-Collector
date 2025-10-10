@@ -128,16 +128,62 @@ export function RegisterPage() {
       // Map department to role
       const role = mapDepartmentToRole(formData.department);
 
-      await register({
+      const response = await register({
         username: formData.username.trim(),
         email: formData.email.trim(),
         full_name: formData.full_name.trim(),
         password: formData.password,
         role: role
       });
-      navigate('/'); // Redirect to home after successful registration
+
+      console.log('RegisterPage - Registration response:', response);
+
+      // Check if user requires 2FA setup
+      // AuthService.register returns { user, data: { requires_2fa_setup, tempToken, user } }
+      if (response?.data?.requires_2fa_setup === true && response?.data?.tempToken) {
+        console.log('RegisterPage - User requires 2FA setup, redirecting to setup page');
+        navigate('/2fa-setup', {
+          state: {
+            tempToken: response.data.tempToken,
+            username: response.user?.username || formData.username.trim(),
+            mandatory: true
+          },
+          replace: true
+        });
+        return;
+      }
+
+      // Normal registration - redirect to home
+      navigate('/');
     } catch (error) {
-      setApiError(error.message || 'สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+      console.error('RegisterPage - Registration error:', error);
+
+      // Parse error message to provide user-friendly feedback
+      let errorMessage = 'สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+
+      if (error.message) {
+        const message = error.message.toLowerCase();
+
+        // Check for specific error types
+        if (message.includes('email already registered') || message.includes('duplicate_email')) {
+          errorMessage = '❌ อีเมลนี้ถูกใช้งานแล้ว\n\n💡 วิธีแก้:\n• ใช้อีเมลอื่นที่ยังไม่เคยลงทะเบียน\n• หากลืมรหัสผ่าน ให้ติดต่อผู้ดูแลระบบ';
+        } else if (message.includes('username already taken') || message.includes('duplicate_username')) {
+          errorMessage = '❌ ชื่อผู้ใช้นี้ถูกใช้งานแล้ว\n\n💡 วิธีแก้:\n• เลือกชื่อผู้ใช้ใหม่ที่ยังไม่มีในระบบ\n• ลองเพิ่มตัวเลขหรือชื่อที่ไม่ซ้ำกัน';
+        } else if (message.includes('username must be') || message.includes('validation')) {
+          errorMessage = '❌ ข้อมูลไม่ถูกต้อง\n\n💡 กรุณาตรวจสอบ:\n• ชื่อผู้ใช้: 3-50 ตัวอักษร (a-z, A-Z, 0-9)\n• อีเมล: รูปแบบที่ถูกต้อง\n• รหัสผ่าน: 8 ตัวอักษรขึ้นไป มีตัวพิมพ์ใหญ่ เล็ก และตัวเลข';
+        } else if (message.includes('password must') || message.includes('weak password')) {
+          errorMessage = '❌ รหัสผ่านไม่ปลอดภัย\n\n💡 รหัสผ่านต้องมี:\n• อย่างน้อย 8 ตัวอักษร\n• ตัวพิมพ์ใหญ่ (A-Z)\n• ตัวพิมพ์เล็ก (a-z)\n• ตัวเลข (0-9)';
+        } else if (message.includes('rate limit') || message.includes('too many')) {
+          errorMessage = '❌ ลงทะเบียนบ่อยเกินไป\n\n💡 วิธีแก้:\n• รอสักครู่แล้วลองใหม่\n• จำกัด 5 ครั้งต่อชั่วโมง';
+        } else if (message.includes('network') || message.includes('fetch')) {
+          errorMessage = '❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์\n\n💡 วิธีแก้:\n• ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต\n• ตรวจสอบว่าเซิร์ฟเวอร์ทำงานอยู่';
+        } else {
+          // Use the original error message if not matched
+          errorMessage = `❌ เกิดข้อผิดพลาด\n\n${error.message}\n\n💡 หากปัญหายังคงอยู่ กรุณาติดต่อผู้ดูแลระบบ`;
+        }
+      }
+
+      setApiError(errorMessage);
     }
   };
 
@@ -192,9 +238,11 @@ export function RegisterPage() {
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm"
+                  className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm"
                 >
-                  {apiError}
+                  <div className="whitespace-pre-line leading-relaxed">
+                    {apiError}
+                  </div>
                 </motion.div>
               )}
 

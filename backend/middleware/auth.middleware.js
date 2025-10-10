@@ -279,6 +279,47 @@ function requireSuperAdmin(req, res, next) {
 }
 
 /**
+ * Check if user requires 2FA setup
+ * Block access to protected routes if user needs to setup 2FA
+ * Allows access to: /auth/*, /2fa/setup-required, /2fa/enable-required
+ */
+function requireCompletedSetup(req, res, next) {
+  try {
+    if (!req.user) {
+      throw new ApiError(401, 'Authentication required', 'AUTH_REQUIRED');
+    }
+
+    // Skip check for 2FA setup routes
+    const allowedPaths = [
+      '/api/v1/auth/logout',
+      '/api/v1/2fa/setup-required',
+      '/api/v1/2fa/enable-required'
+    ];
+
+    if (allowedPaths.includes(req.path)) {
+      return next();
+    }
+
+    // Check if user requires 2FA setup
+    if (req.user.requires_2fa_setup === true) {
+      logger.warn(
+        `2FA setup required: ${req.user.username} attempted to access ${req.method} ${req.path}`
+      );
+      throw new ApiError(
+        403,
+        'Please complete 2FA setup before accessing the system',
+        'TWO_FACTOR_SETUP_REQUIRED',
+        { requires_2fa_setup: true }
+      );
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Attach request metadata (IP, user agent) to req
  */
 function attachMetadata(req, res, next) {
@@ -309,6 +350,7 @@ module.exports = {
   authRateLimit,
   requireActiveAccount,
   requireSuperAdmin,
+  requireCompletedSetup,
   attachMetadata,
   extractToken,
 };

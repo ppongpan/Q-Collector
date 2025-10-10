@@ -209,4 +209,41 @@ router.post(
   })
 );
 
+/**
+ * DELETE /api/v1/users/:id
+ * Delete user (Super Admin only)
+ */
+router.delete(
+  '/:id',
+  authenticate,
+  requireSuperAdmin,
+  [param('id').isUUID().withMessage('Invalid user ID')],
+  validate,
+  asyncHandler(async (req, res) => {
+    const userId = req.params.id;
+
+    // Prevent deleting yourself
+    if (userId === req.user.id) {
+      throw new ApiError(400, 'Cannot delete your own account', 'CANNOT_DELETE_SELF');
+    }
+
+    const user = await UserService.getUserById(userId);
+    if (!user) {
+      throw new ApiError(404, 'User not found', 'USER_NOT_FOUND');
+    }
+
+    await UserService.deleteUser(userId);
+
+    logger.info(`User deleted by ${req.user.username}`, {
+      deletedUserId: userId,
+      deletedUsername: user.username,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'User deleted successfully',
+    });
+  })
+);
+
 module.exports = router;

@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     submission_id: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,  // Allow null for files uploaded before submission creation
       references: {
         model: 'submissions',
         key: 'id',
@@ -158,16 +158,37 @@ module.exports = (sequelize, DataTypes) => {
 
   /**
    * Convert to JSON with additional metadata
+   * ✅ Returns camelCase properties for frontend compatibility
    * @returns {Object}
    */
   File.prototype.toJSON = function() {
     const values = { ...this.get() };
-    values.humanSize = this.getHumanSize();
-    values.isImage = this.isImage();
-    values.isDocument = this.isDocument();
-    values.extension = this.getExtension();
-    values.downloadUrl = this.getDownloadUrl();
-    return values;
+
+    // Convert snake_case database fields to camelCase for frontend
+    const camelCaseValues = {
+      id: values.id,
+      submissionId: values.submission_id,
+      fieldId: values.field_id,
+      filename: values.filename,
+      originalName: values.original_name,  // ✅ Convert snake_case to camelCase
+      mimeType: values.mime_type,          // ✅ Convert snake_case to camelCase
+      size: values.size,
+      minioPath: values.minio_path,
+      minioBucket: values.minio_bucket,
+      checksum: values.checksum,
+      uploadedBy: values.uploaded_by,
+      uploadedAt: values.uploaded_at,
+      createdAt: values.createdAt,
+      updatedAt: values.updatedAt,
+      // Additional metadata
+      humanSize: this.getHumanSize(),
+      isImage: this.isImage(),
+      isDocument: this.isDocument(),
+      extension: this.getExtension(),
+      downloadUrl: this.getDownloadUrl()
+    };
+
+    return camelCaseValues;
   };
 
   /**

@@ -3,10 +3,10 @@
  * รองรับ responsive design และ modal สำหรับดูรูปเต็มขนาด
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/cn';
-import FileService from '../../services/FileService';
+import fileServiceAPI from '../../services/FileService.api';
 
 const ImageThumbnail = ({
   file,
@@ -38,15 +38,15 @@ const ImageThumbnail = ({
   const handleDownload = (e) => {
     e.stopPropagation();
     console.log('ImageThumbnail download:', file);
-    if (file && file.id) {
-      const success = FileService.downloadFile(file.id);
-      console.log('Download result:', success);
-      if (!success) {
-        console.warn('Failed to download file:', file);
-      }
-    } else {
-      console.warn('Invalid file object for download:', file);
+
+    if (!file || !file.presignedUrl) {
+      console.warn('Invalid file object for download (no presignedUrl):', file);
+      return;
     }
+
+    // ✅ FIX: Open in new tab without changing current tab
+    // Use window.open() to open in background tab
+    window.open(file.presignedUrl, '_blank', 'noopener,noreferrer');
   };
 
   const formatFileSize = (bytes) => {
@@ -61,9 +61,8 @@ const ImageThumbnail = ({
     const [localImageLoaded, setLocalImageLoaded] = React.useState(false);
     const [localImageError, setLocalImageError] = React.useState(false);
 
-    const fileData = FileService.getFile(file.id);
-
-    if (!fileData || !fileData.data) {
+    // Check if we have presigned URL (new MinIO way)
+    if (!file.presignedUrl) {
       return (
         <div className="w-full h-full bg-muted/40 rounded-lg flex items-center justify-center">
           <svg className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,7 +78,7 @@ const ImageThumbnail = ({
 
     return (
       <img
-        src={fileData.data}
+        src={file.presignedUrl}
         alt={file.name}
         className={cn(
           'object-cover rounded-lg transition-all duration-300',
@@ -189,14 +188,14 @@ const ImageThumbnail = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95"
             onClick={() => setShowModal(false)}
           >
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              className="relative max-w-7xl max-h-full bg-background dark:bg-gray-900 backdrop-blur-md rounded-xl border border-border dark:border-gray-600/50 shadow-2xl"
+              className="relative max-w-7xl max-h-full bg-gray-900/95 backdrop-blur-lg rounded-xl border border-gray-700 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
@@ -255,15 +254,14 @@ const FilePreview = ({
   const handleDownload = (e) => {
     e.stopPropagation();
     console.log('FilePreview download:', file);
-    if (file && file.id) {
-      const success = FileService.downloadFile(file.id);
-      console.log('Download result:', success);
-      if (!success) {
-        console.warn('Failed to download file:', file);
-      }
-    } else {
-      console.warn('Invalid file object for download:', file);
+
+    if (!file || !file.presignedUrl) {
+      console.warn('Invalid file object for download (no presignedUrl):', file);
+      return;
     }
+
+    // ✅ FIX: Open in new tab without changing current tab
+    window.open(file.presignedUrl, '_blank', 'noopener,noreferrer');
   };
 
   const formatFileSize = (bytes) => {
@@ -375,7 +373,11 @@ const FileGallery = ({
               file={file}
               size={size}
               showInfo={showFileNames}
-              onClick={() => FileService.downloadFile(file.id)}
+              onClick={() => {
+                if (!file.presignedUrl) return;
+                // ✅ FIX: Open in new tab without changing current tab
+                window.open(file.presignedUrl, '_blank', 'noopener,noreferrer');
+              }}
             />
           )
         ))}

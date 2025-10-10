@@ -202,6 +202,43 @@ router.post(
 
     logger.info(`User registered successfully: ${username}`);
 
+    // Clear user list cache to reflect the new user
+    const cacheService = require('../../services/CacheService');
+    await cacheService.deleteByTags(['user', 'list']);
+
+    // Check if user requires mandatory 2FA setup
+    if (result.user.requires_2fa_setup === true) {
+      // Generate temporary token for 2FA setup (15 minutes expiry)
+      const tempToken = jwt.sign(
+        {
+          userId: result.user.id,  // Changed from 'id' to 'userId' to match verification
+          username: result.user.username,
+          type: 'mandatory_2fa_setup',  // Fixed: Changed from 'temp' to match endpoint check
+          requires_2fa_setup: true
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '15m' }
+      );
+
+      logger.info(`User ${username} requires 2FA setup - returning tempToken`);
+
+      return res.status(201).json({
+        success: true,
+        message: 'User registered successfully. Please setup 2FA to continue.',
+        data: {
+          user: {
+            id: result.user.id,
+            username: result.user.username,
+            email: result.user.email,
+            full_name: result.user.full_name,
+          },
+          requires_2fa_setup: true,
+          tempToken,
+        },
+      });
+    }
+
+    // Normal registration (no 2FA required)
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
@@ -326,8 +363,62 @@ router.post(
       throw new ApiError(401, 'Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
+    // Check if user requires mandatory 2FA setup (admin-created accounts)
+    if (user.requires_2fa_setup) {
+      logger.info(`Mandatory 2FA setup required for user: ${user.username}`);
+
+      // Generate temporary token for mandatory 2FA setup (10 minutes)
+      const tempToken = jwt.sign(
+        {
+          userId: user.id,
+          type: 'mandatory_2fa_setup',
+          username: user.username
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '10m' }
+      );
+
+      return res.status(200).json({
+        success: true,
+        requires2FASetup: true,
+        mandatory: true,
+        message: 'คุณต้องตั้งค่า 2FA ก่อนเข้าใช้งาน',
+        data: {
+          tempToken,
+          username: user.username
+        }
+      });
+    }
+
     // Check if user has 2FA enabled
     if (user.twoFactorEnabled) {
+      // Check if 2FA secret exists (setup completed)
+      if (!user.twoFactorSecret) {
+        // 2FA enabled but not set up yet - require setup
+        logger.info(`2FA setup required for user: ${user.username}`);
+
+        // Generate temporary token for 2FA setup
+        const tempToken = jwt.sign(
+          {
+            userId: user.id,
+            type: 'temp_2fa_setup',
+            username: user.username
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: '10m' }
+        );
+
+        return res.status(200).json({
+          success: true,
+          requires2FASetup: true,
+          message: '2FA setup required',
+          data: {
+            tempToken,
+            username: user.username
+          }
+        });
+      }
+
       // Check if device is trusted (skip 2FA if trusted)
       if (deviceFingerprint) {
         const isTrusted = await trustedDeviceService.isDeviceTrusted(
@@ -408,7 +499,7 @@ router.post(
 router.post(
   '/login/2fa',
   attachMetadata,
-  authRateLimit(5, 15 * 60 * 1000), // 5 attempts per 15 minutes
+  authRateLimit(50, 5 * 60 * 1000), // 50 attempts per 5 minutes - increased to prevent false positives from auto-submit
   [
     body('tempToken')
       .notEmpty()
@@ -757,6 +848,202 @@ router.post(
     res.status(200).json({
       success: true,
       message: 'เปิดใช้งาน 2FA สำเร็จ',
+    });
+  })
+);
+
+/**
+ * POST /api/v1/2fa/init-mandatory-setup
+ * Initialize mandatory 2FA setup - Get QR code and backup codes
+ */
+router.post(
+  '/2fa/init-mandatory-setup',
+  // authRateLimit, // Temporarily disabled for debugging
+  [
+    body('tempToken').notEmpty().withMessage('Temporary token is required'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    logger.info('=== INIT MANDATORY 2FA SETUP REQUEST RECEIVED ===');
+    logger.info('Request body:', req.body);
+
+    const { tempToken } = req.body;
+
+    // Verify temp token
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+      logger.info('Token decoded:', { userId: decoded.userId, type: decoded.type, username: decoded.username });
+
+      if (decoded.type !== 'mandatory_2fa_setup') {
+        throw new ApiError(401, 'Invalid temporary token');
+      }
+    } catch (error) {
+      logger.error('Token verification failed:', error);
+      throw new ApiError(401, 'Temporary token expired or invalid');
+    }
+
+    logger.info('Generating 2FA setup data for userId:', decoded.userId);
+
+    // Get user
+    const { User } = require('../../models');
+    const user = await User.findByPk(decoded.userId);
+
+    if (!user) {
+      throw new ApiError(404, 'User not found');
+    }
+
+    // Generate 2FA setup data
+    const setupData = await twoFactorService.generateSecret(user);
+
+    logger.info(`Mandatory 2FA setup initialized for user: ${decoded.username}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'สร้างข้อมูลการตั้งค่า 2FA สำเร็จ',
+      data: setupData,
+    });
+  })
+);
+
+/**
+ * POST /api/v1/2fa/complete-mandatory-setup
+ * Complete mandatory 2FA setup for admin-created accounts
+ */
+router.post(
+  '/2fa/complete-mandatory-setup',
+  // authRateLimit, // Temporarily disabled for debugging
+  [
+    body('tempToken').notEmpty().withMessage('Temporary token is required'),
+    body('verificationCode').notEmpty().withMessage('Verification code is required'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { tempToken, verificationCode } = req.body;
+
+    // DEBUG: Log request details
+    logger.info('[COMPLETE-MANDATORY-SETUP] Request received:', {
+      hasTempToken: !!tempToken,
+      tempTokenLength: tempToken?.length,
+      tempTokenPreview: tempToken?.substring(0, 20) + '...',
+      hasVerificationCode: !!verificationCode,
+      verificationCode: verificationCode
+    });
+
+    // Verify temp token
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+      logger.info('[COMPLETE-MANDATORY-SETUP] Token decoded:', { decoded });
+
+      if (decoded.type !== 'mandatory_2fa_setup') {
+        logger.error('[COMPLETE-MANDATORY-SETUP] Invalid token type:', decoded.type);
+        throw new ApiError(401, 'Invalid temporary token');
+      }
+    } catch (error) {
+      logger.error('[COMPLETE-MANDATORY-SETUP] JWT verification failed:', {
+        error: error.message,
+        stack: error.stack
+      });
+      throw new ApiError(401, 'Temporary token expired or invalid');
+    }
+
+    const { User } = require('../../models');
+    const user = await User.findByPk(decoded.userId);
+
+    if (!user) {
+      throw new ApiError(400, 'User not found');
+    }
+
+    // If 2FA is already enabled, return success (idempotent operation)
+    if (!user.requires_2fa_setup && user.twoFactorEnabled) {
+      logger.info(`User ${user.username} already has 2FA enabled, returning existing session`);
+      const tokens = await AuthService.generateTokens(user, req.metadata);
+      return res.status(200).json({
+        success: true,
+        message: '2FA is already enabled for this account',
+        tokens,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role
+        }
+      });
+    }
+
+    // If not in setup state, reject
+    if (!user.requires_2fa_setup) {
+      throw new ApiError(400, 'Invalid 2FA setup request');
+    }
+
+    // Get temporary 2FA secret from cache (stored during init-mandatory-setup)
+    const tempData = await cacheService.get(`2fa:temp:${user.id}`);
+    if (!tempData || !tempData.secret) {
+      throw new ApiError(400, 'Setup session expired. Please restart the 2FA setup process.');
+    }
+
+    // Extract secret string from cached data
+    const tempSecret = tempData.secret;
+
+    // Verify 2FA token using temporary secret
+    const speakeasy = require('speakeasy');
+    const verified = speakeasy.totp.verify({
+      secret: tempSecret,
+      encoding: 'base32',
+      token: verificationCode,
+      window: 2
+    });
+
+    if (!verified) {
+      throw new ApiError(401, 'Invalid verification code');
+    }
+
+    // Verification successful - encrypt and save the secret permanently
+    const crypto = require('crypto');
+    const encryptSecret = (secret) => {
+      const algorithm = 'aes-256-cbc';
+      const key = crypto.scryptSync(process.env.ENCRYPTION_KEY, 'salt', 32);
+      const iv = crypto.randomBytes(16);
+      const cipher = crypto.createCipheriv(algorithm, key, iv);
+      let encrypted = cipher.update(secret, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      return iv.toString('hex') + ':' + encrypted;
+    };
+
+    user.twoFactorSecret = encryptSecret(tempSecret);
+    user.twoFactorEnabled = true;
+    user.twoFactorEnabledAt = new Date();
+    user.requires_2fa_setup = false;
+    user.last_login_at = new Date();
+    await user.save();
+
+    // Clear temporary secret from cache
+    await cacheService.delete(`2fa:temp:${user.id}`);
+
+    // Generate full access tokens
+    const tokens = await AuthService.generateTokens(user, req.metadata);
+
+    // Create audit log
+    const { AuditLog } = require('../../models');
+    await AuditLog.logAction({
+      userId: user.id,
+      action: 'update',
+      entityType: 'user',
+      ipAddress: req.metadata?.ipAddress,
+      userAgent: req.metadata?.userAgent,
+      details: { action: '2fa_enabled', mandatory: true, method: 'mandatory_setup' }
+    });
+
+    logger.info(`Mandatory 2FA setup completed for user: ${user.username}`);
+
+    res.status(200).json({
+      success: true,
+      message: '2FA setup successful',
+      data: {
+        user: user.toJSON(),
+        tokens,
+      },
     });
   })
 );

@@ -36,26 +36,56 @@ class AuthService {
 
       const response = await ApiClient.post(API_ENDPOINTS.auth.login, payload);
 
-      // Check if 2FA is required
-      if (response.data?.requires2FA) {
+      console.log('AuthService - API response:', JSON.stringify(response, null, 2));
+
+      // Check if 2FA setup is required (admin forced enable)
+      if (response.requires2FASetup) {
+        return {
+          requires2FASetup: true,
+          tempToken: response.data?.tempToken,
+          username: response.data?.username,
+          data: response
+        };
+      }
+
+      // Check if 2FA verification is required
+      if (response.requires2FA) {
         return {
           requires2FA: true,
-          tempToken: response.data.data.tempToken,
-          username: response.data.data.username
+          tempToken: response.data?.tempToken,
+          username: response.data?.username,
+          data: response
         };
       }
 
       // Store tokens and user data
       const { data } = response;
+      console.log('🔑 AuthService - Storing tokens:', {
+        hasAccessToken: !!data?.tokens?.accessToken,
+        hasRefreshToken: !!data?.tokens?.refreshToken,
+        hasUser: !!data?.user,
+        accessTokenPreview: data?.tokens?.accessToken ? data.tokens.accessToken.substring(0, 20) + '...' : 'NONE'
+      });
+
       if (data?.tokens?.accessToken) {
         tokenManager.setAccessToken(data.tokens.accessToken);
+        console.log('✅ AuthService - Access token saved to localStorage');
       }
       if (data?.tokens?.refreshToken) {
         tokenManager.setRefreshToken(data.tokens.refreshToken);
+        console.log('✅ AuthService - Refresh token saved to localStorage');
       }
       if (data?.user) {
         tokenManager.setUser(data.user);
+        console.log('✅ AuthService - User saved to localStorage:', data.user.username);
       }
+
+      // Verify tokens were actually saved
+      const verifyAccessToken = localStorage.getItem('access_token');
+      console.log('🔍 AuthService - Verification check:', {
+        tokenInLocalStorage: verifyAccessToken ? verifyAccessToken.substring(0, 20) + '...' : 'NONE',
+        matchesNewToken: verifyAccessToken === data?.tokens?.accessToken
+      });
 
       return {
         user: data?.user,
@@ -80,10 +110,33 @@ class AuthService {
     try {
       const response = await ApiClient.post(API_ENDPOINTS.auth.register, userData);
 
-      // Response structure: { success: true, data: { user, tokens } }
+      console.log('🔍 AuthService.register - RAW response from ApiClient:', JSON.stringify(response, null, 2));
+
+      // Response structure:
+      // { success: true, data: { user, tokens } } - Normal registration
+      // OR { success: true, data: { user, requires_2fa_setup: true, tempToken } } - 2FA setup required
       const { data } = response;
 
-      // Store tokens and user data
+      console.log('🔍 AuthService.register - Extracted data:', JSON.stringify(data, null, 2));
+      console.log('🔍 AuthService.register - requires_2fa_setup check:', {
+        'data?.requires_2fa_setup': data?.requires_2fa_setup,
+        'typeof': typeof data?.requires_2fa_setup,
+        'strict equality': data?.requires_2fa_setup === true
+      });
+
+      // Check if user requires 2FA setup
+      if (data?.requires_2fa_setup === true) {
+        // Don't store tokens or user data - user must complete 2FA setup first
+        console.log('✅ AuthService.register - User requires 2FA setup, not storing tokens');
+        const returnValue = {
+          user: data?.user,
+          data: data // Contains: requires_2fa_setup, tempToken, user
+        };
+        console.log('🔍 AuthService.register - Returning:', JSON.stringify(returnValue, null, 2));
+        return returnValue;
+      }
+
+      // Normal registration - Store tokens and user data
       if (data?.tokens?.accessToken) {
         tokenManager.setAccessToken(data.tokens.accessToken);
       }

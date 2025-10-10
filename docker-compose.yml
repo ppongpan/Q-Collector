@@ -62,26 +62,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Argos Translate Service (Thai-English Translation)
-  argos-translate:
-    build:
-      context: .
-      dockerfile: Dockerfile.argos
-    container_name: qcollector_argos
-    restart: unless-stopped
-    ports:
-      - "${ARGOS_PORT:-5555}:5000"
-    networks:
-      - q-collector-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    environment:
-      - PYTHONUNBUFFERED=1
-
   # API Backend Service (Node.js 20)
   api:
     build:
@@ -101,9 +81,8 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-your_minio_password_here}
       MINIO_BUCKET: ${MINIO_BUCKET:-qcollector}
-      # Argos Translation Service (Thai-English)
-      TRANSLATION_API_URL: ${TRANSLATION_API_URL:-http://argos-translate:5000}
-      TRANSLATION_API_KEY: ${TRANSLATION_API_KEY:-}
+      # DeepL Translation Service (Thai-English)
+      DEEPL_API_KEY: ${DEEPL_API_KEY:-}
       JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_here_minimum_32_characters}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
@@ -124,8 +103,6 @@ services:
       redis:
         condition: service_healthy
       minio:
-        condition: service_healthy
-      argos-translate:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]

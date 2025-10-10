@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
-import FileService from '../../services/FileService.js';
+import fileServiceAPI from '../../services/FileService.api.js';
 
 // File type detection utility
 const getFileType = (fileName) => {
@@ -92,17 +92,17 @@ const FileItem = ({ file, onClick, className }) => {
   const handleClick = () => {
     if (onClick) {
       onClick(file);
+    } else if (file && file.presignedUrl) {
+      // Use presigned URL for download
+      const link = document.createElement('a');
+      link.href = file.presignedUrl;
+      link.download = file.name;
+      link.click();
     } else if (fileUrl) {
-      // Open file in new tab if URL is available
+      // Fallback to fileUrl if available
       window.open(fileUrl, '_blank');
-    } else if (file && file.id) {
-      // Try to download using FileService
-      console.log('FileItem click download:', file);
-      const success = FileService.downloadFile(file.id);
-      console.log('Download result:', success);
-      if (!success) {
-        console.warn('Failed to download file:', file);
-      }
+    } else {
+      console.warn('No presignedUrl or fileUrl available for download:', file);
     }
   };
 
@@ -134,21 +134,22 @@ const FileItem = ({ file, onClick, className }) => {
       </div>
 
       {/* Download button */}
-      {(onClick || fileUrl || (file && file.id)) && (
+      {(onClick || fileUrl || (file && file.presignedUrl)) && (
         <button
           onClick={(e) => {
             e.stopPropagation();
-            if (file && file.id) {
+            if (file && file.presignedUrl) {
               console.log('Download button clicked:', file);
-              const success = FileService.downloadFile(file.id);
-              console.log('Download result:', success);
-              if (!success) {
-                console.warn('Failed to download file:', file);
-              }
+              const link = document.createElement('a');
+              link.href = file.presignedUrl;
+              link.download = file.name;
+              link.click();
             } else if (onClick) {
               onClick(file);
             } else if (fileUrl) {
               window.open(fileUrl, '_blank');
+            } else {
+              console.warn('No download method available:', file);
             }
           }}
           className="flex-shrink-0 p-1 text-orange-500 hover:text-orange-600 hover:bg-orange-50 rounded transition-all duration-200"
@@ -194,13 +195,14 @@ const FileList = ({ files, onFileClick, className, maxDisplay = 5 }) => {
           key={index}
           file={file}
           onClick={onFileClick || ((file) => {
-            if (file && file.id) {
+            if (file && file.presignedUrl) {
               console.log('FileList item download:', file);
-              const success = FileService.downloadFile(file.id);
-              console.log('Download result:', success);
-              if (!success) {
-                console.warn('Failed to download file:', file);
-              }
+              const link = document.createElement('a');
+              link.href = file.presignedUrl;
+              link.download = file.name;
+              link.click();
+            } else {
+              console.warn('No presignedUrl available for file:', file);
             }
           })}
         />
@@ -281,17 +283,7 @@ const FileDisplayCompact = ({ value, maxDisplay = 3 }) => {
   // Helper function to get file info from ID or object
   const getFileInfo = (fileIdOrObject) => {
     if (typeof fileIdOrObject === 'string') {
-      // ถ้าเป็น string อาจจะเป็น file ID หรือชื่อไฟล์
-      // ลองดึงไฟล์จาก FileService ก่อน
-      const fileFromService = FileService.getFile(fileIdOrObject);
-      if (fileFromService) {
-        return {
-          name: fileFromService.name,
-          type: getFileType(fileFromService.name),
-          icon: getFileIcon(getFileType(fileFromService.name))
-        };
-      }
-      // ถ้าไม่พบใน FileService แสดงว่าเป็นชื่อไฟล์
+      // String is filename or file ID
       return {
         name: fileIdOrObject,
         type: getFileType(fileIdOrObject),

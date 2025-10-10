@@ -30,7 +30,7 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
 
   // Enhanced toast notifications
   const toast = useEnhancedToast();
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   // Helper function to check if user can create/edit forms
   const canCreateOrEditForms = () => {
@@ -93,10 +93,17 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
     });
   };
 
-  // Load forms from DataService
+  // Load forms from API - only when authenticated
   useEffect(() => {
-    loadForms();
-  }, []);
+    // Wait for authentication to be ready AND user to be set
+    // This prevents loading with stale tokens during login
+    if (isAuthenticated && !isLoading && user) {
+      console.log('FormListApp - Loading forms for user:', user.username);
+      loadForms();
+    } else {
+      console.log('FormListApp - Skipping load:', { isAuthenticated, isLoading, hasUser: !!user });
+    }
+  }, [isAuthenticated, isLoading, user]);
 
   const loadForms = async () => {
     // Prevent duplicate calls
@@ -360,12 +367,15 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
       }
 
       // Show confirmation toast with action buttons
-      toast.error(warningMessage, {
+      const confirmToastId = toast.error(warningMessage, {
         title: confirmMessage,
         duration: 10000,
         action: {
           label: "ยืนยันการลบ",
           onClick: async () => {
+            // Close confirmation toast immediately when user clicks confirm
+            toast.dismiss(confirmToastId);
+
             try {
               // Delete via API
               await apiClient.deleteForm(formId);
@@ -524,20 +534,39 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
                         </div>
 
                         {canCreateOrEditForms() && (
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(form.id);
-                            }}
-                            className="flex items-center justify-center cursor-pointer group"
-                            title="แก้ไขฟอร์ม"
-                            style={{ background: 'transparent' }}
-                          >
-                            <FontAwesomeIcon
-                              icon={faEdit}
-                              className="text-lg text-muted-foreground/60 group-hover:text-cyan-400 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"
-                            />
-                          </div>
+                          <>
+                            <div
+                              data-testid="edit-form-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(form.id);
+                              }}
+                              className="flex items-center justify-center cursor-pointer group"
+                              title="แก้ไขฟอร์ม"
+                              style={{ background: 'transparent' }}
+                            >
+                              <FontAwesomeIcon
+                                icon={faEdit}
+                                className="text-lg text-muted-foreground/60 group-hover:text-cyan-400 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"
+                              />
+                            </div>
+
+                            <div
+                              data-testid="delete-form-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(form.id);
+                              }}
+                              className="flex items-center justify-center cursor-pointer group"
+                              title="ลบฟอร์ม"
+                              style={{ background: 'transparent' }}
+                            >
+                              <FontAwesomeIcon
+                                icon={faTrashAlt}
+                                className="text-lg text-muted-foreground/60 group-hover:text-red-500 group-hover:scale-110 transition-all duration-300"
+                              />
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>

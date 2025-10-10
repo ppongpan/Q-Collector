@@ -44,7 +44,7 @@ export const BreadcrumbList = ({ children, className }) => {
   return (
     <ol
       className={cn(
-        'flex items-center space-x-1 md:space-x-2 text-sm',
+        'flex items-center space-x-1 md:space-x-2 text-xs',
         className
       )}
     >

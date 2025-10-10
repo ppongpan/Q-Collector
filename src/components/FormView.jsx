@@ -14,9 +14,8 @@ import { Slider } from './ui/slider';
 import EnhancedFormSlider from './ui/enhanced-form-slider';
 
 // Data services
-import dataService from '../services/DataService.js';
 import submissionService from '../services/SubmissionService.js';
-import FileService from '../services/FileService.js';
+import fileServiceAPI from '../services/FileService.api.js';
 import apiClient from '../services/ApiClient';
 
 // Utilities
@@ -24,6 +23,7 @@ import { formatNumberInput, parseNumberInput, isValidNumber } from '../utils/num
 import { formulaEngine } from '../utils/formulaEngine.js';
 import { useConditionalVisibility } from '../hooks/useConditionalVisibility.js';
 import { useStorage } from '../contexts/StorageContext.jsx';
+import { useDelayedLoading } from '../hooks/useDelayedLoading';
 
 const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) => {
   const [form, setForm] = useState(null);
@@ -37,6 +37,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   const [hasSubmissionAttempt, setHasSubmissionAttempt] = useState(false);
   const [storageUsage, setStorageUsage] = useState(null);
   const [fieldVisibility, setFieldVisibility] = useState({});
+  const [filesToDelete, setFilesToDelete] = useState([]); // ✅ Track files to delete on save
 
   // Enhanced toast notifications
   const toast = useEnhancedToast();
@@ -44,13 +45,36 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   // Storage configuration
   const { config: storageConfig } = useStorage();
 
+  // Delayed loading to prevent screen flickering
+  const showLoading = useDelayedLoading(loading, 1000);
+
   // Update storage usage
-  const updateStorageUsage = useCallback(() => {
-    const usage = FileService.getStorageUsage(storageConfig.maxStorageSize, storageConfig.warningThreshold);
-    setStorageUsage({
-      ...usage,
-      maxStorage: storageConfig.maxStorageSize
-    });
+  const updateStorageUsage = useCallback(async () => {
+    try {
+      const stats = await fileServiceAPI.getFileStatistics();
+      const totalSizeMB = (stats.totalSize || 0) / (1024 * 1024);
+      const maxStorage = storageConfig.maxStorageSize || 10;
+      const usedPercentage = (totalSizeMB / maxStorage) * 100;
+      const isNearLimit = usedPercentage >= (storageConfig.warningThreshold || 80);
+
+      setStorageUsage({
+        totalSizeMB: totalSizeMB.toFixed(2),
+        totalFiles: stats.totalFiles || 0,
+        maxStorage,
+        usedPercentage: usedPercentage.toFixed(1),
+        isNearLimit
+      });
+    } catch (error) {
+      console.error('Error fetching storage usage:', error);
+      // Fallback to default values
+      setStorageUsage({
+        totalSizeMB: '0.00',
+        totalFiles: 0,
+        maxStorage: storageConfig.maxStorageSize || 10,
+        usedPercentage: '0',
+        isNearLimit: false
+      });
+    }
   }, [storageConfig]);
 
   // Date formatting utilities
@@ -82,8 +106,8 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   // Load form and submission data
   useEffect(() => {
     loadFormData();
-    updateStorageUsage();
-  }, [formId, submissionId, updateStorageUsage]); // eslint-disable-line react-hooks/exhaustive-deps
+    // updateStorageUsage(); // Temporarily disabled - files table not yet created
+  }, [formId, submissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Expose handleSubmit function to parent component via ref
   useImperativeHandle(ref, () => ({
@@ -95,8 +119,8 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     try {
       // Load form from API
       const response = await apiClient.getForm(formId);
-      const formData = response.data?.form || response.data;
-      if (!formData) {
+      const loadedForm = response.data?.form || response.data;
+      if (!loadedForm) {
         console.error('Form not found:', formId);
         toast.error('ไม่พบฟอร์มที่ต้องการ', {
           title: 'เกิดข้อผิดพลาด',
@@ -104,37 +128,108 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         });
         return;
       }
-      setForm(formData);
+      setForm(loadedForm);
 
       // Load existing submission for editing
       if (submissionId) {
-        const submission = dataService.getSubmission(submissionId);
-        if (submission) {
-          setFormData(submission.data || {});
+        try {
+          console.log('📥 Loading existing submission:', submissionId);
+          const response = await apiClient.getSubmission(submissionId);
+          console.log('📊 Submission API Response:', response);
 
-          // Load existing files
-          const existingFiles = FileService.getSubmissionFiles(submissionId);
-          const filesByField = {};
-          existingFiles.forEach(file => {
-            if (!filesByField[file.fieldId]) {
-              filesByField[file.fieldId] = [];
-            }
-            filesByField[file.fieldId].push({
-              id: file.id,
-              name: file.name,
-              type: file.type,
-              size: file.size,
-              uploadedAt: file.uploadedAt,
-              isImage: file.isImage
+          // Extract submission from response.data.submission
+          const submission = response.data?.submission || response.data;
+          console.log('📝 Submission Data:', submission);
+
+          if (submission && submission.data) {
+            // Map submission data: { field_id: { value, ... } } -> { field_id: value }
+            const mappedData = {};
+            Object.keys(submission.data).forEach(fieldId => {
+              const fieldData = submission.data[fieldId];
+              mappedData[fieldId] = fieldData?.value;
             });
-          });
+            console.log('🎯 Mapped Form Data:', mappedData);
+            setFormData(mappedData);
 
-          // Convert to uploadedFiles format
-          const uploadedFilesData = Object.keys(filesByField).map(fieldId => ({
-            fieldId,
-            files: filesByField[fieldId]
-          }));
-          setUploadedFiles(uploadedFilesData);
+            // Load existing files from MinIO API
+            try {
+              console.log('🔍 Loading files for submission:', submissionId);
+              const existingFiles = await fileServiceAPI.getSubmissionFiles(submissionId);
+              console.log('📂 Files from API:', existingFiles);
+
+              // 🔍 CRITICAL FIX: Get list of main form field IDs (exclude sub-form fields)
+              // ✅ Use loadedForm.fields (freshly loaded data) to avoid null reference
+              const mainFormFieldIds = loadedForm.fields
+                .filter(field => !field.sub_form_id && !field.subFormId)
+                .map(field => field.id);
+              console.log('🎯 Main form field IDs:', mainFormFieldIds);
+
+              // ✅ Filter files to only include main form files (exclude sub-form files)
+              const mainFormFiles = existingFiles.filter(file =>
+                mainFormFieldIds.includes(file.fieldId || file.field_id)
+              );
+              console.log(`📋 Filtered ${mainFormFiles.length} main form files (from ${existingFiles.length} total)`);
+
+              const filesByField = {};
+
+              // ✅ Process each file and get fresh presigned URL
+              for (const file of mainFormFiles) {
+                console.log('📄 Processing file:', {
+                  id: file.id,
+                  fieldId: file.fieldId,
+                  originalName: file.originalName,
+                  filename: file.filename,
+                  mimeType: file.mimeType,
+                  size: file.size,
+                  hasPresignedUrl: !!file.presignedUrl
+                });
+
+                if (!filesByField[file.fieldId]) {
+                  filesByField[file.fieldId] = [];
+                }
+
+                // ✅ Get fresh presigned URL for each file
+                let presignedUrl = file.presignedUrl || file.url;
+                try {
+                  // Fetch fresh URL to ensure it's not expired
+                  const fileWithUrl = await fileServiceAPI.getFileWithUrl(file.id);
+                  presignedUrl = fileWithUrl.presignedUrl || fileWithUrl.downloadUrl;
+                  console.log('✅ Got fresh presigned URL for file:', file.id);
+                } catch (urlError) {
+                  console.warn('⚠️ Failed to get fresh URL for file:', file.id, urlError);
+                }
+
+                filesByField[file.fieldId].push({
+                  id: file.id,
+                  name: file.originalName || file.filename || file.name || 'ไฟล์ที่แนบ',
+                  type: file.mimeType || file.mime_type || 'application/octet-stream',
+                  size: file.size || 0,
+                  uploadedAt: file.uploadedAt,
+                  isImage: fileServiceAPI.isImage(file.mimeType || file.mime_type),
+                  presignedUrl: presignedUrl
+                });
+              }
+
+              console.log('📋 Files by field:', filesByField);
+
+              // Convert to uploadedFiles format
+              const uploadedFilesData = Object.keys(filesByField).map(fieldId => ({
+                fieldId,
+                files: filesByField[fieldId]
+              }));
+              console.log('✅ Final uploadedFiles:', uploadedFilesData);
+              setUploadedFiles(uploadedFilesData);
+            } catch (error) {
+              console.error('❌ Error loading existing files:', error);
+              setUploadedFiles([]);
+            }
+          }
+        } catch (apiError) {
+          console.error('Failed to load submission from API:', apiError);
+          toast.error('ไม่สามารถโหลดข้อมูลการส่งฟอร์มจาก API ได้', {
+            title: 'เกิดข้อผิดพลาด',
+            duration: 5000
+          });
         }
       }
     } catch (error) {
@@ -191,13 +286,17 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         case 'url':
           try {
             // Auto-add https:// if no protocol is specified
-            let urlToValidate = value;
-            if (!/^https?:\/\//i.test(value)) {
-              urlToValidate = 'https://' + value;
+            let urlToValidate = value.trim();
+            if (!/^https?:\/\//i.test(urlToValidate)) {
+              // Add https:// prefix if no protocol specified
+              urlToValidate = 'https://' + urlToValidate;
             }
+            // Validate URL format
             new URL(urlToValidate);
+            // If validation passes, update the value to include protocol
+            // This makes sure the saved value always has a protocol
           } catch {
-            return 'รูปแบบ URL ไม่ถูกต้อง';
+            return 'รูปแบบ URL ไม่ถูกต้อง (ตัวอย่าง: www.google.com หรือ https://www.google.com)';
           }
           break;
         case 'number':
@@ -401,13 +500,13 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
 
     try {
       const fileArray = Array.from(files);
-      const currentSubmissionId = submissionId || `temp_${Date.now()}`;
+      const currentSubmissionId = submissionId || null; // MinIO API handles null submission IDs
 
-      // Upload files using FileService
-      const results = await FileService.saveMultipleFiles(
+      // Upload files using MinIO API
+      const results = await fileServiceAPI.uploadMultipleFiles(
         fileArray,
-        fieldId,
         currentSubmissionId,
+        fieldId,
         (progress) => {
           setFileUploadProgress(prev => ({ ...prev, [fieldId]: progress }));
         }
@@ -416,7 +515,15 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
       // Process successful uploads
       const successfulFiles = results
         .filter(result => result.success)
-        .map(result => result.fileInfo);
+        .map(result => ({
+          id: result.file.id,
+          name: result.file.originalName,
+          type: result.file.mimeType,
+          size: result.file.size,
+          uploadedAt: result.file.uploadedAt,
+          isImage: fileServiceAPI.isImage(result.file.mimeType),
+          presignedUrl: result.file.presignedUrl // Store presigned URL for immediate display
+        }));
 
       // Process failed uploads
       const failedFiles = results
@@ -459,7 +566,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         });
 
         // Update storage usage after upload
-        updateStorageUsage();
+        await updateStorageUsage();
       }
 
     } catch (error) {
@@ -478,45 +585,31 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     }
   };
 
-  const handleFileRemove = async (fieldId, fileId) => {
-    try {
-      // Remove file from FileService
-      const success = FileService.deleteFile(fileId);
+  const handleFileRemove = (fieldId, fileId) => {
+    // ✅ STAGED DELETION: Don't delete immediately, mark for deletion on save
+    setFilesToDelete(prev => [...prev, fileId]);
 
-      if (success) {
-        // Update uploadedFiles state
-        const updatedFiles = uploadedFiles.map(field => {
-          if (field.fieldId === fieldId) {
-            const updatedFieldFiles = field.files.filter(file => file.id !== fileId);
-            return { ...field, files: updatedFieldFiles };
-          }
-          return field;
-        }).filter(field => field.files.length > 0); // Remove empty field entries
-
-        setUploadedFiles(updatedFiles);
-
-        // Update form data
-        const fieldFiles = updatedFiles.find(f => f.fieldId === fieldId);
-        const fileIds = fieldFiles ? fieldFiles.files.map(f => f.id) : [];
-        handleInputChange(fieldId, fileIds);
-
-        toast.success('ลบไฟล์เรียบร้อยแล้ว', {
-          title: "ลบไฟล์สำเร็จ",
-          duration: 2000
-        });
-
-        // Update storage usage after deletion
-        updateStorageUsage();
-      } else {
-        throw new Error('ไม่สามารถลบไฟล์ได้');
+    // Update uploadedFiles state (remove from UI)
+    const updatedFiles = uploadedFiles.map(field => {
+      if (field.fieldId === fieldId) {
+        const updatedFieldFiles = field.files.filter(file => file.id !== fileId);
+        return { ...field, files: updatedFieldFiles };
       }
-    } catch (error) {
-      console.error('File removal error:', error);
-      toast.error(error.message || 'เกิดข้อผิดพลาดในการลบไฟล์', {
-        title: "ลบไฟล์ไม่สำเร็จ",
-        duration: 5000
-      });
-    }
+      return field;
+    }).filter(field => field.files.length > 0); // Remove empty field entries
+
+    setUploadedFiles(updatedFiles);
+
+    // Update form data
+    const fieldFiles = updatedFiles.find(f => f.fieldId === fieldId);
+    const fileIds = fieldFiles ? fieldFiles.files.map(f => f.id) : [];
+    handleInputChange(fieldId, fileIds);
+
+    // ✅ INFO TOAST: Notify user that file will be deleted on save
+    toast.info('ไฟล์จะถูกลบเมื่อกดบันทึก', {
+      title: "เตรียมลบไฟล์",
+      duration: 2000
+    });
   };
 
   const formatFileSize = (bytes) => {
@@ -579,7 +672,12 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     console.log('Uploaded files:', uploadedFiles);
     console.log('Field visibility:', fieldVisibility);
 
-    form.fields.forEach(field => {
+    // ⚠️ CRITICAL FIX: Filter out sub-form fields (sub_form_id !== null)
+    // Only validate main form fields
+    const mainFormFields = form.fields.filter(field => !field.sub_form_id && !field.subFormId);
+    console.log(`Validating ${mainFormFields.length} main form fields (filtered from ${form.fields.length} total fields)`);
+
+    mainFormFields.forEach(field => {
       // Skip validation for hidden fields
       if (fieldVisibility[field.id] === false) {
         console.log(`Skipping validation for hidden field: ${field.title}`);
@@ -676,62 +774,59 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
       return;
     }
 
+    // Show "saving" toast notification
+    toast.info('อยู่ระหว่างการบันทึกข้อมูล...', {
+      title: "กำลังบันทึก",
+      duration: 2000
+    });
+
     setSubmitting(true);
     try {
       let result;
       if (submissionId) {
         // Update existing submission
         const flatFiles = uploadedFiles.flatMap(uf =>
-          uf.files.map(file => {
-            // Get full file data from FileService
-            const fileData = FileService.getFile(file.id);
-            return {
-              ...file,
-              fieldId: uf.fieldId,
-              // Include the full file data for processing
-              ...fileData
-            };
-          })
+          uf.files.map(file => ({
+            id: file.id,
+            fieldId: uf.fieldId,
+            name: file.name,
+            type: file.type,
+            size: file.size
+          }))
         );
         result = await submissionService.updateSubmission(formId, submissionId, formData, flatFiles);
       } else {
         // Create new submission
         const flatFiles = uploadedFiles.flatMap(uf =>
-          uf.files.map(file => {
-            // Get full file data from FileService
-            const fileData = FileService.getFile(file.id);
-            return {
-              ...file,
-              fieldId: uf.fieldId,
-              // Include the full file data for processing
-              ...fileData
-            };
-          })
+          uf.files.map(file => ({
+            id: file.id,
+            fieldId: uf.fieldId,
+            name: file.name,
+            type: file.type,
+            size: file.size
+          }))
         );
         result = await submissionService.submitForm(formId, formData, flatFiles);
       }
 
       if (result.success) {
-        // If this was a new submission (not editing), update file submission IDs
-        if (!submissionId && result.submission) {
-          const newSubmissionId = result.submission.id;
-
-          // Find all files that were uploaded with temporary IDs during this session
-          uploadedFiles.forEach(fieldFiles => {
-            fieldFiles.files.forEach(file => {
-              // Check if this file has a temporary submission ID
-              const storedFile = FileService.getFile(file.id);
-              if (storedFile && storedFile.submissionId.startsWith('temp_')) {
-                // Update the file's submission ID to the real one
-                const updatedFileInfo = {
-                  ...storedFile,
-                  submissionId: newSubmissionId
-                };
-                FileService.storeFileInfo(updatedFileInfo);
-              }
-            });
-          });
+        // ✅ DELETE STAGED FILES: Delete files marked for deletion after successful save
+        if (filesToDelete.length > 0) {
+          console.log(`🗑️ Deleting ${filesToDelete.length} staged files...`);
+          for (const fileId of filesToDelete) {
+            try {
+              await fileServiceAPI.deleteFile(fileId);
+              console.log(`✅ Deleted file: ${fileId}`);
+            } catch (error) {
+              console.error(`❌ Failed to delete file ${fileId}:`, error);
+              // Continue deleting other files even if one fails
+            }
+          }
+          setFilesToDelete([]); // Clear the deletion queue
         }
+
+        // File associations are now handled by the backend via submission_id linkage
+        // No need to update file metadata as MinIO files are already uploaded with correct metadata
 
         toast.success(result.message || 'บันทึกข้อมูลเรียบร้อยแล้ว', {
           title: submissionId ? "อัพเดทข้อมูลสำเร็จ" : "บันทึกข้อมูลสำเร็จ",
@@ -1231,8 +1326,20 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
 
       case 'file_upload':
       case 'image_upload':
+        // ✅ SINGLE FILE MODE: Only show the first file (1 file per field)
         const fieldFiles = uploadedFiles.find(f => f.fieldId === field.id)?.files || [];
+        const currentFile = fieldFiles.length > 0 ? fieldFiles[0] : null;
         const uploadProgress = fileUploadProgress[field.id];
+
+        // 🔍 DEBUG: Log rendering state
+        console.log(`🎨 Rendering ${field.type} field "${field.title}":`, {
+          fieldId: field.id,
+          uploadedFilesState: uploadedFiles,
+          fieldFiles: fieldFiles,
+          currentFile: currentFile,
+          uploadProgress: uploadProgress,
+          willShowFile: !!(currentFile && !uploadProgress)
+        });
 
         return (
           <div key={field.id} data-field-id={field.id} className="space-y-3">
@@ -1241,15 +1348,91 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
               {field.required && <span className="text-destructive ml-1">*</span>}
             </label>
 
-            {/* File Input */}
+            {/* ✅ File Input - Always visible */}
             <input
               type="file"
               accept={field.type === 'image_upload' ? 'image/*' : undefined}
-              multiple={field.options?.allowMultiple}
               onChange={(e) => handleFileChange(field.id, e.target.files)}
               className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 transition-colors"
               disabled={uploadProgress !== undefined}
             />
+
+            {/* ✅ Display current filename next to button area if file exists */}
+            {currentFile && !uploadProgress && (
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border/40 bg-muted/10">
+                {/* File Icon/Preview */}
+                {currentFile.isImage && currentFile.presignedUrl ? (
+                  <img
+                    src={currentFile.presignedUrl}
+                    alt={currentFile.name}
+                    className="w-10 h-10 rounded object-cover flex-shrink-0"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-muted/40 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                )}
+
+                {/* Filename and Size */}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-foreground truncate">
+                    {currentFile.name}
+                  </div>
+                  {currentFile.size && (
+                    <div className="text-xs text-muted-foreground">
+                      {formatFileSize(currentFile.size)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Download Button */}
+                  {currentFile.presignedUrl && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          // Get file with presigned URL
+                          const fileData = await fileServiceAPI.getFileWithUrl(currentFile.id);
+                          // Open in new tab without switching focus
+                          window.open(fileData.presignedUrl, '_blank', 'noopener,noreferrer');
+                        } catch (error) {
+                          console.error('Download error:', error);
+                          toast.error('ไม่สามารถดาวน์โหลดไฟล์ได้', {
+                            title: 'เกิดข้อผิดพลาด',
+                            duration: 3000
+                          });
+                        }
+                      }}
+                      className="p-2 rounded hover:bg-muted/40 transition-colors"
+                      title="ดาวน์โหลด"
+                    >
+                      <svg className="w-4 h-4 text-muted-foreground hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Remove Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleFileRemove(field.id, currentFile.id)}
+                    className="p-2 rounded hover:bg-destructive/10 transition-colors"
+                    title="ลบไฟล์"
+                  >
+                    <svg className="w-4 h-4 text-muted-foreground hover:text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Upload Progress */}
             {uploadProgress !== undefined && (
@@ -1263,84 +1446,6 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
                     className="bg-primary h-2 rounded-full transition-all duration-300"
                     style={{ width: `${uploadProgress}%` }}
                   />
-                </div>
-              </div>
-            )}
-
-            {/* Uploaded Files List */}
-            {fieldFiles.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-xs text-muted-foreground">
-                  ไฟล์ที่อัปโหลดแล้ว ({fieldFiles.length} ไฟล์)
-                </div>
-                <div className="space-y-1 sm:space-y-2 max-h-40 sm:max-h-48 overflow-y-auto">
-                  {fieldFiles.map((file, index) => (
-                    <div
-                      key={file.id || index}
-                      className="flex items-center justify-between p-2 sm:p-3 bg-muted/20 rounded-lg border border-border/40"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
-                        {/* File Icon/Preview */}
-                        <div className="flex-shrink-0">
-                          {file.isImage ? (
-                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                              <svg className="w-4 h-4 sm:w-6 sm:h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                            </div>
-                          ) : (
-                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted/40 rounded-lg flex items-center justify-center">
-                              <svg className="w-4 h-4 sm:w-6 sm:h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* File Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs sm:text-sm font-medium text-foreground truncate">
-                            {file.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {formatFileSize(file.size)} • {file.type}
-                          </div>
-                          {file.uploadedAt && (
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(file.uploadedAt).toLocaleString('th-TH')}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-                        {/* Download Button */}
-                        <button
-                          type="button"
-                          onClick={() => FileService.downloadFile(file.id)}
-                          className="p-1 sm:p-2 text-muted-foreground hover:text-primary transition-colors"
-                          title="ดาวน์โหลด"
-                        >
-                          <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </button>
-
-                        {/* Remove Button */}
-                        <button
-                          type="button"
-                          onClick={() => handleFileRemove(field.id, file.id)}
-                          className="p-1 sm:p-2 text-muted-foreground hover:text-destructive transition-colors"
-                          title="ลบไฟล์"
-                        >
-                          <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
             )}
@@ -1522,7 +1627,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     }
   };
 
-  if (loading) {
+  if (showLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
         <GlassCard className="glass-container">
@@ -1587,8 +1692,11 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
             <div className="p-3 sm:p-4">
 
               <div className="space-y-3 sm:space-y-4 lg:space-y-6">
-                {/* Main Form Fields */}
-                {form.fields?.map(field => renderField(field))}
+                {/* Main Form Fields - Filter out sub-form fields (sub_form_id !== null) and sort by order */}
+                {form.fields
+                  ?.filter(field => !field.sub_form_id && !field.subFormId)
+                  .sort((a, b) => (a.order || 0) - (b.order || 0))
+                  .map(field => renderField(field))}
               </div>
             </div>
           </GlassCard>

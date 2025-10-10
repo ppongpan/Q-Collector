@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  argos-translate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: qcollector-argos-translate
+    ports:
+      - "8765:8765"
+    restart: unless-stopped
+    environment:
+      - ARGOS_DEVICE_TYPE=cpu  # Use 'cuda' for GPU support
+      - PYTHONUNBUFFERED=1     # Show logs immediately
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s  # Give it time to download models on first run
+    volumes:
+      # Persist translation models
+      - argos-models:/root/.local/share/argos-translate
+      # Optional: Mount logs
+      - ./logs:/app/logs
+    networks:
+      - qcollector-network
+    labels:
+      com.qcollector.service: "translation"
+      com.qcollector.version: "1.0.0"
+
+volumes:
+  argos-models:
+    driver: local
+
+networks:
+  qcollector-network:
+    driver: bridge

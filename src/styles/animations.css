@@ -68,14 +68,17 @@
 @keyframes glass-morph {
   0% {
     border-radius: 16px;
+    -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
   }
   50% {
     border-radius: 24px;
+    -webkit-backdrop-filter: blur(30px);
     backdrop-filter: blur(30px);
   }
   100% {
     border-radius: 16px;
+    -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
   }
 }
@@ -140,6 +143,7 @@
 
 .glass-hover:hover {
   transform: scale(1.02) translateY(-1px);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
   backdrop-filter: blur(24px) saturate(200%);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
@@ -150,6 +154,7 @@
 
 .glass-hover-subtle:hover {
   transform: scale(1.005);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   backdrop-filter: blur(24px) saturate(180%);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
@@ -160,6 +165,7 @@
 
 .glass-hover-lift:hover {
   transform: translateY(-4px) scale(1.015);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
   backdrop-filter: blur(28px) saturate(200%);
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
 }
@@ -186,6 +192,7 @@
 
 .btn-glass-animated:hover {
   transform: scale(1.02);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   backdrop-filter: blur(24px) saturate(180%);
   box-shadow: 0 8px 32px rgba(247, 115, 22, 0.3);
 }
@@ -295,6 +302,7 @@
 .glass-focus:focus,
 .glass-focus:focus-within {
   transform: scale(1.005);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   backdrop-filter: blur(24px) saturate(180%);
   box-shadow: 0 0 0 3px rgba(247, 115, 22, 0.3);
 }

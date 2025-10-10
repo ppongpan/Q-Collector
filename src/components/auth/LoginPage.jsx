@@ -92,6 +92,13 @@ export function LoginPage() {
     if (!validate()) return;
 
     try {
+      // Clear all old tokens BEFORE login to prevent race conditions
+      // This prevents FormListApp from using stale tokens while login is in progress
+      console.log('LoginPage - Clearing old tokens before login');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+
       // Get device fingerprint
       const deviceFingerprint = await getDeviceFingerprint();
 
@@ -102,12 +109,31 @@ export function LoginPage() {
         deviceFingerprint
       );
 
-      console.log('LoginPage - Login response:', loginResponse);
+      console.log('LoginPage - Login response:', JSON.stringify(loginResponse, null, 2));
+      console.log('LoginPage - requires2FASetup check:', JSON.stringify({
+        direct: loginResponse.requires2FASetup,
+        nested: loginResponse.data?.requires2FASetup,
+        hasRequires2FA: loginResponse.requires2FA,
+        tempToken: loginResponse.tempToken?.substring(0, 20) + '...'
+      }, null, 2));
 
       if (loginResponse) {
-        // Check if 2FA is required - response has nested data structure
-        if (loginResponse.requires2FA || loginResponse.data?.tempToken) {
-          console.log('LoginPage - 2FA required, setting state:', {
+        // Check if mandatory 2FA setup is required (admin-created account)
+        if (loginResponse.requires2FASetup || loginResponse.mandatory) {
+          console.log('LoginPage - Mandatory 2FA setup required, redirecting to setup');
+          navigate('/2fa-setup', {
+            state: {
+              tempToken: loginResponse.tempToken || loginResponse.data?.tempToken,
+              username: loginResponse.username || loginResponse.data?.username,
+              mandatory: true
+            },
+            replace: true
+          });
+          return; // Exit early to prevent further processing
+        }
+        // Check if 2FA verification is required (normal 2FA login)
+        else if (loginResponse.requires2FA) {
+          console.log('LoginPage - 2FA verification required, setting state:', {
             tempToken: loginResponse.tempToken || loginResponse.data?.tempToken,
             username: loginResponse.username || loginResponse.data?.username
           });
@@ -116,7 +142,24 @@ export function LoginPage() {
           setUsername2FA(loginResponse.username || loginResponse.data?.username);
         } else if (loginResponse.user) {
           // No 2FA - login successful
-          navigate('/', { replace: true });
+          console.log('LoginPage - Login successful, updating AuthContext');
+
+          // Update AuthContext state immediately before navigation
+          // This triggers isAuthenticated to become true
+          setUser(loginResponse.user);
+
+          // Wait a bit longer to ensure tokens and state are fully synced
+          await new Promise(resolve => setTimeout(resolve, 200));
+
+          // ✅ FIX: Check if there's a saved redirect URL (from token expiry)
+          const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+          if (redirectPath) {
+            sessionStorage.removeItem('redirectAfterLogin'); // Clear after using
+            navigate(redirectPath, { replace: true });
+          } else {
+            // Default to home page
+            navigate('/', { replace: true });
+          }
         }
       }
     } catch (error) {
@@ -142,8 +185,15 @@ export function LoginPage() {
         setUser(data.user);
       }
 
-      // Navigate to home page
-      navigate('/', { replace: true });
+      // ✅ FIX: Check if there's a saved redirect URL (from token expiry)
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin'); // Clear after using
+        navigate(redirectPath, { replace: true });
+      } else {
+        // Default to home page
+        navigate('/', { replace: true });
+      }
     } catch (error) {
       console.error('handle2FASuccess error:', error);
       setApiError('เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
@@ -323,7 +373,7 @@ export function LoginPage() {
 
         {/* App Info */}
         <div className="text-center mt-6 text-muted-foreground" style={{ fontSize: '10px' }}>
-          <p>Q-Collector v0.6.2</p>
+          <p>Q-Collector v0.7.5-dev</p>
           <p className="mt-1">Form Builder & Data Collection System</p>
         </div>
 

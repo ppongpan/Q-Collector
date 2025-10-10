@@ -12,7 +12,9 @@ import { useAuth } from '../contexts/AuthContext';
 import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './auth/LoginPage';
 import RegisterPage from './auth/RegisterPage';
+import TwoFactorSetupPage from './auth/TwoFactorSetupPage';
 import MainFormApp from './MainFormApp';
+import ScrollToTop from './ScrollToTop';
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -31,6 +33,7 @@ function AppRouter() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* Public Routes */}
         <Route
@@ -44,6 +47,10 @@ function AppRouter() {
           element={
             isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />
           }
+        />
+        <Route
+          path="/2fa-setup"
+          element={<TwoFactorSetupPage />}
         />
 
         {/* Protected Routes */}

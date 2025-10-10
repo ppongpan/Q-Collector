@@ -11,7 +11,6 @@ import { useEnhancedToast } from './ui/enhanced-toast';
 import { PhoneIcon } from './ui/phone-icon';
 
 // Data services
-import dataService from '../services/DataService.js';
 import submissionService from '../services/SubmissionService.js';
 import apiClient from '../services/ApiClient.js';
 
@@ -42,8 +41,13 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         formData = response.data?.form || response.data;
         console.log('✅ Form loaded from API:', formData?.title);
       } catch (apiError) {
-        console.warn('Failed to load form from API, trying LocalStorage:', apiError);
-        formData = dataService.getForm(formId);
+        console.error('Failed to load form from API:', apiError);
+        toast.error('ไม่สามารถโหลดข้อมูลฟอร์มจาก API ได้', {
+          title: 'เกิดข้อผิดพลาด',
+          duration: 5000
+        });
+        setLoading(false);
+        return;
       }
 
       if (!formData) {
@@ -62,11 +66,17 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         const response = await apiClient.listSubmissions(formId);
         submissionsData = response.data?.submissions || response.data || [];
         console.log('✅ Submissions loaded from API:', submissionsData.length, 'items');
-        console.log('📦 First submission structure:', submissionsData[0]);
-        console.log('📦 First submission JSON:', JSON.stringify(submissionsData[0], null, 2));
+        if (submissionsData.length > 0) {
+          console.log('📦 First submission structure:', submissionsData[0]);
+          console.log('📦 First submission JSON:', JSON.stringify(submissionsData[0], null, 2));
+        }
       } catch (apiError) {
-        console.warn('Failed to load submissions from API, trying LocalStorage:', apiError);
-        submissionsData = dataService.getSubmissionsByFormId(formId);
+        console.error('Failed to load submissions from API:', apiError);
+        toast.error('ไม่สามารถโหลดรายการข้อมูลจาก API ได้', {
+          title: 'เกิดข้อผิดพลาด',
+          duration: 5000
+        });
+        submissionsData = []; // Empty array on error
       }
 
       setSubmissions(submissionsData);
@@ -91,7 +101,11 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
   const getTableFields = () => {
     if (!form) return [];
 
-    const selectedFields = form.fields.filter(field => field.showInTable).slice(0, 5);
+    // ✅ FIX: Only show main form fields, exclude sub-form fields
+    // Support both camelCase and snake_case for compatibility
+    const selectedFields = form.fields
+      .filter(field => (field.showInTable === true || field.show_in_table === true) && !field.subFormId) // Exclude sub-form fields
+      .slice(0, 5);
 
     // If we have less than 5 fields, add automatic columns to fill up to 5 total
     if (selectedFields.length < 5) {
@@ -163,15 +177,19 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           toast.dismiss(toastId);
 
           try {
-            dataService.deleteSubmission(submissionId);
+            // Delete via API
+            await apiClient.deleteSubmission(submissionId);
+
+            // Remove from local state
             setSubmissions(prev => prev.filter(sub => sub.id !== submissionId));
+
             toast.success('ลบข้อมูลเรียบร้อยแล้ว', {
               title: "ลบสำเร็จ",
               duration: 3000
             });
           } catch (error) {
             console.error('Delete error:', error);
-            toast.error('เกิดข้อผิดพลาดในการลบข้อมูล', {
+            toast.error(`เกิดข้อผิดพลาดในการลบข้อมูล: ${error.message}`, {
               title: "ลบไม่สำเร็จ",
               duration: 5000
             });
@@ -251,7 +269,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
   // Enhanced field value renderer for different field types
   const renderFieldValue = (fieldData, field) => {
     if (!fieldData || (!fieldData.value && fieldData.value !== 0)) {
-      return <span className="text-muted-foreground text-[12px]">-</span>;
+      return <span className="text-muted-foreground text-[14px] sm:text-[15px]">-</span>;
     }
 
     const { value, type } = fieldData;
@@ -259,30 +277,30 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
     switch (type) {
       case 'date':
         if (!value || value === '' || value === 'undefined' || value === 'null' || value === '-' || value === 'Invalid Date') {
-          return <span className="text-muted-foreground text-[12px]">-</span>;
+          return <span className="text-muted-foreground text-[14px] sm:text-[15px]">-</span>;
         }
         return (
-          <div className="text-[12px] text-foreground/80 text-center">
+          <div className="text-[14px] sm:text-[15px] text-foreground/80 text-center">
             <div className="font-medium">{value === 'Invalid Date' ? '-' : value}</div>
           </div>
         );
 
       case 'time':
         return (
-          <div className="text-[12px] text-foreground/80 font-mono text-center">
+          <div className="text-[14px] sm:text-[15px] text-foreground/80 font-mono text-center">
             {value}
           </div>
         );
 
       case 'datetime':
         if (!value || value === '' || value === 'undefined' || value === 'null' || value === '-' || value === 'Invalid Date') {
-          return <span className="text-muted-foreground text-[12px]">-</span>;
+          return <span className="text-muted-foreground text-[14px] sm:text-[15px]">-</span>;
         }
         // If value is already formatted (contains time), use it directly
         if (typeof value === 'string' && value.includes(' ') && value !== 'Invalid Date') {
           const parts = value.split(' ');
           return (
-            <div className="text-[12px] text-foreground/80 text-center">
+            <div className="text-[11px] sm:text-[12px] text-foreground/80 text-center leading-relaxed">
               <div className="font-medium">{parts[0]}</div>
               <div className="text-muted-foreground">{parts[1]}</div>
             </div>
@@ -290,10 +308,10 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         }
         const date = new Date(value);
         if (isNaN(date.getTime())) {
-          return <span className="text-muted-foreground text-[12px]">-</span>;
+          return <span className="text-muted-foreground text-[14px] sm:text-[15px]">-</span>;
         }
         return (
-          <div className="text-[12px] text-foreground/80 text-center">
+          <div className="text-[11px] sm:text-[12px] text-foreground/80 text-center leading-relaxed">
             <div className="font-medium">{formatDate(value)}</div>
             <div className="text-muted-foreground">{date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
           </div>
@@ -303,39 +321,68 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         const rating = parseInt(value) || 0;
         return (
           <div className="flex items-center justify-center">
-            <span className="text-[12px]">{'⭐'.repeat(rating)}</span>
+            <span className="text-[16px] sm:text-[18px]">{'⭐'.repeat(rating)}</span>
           </div>
         );
 
       case 'lat_long':
-        if (typeof value === 'object' && value.lat && value.lng) {
-          return (
-            <div className="text-[12px] text-foreground/80 font-mono text-center">
-              <div>Lat: {parseFloat(value.lat).toFixed(4)}</div>
-              <div>Lng: {parseFloat(value.lng).toFixed(4)}</div>
-            </div>
-          );
+        // Handle coordinate objects with {lat, lng} format
+        if (typeof value === 'object' && value !== null) {
+          // Check for lat/lng format
+          if (value.lat !== undefined && value.lng !== undefined) {
+            return (
+              <div className="text-[11px] sm:text-[12px] text-foreground/80 font-mono text-center leading-relaxed">
+                <div>Lat: {parseFloat(value.lat).toFixed(4)}</div>
+                <div>Lng: {parseFloat(value.lng).toFixed(4)}</div>
+              </div>
+            );
+          }
+          // Check for x/y format (alternative coordinate format)
+          if (value.x !== undefined && value.y !== undefined) {
+            return (
+              <div className="text-[11px] sm:text-[12px] text-foreground/80 font-mono text-center leading-relaxed">
+                <div>Lat: {parseFloat(value.y).toFixed(4)}</div>
+                <div>Lng: {parseFloat(value.x).toFixed(4)}</div>
+              </div>
+            );
+          }
         }
-        return <span className="text-[12px] text-foreground/80 text-center">{value}</span>;
+        // Handle string format "lat, lng"
+        if (typeof value === 'string' && value.includes(',')) {
+          const parts = value.split(',').map(p => p.trim());
+          if (parts.length === 2) {
+            const lat = parseFloat(parts[0]);
+            const lng = parseFloat(parts[1]);
+            if (!isNaN(lat) && !isNaN(lng)) {
+              return (
+                <div className="text-[11px] sm:text-[12px] text-foreground/80 font-mono text-center leading-relaxed">
+                  <div>Lat: {lat.toFixed(4)}</div>
+                  <div>Lng: {lng.toFixed(4)}</div>
+                </div>
+              );
+            }
+          }
+        }
+        return <span className="text-[14px] sm:text-[15px] text-foreground/80 text-center">{value || '-'}</span>;
 
       case 'multiple_choice':
         if (Array.isArray(value)) {
           return (
             <div className="flex flex-wrap gap-1 justify-center">
               {value.slice(0, 2).map((item, index) => (
-                <span key={index} className="inline-block text-primary text-[12px]">
+                <span key={index} className="inline-block text-primary text-[14px] sm:text-[15px]">
                   {item}
                 </span>
               ))}
               {value.length > 2 && (
-                <span className="text-[12px] text-muted-foreground">+{value.length - 2}</span>
+                <span className="text-[14px] sm:text-[15px] text-muted-foreground">+{value.length - 2}</span>
               )}
             </div>
           );
         }
         return (
           <div className="text-center">
-            <span className="inline-block text-primary text-[12px]">
+            <span className="inline-block text-primary text-[14px] sm:text-[15px]">
               {value}
             </span>
           </div>
@@ -343,10 +390,20 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
       case 'province':
       case 'factory':
+        // ✅ FIX: Handle array values (factory can be multi-select)
+        // Extract plain text from array: ["โรงงานระยอง"] → "โรงงานระยอง"
+        let displayValue = value;
+        if (Array.isArray(value)) {
+          displayValue = value.join(', ');
+        } else if (typeof value === 'object' && value !== null) {
+          // If it's an object, convert to JSON string safely
+          displayValue = JSON.stringify(value);
+        }
+
         return (
           <div className="text-center">
-            <span className="inline-block text-primary text-[12px]">
-              {value}
+            <span className="inline-block text-primary text-[14px] sm:text-[15px]">
+              {displayValue}
             </span>
           </div>
         );
@@ -363,7 +420,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
       case 'number':
         return (
-          <span className="text-[12px] text-foreground/80 font-mono text-center block">
+          <span className="text-[14px] sm:text-[15px] text-foreground/80 font-mono text-center block">
             {formatNumberByContext(value, 'table')}
           </span>
         );
@@ -371,7 +428,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
       case 'email':
         return (
           <div className="text-center">
-            <a href={`mailto:${value}`} className="text-[12px] text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+            <a href={`mailto:${value}`} className="text-[14px] sm:text-[15px] text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
               {value}
             </a>
           </div>
@@ -393,7 +450,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
             includeIcon: true,
             size: 'xs',
             showTooltip: true,
-            className: 'text-[12px]'
+            className: 'text-[14px] sm:text-[15px]'
           });
 
           return (
@@ -412,7 +469,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                   </a>
                 </div>
               ) : (
-                <span className="text-[12px] text-foreground/80">
+                <span className="text-[14px] sm:text-[15px] text-foreground/80">
                   {formatPhoneDisplay(value) || value || '-'}
                 </span>
               )}
@@ -423,7 +480,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         // Fallback for standard phone display
         return (
           <div className="text-center">
-            <span className="text-[12px] text-foreground/80">
+            <span className="text-[14px] sm:text-[15px] text-foreground/80">
               {formatPhoneDisplay(value) || value || '-'}
             </span>
           </div>
@@ -475,13 +532,13 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                   href={validUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[12px] text-primary hover:underline"
+                  className="text-[14px] sm:text-[15px] text-primary hover:underline"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {displayText}
                 </a>
               ) : (
-                <span className="text-[12px] text-foreground/80">{displayText}</span>
+                <span className="text-[14px] sm:text-[15px] text-foreground/80">{displayText}</span>
               )}
             </div>
           );
@@ -490,7 +547,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         // Fallback for standard URL display
         return (
           <div className="text-center">
-            <span className="text-[12px] text-foreground/80">
+            <span className="text-[14px] sm:text-[15px] text-foreground/80">
               {value?.length > 30 ? `${value.substring(0, 30)}...` : value}
             </span>
           </div>
@@ -507,18 +564,18 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                 style={{ width: `${(sliderValue / (field.options?.max || 100)) * 100}%` }}
               />
             </div>
-            <span className="text-[12px] text-foreground/80 font-mono">{sliderValue}{unit}</span>
+            <span className="text-[14px] sm:text-[15px] text-foreground/80 font-mono">{sliderValue}{unit}</span>
           </div>
         );
 
       case 'auto_date':
         // Auto date column - show submission date (simplified structure)
         if (!value || value === '' || value === 'undefined' || value === 'null') {
-          return <span className="text-muted-foreground text-[12px]">-</span>;
+          return <span className="text-muted-foreground text-[14px] sm:text-[15px]">-</span>;
         }
         const formattedDate = formatDate(value);
         return (
-          <span className="text-[12px] text-foreground/80 font-medium" style={{
+          <span className="text-[14px] sm:text-[15px] text-foreground/80 font-medium" style={{
             background: 'transparent !important',
             backgroundColor: 'transparent !important',
             border: 'none !important',
@@ -533,14 +590,14 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
       case 'auto_time':
         // Auto time column - show submission time (simplified structure)
         if (!value || value === '' || value === 'undefined' || value === 'null') {
-          return <span className="text-muted-foreground text-[12px]">-</span>;
+          return <span className="text-muted-foreground text-[14px] sm:text-[15px]">-</span>;
         }
         const timeDate = new Date(value);
         if (isNaN(timeDate.getTime())) {
-          return <span className="text-muted-foreground text-[12px]">-</span>;
+          return <span className="text-muted-foreground text-[14px] sm:text-[15px]">-</span>;
         }
         return (
-          <span className="text-[12px] text-foreground/80 font-mono" style={{
+          <span className="text-[14px] sm:text-[15px] text-foreground/80 font-mono" style={{
             background: 'transparent !important',
             backgroundColor: 'transparent !important',
             border: 'none !important',
@@ -590,7 +647,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
             includeIcon: true,
             size: 'xs',
             showTooltip: true,
-            className: 'text-[12px]'
+            className: 'text-[14px] sm:text-[15px]'
           });
 
           return (
@@ -609,7 +666,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                   </a>
                 </div>
               ) : (
-                <span className="text-[12px] text-foreground/80">
+                <span className="text-[14px] sm:text-[15px] text-foreground/80">
                   {formatPhoneDisplay(value) || value || '-'}
                 </span>
               )}
@@ -649,13 +706,13 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                   href={validUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[12px] text-primary hover:underline"
+                  className="text-[14px] sm:text-[15px] text-primary hover:underline"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {displayText}
                 </a>
               ) : (
-                <span className="text-[12px] text-foreground/80">{displayText}</span>
+                <span className="text-[14px] sm:text-[15px] text-foreground/80">{displayText}</span>
               )}
             </div>
           );
@@ -667,7 +724,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
             <div className="text-center">
               <a
                 href={`mailto:${value}`}
-                className="text-[12px] text-primary hover:underline"
+                className="text-[14px] sm:text-[15px] text-primary hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >
                 {value}
@@ -679,7 +736,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         // For other text fields
         const text = String(value);
         return (
-          <div className="text-[12px] text-foreground/80 max-w-[180px] text-center">
+          <div className="text-[14px] sm:text-[15px] text-foreground/80 max-w-[180px] text-center">
             <span className={text.length > 50 ? "truncate block" : ""} title={text.length > 50 ? text : undefined}>
               {text}
             </span>
@@ -908,7 +965,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                   <thead>
                     <tr className="border-b border-border/30 bg-muted/20">
                       {tableFields.map(field => (
-                        <th key={field.id} className="text-center p-3 text-[12px] font-medium text-foreground/80 uppercase tracking-wide bg-gradient-to-r from-muted/30 to-muted/20">
+                        <th key={field.id} className="text-center p-3 text-[14px] sm:text-[15px] font-medium text-foreground/80 uppercase tracking-wide bg-gradient-to-r from-muted/30 to-muted/20">
                           {field.title}
                         </th>
                       ))}
@@ -983,7 +1040,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                             return (
                               <td
                                 key={field.id}
-                                className={`p-3 text-[12px] text-center transition-colors duration-300 [&_*]:!bg-transparent [&_*]:!border-none [&_*]:!rounded-none [&_*]:!shadow-none`}
+                                className={`py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center transition-colors duration-300 [&_*]:!bg-transparent [&_*]:!border-none [&_*]:!rounded-none [&_*]:!shadow-none min-h-[56px] sm:min-h-[64px]`}
                               >
                                 {renderFieldValue(fieldData, field)}
                               </td>

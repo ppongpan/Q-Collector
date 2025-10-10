@@ -26,6 +26,10 @@ module.exports = defineConfig({
   // Number of parallel workers
   workers: process.env.CI ? 1 : undefined,
 
+  // Global setup - login once and share session
+  // TEMPORARILY DISABLED FOR DEBUGGING LOGIN LOOP
+  // globalSetup: require.resolve('./tests/e2e/global-setup.js'),
+
   // Reporter configuration
   reporter: [
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
@@ -62,9 +66,25 @@ module.exports = defineConfig({
 
   // Configure projects for different browsers
   projects: [
+    // Authenticated tests (most tests)
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Use saved authentication state
+        storageState: 'tests/e2e/.auth/user.json',
+      },
+      testIgnore: ['**/auth/**', '**/authentication.spec.js'],
+    },
+
+    // Unauthenticated tests (login, registration, auth tests)
+    {
+      name: 'chromium-unauth',
+      use: {
+        ...devices['Desktop Chrome'],
+        // No storage state - start fresh
+      },
+      testMatch: ['**/auth/**', '**/authentication.spec.js'],
     },
 
     // Uncomment to test on Firefox and WebKit

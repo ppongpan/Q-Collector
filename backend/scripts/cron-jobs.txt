@@ -1,0 +1,339 @@
+================================================================================
+  Q-Collector Migration System - Cron Job Configuration
+  Sprint 6 (Week 8) - Automated Maintenance Tasks
+  Version: 0.8.0
+  Created: 2025-10-07
+================================================================================
+
+This file contains cron job configurations for automated maintenance of the
+Field Migration System. Choose the appropriate section based on your platform.
+
+================================================================================
+PART 1: Linux/Unix Cron Jobs
+================================================================================
+
+# Edit your crontab with: crontab -e
+# Then add the following lines (adjust paths as needed):
+
+# Set environment variables
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+NODE_ENV=production
+
+# Project directory (CHANGE THIS to your installation path)
+PROJECT_DIR=/path/to/qcollector
+
+# Daily cleanup of expired backups (2:00 AM every day)
+# Removes backups past their retention_until date
+0 2 * * * cd $PROJECT_DIR && node backend/scripts/cleanup-old-backups.js >> /var/log/qcollector/backup-cleanup.log 2>&1
+
+# Weekly health check (Monday 8:00 AM)
+# Verifies system integrity and reports issues
+0 8 * * 1 cd $PROJECT_DIR && node backend/scripts/migration-health-check.js >> /var/log/qcollector/health-check.log 2>&1
+
+# Weekly migration report (Friday 5:00 PM)
+# Generates analytics on migration activity
+0 17 * * 5 cd $PROJECT_DIR && node backend/scripts/generate-migration-report.js >> /var/log/qcollector/migration-report.log 2>&1
+
+# Monthly schema validation (1st of month, 3:00 AM)
+# Detects schema drift between definitions and database
+0 3 1 * * cd $PROJECT_DIR && node backend/scripts/validate-schema-consistency.js >> /var/log/qcollector/schema-validation.log 2>&1
+
+# Quarterly sync of existing tables (1st of Jan/Apr/Jul/Oct, 4:00 AM)
+# Backfills migration records for pre-v0.8.0 tables
+0 4 1 1,4,7,10 * cd $PROJECT_DIR && node backend/scripts/sync-existing-dynamic-tables.js >> /var/log/qcollector/table-sync.log 2>&1
+
+================================================================================
+PART 2: Windows Task Scheduler (PowerShell)
+================================================================================
+
+# Run these PowerShell commands as Administrator to create scheduled tasks:
+
+# 1. Daily Backup Cleanup (2:00 AM)
+$action = New-ScheduledTaskAction -Execute "node" -Argument "backend/scripts/cleanup-old-backups.js" -WorkingDirectory "C:\path\to\qcollector"
+$trigger = New-ScheduledTaskTrigger -Daily -At 2am
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
+Register-ScheduledTask -TaskName "QCollector-BackupCleanup" -Action $action -Trigger $trigger -Principal $principal -Description "Clean up expired field data backups"
+
+# 2. Weekly Health Check (Monday 8:00 AM)
+$action = New-ScheduledTaskAction -Execute "node" -Argument "backend/scripts/migration-health-check.js" -WorkingDirectory "C:\path\to\qcollector"
+$trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 8am
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
+Register-ScheduledTask -TaskName "QCollector-HealthCheck" -Action $action -Trigger $trigger -Principal $principal -Description "Verify migration system health"
+
+# 3. Weekly Migration Report (Friday 5:00 PM)
+$action = New-ScheduledTaskAction -Execute "node" -Argument "backend/scripts/generate-migration-report.js" -WorkingDirectory "C:\path\to\qcollector"
+$trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Friday -At 5pm
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
+Register-ScheduledTask -TaskName "QCollector-MigrationReport" -Action $action -Trigger $trigger -Principal $principal -Description "Generate migration analytics report"
+
+# 4. Monthly Schema Validation (1st of month, 3:00 AM)
+$action = New-ScheduledTaskAction -Execute "node" -Argument "backend/scripts/validate-schema-consistency.js" -WorkingDirectory "C:\path\to\qcollector"
+$trigger = New-ScheduledTaskTrigger -Daily -At 3am
+# Note: Set up additional settings in Task Scheduler GUI to run only on 1st of month
+Register-ScheduledTask -TaskName "QCollector-SchemaValidation" -Action $action -Trigger $trigger -Principal $principal -Description "Validate schema consistency"
+
+# View scheduled tasks:
+Get-ScheduledTask | Where-Object {$_.TaskName -like "QCollector-*"}
+
+# Remove a task (if needed):
+# Unregister-ScheduledTask -TaskName "QCollector-BackupCleanup" -Confirm:$false
+
+================================================================================
+PART 3: Docker/PM2 Integration
+================================================================================
+
+# If using Docker Compose, add a cron service:
+
+services:
+  qcollector-cron:
+    image: node:18-alpine
+    volumes:
+      - ./:/app
+      - /var/log/qcollector:/var/log/qcollector
+    working_dir: /app
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=qcollector_db
+      - POSTGRES_USER=qcollector
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_HOST=redis
+    command: >
+      sh -c "echo '0 2 * * * cd /app && node backend/scripts/cleanup-old-backups.js >> /var/log/qcollector/backup-cleanup.log 2>&1' > /etc/crontabs/root &&
+             echo '0 8 * * 1 cd /app && node backend/scripts/migration-health-check.js >> /var/log/qcollector/health-check.log 2>&1' >> /etc/crontabs/root &&
+             echo '0 17 * * 5 cd /app && node backend/scripts/generate-migration-report.js >> /var/log/qcollector/migration-report.log 2>&1' >> /etc/crontabs/root &&
+             echo '0 3 1 * * cd /app && node backend/scripts/validate-schema-consistency.js >> /var/log/qcollector/schema-validation.log 2>&1' >> /etc/crontabs/root &&
+             crond -f"
+    networks:
+      - qcollector-network
+
+# If using PM2 (process manager), use PM2's cron feature:
+
+# In ecosystem.config.js:
+module.exports = {
+  apps: [
+    {
+      name: 'qcollector-cleanup',
+      script: 'backend/scripts/cleanup-old-backups.js',
+      cron_restart: '0 2 * * *', // Daily at 2 AM
+      autorestart: false,
+      watch: false
+    },
+    {
+      name: 'qcollector-health-check',
+      script: 'backend/scripts/migration-health-check.js',
+      cron_restart: '0 8 * * 1', // Monday at 8 AM
+      autorestart: false,
+      watch: false
+    },
+    {
+      name: 'qcollector-report',
+      script: 'backend/scripts/generate-migration-report.js',
+      cron_restart: '0 17 * * 5', // Friday at 5 PM
+      autorestart: false,
+      watch: false
+    },
+    {
+      name: 'qcollector-validation',
+      script: 'backend/scripts/validate-schema-consistency.js',
+      cron_restart: '0 3 1 * *', // 1st of month at 3 AM
+      autorestart: false,
+      watch: false
+    }
+  ]
+};
+
+# Start PM2 with config:
+# pm2 start ecosystem.config.js
+
+================================================================================
+PART 4: Email Notifications (Optional)
+================================================================================
+
+# To receive email notifications on failures, wrap scripts with a notification handler.
+# Create a wrapper script: backend/scripts/cron-wrapper.sh
+
+#!/bin/bash
+SCRIPT=$1
+SCRIPT_NAME=$(basename $SCRIPT)
+LOG_FILE="/var/log/qcollector/${SCRIPT_NAME}.log"
+EMAIL="admin@example.com"
+
+# Run the script
+node $SCRIPT >> $LOG_FILE 2>&1
+EXIT_CODE=$?
+
+# Send email on failure
+if [ $EXIT_CODE -ne 0 ]; then
+    SUBJECT="[QCollector] ${SCRIPT_NAME} Failed (Exit code: ${EXIT_CODE})"
+    BODY="The scheduled task ${SCRIPT_NAME} failed with exit code ${EXIT_CODE}. Check logs at ${LOG_FILE}"
+    echo "$BODY" | mail -s "$SUBJECT" $EMAIL
+fi
+
+exit $EXIT_CODE
+
+# Then use in crontab:
+# 0 2 * * * /path/to/qcollector/backend/scripts/cron-wrapper.sh /path/to/qcollector/backend/scripts/cleanup-old-backups.js
+
+================================================================================
+PART 5: Monitoring & Alerting
+================================================================================
+
+# Recommended monitoring setup:
+
+1. Log Monitoring:
+   - Use tools like Logwatch, Logrotate, or ELK stack
+   - Monitor /var/log/qcollector/*.log for errors
+   - Set up alerts for keywords: "Error", "CRITICAL", "FAILED"
+
+2. Health Check Monitoring:
+   - Run migration-health-check.js via monitoring service (Nagios, Zabbix)
+   - Alert if exit code != 0
+   - Track health score trends over time
+
+3. Storage Monitoring:
+   - Monitor reports/ directory size
+   - Alert if backup storage exceeds threshold
+   - Set up automatic log rotation
+
+4. Performance Monitoring:
+   - Track script execution time
+   - Alert if scripts take longer than expected
+   - Monitor database query performance
+
+================================================================================
+PART 6: Verification Commands
+================================================================================
+
+# Verify cron jobs are scheduled (Linux):
+crontab -l
+
+# Check cron service is running (Linux):
+sudo systemctl status cron
+
+# View recent cron executions (Linux):
+grep CRON /var/log/syslog | tail -n 20
+
+# Test a cron job manually (Linux):
+cd /path/to/qcollector && node backend/scripts/cleanup-old-backups.js --dry-run
+
+# Check Windows scheduled tasks:
+Get-ScheduledTask | Where-Object {$_.TaskName -like "QCollector-*"} | Format-Table -AutoSize
+
+# View task execution history (Windows):
+Get-ScheduledTask -TaskName "QCollector-BackupCleanup" | Get-ScheduledTaskInfo
+
+# Check Docker cron container logs:
+docker logs qcollector-cron
+
+# View PM2 cron jobs:
+pm2 list
+
+================================================================================
+PART 7: Troubleshooting
+================================================================================
+
+Common Issues:
+
+1. Script not found:
+   - Ensure absolute paths are used in cron
+   - Verify NODE_PATH is set correctly
+   - Check file permissions (chmod +x)
+
+2. Database connection fails:
+   - Verify .env file is loaded
+   - Check database credentials
+   - Ensure PostgreSQL is accessible from cron environment
+
+3. Redis connection fails:
+   - Verify Redis is running
+   - Check firewall rules
+   - Test connection: redis-cli ping
+
+4. Permission denied:
+   - Check script file permissions
+   - Verify log directory permissions
+   - Ensure cron user has access to project directory
+
+5. Environment variables not loaded:
+   - Source .env explicitly in cron command
+   - Use full paths to node and project
+   - Set variables in crontab header
+
+================================================================================
+PART 8: Maintenance Schedule Recommendations
+================================================================================
+
+Suggested schedule based on system load:
+
+Low Traffic (< 100 forms, < 1000 migrations/month):
+  - Cleanup: Weekly
+  - Health Check: Monthly
+  - Reports: Monthly
+  - Schema Validation: Quarterly
+
+Medium Traffic (100-1000 forms, 1000-10000 migrations/month):
+  - Cleanup: Daily
+  - Health Check: Weekly
+  - Reports: Weekly
+  - Schema Validation: Monthly
+
+High Traffic (> 1000 forms, > 10000 migrations/month):
+  - Cleanup: Daily
+  - Health Check: Daily
+  - Reports: Daily
+  - Schema Validation: Weekly
+  - Table Sync: Monthly
+
+Adjust schedules based on:
+  - Backup retention policy (shorter = more frequent cleanup)
+  - Storage constraints (limited space = more aggressive cleanup)
+  - Monitoring requirements (critical systems = more frequent checks)
+  - Team reporting needs (adjust report frequency)
+
+================================================================================
+PART 9: Quick Setup Guide
+================================================================================
+
+# For Linux Production Server:
+
+1. Create log directory:
+   sudo mkdir -p /var/log/qcollector
+   sudo chown $USER:$USER /var/log/qcollector
+
+2. Test scripts manually:
+   cd /path/to/qcollector
+   node backend/scripts/migration-health-check.js
+   node backend/scripts/cleanup-old-backups.js --dry-run
+
+3. Edit crontab:
+   crontab -e
+
+4. Copy and paste the Linux cron jobs from PART 1 (update paths)
+
+5. Verify cron jobs:
+   crontab -l
+
+6. Monitor first execution:
+   tail -f /var/log/qcollector/health-check.log
+
+7. Set up log rotation:
+   sudo nano /etc/logrotate.d/qcollector
+   # Add:
+   /var/log/qcollector/*.log {
+     daily
+     rotate 30
+     compress
+     missingok
+     notifempty
+   }
+
+================================================================================
+END OF CRON JOB CONFIGURATION
+================================================================================
+
+For support or questions, refer to:
+- Documentation: docs/MIGRATION-GUIDE.md
+- Script help: node backend/scripts/[script-name].js --help
+- GitHub Issues: https://github.com/your-org/qcollector/issues

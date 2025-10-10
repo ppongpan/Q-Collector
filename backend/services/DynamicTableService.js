@@ -30,7 +30,7 @@ class DynamicTableService {
    * @returns {Promise<string>} - Created table name
    */
   async createFormTable(form) {
-    const tableName = generateTableName(form.title, form.id);
+    const tableName = await generateTableName(form.title, form.id);
 
     if (!isValidTableName(tableName)) {
       throw new Error(`Invalid table name generated: ${tableName}`);
@@ -56,16 +56,13 @@ class DynamicTableService {
         await this.updateFormTableColumns(form, tableName, client);
       } else {
         // Create new table with base columns
+        // ✅ Use local timezone (Asia/Bangkok) for submitted_at
         const createTableQuery = `
           CREATE TABLE ${tableName} (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             form_id UUID NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
-            user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-            submission_number INTEGER,
-            status VARCHAR(50) DEFAULT 'submitted',
-            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            username VARCHAR(100),
+            submitted_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok')
           );
         `;
 
@@ -77,7 +74,7 @@ class DynamicTableService {
 
         // Create indexes
         await client.query(`CREATE INDEX idx_${tableName}_form_id ON ${tableName}(form_id);`);
-        await client.query(`CREATE INDEX idx_${tableName}_user_id ON ${tableName}(user_id);`);
+        await client.query(`CREATE INDEX idx_${tableName}_username ON ${tableName}(username);`);
         await client.query(`CREATE INDEX idx_${tableName}_submitted_at ON ${tableName}(submitted_at);`);
       }
 
@@ -101,11 +98,33 @@ class DynamicTableService {
 
   /**
    * Add columns for form fields
+   * ✅ FIXED: Only add columns for fields that belong to this form (exclude sub-form fields)
+   * @param {Array} fields - Array of field objects
+   * @param {string} tableName - Table name
+   * @param {Object} client - Database client
+   * @param {boolean} isSubForm - Whether this is a sub-form table (skip filtering)
    */
-  async addFormFieldColumns(fields, tableName, client) {
-    for (const field of fields) {
-      const columnName = generateColumnName(field.label || field.title, field.id);
+  async addFormFieldColumns(fields, tableName, client, isSubForm = false) {
+    const addedColumns = new Set(); // Track added column names to detect duplicates
+
+    // ✅ FILTER: For main forms, exclude sub-form fields
+    // For sub-forms, include ALL fields (they already have sub_form_id)
+    const fieldsToAdd = isSubForm
+      ? fields
+      : fields.filter(field => !field.sub_form_id && !field.subFormId);
+
+    console.log(`Adding ${fieldsToAdd.length} ${isSubForm ? 'sub-form' : 'main form'} field columns (from ${fields.length} total fields)`);
+
+    for (const field of fieldsToAdd) {
+      const columnName = await generateColumnName(field.label || field.title, field.id);
       const dataType = getPostgreSQLType(field.type);
+
+      // ✅ NEW: Check for duplicate column names
+      if (addedColumns.has(columnName)) {
+        const errorMsg = `Duplicate column name detected: "${columnName}" (from field "${field.label || field.title}"). Please use different field names.`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+      }
 
       try {
         const addColumnQuery = `
@@ -114,15 +133,23 @@ class DynamicTableService {
         `;
         await client.query(addColumnQuery);
         console.log(`Added column: ${columnName} (${dataType})`);
+        addedColumns.add(columnName);
       } catch (error) {
+        // Check if error is due to duplicate column (PostgreSQL error 42701)
+        if (error.message.includes('already exists') || error.code === '42701') {
+          const errorMsg = `Column "${columnName}" already exists in table ${tableName}. Field "${field.label || field.title}" translates to existing column name.`;
+          console.error(errorMsg);
+          throw new Error(errorMsg);
+        }
         console.error(`Error adding column ${columnName}:`, error.message);
-        // Continue with other columns even if one fails
+        throw error;
       }
     }
   }
 
   /**
    * Update table columns when form fields change
+   * ✅ FIXED: Only update columns for main form fields (exclude sub-form fields)
    */
   async updateFormTableColumns(form, tableName, client) {
     // Get existing columns
@@ -131,16 +158,23 @@ class DynamicTableService {
       FROM information_schema.columns
       WHERE table_schema = 'public'
       AND table_name = $1
-      AND column_name NOT IN ('id', 'form_id', 'user_id', 'submission_number', 'status', 'submitted_at', 'created_at', 'updated_at');
+      AND column_name NOT IN ('id', 'form_id', 'parent_id', 'sub_form_id', 'username', 'order', 'submitted_at');
     `;
     const existingColumns = await client.query(columnsQuery, [tableName]);
     const existingColumnNames = new Set(existingColumns.rows.map(r => r.column_name));
 
+    // ✅ FILTER: Only process main form fields (exclude sub-form fields)
+    const mainFormFields = (form.fields || []).filter(field => !field.sub_form_id && !field.subFormId);
+    console.log(`Processing ${mainFormFields.length} main form fields (filtered from ${form.fields?.length || 0} total fields)`);
+
     // Add new columns for new fields
-    const newFields = (form.fields || []).filter(field => {
-      const columnName = generateColumnName(field.label || field.title, field.id);
-      return !existingColumnNames.has(columnName);
-    });
+    const newFields = [];
+    for (const field of mainFormFields) {
+      const columnName = await generateColumnName(field.label || field.title, field.id);
+      if (!existingColumnNames.has(columnName)) {
+        newFields.push(field);
+      }
+    }
 
     if (newFields.length > 0) {
       console.log(`Adding ${newFields.length} new columns to ${tableName}`);
@@ -159,7 +193,7 @@ class DynamicTableService {
    * @returns {Promise<string>} - Created sub-form table name
    */
   async createSubFormTable(subForm, mainTableName, formId) {
-    const subFormTableName = generateTableName(subForm.title, subForm.id);
+    const subFormTableName = await generateTableName(subForm.title, subForm.id);
 
     if (!isValidTableName(subFormTableName)) {
       throw new Error(`Invalid sub-form table name generated: ${subFormTableName}`);
@@ -188,34 +222,31 @@ class DynamicTableService {
           client
         );
       } else {
-        // Create new sub-form table with base columns
+        // Create new sub-form table with minimal base columns
+        // ✅ COLUMN ORDER: id, parent_id, main_form_subid (3rd position), username, order, submitted_at
+        // ✅ Use local timezone (Asia/Bangkok) for submitted_at
+        // ✅ parent_id: FK to submissions.id (maintains data integrity)
+        // ✅ main_form_subid: The ACTUAL parent main form submission ID from dynamic table (3rd column)
         const createTableQuery = `
           CREATE TABLE ${subFormTableName} (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            parent_id UUID NOT NULL REFERENCES ${mainTableName}(id) ON DELETE CASCADE,
-            form_id UUID NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
-            sub_form_id UUID NOT NULL REFERENCES sub_forms(id) ON DELETE CASCADE,
-            user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-            submission_number INTEGER,
-            order_index INTEGER DEFAULT 0,
-            status VARCHAR(50) DEFAULT 'submitted',
-            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            parent_id UUID NOT NULL REFERENCES submissions(id) ON DELETE CASCADE,
+            main_form_subid UUID,
+            username VARCHAR(100),
+            "order" INTEGER DEFAULT 0,
+            submitted_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok')
           );
         `;
 
         await client.query(createTableQuery);
         console.log(`Created sub-form table: ${subFormTableName}`);
 
-        // Add columns for each field
-        await this.addFormFieldColumns(subForm.fields || [], subFormTableName, client);
+        // Add columns for each field (✅ CRITICAL: Set isSubForm = true to skip filtering)
+        await this.addFormFieldColumns(subForm.fields || [], subFormTableName, client, true);
 
-        // Create indexes
+        // Create indexes (only for parent_id and username)
         await client.query(`CREATE INDEX idx_${subFormTableName}_parent_id ON ${subFormTableName}(parent_id);`);
-        await client.query(`CREATE INDEX idx_${subFormTableName}_form_id ON ${subFormTableName}(form_id);`);
-        await client.query(`CREATE INDEX idx_${subFormTableName}_sub_form_id ON ${subFormTableName}(sub_form_id);`);
-        await client.query(`CREATE INDEX idx_${subFormTableName}_user_id ON ${subFormTableName}(user_id);`);
+        await client.query(`CREATE INDEX idx_${subFormTableName}_username ON ${subFormTableName}(username);`);
       }
 
       // Store table name mapping in sub_forms table
@@ -238,27 +269,54 @@ class DynamicTableService {
 
   /**
    * Insert submission into dynamic table
+   * ✅ CRITICAL FIX: Use submissionId as the id in dynamic table (no UUID generation)
+   * @param {string} submissionId - Submission ID from submissions table
+   * @param {string} formId - Form ID
+   * @param {string} tableName - Table name
+   * @param {string} username - Username
+   * @param {Object} submissionData - Submission data
    */
-  async insertSubmission(formId, tableName, userId, submissionData) {
+  async insertSubmission(submissionId, formId, tableName, username, submissionData) {
     const client = await this.pool.connect();
 
     try {
-      // Prepare columns and values
-      const columns = ['form_id', 'user_id'];
-      const values = [formId, userId];
-      const placeholders = ['$1', '$2'];
-      let paramIndex = 3;
+      // ✅ CRITICAL: Include 'id' in columns and use submissionId
+      // This ensures dynamic table id matches submissions table id
+      const columns = ['"id"', '"form_id"', '"username"'];
+      const values = [submissionId, formId, username];
+      const placeholders = ['$1', '$2', '$3'];
+      let paramIndex = 4;
 
       // Add data fields
       for (const [key, value] of Object.entries(submissionData)) {
-        columns.push(key);
-        values.push(value);
-        placeholders.push(`$${paramIndex}`);
-        paramIndex++;
+        columns.push(`"${key}"`); // Quote column names for PostgreSQL
+
+        // ✅ CRITICAL FIX: Convert coordinate objects to PostgreSQL POINT format
+        // PostgreSQL POINT format: POINT(longitude, latitude)
+        // Frontend sends: {lat: 13.806..., lng: 100.522...}
+        if (value && typeof value === 'object' && 'lat' in value && 'lng' in value) {
+          // Convert to POINT format: POINT(lng, lat) - note the order!
+          // Use direct SQL instead of parameterized query for POINT type
+          placeholders.push(`POINT(${value.lng}, ${value.lat})`);
+          console.log(`✅ Converted coordinates {lat: ${value.lat}, lng: ${value.lng}} to POINT format`);
+        } else if (Array.isArray(value)) {
+          // ✅ NEW FIX: Convert arrays to plain text
+          // Factory/dropdown fields come as arrays: ["โรงงานระยอง"]
+          // Extract first element or join multiple values
+          const plainValue = value.length === 1 ? value[0] : value.join(', ');
+          placeholders.push(`$${paramIndex}`);
+          values.push(plainValue);
+          console.log(`✅ Converted array [${value.join(', ')}] to plain text: "${plainValue}"`);
+          paramIndex++;
+        } else {
+          placeholders.push(`$${paramIndex}`);
+          values.push(value);
+          paramIndex++;
+        }
       }
 
       const insertQuery = `
-        INSERT INTO ${tableName} (${columns.join(', ')})
+        INSERT INTO "${tableName}" (${columns.join(', ')})
         VALUES (${placeholders.join(', ')})
         RETURNING *;
       `;
@@ -284,9 +342,9 @@ class DynamicTableService {
       let paramIndex = 1;
 
       // Add filters
-      if (filters.userId) {
-        conditions.push(`user_id = $${paramIndex}`);
-        values.push(filters.userId);
+      if (filters.username) {
+        conditions.push(`username = $${paramIndex}`);
+        values.push(filters.username);
         paramIndex++;
       }
 
@@ -329,34 +387,55 @@ class DynamicTableService {
   /**
    * Insert sub-form data
    * @param {string} subFormTableName - Sub-form table name
-   * @param {string} parentId - Parent submission ID
-   * @param {string} formId - Form ID
-   * @param {string} subFormId - Sub-form ID
-   * @param {string} userId - User ID
+   * @param {string} parentId - Parent submission ID (from submissions table)
+   * @param {string} mainFormSubId - Main form submission ID from dynamic table (the actual parent)
+   * @param {string} username - Username
    * @param {Object} submissionData - Sub-form data
    * @param {number} orderIndex - Order index for multiple entries
    * @returns {Promise<Object>} - Inserted record
    */
-  async insertSubFormData(subFormTableName, parentId, formId, subFormId, userId, submissionData, orderIndex = 0) {
+  async insertSubFormData(subFormTableName, parentId, mainFormSubId, username, submissionData, orderIndex = 0) {
     const client = await this.pool.connect();
 
     try {
-      // Prepare columns and values
-      const columns = ['parent_id', 'form_id', 'sub_form_id', 'user_id', 'order_index'];
-      const values = [parentId, formId, subFormId, userId, orderIndex];
-      const placeholders = ['$1', '$2', '$3', '$4', '$5'];
-      let paramIndex = 6;
+      // ✅ CRITICAL FIX: Only use parent_id and main_form_subid (parent_id2 is deprecated)
+      // parent_id: FK to submissions.id (maintains data integrity)
+      // main_form_subid: The ACTUAL parent main form submission ID from dynamic table
+      const columns = ['"parent_id"', '"main_form_subid"', '"username"', '"order"'];
+      const values = [parentId, mainFormSubId, username, orderIndex];
+      const placeholders = ['$1', '$2', '$3', '$4'];
+      let paramIndex = 5;
 
-      // Add data fields
+      // Add data fields with quoted column names
       for (const [key, value] of Object.entries(submissionData)) {
-        columns.push(key);
-        values.push(value);
-        placeholders.push(`$${paramIndex}`);
-        paramIndex++;
+        columns.push(`"${key}"`); // Quote column names for PostgreSQL
+
+        // ✅ CRITICAL FIX: Convert coordinate objects to PostgreSQL POINT format
+        // PostgreSQL POINT format: POINT(longitude, latitude)
+        // Frontend sends: {lat: 13.806..., lng: 100.522...}
+        if (value && typeof value === 'object' && 'lat' in value && 'lng' in value) {
+          // Convert to POINT format: POINT(lng, lat) - note the order!
+          // Use direct SQL instead of parameterized query for POINT type
+          placeholders.push(`POINT(${value.lng}, ${value.lat})`);
+          console.log(`✅ Converted coordinates {lat: ${value.lat}, lng: ${value.lng}} to POINT format`);
+        } else if (Array.isArray(value)) {
+          // ✅ NEW FIX: Convert arrays to plain text
+          // Factory/dropdown fields come as arrays: ["โรงงานระยอง"]
+          // Extract first element or join multiple values
+          const plainValue = value.length === 1 ? value[0] : value.join(', ');
+          placeholders.push(`$${paramIndex}`);
+          values.push(plainValue);
+          console.log(`✅ Converted array [${value.join(', ')}] to plain text: "${plainValue}"`);
+          paramIndex++;
+        } else {
+          placeholders.push(`$${paramIndex}`);
+          values.push(value);
+          paramIndex++;
+        }
       }
 
       const insertQuery = `
-        INSERT INTO ${subFormTableName} (${columns.join(', ')})
+        INSERT INTO "${subFormTableName}" (${columns.join(', ')})
         VALUES (${placeholders.join(', ')})
         RETURNING *;
       `;
@@ -382,7 +461,7 @@ class DynamicTableService {
       const query = `
         SELECT * FROM ${subFormTableName}
         WHERE parent_id = $1
-        ORDER BY order_index ASC, created_at ASC;
+        ORDER BY "order" ASC, submitted_at ASC;
       `;
 
       const result = await client.query(query, [parentId]);

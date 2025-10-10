@@ -176,8 +176,7 @@
 
   html {
     scroll-behavior: smooth;
-    -webkit-text-size-adjust: 100%;
-    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%; /* ✅ Modern standard property */
   }
 
   body {
@@ -3048,4 +3047,20 @@
     border-color: rgba(255, 255, 255, 1) !important;
     background: rgba(255, 255, 255, 0.25) !important;
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.3) !important;
+  }
+
+  /* Toast Icon Animation - Pulse Scale (ย่อ-ขยาย) */
+  @keyframes pulse-scale {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.15);
+      opacity: 0.85;
+    }
+  }
+
+  .animate-pulse-scale {
+    animation: pulse-scale 1.5s ease-in-out infinite;
   }

@@ -61,10 +61,18 @@ const TwoFactorVerification = ({
     }
   }, [useBackupCode]);
 
-  // Auto-submit when 6 digits entered
+  // Auto-submit when 6 digits entered (with ref to prevent multiple calls)
+  const hasSubmittedRef = useRef(false);
+
   useEffect(() => {
-    if (!useBackupCode && code.every(digit => digit !== '') && !loading) {
+    if (!useBackupCode && code.every(digit => digit !== '') && !loading && !hasSubmittedRef.current) {
+      hasSubmittedRef.current = true;
       handleVerify();
+    }
+
+    // Reset when code changes back to incomplete
+    if (code.some(digit => digit === '')) {
+      hasSubmittedRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, useBackupCode]);

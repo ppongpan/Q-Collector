@@ -1,0 +1,704 @@
+{
+  "timestamp": "2025-10-10T11:08:33.580Z",
+  "summary": {
+    "totalForms": 20,
+    "successfulForms": 20,
+    "failedForms": 0,
+    "formSuccessRate": 100,
+    "totalFields": 78,
+    "successfulFields": 78,
+    "fieldSuccessRate": 100,
+    "categoryStats": {
+      "HR & Employment": {
+        "total": 5,
+        "passed": 5
+      },
+      "Sales & Marketing": {
+        "total": 4,
+        "passed": 4
+      },
+      "Operations & Services": {
+        "total": 4,
+        "passed": 4
+      },
+      "Quality & Safety": {
+        "total": 4,
+        "passed": 4
+      },
+      "Finance & Admin": {
+        "total": 3,
+        "passed": 3
+      }
+    }
+  },
+  "results": [
+    {
+      "formTitle": "แบบฟอร์มสมัครงาน",
+      "category": "HR & Employment",
+      "tableName": "job_application_form_0",
+      "expectedTable": "job_application_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "ชื่อ-นามสกุล",
+          "result": "full_name",
+          "expected": "full_name",
+          "meaningful": true
+        },
+        {
+          "title": "ตำแหน่งที่สมัคร",
+          "result": "applied_position",
+          "expected": "position_applied",
+          "meaningful": true
+        },
+        {
+          "title": "เงินเดือนที่คาดหวัง",
+          "result": "expected_salary",
+          "expected": "expected_salary",
+          "meaningful": true
+        },
+        {
+          "title": "ประสบการณ์ทำงาน",
+          "result": "work_experience",
+          "expected": "work_experience",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "ใบลาพักร้อน",
+      "category": "HR & Employment",
+      "tableName": "leaves_of_absence_1",
+      "expectedTable": "vacation_leave_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "วันที่เริ่มลา",
+          "result": "leave_start_date",
+          "expected": "leave_start_date",
+          "meaningful": true
+        },
+        {
+          "title": "วันที่สิ้นสุด",
+          "result": "end_date",
+          "expected": "end_date",
+          "meaningful": true
+        },
+        {
+          "title": "เหตุผลการลา",
+          "result": "leave_reason",
+          "expected": "leave_reason",
+          "meaningful": true
+        },
+        {
+          "title": "ผู้รับมอบงาน",
+          "result": "assignee",
+          "expected": "work_delegated_to",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบประเมินผลการปฏิบัติงาน",
+      "category": "HR & Employment",
+      "tableName": "performance_evaluation_form_2",
+      "expectedTable": "performance_evaluation_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "ชื่อพนักงาน",
+          "result": "employee_name",
+          "expected": "employee_name",
+          "meaningful": true
+        },
+        {
+          "title": "แผนก",
+          "result": "department",
+          "expected": "department",
+          "meaningful": true
+        },
+        {
+          "title": "คะแนนรวม",
+          "result": "total_score",
+          "expected": "total_score",
+          "meaningful": true
+        },
+        {
+          "title": "ข้อเสนอแนะ",
+          "result": "feedback",
+          "expected": "recommendations",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มขอเลื่อนตำแหน่ง",
+      "category": "HR & Employment",
+      "tableName": "promotion_request_form_3",
+      "expectedTable": "promotion_request_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "ตำแหน่งปัจจุบัน",
+          "result": "current_location",
+          "expected": "current_position",
+          "meaningful": true
+        },
+        {
+          "title": "ตำแหน่งที่ขอเลื่อน",
+          "result": "postponement_request_position",
+          "expected": "requested_position",
+          "meaningful": true
+        },
+        {
+          "title": "เหตุผล",
+          "result": "reason",
+          "expected": "reason",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มอบรมพัฒนาพนักงาน",
+      "category": "HR & Employment",
+      "tableName": "employee_development_training_form_4",
+      "expectedTable": "employee_training_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "หัวข้อการอบรม",
+          "result": "training_topics",
+          "expected": "training_topic",
+          "meaningful": true
+        },
+        {
+          "title": "วันที่อบรม",
+          "result": "training_date",
+          "expected": "training_date",
+          "meaningful": true
+        },
+        {
+          "title": "จำนวนผู้เข้าอบรม",
+          "result": "number_of_participants",
+          "expected": "number_of_participants",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มใบเสนอราคา",
+      "category": "Sales & Marketing",
+      "tableName": "quotation_form_5",
+      "expectedTable": "quotation_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "ชื่อลูกค้า",
+          "result": "customer_name",
+          "expected": "customer_name",
+          "meaningful": true
+        },
+        {
+          "title": "รายการสินค้า",
+          "result": "product_list",
+          "expected": "product_list",
+          "meaningful": true
+        },
+        {
+          "title": "ราคารวม",
+          "result": "total_price",
+          "expected": "total_price",
+          "meaningful": true
+        },
+        {
+          "title": "วันที่เสนอราคา",
+          "result": "quotation_date",
+          "expected": "quotation_date",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบสำรวจความพึงพอใจลูกค้า",
+      "category": "Sales & Marketing",
+      "tableName": "customer_satisfaction_survey_6",
+      "expectedTable": "customer_satisfaction_survey",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "ความพึงพอใจด้านสินค้า",
+          "result": "product_satisfaction",
+          "expected": "product_satisfaction",
+          "meaningful": true
+        },
+        {
+          "title": "ความพึงพอใจด้านบริการ",
+          "result": "service_satisfaction",
+          "expected": "service_satisfaction",
+          "meaningful": true
+        },
+        {
+          "title": "โอกาสแนะนำต่อ",
+          "result": "referral_opportunity",
+          "expected": "recommendation_likelihood",
+          "meaningful": true
+        },
+        {
+          "title": "ข้อเสนอแนะเพิ่มเติม",
+          "result": "additional_feedback",
+          "expected": "additional_feedback",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มการรับคำสั่งซื้อ",
+      "category": "Sales & Marketing",
+      "tableName": "order_acceptance_form_7",
+      "expectedTable": "purchase_order_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "เลขที่ใบสั่งซื้อ",
+          "result": "purchase_order_number",
+          "expected": "purchase_order_number",
+          "meaningful": true
+        },
+        {
+          "title": "ชื่อผู้สั่งซื้อ",
+          "result": "ordering_person_name",
+          "expected": "buyer_name",
+          "meaningful": true
+        },
+        {
+          "title": "วันที่ต้องการสินค้า",
+          "result": "date_of_need",
+          "expected": "required_delivery_date",
+          "meaningful": true
+        },
+        {
+          "title": "ที่อยู่จัดส่ง",
+          "result": "shipping_address",
+          "expected": "delivery_address",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มรับข้อร้องเรียนลูกค้า",
+      "category": "Sales & Marketing",
+      "tableName": "customer_complaint_form_8",
+      "expectedTable": "customer_complaint_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "ชื่อผู้ร้องเรียน",
+          "result": "complainants_name",
+          "expected": "complainant_name",
+          "meaningful": true
+        },
+        {
+          "title": "หมายเลขคำสั่งซื้อ",
+          "result": "order_number",
+          "expected": "order_number",
+          "meaningful": true
+        },
+        {
+          "title": "รายละเอียดปัญหา",
+          "result": "issue_details",
+          "expected": "problem_details",
+          "meaningful": true
+        },
+        {
+          "title": "ผลการแก้ไข",
+          "result": "correction_result",
+          "expected": "resolution_result",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มขอซ่อมบำรุง",
+      "category": "Operations & Services",
+      "tableName": "maintenance_request_form_9",
+      "expectedTable": "maintenance_request_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "รหัสอุปกรณ์",
+          "result": "device_id",
+          "expected": "equipment_id",
+          "meaningful": true
+        },
+        {
+          "title": "อาการเสีย",
+          "result": "loss_symptoms",
+          "expected": "malfunction_description",
+          "meaningful": true
+        },
+        {
+          "title": "ระดับความเร่งด่วน",
+          "result": "level_of_urgency",
+          "expected": "urgency_level",
+          "meaningful": true
+        },
+        {
+          "title": "วันที่แจ้งซ่อม",
+          "result": "date_of_repair_notification",
+          "expected": "request_date",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "บันทึกการตรวจสอบสต็อกสินค้า",
+      "category": "Operations & Services",
+      "tableName": "stock_check_log_10",
+      "expectedTable": "inventory_inspection_log",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "รหัสสินค้า",
+          "result": "product_code",
+          "expected": "product_code",
+          "meaningful": true
+        },
+        {
+          "title": "จำนวนคงเหลือ",
+          "result": "balance_amount",
+          "expected": "remaining_quantity",
+          "meaningful": true
+        },
+        {
+          "title": "วันที่ตรวจสอบ",
+          "result": "inspection_date",
+          "expected": "inspection_date",
+          "meaningful": true
+        },
+        {
+          "title": "สถานที่จัดเก็บ",
+          "result": "storage_facility",
+          "expected": "storage_location",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มขอใช้ห้องประชุม",
+      "category": "Operations & Services",
+      "tableName": "meeting_room_use_request_form_11",
+      "expectedTable": "meeting_room_request_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "ชื่อห้องประชุม",
+          "result": "meeting_room_name",
+          "expected": "meeting_room_name",
+          "meaningful": true
+        },
+        {
+          "title": "วันที่ใช้",
+          "result": "date_used",
+          "expected": "usage_date",
+          "meaningful": true
+        },
+        {
+          "title": "เวลาเริ่ม-เวลาสิ้นสุด",
+          "result": "start_time_end_time",
+          "expected": "start_end_time",
+          "meaningful": true
+        },
+        {
+          "title": "จำนวนผู้เข้าร่วม",
+          "result": "number_of_participants",
+          "expected": "number_of_attendees",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มจัดส่งสินค้า",
+      "category": "Operations & Services",
+      "tableName": "delivery_form_12",
+      "expectedTable": "product_delivery_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "เลขที่ใบส่งสินค้า",
+          "result": "delivery_note_number",
+          "expected": "delivery_note_number",
+          "meaningful": true
+        },
+        {
+          "title": "ชื่อผู้รับ",
+          "result": "recipient_name",
+          "expected": "recipient_name",
+          "meaningful": true
+        },
+        {
+          "title": "สถานะการจัดส่ง",
+          "result": "delivery_status",
+          "expected": "delivery_status",
+          "meaningful": true
+        },
+        {
+          "title": "ลายเซ็นผู้รับ",
+          "result": "recipient_signature",
+          "expected": "recipient_signature",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มตรวจสอบคุณภาพสินค้า",
+      "category": "Quality & Safety",
+      "tableName": "product_quality_inspection_form_13",
+      "expectedTable": "product_quality_inspection_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "รหัสล็อตสินค้า",
+          "result": "lot_code",
+          "expected": "product_lot_number",
+          "meaningful": true
+        },
+        {
+          "title": "ผลการตรวจสอบ",
+          "result": "audit_result",
+          "expected": "inspection_result",
+          "meaningful": true
+        },
+        {
+          "title": "จำนวนของเสีย",
+          "result": "waste_amount",
+          "expected": "defective_quantity",
+          "meaningful": true
+        },
+        {
+          "title": "ผู้ตรวจสอบ",
+          "result": "inspector",
+          "expected": "inspector",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "รายงานอุบัติเหตุในการทำงาน",
+      "category": "Quality & Safety",
+      "tableName": "report_a_work_accident_14",
+      "expectedTable": "work_accident_report",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "ชื่อผู้ประสบอุบัติเหตุ",
+          "result": "victimname",
+          "expected": "accident_victim_name",
+          "meaningful": true
+        },
+        {
+          "title": "วันเวลาที่เกิดเหตุ",
+          "result": "date_and_time_of_the_incident",
+          "expected": "accident_date_time",
+          "meaningful": true
+        },
+        {
+          "title": "สาเหตุ",
+          "result": "cause",
+          "expected": "cause",
+          "meaningful": true
+        },
+        {
+          "title": "การรักษา",
+          "result": "treatment",
+          "expected": "treatment",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มตรวจสอบความปลอดภัย",
+      "category": "Quality & Safety",
+      "tableName": "safety_check_form_15",
+      "expectedTable": "safety_inspection_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "จุดตรวจสอบ",
+          "result": "checkpoint",
+          "expected": "inspection_point",
+          "meaningful": true
+        },
+        {
+          "title": "ผลการตรวจ",
+          "result": "results",
+          "expected": "inspection_result",
+          "meaningful": true
+        },
+        {
+          "title": "ข้อบกพร่อง",
+          "result": "defect",
+          "expected": "deficiencies",
+          "meaningful": true
+        },
+        {
+          "title": "มาตรการแก้ไข",
+          "result": "corrective_measures",
+          "expected": "corrective_measures",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มการจัดการของเสีย",
+      "category": "Quality & Safety",
+      "tableName": "waste_management_form_16",
+      "expectedTable": "waste_management_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "ประเภทของเสีย",
+          "result": "waste_type",
+          "expected": "waste_type",
+          "meaningful": true
+        },
+        {
+          "title": "น้ำหนัก/ปริมาณ",
+          "result": "weightvolume",
+          "expected": "weight_volume",
+          "meaningful": true
+        },
+        {
+          "title": "วิธีการกำจัด",
+          "result": "disposal_method",
+          "expected": "disposal_method",
+          "meaningful": true
+        },
+        {
+          "title": "ผู้รับผิดชอบ",
+          "result": "responsible_person",
+          "expected": "responsible_person",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มขอเบิกค่าใช้จ่าย",
+      "category": "Finance & Admin",
+      "tableName": "expense_reimbursement_form_17",
+      "expectedTable": "expense_claim_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "ประเภทค่าใช้จ่าย",
+          "result": "expense_type",
+          "expected": "expense_type",
+          "meaningful": true
+        },
+        {
+          "title": "จำนวนเงิน",
+          "result": "amount",
+          "expected": "amount",
+          "meaningful": true
+        },
+        {
+          "title": "วันที่เกิดรายจ่าย",
+          "result": "expenditure_date",
+          "expected": "expense_date",
+          "meaningful": true
+        },
+        {
+          "title": "เอกสารแนบ",
+          "result": "attachment",
+          "expected": "attached_documents",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มใบเสร็จรับเงิน",
+      "category": "Finance & Admin",
+      "tableName": "receipt_form_18",
+      "expectedTable": "receipt_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "เลขที่ใบเสร็จ",
+          "result": "receipt_number",
+          "expected": "receipt_number",
+          "meaningful": true
+        },
+        {
+          "title": "ชื่อผู้ชำระเงิน",
+          "result": "payer_name",
+          "expected": "payer_name",
+          "meaningful": true
+        },
+        {
+          "title": "รายการ",
+          "result": "list",
+          "expected": "items",
+          "meaningful": true
+        },
+        {
+          "title": "ยอดรวมทั้งสิ้น",
+          "result": "total",
+          "expected": "grand_total",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    },
+    {
+      "formTitle": "แบบฟอร์มอนุมัติงบประมาณ",
+      "category": "Finance & Admin",
+      "tableName": "budget_approval_form_19",
+      "expectedTable": "budget_approval_form",
+      "meaningful": true,
+      "fields": [
+        {
+          "title": "โครงการ",
+          "result": "project",
+          "expected": "project",
+          "meaningful": true
+        },
+        {
+          "title": "งบประมาณที่ขอ",
+          "result": "requested_budget",
+          "expected": "requested_budget",
+          "meaningful": true
+        },
+        {
+          "title": "ผู้อนุมัติ",
+          "result": "approver",
+          "expected": "approver",
+          "meaningful": true
+        },
+        {
+          "title": "สถานะอนุมัติ",
+          "result": "approval_status",
+          "expected": "approval_status",
+          "meaningful": true
+        }
+      ],
+      "success": true
+    }
+  ]
+}

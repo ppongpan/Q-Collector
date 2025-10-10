@@ -34,3 +34,9 @@ logs
 # Temporary files
 *.tmp
 *.temp
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/tests/e2e/.auth/*.json

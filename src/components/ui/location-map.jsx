@@ -15,7 +15,18 @@ const LocationMap = ({
   const lat = parseFloat(latitude);
   const lng = parseFloat(longitude);
 
+  // ✅ DEBUG: Log coordinates to verify they're correct
+  console.log('🗺️ LocationMap coordinates:', {
+    latitude,
+    longitude,
+    lat,
+    lng,
+    latType: typeof latitude,
+    lngType: typeof longitude
+  });
+
   if (isNaN(lat) || isNaN(lng)) {
+    console.error('❌ Invalid coordinates:', { latitude, longitude, lat, lng });
     return (
       <div className={`bg-muted rounded-lg p-3 sm:p-4 text-center ${className}`} style={{ height }}>
         <MapPin className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-2 text-muted-foreground" />
@@ -24,13 +35,23 @@ const LocationMap = ({
     );
   }
 
-  // Generate multiple map URL options
-  const embedMapUrl = `https://maps.google.com/maps?q=${lat},${lng}&hl=en&z=15&output=embed`;
-  const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=400x300&markers=color:red%7C${lat},${lng}&maptype=roadmap`;
-  const openStreetMapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.01},${lat-0.01},${lng+0.01},${lat+0.01}&layer=mapnik&marker=${lat},${lng}`;
+  // ✅ CRITICAL FIX: Google Maps uses lat,lng format (NOT lng,lat)
+  // Also ensure proper decimal precision (6 digits is standard)
+  const latFormatted = lat.toFixed(6);
+  const lngFormatted = lng.toFixed(6);
 
-  // Generate Google Maps link
-  const mapsLink = `https://www.google.com/maps?q=${lat},${lng}`;
+  // ✅ Use Google Maps iframe embed (not blocked by ad blockers when using embed URL)
+  // Format: https://maps.google.com/maps?q=lat,lng&hl=th&z=16&output=embed
+  const embedMapUrl = `https://maps.google.com/maps?q=${latFormatted},${lngFormatted}&hl=th&z=16&output=embed`;
+
+  // Alternative: OpenStreetMap (backup option)
+  // Note: OpenStreetMap uses lng,lat order (opposite of Google Maps)
+  const openStreetMapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.005},${lat-0.005},${lng+0.005},${lat+0.005}&layer=mapnik&marker=${lat},${lng}`;
+
+  // Generate Google Maps link for opening in new tab
+  const mapsLink = `https://www.google.com/maps?q=${latFormatted},${lngFormatted}`;
+
+  console.log('🗺️ Map URLs:', { embedMapUrl, mapsLink });
 
   // Handle map load error
   const handleMapError = () => {
@@ -50,6 +71,7 @@ const LocationMap = ({
       >
         {!mapError ? (
           <>
+            {/* ✅ Use Google Maps embed iframe (works with ad blockers when using embed URL) */}
             <iframe
               src={embedMapUrl}
               width="100%"
@@ -59,26 +81,8 @@ const LocationMap = ({
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               className="w-full h-full"
-              title={`Map showing location at ${lat}, ${lng}`}
+              title={`แผนที่แสดงตำแหน่ง ${lat}, ${lng}`}
               onError={handleMapError}
-              onLoad={(e) => {
-                // Check if iframe loaded properly
-                setTimeout(() => {
-                  const iframe = e.target;
-                  if (iframe && iframe.contentDocument) {
-                    try {
-                      // Try to access iframe content to check if it loaded
-                      const iframeDoc = iframe.contentDocument;
-                      if (!iframeDoc || iframeDoc.body.children.length === 0) {
-                        handleMapError();
-                      }
-                    } catch (error) {
-                      // CORS error means iframe loaded successfully from external source
-                      console.log('Map loaded successfully');
-                    }
-                  }
-                }, 2000);
-              }}
             />
 
             {/* Overlay for click to open */}

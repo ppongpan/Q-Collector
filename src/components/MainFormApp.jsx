@@ -20,24 +20,25 @@ import SubFormView from './SubFormView';
 import SubFormDetail from './SubFormDetail';
 import MainFormEditPage from './pages/MainFormEditPage';
 import SubFormEditPage from './pages/SubFormEditPage';
+import UserEditPage from './pages/UserEditPage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCog, faArrowLeft, faFileAlt, faPlus, faSave, faEdit, faTrashAlt, faUsers
 } from '@fortawesome/free-solid-svg-icons';
 
 // Data services
-import dataService from '../services/DataService.js';
 import apiClient from '../services/ApiClient';
 import { useAuth } from '../contexts/AuthContext';
 
 
 // Main App Component with Toast Integration
 function MainFormAppContent() {
-  const [currentPage, setCurrentPage] = useState('form-list'); // 'form-list', 'form-builder', 'settings', 'user-management', 'theme-test', 'submission-list', 'submission-detail', 'form-view', 'subform-view', 'subform-detail', 'main-form-edit', 'subform-edit'
+  const [currentPage, setCurrentPage] = useState('form-list'); // 'form-list', 'form-builder', 'settings', 'user-management', 'user-edit', 'theme-test', 'submission-list', 'submission-detail', 'form-view', 'subform-view', 'subform-detail', 'main-form-edit', 'subform-edit'
   const [currentFormId, setCurrentFormId] = useState(null);
   const [currentSubmissionId, setCurrentSubmissionId] = useState(null);
   const [currentSubFormId, setCurrentSubFormId] = useState(null);
   const [currentSubSubmissionId, setCurrentSubSubmissionId] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [currentEditSubmissionId, setCurrentEditSubmissionId] = useState(null);
   const [currentEditSubFormId, setCurrentEditSubFormId] = useState(null);
@@ -53,6 +54,7 @@ function MainFormAppContent() {
 
   // Navigation state for submission detail
   const [allSubmissions, setAllSubmissions] = useState([]);
+  const [allSubSubmissions, setAllSubSubmissions] = useState([]);
   const [navCurrentIndex, setNavCurrentIndex] = useState(-1);
   const [navHasPrevious, setNavHasPrevious] = useState(false);
   const [navHasNext, setNavHasNext] = useState(false);
@@ -68,9 +70,8 @@ function MainFormAppContent() {
           console.log('📝 Form loaded for editing:', { formId: currentFormId, title: formData?.title });
           setEditFormData(formData);
         } catch (error) {
-          console.warn('Failed to load form from API, trying localStorage:', error);
-          const localForm = dataService.getForm(currentFormId);
-          setEditFormData(localForm);
+          console.error('Failed to load form from API:', error);
+          setEditFormData(null);
         } finally {
           setLoadingEditForm(false);
         }
@@ -80,6 +81,15 @@ function MainFormAppContent() {
     }
     loadFormForEdit();
   }, [isEditing, currentFormId, currentPage]);
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'instant'
+    });
+  }, [currentPage, currentFormId, currentSubmissionId, currentSubFormId, currentSubSubmissionId, currentUserId]);
 
   // Update breadcrumbs when navigation changes
   useEffect(() => {
@@ -143,6 +153,7 @@ function MainFormAppContent() {
 
 
   const handleNavigate = async (page, formId = null, editing = false, submissionId = null, subFormId = null, subSubmissionId = null) => {
+    console.log('🚀 handleNavigate called:', { page, formId, editing, submissionId, subFormId, subSubmissionId });
     setCurrentPage(page);
     setCurrentFormId(formId);
     setCurrentSubmissionId(submissionId);
@@ -169,18 +180,9 @@ function MainFormAppContent() {
           }
         }
       } catch (error) {
-        // Fallback to localStorage
-        console.warn('Failed to load form from API, trying localStorage:', error);
-        const form = dataService.getForm(formId);
-        if (form) {
-          setCurrentFormTitle(form.title);
-          if (subFormId && form.subForms) {
-            const subForm = form.subForms.find(sf => sf.id === subFormId);
-            if (subForm) {
-              setCurrentSubFormTitle(subForm.title);
-            }
-          }
-        }
+        console.error('Failed to load form from API:', error);
+        setCurrentFormTitle('');
+        setCurrentSubFormTitle('');
       }
     } else {
       // Clear form title when no formId
@@ -188,6 +190,42 @@ function MainFormAppContent() {
       setCurrentSubFormTitle('');
     }
   };
+
+  // Load sub-form submissions for navigation
+  useEffect(() => {
+    console.log('🔍 useEffect [sub-form navigation] triggered:', {
+      currentPage,
+      currentSubFormId,
+      currentSubmissionId,
+      conditionPassed: currentPage === 'subform-detail' && !!currentSubFormId && !!currentSubmissionId
+    });
+
+    async function loadSubFormSubmissions() {
+      if (currentPage === 'subform-detail' && currentSubFormId && currentSubmissionId) {
+        try {
+          console.log('🔍 Loading sub-form submissions for navigation:', {
+            currentSubFormId,
+            currentSubmissionId
+          });
+          // ✅ FIX: Use correct API endpoint that matches SubmissionDetail.jsx
+          const response = await apiClient.get(`/submissions/${currentSubmissionId}/sub-forms/${currentSubFormId}`);
+          const subs = response.data?.submissions || response.data || [];
+          console.log('✅ Sub-form submissions loaded:', {
+            count: subs.length,
+            submissions: subs.map(s => ({ id: s.id, submittedAt: s.submittedAt }))
+          });
+          setAllSubSubmissions(subs);
+        } catch (error) {
+          console.error('❌ Failed to load sub-form submissions:', error);
+          setAllSubSubmissions([]);
+        }
+      } else {
+        console.log('⏭️ Skipping sub-form load (condition not met) - Setting empty array');
+        setAllSubSubmissions([]);
+      }
+    }
+    loadSubFormSubmissions();
+  }, [currentPage, currentSubFormId, currentSubmissionId]);
 
   const handleNewForm = () => {
     if (!canCreateOrEditForms()) {
@@ -232,6 +270,10 @@ function MainFormAppContent() {
     handleNavigate('subform-detail', formId, false, submissionId, subFormId, subSubmissionId);
   };
 
+  const handleEditUser = (userId) => {
+    setCurrentUserId(userId);
+    handleNavigate('user-edit');
+  };
 
   const renderNavigation = () => {
     const getPageTitle = () => {
@@ -240,6 +282,7 @@ function MainFormAppContent() {
         case 'form-builder': return isEditing ? 'แก้ไขฟอร์ม' : 'สร้างฟอร์มใหม่';
         case 'settings': return 'ตั้งค่าระบบ';
         case 'user-management': return 'จัดการผู้ใช้งาน';
+        case 'user-edit': return 'แก้ไขข้อมูลผู้ใช้';
         case 'submission-list': return 'รายการข้อมูล';
         case 'submission-detail': return 'รายละเอียดข้อมูล';
         case 'form-view': return 'กรอกข้อมูลฟอร์ม';
@@ -472,6 +515,81 @@ function MainFormAppContent() {
                 </motion.div>
               )}
 
+              {currentPage === 'main-form-edit' && (
+                <motion.div
+                  onClick={() => {
+                    console.log('💾 Save button clicked for main-form-edit');
+                    if (formViewSaveHandlerRef.current) {
+                      console.log('💾 Calling handleSubmit...');
+                      formViewSaveHandlerRef.current.handleSubmit();
+                    }
+                  }}
+                  title="บันทึกการแก้ไข"
+                  className="relative flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none'
+                  }}
+                  animate={{
+                    scale: [1, 1.15, 1],
+                    opacity: [0.9, 1, 0.9]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                >
+                  {/* Pulsing glow background */}
+                  <motion.div
+                    className="absolute inset-0 rounded-full"
+                    animate={{
+                      scale: [1, 1.4, 1],
+                      opacity: [0.6, 0.2, 0.6]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    style={{
+                      background: 'radial-gradient(circle, rgba(255, 100, 0, 0.4) 0%, rgba(249, 115, 22, 0.2) 50%, transparent 70%)',
+                      filter: 'blur(8px)'
+                    }}
+                  />
+
+                  {/* Icon with orange color and rotation on hover */}
+                  <motion.div
+                    className="relative z-10"
+                    initial={{ rotate: 0 }}
+                    whileHover={{
+                      rotate: 360,
+                      scale: 1.1
+                    }}
+                    animate={{ rotate: 0 }}
+                    transition={{
+                      rotate: {
+                        duration: 0.5,
+                        ease: "linear"
+                      },
+                      scale: {
+                        duration: 0.2,
+                        ease: "easeInOut"
+                      }
+                    }}
+                  >
+                    <FontAwesomeIcon
+                      icon={faSave}
+                      className="text-2xl text-[#ff6400] group-hover:text-[#ff8533] transition-colors duration-300"
+                      style={{
+                        filter: 'drop-shadow(0 0 8px rgba(255, 100, 0, 0.6))'
+                      }}
+                    />
+                  </motion.div>
+                </motion.div>
+              )}
+
               {currentPage === 'submission-list' && (
                 <div
                   onClick={() => handleNavigate('form-view', currentFormId)}
@@ -493,7 +611,7 @@ function MainFormAppContent() {
                 <>
                   {/* Edit Button */}
                   <div
-                    onClick={() => handleNavigate('form-view', currentFormId, false, currentSubmissionId)}
+                    onClick={() => handleNavigate('main-form-edit', currentFormId, false, currentSubmissionId)}
                     title="แก้ไขข้อมูล"
                     className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
                     style={{
@@ -510,14 +628,17 @@ function MainFormAppContent() {
                   {/* Delete Button */}
                   <div
                     onClick={() => {
-                      toast.warning('คุณแน่ใจหรือไม่ที่จะลบข้อมูลนี้?', {
+                      const confirmToastId = toast.warning('คุณแน่ใจหรือไม่ที่จะลบข้อมูลนี้?', {
                         title: '⚠️ ยืนยันการลบข้อมูล',
                         duration: 8000,
                         action: {
                           label: 'ลบข้อมูล',
-                          onClick: () => {
+                          onClick: async () => {
+                            // ✅ ปิด toast ยืนยันทันที
+                            toast.dismiss(confirmToastId);
+
                             try {
-                              dataService.deleteSubmission(currentSubmissionId);
+                              await apiClient.deleteSubmission(currentSubmissionId);
                               handleNavigate('submission-list', currentFormId);
                               toast.success('ลบข้อมูลเรียบร้อยแล้ว', {
                                 title: '✅ สำเร็จ'
@@ -533,6 +654,69 @@ function MainFormAppContent() {
                       });
                     }}
                     title="ลบข้อมูล"
+                    className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                    style={{
+                      background: 'transparent',
+                      border: 'none'
+                    }}
+                  >
+                    <FontAwesomeIcon
+                      icon={faTrashAlt}
+                      className="text-muted-foreground group-hover:text-destructive group-hover:scale-110 transition-all duration-300"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* ✅ Sub-Form Detail Page - Edit/Delete Buttons */}
+              {currentPage === 'subform-detail' && (
+                <>
+                  {/* Edit Button */}
+                  <div
+                    onClick={() => handleNavigate('subform-edit', currentFormId, false, currentSubmissionId, currentSubFormId, currentSubSubmissionId)}
+                    title="แก้ไขข้อมูล"
+                    className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                    style={{
+                      background: 'transparent',
+                      border: 'none'
+                    }}
+                  >
+                    <FontAwesomeIcon
+                      icon={faEdit}
+                      className="text-muted-foreground group-hover:text-primary group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"
+                    />
+                  </div>
+
+                  {/* Delete Button - Only deletes sub-form submission, not parent */}
+                  <div
+                    onClick={() => {
+                      const confirmToastId = toast.warning('คุณแน่ใจหรือไม่ที่จะลบข้อมูลฟอร์มย่อยนี้?', {
+                        title: '⚠️ ยืนยันการลบข้อมูลฟอร์มย่อย',
+                        duration: 8000,
+                        action: {
+                          label: 'ลบข้อมูล',
+                          onClick: async () => {
+                            // ✅ ปิด toast ยืนยันทันที
+                            toast.dismiss(confirmToastId);
+
+                            try {
+                              await apiClient.delete(`/subforms/${currentSubFormId}/submissions/${currentSubSubmissionId}`);
+                              // After delete, go back to parent submission detail
+                              handleNavigate('submission-detail', currentFormId, false, currentSubmissionId);
+                              toast.success('ลบข้อมูลฟอร์มย่อยเรียบร้อยแล้ว', {
+                                title: '✅ สำเร็จ'
+                              });
+                            } catch (error) {
+                              console.error('Delete sub-form submission error:', error);
+                              toast.error('เกิดข้อผิดพลาดในการลบข้อมูลฟอร์มย่อย', {
+                                title: '❌ ข้อผิดพลาด'
+                              });
+                            }
+                          }
+                        }
+                      });
+                    }}
+                    title="ลบข้อมูลฟอร์มย่อย"
                     className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
                     style={{
                       background: 'transparent',
@@ -607,7 +791,7 @@ function MainFormAppContent() {
         handleViewSubmissionDetail(currentFormId, submissionId);
       }}
       onEditSubmission={(submissionId) => {
-        handleNavigate('form-view', currentFormId, false, submissionId);
+        handleNavigate('main-form-edit', currentFormId, false, submissionId);
       }}
       onBack={() => handleNavigate('form-list')}
     />
@@ -778,12 +962,19 @@ function MainFormAppContent() {
   );
 
   const renderSubFormDetail = () => {
-    // Get all sub-form submissions for this parent submission to determine navigation
-    const allSubSubmissions = dataService.getSubSubmissionsByParentId(currentSubmissionId)
-      .filter(sub => sub.subFormId === currentSubFormId);
+    // ✅ FIX: Use state-loaded sub-form submissions for navigation
     const currentIndex = allSubSubmissions.findIndex(sub => sub.id === currentSubSubmissionId);
     const hasPrevious = currentIndex > 0;
     const hasNext = currentIndex < allSubSubmissions.length - 1;
+
+    console.log('🎯 renderSubFormDetail navigation state:', {
+      allSubSubmissionsCount: allSubSubmissions.length,
+      currentSubSubmissionId,
+      currentIndex,
+      hasPrevious,
+      hasNext,
+      allSubSubmissionIds: allSubSubmissions.map(s => s.id)
+    });
 
     const handleNavigatePrevious = () => {
       if (hasPrevious) {
@@ -815,8 +1006,8 @@ function MainFormAppContent() {
         onBack={() => handleNavigate('submission-detail', currentFormId, false, currentSubmissionId)}
         onNavigatePrevious={handleNavigatePrevious}
         onNavigateNext={handleNavigateNext}
-        hasPrevious={navHasPrevious}
-        hasNext={navHasNext}
+        hasPrevious={hasPrevious}  // ✅ FIX: Use local variable instead of navHasPrevious
+        hasNext={hasNext}          // ✅ FIX: Use local variable instead of navHasNext
       />
     );
   };
@@ -829,6 +1020,7 @@ function MainFormAppContent() {
         transition={{ duration: 0.6 }}
       >
         <MainFormEditPage
+          ref={formViewSaveHandlerRef}
           formId={currentFormId}
           submissionId={currentSubmissionId}
           onSave={(submission, isEdit) => {
@@ -881,7 +1073,19 @@ function MainFormAppContent() {
       case 'settings':
         return renderSettings();
       case 'user-management':
-        return <UserManagement />;
+        return <UserManagement onEditUser={handleEditUser} />;
+      case 'user-edit':
+        return (
+          <UserEditPage
+            userId={currentUserId}
+            onSave={() => {
+              handleNavigate('user-management');
+            }}
+            onCancel={() => {
+              handleNavigate('user-management');
+            }}
+          />
+        );
       case 'theme-test':
         return <ThemeTestPage onNavigate={handleNavigate} />;
       case 'submission-list':
