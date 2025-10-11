@@ -65,14 +65,24 @@ app.use(helmet({
 // CORS configuration
 const corsOptions = {
   origin: (origin, callback) => {
-    const allowedOrigins = process.env.CORS_ORIGIN.split(',');
+    const allowedOrigins = process.env.CORS_ORIGIN.split(',').map(o => o.trim());
 
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
+    // Allow requests with no origin (mobile apps, curl, Postman, React proxy)
+    if (!origin) {
+      logger.debug('CORS: Request with no origin - ALLOWED');
+      return callback(null, true);
+    }
 
-    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+    // Remove trailing slash from origin for comparison
+    const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+    const normalizedAllowed = allowedOrigins.map(o => o.endsWith('/') ? o.slice(0, -1) : o);
+
+    // Check if origin is in allowed list (with or without trailing slash)
+    if (normalizedAllowed.indexOf(normalizedOrigin) !== -1 || allowedOrigins.includes('*')) {
+      logger.debug(`CORS: Origin ${origin} - ALLOWED`);
       callback(null, true);
     } else {
+      logger.error(`CORS: Origin ${origin} - BLOCKED (allowed: ${allowedOrigins.join(', ')})`);
       callback(new Error('Not allowed by CORS'));
     }
   },

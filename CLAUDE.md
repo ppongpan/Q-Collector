@@ -2,11 +2,11 @@
 
 **Enterprise Form Builder & Data Collection System**
 
-## Version: 0.7.8-dev (2025-10-10)
+## Version: 0.7.9-dev (2025-10-11)
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection
-**Status:** 🟢 Mobile UX + Token Refresh Fix (Critical Auth Bug Fixed!)
+**Status:** 🟢 ngrok Mobile Testing Ready (CORS + Proxy Configuration Complete!)
 
 ## Core Features
 
@@ -22,8 +22,10 @@
 ✅ MyMemory Translation (Free API, real-time Thai→English, excellent quality)
 ✅ File Management (MinIO, thumbnails, presigned URLs, smart downloads)
 ✅ Smart Token Redirect (return to original page after re-login)
-✅ **NEW:** Mobile-Friendly Tables (56-64px rows, adaptive fonts)
-✅ **NEW:** Token Refresh Working (7-day sessions, no false logouts)
+✅ Mobile-Friendly Tables (56-64px rows, adaptive fonts)
+✅ Token Refresh Working (7-day sessions, no false logouts)
+✅ **NEW:** ngrok Mobile Testing (HTTPS tunnel, React proxy pattern)
+✅ **NEW:** CORS Trailing Slash Fix (normalized origin matching)
 
 ## Quick Start
 
@@ -41,6 +43,94 @@ npm run build && npm run lint
 **Design:** Orange primary (#f97316) • 8px grid • 44px+ touch targets • Glass morphism • Responsive (mobile-first)
 
 ## Latest Updates
+
+### v0.7.9-dev (2025-10-11) - ngrok Mobile Testing Setup Complete 🎉
+
+**Status:** ✅ Production-Ready Mobile Testing via HTTPS Tunnel
+
+**Problem Solved:**
+- ❌ **Local Network Testing Failed**: Router AP Isolation prevented mobile device connectivity
+- ❌ **Dual Tunnel Not Possible**: ngrok free tier only supports 1 tunnel (we have 2 servers: frontend + backend)
+- ✅ **Solution**: React Proxy Pattern with single ngrok tunnel + CORS trailing slash fix
+
+**Architecture Decision:**
+- **Single Tunnel Strategy**: ngrok → Frontend (port 3000) → React Proxy → Backend (port 5000)
+- **Why React Proxy?**: Eliminates need for dual tunnels, works within ngrok free tier constraints
+- **Traffic Flow**: Mobile → HTTPS tunnel → localhost:3000 → proxy → localhost:5000 → PostgreSQL/Redis/MinIO
+
+**Configuration Changes:**
+
+1. **Frontend (.env)**
+   ```env
+   HOST=0.0.0.0                          # Bind to all network interfaces
+   DANGEROUSLY_DISABLE_HOST_CHECK=true   # Allow ngrok host headers
+   REACT_APP_API_URL=/api/v1             # Changed from absolute to relative path
+   ```
+
+2. **Backend (backend/.env)**
+   ```env
+   CORS_ORIGIN=http://localhost:3000,http://localhost:5000,http://192.168.1.181:3000,https://78291324f2c7.ngrok-free.app
+   CORS_CREDENTIALS=true
+   ```
+
+3. **React Proxy (package.json)**
+   ```json
+   {
+     "proxy": "http://localhost:5000"
+   }
+   ```
+
+**Critical Fix: CORS Trailing Slash Bug**
+- **Problem**: React proxy sent `Origin: http://localhost:5000/` (with trailing slash) but CORS_ORIGIN had `http://localhost:5000` (without slash)
+- **Symptom**: `CORS: Origin http://localhost:5000/ - BLOCKED`
+- **Solution**: Implemented origin normalization in `backend/api/app.js` (lines 66-94)
+- **Code**:
+  ```javascript
+  // Remove trailing slash from origin for comparison
+  const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+  const normalizedAllowed = allowedOrigins.map(o => o.endsWith('/') ? o.slice(0, -1) : o);
+  ```
+- **Result**: Now handles both `http://localhost:5000` and `http://localhost:5000/` correctly
+
+**Testing Results:**
+- ✅ **PC Login**: 200 OK response
+- ✅ **CORS Working**: `CORS: Origin http://localhost:5000/ - ALLOWED`
+- ✅ **Trusted Device**: Device recognized, session created successfully
+- 📱 **Mobile Ready**: `https://78291324f2c7.ngrok-free.app`
+
+**Files Modified:** 7 files total
+- `.env` - Frontend configuration (HOST, API_URL, host check)
+- `backend/.env` - CORS origins (added ngrok URL and localhost:5000)
+- `package.json` - Added proxy configuration + version bump
+- `backend/api/app.js` - CORS trailing slash normalization
+- `MOBILE-TESTING-COMPLETE.md` - Comprehensive setup guide (NEW)
+- `NGROK-SETUP.md` - Quick start guide (NEW)
+- `LOCAL-NETWORK-TESTING.md` - AP Isolation documentation (NEW)
+
+**Lines Changed:** ~300 lines total
+**Breaking Changes:** None (fully backward compatible)
+
+**Security Notes:**
+- ⚠️ `DANGEROUSLY_DISABLE_HOST_CHECK=true` is for **development only**
+- ⚠️ ngrok URL changes on every restart (free tier limitation)
+- ⚠️ Public HTTPS endpoint (anyone with URL can access)
+
+**Commands:**
+```bash
+# Start ngrok tunnel
+ngrok http 3000
+
+# Start servers (separate terminals)
+npm start              # Frontend
+cd backend && npm start  # Backend
+```
+
+**Documentation:**
+- `MOBILE-TESTING-COMPLETE.md` - Complete setup guide with troubleshooting
+- `NGROK-SETUP.md` - Quick start instructions
+- `LOCAL-NETWORK-TESTING.md` - AP Isolation problem documentation
+
+---
 
 ### v0.7.8-dev (2025-10-10) - Mobile UX + Critical Token Refresh Fix 🚀
 
@@ -582,3 +672,4 @@ if (filters.submissionId) {
 **License:** Internal use - Q-Collector Enterprise v0.6.5
 - if restart servers  do not kill claude process
 - do not kill claude process
+- สามารถให้ใช้ playwright mcp ช่วยตรวจสอบ console log ได้เลย
