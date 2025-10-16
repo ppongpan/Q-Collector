@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
+import { useEnhancedToast } from './ui/enhanced-toast'; // ✅ FIX v0.7.10: Use project's toast system
 import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription, GlassCardContent } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -15,6 +16,8 @@ import { LocationMap } from './ui/location-map';
 // Data services
 import fileServiceAPI from '../services/FileService.api.js';
 import apiClient from '../services/ApiClient';
+import { getFileStreamURL } from '../config/api.config.js'; // ✅ FIX v0.7.10: For blob URL stream
+import API_CONFIG from '../config/api.config.js'; // ✅ FIX v0.7.10: Default import for API_CONFIG
 
 // Auth context
 import { useAuth } from '../contexts/AuthContext';
@@ -25,6 +28,135 @@ import { useDelayedLoading } from '../hooks/useDelayedLoading';
 // Utilities
 import { formatNumberByContext } from '../utils/numberFormatter.js';
 import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../utils/phoneFormatter.js';
+import { cn } from '../lib/utils'; // ✅ FIX v0.7.10: For className composition
+
+// ✅ FIX v0.7.26: Fixed Navigation Buttons Component using Portal
+// Buttons stay on screen edges even when scrolling (fixed position)
+const FixedNavigationButtons = ({ hasPrevious, hasNext, onNavigatePrevious, onNavigateNext }) => {
+  const [portalElement, setPortalElement] = useState(null);
+
+  useEffect(() => {
+    // Create portal element for navigation buttons
+    const element = document.createElement('div');
+    element.id = 'fixed-navigation-portal';
+    element.style.cssText = `
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100vh !important;
+      pointer-events: none !important;
+      z-index: 40 !important;
+    `;
+    document.body.appendChild(element);
+    setPortalElement(element);
+
+    return () => {
+      if (document.body.contains(element)) {
+        document.body.removeChild(element);
+      }
+    };
+  }, []);
+
+  // ✅ v0.7.26 DEBUG: Button visibility logging
+  useEffect(() => {
+    console.log('🎯 [v0.7.26] Button Visibility - FixedNavigationButtons:', {
+      hasPrevious,
+      hasNext,
+      onNavigatePrevious: !!onNavigatePrevious,
+      onNavigateNext: !!onNavigateNext,
+      portalCreated: !!portalElement,
+      rendering: true
+    });
+  }, [hasPrevious, hasNext, onNavigatePrevious, onNavigateNext, portalElement]);
+
+  if (!portalElement) return null;
+
+  return createPortal(
+    <>
+      {/* ✅ Previous Button - Fixed to left edge, always visible on desktop */}
+      {hasPrevious && onNavigatePrevious && (
+        <motion.div
+          initial={{ opacity: 0, x: -100 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -100 }}
+          transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
+          onClick={onNavigatePrevious}
+          className="hidden md:flex fixed left-6 top-1/2 -translate-y-1/2 w-20 h-20 items-center justify-center cursor-pointer group pointer-events-auto"
+          title="คลิกเพื่อดูข้อมูลก่อนหน้า"
+          style={{
+            zIndex: 50
+          }}
+        >
+          {/* Glow Effect */}
+          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500/30 to-orange-600/30 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+          {/* Glass Button */}
+          <motion.div
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            className="relative w-16 h-16 rounded-full bg-gradient-to-br from-white/10 to-white/5 dark:from-white/20 dark:to-white/10 backdrop-blur-xl border border-white/20 dark:border-white/30 shadow-2xl flex items-center justify-center overflow-hidden group-hover:border-orange-400/60 transition-all duration-300"
+          >
+            {/* Inner Glow */}
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-400/0 to-orange-600/0 group-hover:from-orange-400/30 group-hover:to-orange-600/30 transition-all duration-500" />
+
+            {/* Icon */}
+            <svg xmlns="http://www.w3.org/2000/svg" className="relative h-7 w-7 text-gray-700 dark:text-gray-300 group-hover:text-orange-500 dark:group-hover:text-orange-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+            </svg>
+
+            {/* Shimmer Effect */}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* ✅ Next Button - Fixed to right edge, always visible on desktop */}
+      {hasNext && onNavigateNext && (
+        <motion.div
+          initial={{ opacity: 0, x: 100 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 100 }}
+          transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
+          onClick={onNavigateNext}
+          className="hidden md:flex fixed right-6 top-1/2 -translate-y-1/2 w-20 h-20 items-center justify-center cursor-pointer group pointer-events-auto"
+          title="คลิกเพื่อดูข้อมูลถัดไป"
+          style={{
+            zIndex: 50
+          }}
+        >
+          {/* Glow Effect */}
+          <div className="absolute inset-0 rounded-full bg-gradient-to-l from-orange-500/30 to-orange-600/30 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+          {/* Glass Button */}
+          <motion.div
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            className="relative w-16 h-16 rounded-full bg-gradient-to-br from-white/10 to-white/5 dark:from-white/20 dark:to-white/10 backdrop-blur-xl border border-white/20 dark:border-white/30 shadow-2xl flex items-center justify-center overflow-hidden group-hover:border-orange-400/60 transition-all duration-300"
+          >
+            {/* Inner Glow */}
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-400/0 to-orange-600/0 group-hover:from-orange-400/30 group-hover:to-orange-600/30 transition-all duration-500" />
+
+            {/* Icon */}
+            <svg xmlns="http://www.w3.org/2000/svg" className="relative h-7 w-7 text-gray-700 dark:text-gray-300 group-hover:text-orange-500 dark:group-hover:text-orange-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+            </svg>
+
+            {/* Shimmer Effect */}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </>,
+    portalElement
+  );
+};
 
 // Floating Button Component using Portal
 const FloatingAddButton = ({ formId, onAddNew }) => {
@@ -232,7 +364,9 @@ const FloatingAddButton = ({ formId, onAddNew }) => {
   );
 };
 
-export default function SubmissionDetail({
+// ✅ FIX v0.7.20: Wrap component with React.memo to prevent toast context re-renders
+// Toast state changes in ToastProvider no longer trigger SubmissionDetail re-renders
+const SubmissionDetailComponent = function SubmissionDetail({
   formId,
   submissionId,
   onEdit,
@@ -247,12 +381,20 @@ export default function SubmissionDetail({
   hasNext
 }) {
   const { userRole } = useAuth();
+  const toast = useEnhancedToast(); // ✅ FIX v0.7.10: Initialize toast for mobile downloads
   const [form, setForm] = useState(null);
   const [submission, setSubmission] = useState(null);
   const [subSubmissions, setSubSubmissions] = useState({});
   const [loading, setLoading] = useState(true);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+
+  // ✅ FIX v0.7.29-v15: Hide images during navigation to prevent flicker
+  // Track version + loading state to completely hide old images
+  const imageBlobUrlsRef = useRef({});
+  const [imageBlobUrls, setImageBlobUrls] = useState({});
+  const [imageBlobUrlsVersion, setImageBlobUrlsVersion] = useState(0);
+  const [imagesTransitioning, setImagesTransitioning] = useState(false);
 
   // Show loading UI only if loading takes longer than 1 second
   const showLoading = useDelayedLoading(loading, 1000);
@@ -289,18 +431,47 @@ export default function SubmissionDetail({
     loadSubmissionData();
   }, [formId, submissionId]);
 
-  // Add effect to reload data when component is focused (for file updates)
-  // ✅ CRITICAL FIX: Include formId and submissionId in dependencies to prevent stale closure
-  // Without dependencies, the listener captures old formId/submissionId values and never updates
+  // ✅ FIX v0.7.29-v16: COMPLETE IMAGE CLEARING - Clear ALL image sources
+  // This fixes all 4 flicker causes: blob URLs, ref, state, and presignedUrls
   useEffect(() => {
-    const handleFocus = () => {
-      console.log('🔄 Window focused - reloading submission data:', { formId, submissionId });
-      loadSubmissionData();
-    };
+    console.log('🔄 [v0.7.29-v16] Navigation detected, clearing ALL image sources for submission:', submissionId);
 
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [formId, submissionId]); // ← Re-create listener when IDs change to fix stale closure
+    // STEP 1: Hide ALL images IMMEDIATELY (prevents any rendering)
+    setImagesTransitioning(true);
+
+    // STEP 2: Revoke ALL old blob URLs (memory cleanup)
+    const currentBlobUrls = { ...imageBlobUrlsRef.current };
+    Object.keys(currentBlobUrls).forEach(fileId => {
+      const blobUrl = currentBlobUrls[fileId];
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        console.log('🗑️ [v0.7.29-v16] Revoked blob URL for file:', fileId);
+      }
+    });
+
+    // STEP 3: Clear BOTH ref AND state (removes blob URLs from all sources)
+    imageBlobUrlsRef.current = {};
+    setImageBlobUrls({});
+
+    // STEP 4: Increment version (forces ImageThumbnail unmount/remount)
+    setImageBlobUrlsVersion(prev => {
+      const newVersion = prev + 1;
+      console.log('✨ [v0.7.29-v16] Version incremented:', newVersion);
+      return newVersion;
+    });
+
+    // STEP 5: Un-hide after brief delay (allows DOM to settle)
+    const timer = setTimeout(() => {
+      setImagesTransitioning(false);
+      console.log('✅ [v0.7.29-v16] Transition complete, images can render');
+    }, 100);  // ✅ Increased to 100ms for more reliable clearing
+
+    return () => clearTimeout(timer);
+  }, [submissionId]);
+
+  // ❌ REMOVED v0.7.13: Window focus reload - caused unnecessary re-renders and duplicate API calls
+  // Users complained about excessive logs and API requests on every click
+  // Files are already loaded correctly via useEffect, no need to reload on window focus
 
   const loadSubmissionData = async () => {
     setLoading(true);
@@ -495,11 +666,18 @@ export default function SubmissionDetail({
     }
   };
 
-  // Create separate component for file fields to use hooks properly
-  const FileFieldDisplay = ({ field, value, submissionId }) => {
+// ✅ FIX v0.7.17: Define FileFieldDisplay OUTSIDE parent component to prevent re-creation
+// This prevents it from being recreated on every parent re-render → no unmount/remount → no flicker
+const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageBlobUrls, imagesTransitioning }) => {
     // ✅ CRITICAL FIX: Declare ALL hooks FIRST before any conditional logic or early returns
     const [files, setFiles] = useState([]);
     const [filesLoading, setFilesLoading] = useState(true);
+    // ❌ REMOVED v0.7.16: imageBlobUrls state moved to parent to prevent re-render cycle
+    // const [imageBlobUrls, setImageBlobUrls] = useState({});
+
+    // ✅ FIX v0.7.15: Use useRef instead of useState to persist across re-renders
+    const loadedFileIdsRef = React.useRef(new Set());
+    const loadingFileIdsRef = React.useRef(new Set()); // Track currently loading files
 
     // ✅ Check for error objects AFTER hooks are declared
     const hasError = value && typeof value === 'object' && 'error' in value;
@@ -531,42 +709,40 @@ export default function SubmissionDetail({
       fileIds = [actualValue.id];
     }
 
-    console.log('📁 FileFieldDisplay:', {
-      fieldId: field.id,
-      fieldTitle: field.title,
-      rawValue: value,
-      rawValueType: typeof value,
-      rawValueKeys: value && typeof value === 'object' ? Object.keys(value) : null,
-      actualValue: actualValue,
-      actualValueType: typeof actualValue,
-      extractedFileIds: fileIds,
-      submissionId,
-      hasError
-    });
+    // ❌ REMOVED v0.7.13: Debug logging - caused 6+ logs per interaction
+    // console.log('📁 FileFieldDisplay:', {...})
+
+    // ✅ FIX v0.7.14: Stable file IDs string to prevent excessive re-renders
+    const fileIdsKey = fileIds && fileIds.length > 0 ? fileIds.sort().join(',') : '';
 
     useEffect(() => {
+      // ✅ FIX v0.7.15: Check if already loaded OR currently loading using Ref
+      if (fileIdsKey && (loadedFileIdsRef.current.has(fileIdsKey) || loadingFileIdsRef.current.has(fileIdsKey))) {
+        console.log('✅ [v0.7.15] Skipping duplicate load:', fileIdsKey);
+        return;
+      }
+
+      // Mark as loading
+      loadingFileIdsRef.current.add(fileIdsKey);
+
       const loadFiles = async () => {
         // ✅ Skip loading if there's an error
         if (hasError) {
-          console.log('⚠️ Error object detected for field:', field.title, value.error);
           setFilesLoading(false);
           return;
         }
 
         if (!fileIds || fileIds.length === 0) {
-          console.log('⚠️ No file IDs to load for field:', field.title);
           setFilesLoading(false);
           return;
         }
 
         setFilesLoading(true);
-        console.log('📥 Loading files from MinIO:', fileIds);
 
         try {
           // ✅ OPTIMIZATION: If actualValue already has file info (name, type, size), use it directly
           // This happens when file is stored as single object with all metadata
           if (!hasError && typeof actualValue === 'object' && actualValue?.id && actualValue?.name) {
-            console.log('✅ Using file metadata from submission data:', actualValue);
             const fileWithUrl = await fileServiceAPI.getFileWithUrl(actualValue.id);
             setFiles([{
               id: actualValue.id,
@@ -578,12 +754,14 @@ export default function SubmissionDetail({
               presignedUrl: fileWithUrl.presignedUrl
             }]);
             setFilesLoading(false);
+            // ✅ FIX v0.7.15: Mark as loaded using Ref
+            loadingFileIdsRef.current.delete(fileIdsKey);
+            loadedFileIdsRef.current.add(fileIdsKey);
             return;
           }
 
           // Try to get files for this submission and field
           const submissionFiles = await fileServiceAPI.getSubmissionFiles(submissionId);
-          console.log('📦 All submission files:', submissionFiles);
 
           // Filter files for this specific field
           const fieldFiles = submissionFiles
@@ -598,14 +776,10 @@ export default function SubmissionDetail({
               presignedUrl: fileData.presignedUrl
             }));
 
-          console.log('✅ Field files loaded:', {
-            fieldId: field.id,
-            fieldTitle: field.title,
-            filesCount: fieldFiles.length,
-            files: fieldFiles
-          });
-
           setFiles(fieldFiles);
+          // ✅ FIX v0.7.15: Mark as loaded using Ref
+          loadingFileIdsRef.current.delete(fileIdsKey);
+          loadedFileIdsRef.current.add(fileIdsKey);
         } catch (error) {
           console.error('❌ Error loading files from MinIO:', error);
           // Fallback: try loading files individually by ID
@@ -631,11 +805,15 @@ export default function SubmissionDetail({
             );
 
             const validFiles = loadedFiles.filter(file => file);
-            console.log('✅ Files loaded individually:', validFiles.length);
             setFiles(validFiles);
+            // ✅ FIX v0.7.15: Mark as loaded using Ref
+            loadingFileIdsRef.current.delete(fileIdsKey);
+            loadedFileIdsRef.current.add(fileIdsKey);
           } catch (fallbackError) {
             console.error('❌ Fallback file loading failed:', fallbackError);
             setFiles([]);
+            // ✅ FIX v0.7.15: Still mark as attempted even if failed
+            loadingFileIdsRef.current.delete(fileIdsKey);
           }
         } finally {
           setFilesLoading(false);
@@ -643,7 +821,148 @@ export default function SubmissionDetail({
       };
 
       loadFiles();
-    }, [JSON.stringify(fileIds), submissionId, field.id]); // Dependency on fileIds and submissionId
+    }, [fileIdsKey, submissionId, field.id, hasError, actualValue, fileIds]); // ✅ FIX v0.7.15: Complete dependencies
+
+    // ✅ FIX v0.7.17: Use useMemo with JSON.stringify for truly stable comparison
+    // This prevents useEffect from running when parent re-renders but file IDs haven't changed
+    const fileIdsString = React.useMemo(() => {
+      if (!files || files.length === 0) return '';
+      return files.map(f => f.id).sort().join(',');
+    }, [JSON.stringify(files?.map(f => f.id) || [])]);
+
+    // ✅ Load authenticated image blob URLs for display (fixes 401 Unauthorized)
+    // ✅ FIX v0.7.15: Track loaded blob URLs to prevent duplicate loading
+    const loadedBlobUrlsRef = React.useRef(new Set());
+
+    useEffect(() => {
+      const loadAuthenticatedImages = async () => {
+        // ✅ FIX: Use API_CONFIG to get consistent token key
+        const token = localStorage.getItem(API_CONFIG.token.storageKey);
+
+        // ✅ FIX v0.7.18: Debug logging for 401 error
+        console.log('🔐 [SubmissionDetail] Image auth check:', {
+          hasToken: !!token,
+          tokenKey: API_CONFIG.token.storageKey,
+          tokenLength: token?.length,
+          filesCount: files?.length
+        });
+
+        if (!token || !files || files.length === 0) {
+          if (!token) {
+            console.error('❌ [SubmissionDetail] NO TOKEN found in localStorage!', {
+              storageKey: API_CONFIG.token.storageKey,
+              allKeys: Object.keys(localStorage)
+            });
+          }
+          return;
+        }
+
+        // Iterate through all files in this field
+        for (const file of files) {
+          // ✅ FIX v0.7.17: Only load if we DON'T already have a blob URL AND haven't loaded before
+          if (file.isImage && file.id && !imageBlobUrlsRef.current[file.id] && !loadedBlobUrlsRef.current.has(file.id)) {
+            // ✅ Mark as loading to prevent duplicates
+            loadedBlobUrlsRef.current.add(file.id);
+            try {
+              const streamUrl = getFileStreamURL(file.id);
+
+              // ✅ FIX v0.7.18: Debug logging for fetch request
+              console.log('🖼️ [SubmissionDetail] Fetching image stream:', {
+                fileId: file.id,
+                streamUrl,
+                hasToken: !!token,
+                tokenPreview: token?.substring(0, 20) + '...'
+              });
+
+              const response = await fetch(streamUrl, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+
+              if (response.ok) {
+                const blob = await response.blob();
+                // ✅ FIX v0.7.29-v14: Write to BOTH ref AND state
+                // Ref for stable reference, state to trigger immediate re-render with new images
+                const blobUrl = URL.createObjectURL(blob);
+                imageBlobUrlsRef.current[file.id] = blobUrl;
+                setImageBlobUrls(prev => ({ ...prev, [file.id]: blobUrl }));
+                console.log('✅ [v0.7.29-v14] Image loaded successfully:', file.id);
+              } else {
+                console.error(`❌ [SubmissionDetail] Failed to load image ${file.id}: ${response.status} ${response.statusText}`);
+              }
+            } catch (error) {
+              console.error(`❌ [SubmissionDetail] Error loading image ${file.id}:`, error);
+            }
+          }
+        }
+      };
+
+      loadAuthenticatedImages();
+
+      // ✅ FIX v0.7.12: NO cleanup function - keep blob URLs stable
+      // Images must display at all times on mobile (user requirement)
+      // Blob URLs will be revoked automatically when component unmounts
+    }, [fileIdsString]); // ✅ FIX v0.7.17: Only depend on fileIdsString, check imageBlobUrls inside loop
+
+    // ✅ FIX v0.7.10: Mobile download handler with toast notifications
+    const handleFileDownload = async (file) => {
+      const isMobile = window.innerWidth < 768;
+
+      if (isMobile) {
+        toast.loading('กำลังเตรียมดาวน์โหลด...', { id: file.id });
+      }
+
+      try {
+        const downloadUrl = `${API_CONFIG.baseURL}/files/${file.id}/download`;
+        // ✅ FIX: Use API_CONFIG to get consistent token key
+        const token = localStorage.getItem(API_CONFIG.token.storageKey);
+
+        const response = await fetch(downloadUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Download failed: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = file.name || 'download';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        window.URL.revokeObjectURL(blobUrl);
+
+        // ✅ Success toast (mobile only)
+        if (isMobile) {
+          toast.success('ดาวน์โหลดสำเร็จ!', { id: file.id, duration: 2000 });
+        }
+      } catch (error) {
+        console.error('❌ Download failed:', error);
+
+        // ✅ Error toast
+        if (isMobile) {
+          toast.error('ดาวน์โหลดไม่สำเร็จ', { id: file.id });
+        } else {
+          alert('ไม่สามารถดาวน์โหลดไฟล์ได้: ' + error.message);
+        }
+      }
+    };
+
+    // ✅ FIX v0.7.28: Add null check before rendering to prevent "Cannot read properties of null" errors
+    if (!field) {
+      console.warn('FileFieldDisplay received null field prop');
+      return null;
+    }
 
     return (
       <div className="space-y-3">
@@ -651,47 +970,42 @@ export default function SubmissionDetail({
           {field.title}
           {field.required && <span className="text-destructive ml-1">*</span>}
         </label>
-        <div className={`w-full border border-border/50 rounded-lg p-4 backdrop-blur-sm ${
+        {/* ✅ FIX v0.7.10: Add min-height to prevent layout shift when content changes */}
+        {/* ✅ FIX v0.7.28: Reduce container height by 50% (200px → 100px) */}
+        <div className={cn(
+          'w-full border border-border/50 rounded-lg p-4 backdrop-blur-sm',  // ✅ FIX v0.7.29-v12: Removed relative positioning (no overlay)
+          'min-h-[100px]',  // ✅ FIX v0.7.28: 50% reduction for compact display
           isEmpty || files.length === 0 || hasError
             ? 'bg-muted/40'
             : 'bg-background/50'
-        }`}>
+        )}>
+          {/* ❌ REMOVED v0.7.29-v12: Loading overlay - caused infinite loading + didn't fix stale images */}
           {hasError ? (
             <div className="text-center py-6 text-muted-foreground">
               <div className="text-4xl mb-2 opacity-30">⚠️</div>
               <div className="text-sm font-medium text-orange-500">ไม่สามารถโหลดไฟล์ได้</div>
               <div className="text-xs mt-1">{value.error || 'ข้อมูลไฟล์สูญหาย'}</div>
             </div>
-          ) : filesLoading ? (
-            <div className="text-center py-6 text-muted-foreground">
-              <div className="text-sm">กำลังโหลดไฟล์...</div>
-            </div>
-          ) : files.length > 0 ? (
+          ) : files.length > 0 && !imagesTransitioning && (
+            // ✅ FIX v0.7.29-v15: Hide images during navigation to prevent old images from flickering
+            // Show files immediately when available AND not transitioning
             <div className="space-y-3">
               {field.type === 'image_upload' ? (
-                // แสดงแบบ left-right layout สำหรับรูปภาพ
-                <div className="space-y-2">
+                // ✅ Use ImageThumbnail component with authenticated blob URLs
+                // Provides: modal preview, download button, responsive horizontal layout on desktop
+                // ✅ LAYOUT: Vertical stack for horizontal thumbnail+info layout
+                // ✅ FIX v0.7.29-v4: Add sm:max-w-fit to prevent expansion on tablet/desktop
+                <div className="space-y-2 w-full sm:max-w-fit">
                   {files.map((file, index) => (
-                    <div key={file.id || index} className="flex items-start gap-4">
-                      {/* รูปภาพด้านซ้าย */}
-                      <div className="flex-shrink-0">
-                        <ImageThumbnail
-                          file={file}
-                          size="lg"
-                          showFileName={false}
-                        />
-                      </div>
-
-                      {/* รายละเอียดด้านขวา */}
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <div className="text-sm font-medium text-foreground truncate" title={file.name || file.originalName || 'ไฟล์ที่แนบ'}>
-                          {file.name || file.originalName || file.filename || 'ไฟล์ที่แนบ'}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {file.size ? formatFileSize(file.size) : 'ไม่ทราบขนาด'}
-                        </div>
-                      </div>
-                    </div>
+                    <ImageThumbnail
+                      key={`${file.id}-${imageBlobUrlsVersion}`}  // ✅ FIX v0.7.29-v13: Force unmount on navigation
+                      file={file}
+                      blobUrl={imageBlobUrls[file.id] || (!imagesTransitioning ? file.presignedUrl : null)}  // ✅ FIX v0.7.29-v16: Prevent presignedUrl during transition
+                      size="lg"
+                      showFileName={true}
+                      onDownload={handleFileDownload}  // ✅ FIX v0.7.10: Pass download handler with toast
+                      adaptive={true}  // ✅ FIX v0.7.23: Enable adaptive sizing (landscape 16:9, portrait 50vw)
+                    />
                   ))}
                 </div>
               ) : (
@@ -713,23 +1027,65 @@ export default function SubmissionDetail({
                 />
               )}
             </div>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              <div className="text-4xl mb-2 opacity-30">📁</div>
-              <div className="text-sm">ไม่มีไฟล์</div>
-            </div>
           )}
         </div>
       </div>
     );
-  };
+}, (prevProps, nextProps) => {
+  // ✅ FIX v0.7.19: Custom comparison function for React.memo
+  // ✅ FIX v0.7.28: Add null checks to prevent "Cannot read properties of null" errors
+  // ✅ FIX v0.7.29-v15: Re-render when imagesTransitioning changes to hide/show images
+
+  // If either field is null, they must both be null to be equal
+  if (!prevProps.field || !nextProps.field) {
+    return prevProps.field === nextProps.field;
+  }
+
+  return (
+    prevProps.field.id === nextProps.field.id &&
+    prevProps.submissionId === nextProps.submissionId &&
+    JSON.stringify(prevProps.value) === JSON.stringify(nextProps.value) &&
+    prevProps.imagesTransitioning === nextProps.imagesTransitioning  // ✅ FIX v0.7.29-v15: Re-render when transitioning state changes
+    // ✅ FIX v0.7.19: imageBlobUrls is ref.current (same reference ALWAYS), no comparison needed
+    // ✅ FIX v0.7.19: toast is stable callback, no comparison needed
+  );
+});
+
+  // ✅ FIX v0.7.29-v15: Memoize FileFieldDisplay with transitioning state
+  // imagesTransitioning triggers immediate hiding of all images during navigation
+  const memoizedFileFieldDisplays = React.useMemo(() => {
+    const fileFields = {};
+    (form?.fields || [])
+      .filter(field => field.type === 'file_upload' || field.type === 'image_upload')
+      .forEach(field => {
+        fileFields[field.id] = (
+          <FileFieldDisplay
+            key={field.id}
+            field={field}
+            submissionId={submissionId}
+            toast={toast}
+            imageBlobUrls={imageBlobUrls}  // ✅ Use state instead of ref for immediate updates
+            imagesTransitioning={imagesTransitioning}  // ✅ FIX v0.7.29-v15: Pass transitioning flag to hide images during navigation
+          />
+        );
+      });
+    return fileFields;
+  }, [form?.fields, submissionId, imageBlobUrls, imageBlobUrlsVersion, imagesTransitioning]);
 
   const renderFieldValue = (field, value) => {
     const isEmpty = !value && value !== 0;
 
     // Special handling for file upload fields - use component with hooks
     if (field.type === 'file_upload' || field.type === 'image_upload') {
-      return <FileFieldDisplay key={field.id} field={field} value={value} submissionId={submissionId} />;
+      // ✅ FIX v0.7.21: Return memoized component instead of creating new one
+      // Pass value as separate prop to force re-render only when value changes
+      const MemoizedComponent = memoizedFileFieldDisplays[field.id];
+      if (MemoizedComponent) {
+        // Clone element with updated value prop
+        return React.cloneElement(MemoizedComponent, { value });
+      }
+      // Fallback if not memoized (shouldn't happen)
+      return <FileFieldDisplay key={field.id} field={field} value={value} submissionId={submissionId} toast={toast} imageBlobUrls={imageBlobUrlsRef.current} />;
     }
 
     // Special handling for LatLong fields
@@ -989,16 +1345,32 @@ export default function SubmissionDetail({
 
     if (subSubs.length === 0) {
       return (
-        <div className="text-center py-8">
+        <div className="text-center py-8 flex flex-col items-center">
           <div className="text-4xl mb-4 opacity-50">📝</div>
           <p className="text-muted-foreground mb-4">ยังไม่มีข้อมูลใน{subForm.title}</p>
-          <GlassButton
+          <button
             onClick={() => handleAddSubForm(subForm.id)}
-            className="orange-neon-button"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-all duration-300 relative overflow-hidden group"
+            style={{
+              background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+              boxShadow: '0 4px 15px 0 rgba(249, 115, 22, 0.4)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)';
+              e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(249, 115, 22, 0.6)';
+              e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
+              e.currentTarget.style.boxShadow = '0 4px 15px 0 rgba(249, 115, 22, 0.4)';
+              e.currentTarget.style.transform = 'translateY(0) scale(1)';
+            }}
           >
-            <FontAwesomeIcon icon={faPlus} className="w-4 h-4 mr-2" />
-            เพิ่ม{subForm.title}
-          </GlassButton>
+            {/* Shimmer effect on hover */}
+            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+            <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5 relative z-10" />
+            <span className="relative z-10">เพิ่ม{subForm.title}</span>
+          </button>
         </div>
       );
     }
@@ -1012,44 +1384,54 @@ export default function SubmissionDetail({
     const displayFields = visibleFields.slice(0, maxDisplayFields);
     const hasMoreFields = visibleFields.length > maxDisplayFields;
 
-    // 🔍 DEBUG: Log sub-form table data structure
-    console.log('🔍 Sub-form table debug:', {
-      subForm: {
-        id: subForm.id,
-        title: subForm.title,
-        totalFields: subForm.fields?.length,
-        fields: subForm.fields?.map(f => ({
-          id: f.id,
-          title: f.title,
-          showInTable: f.showInTable
-        }))
-      },
-      visibleFields: visibleFields.map(f => ({ id: f.id, title: f.title })),
-      displayFields: displayFields.map(f => ({ id: f.id, title: f.title })),
-      subSubmissions: subSubs.map(s => ({
-        id: s.id,
-        submittedAt: s.submittedAt,
-        dataKeys: Object.keys(s.data || {}),
-        sampleData: s.data
-      }))
-    });
+    // ❌ REMOVED v0.7.13: Debug logging - caused excessive console spam (27+ logs per click)
+    // console.log('🔍 Sub-form table debug:', {...})
 
     return (
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <GlassButton
+        <style>{`
+          /* ✅ Simple hover effect for sub-form table - only change background color */
+          .subform-table-override tbody tr {
+            cursor: pointer;
+          }
+
+          .subform-table-override tbody tr:hover {
+            background-color: rgb(229 231 235) !important;
+          }
+
+          .dark .subform-table-override tbody tr:hover {
+            background-color: rgb(55 65 81) !important;
+          }
+        `}</style>
+        <div className="flex items-center justify-end mb-3">
+          <button
             onClick={() => handleAddSubForm(subForm.id)}
-            size="sm"
-            className="orange-neon-button"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-all duration-300 relative overflow-hidden group"
+            style={{
+              background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+              boxShadow: '0 4px 15px 0 rgba(249, 115, 22, 0.4)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)';
+              e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(249, 115, 22, 0.6)';
+              e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
+              e.currentTarget.style.boxShadow = '0 4px 15px 0 rgba(249, 115, 22, 0.4)';
+              e.currentTarget.style.transform = 'translateY(0) scale(1)';
+            }}
           >
-            <FontAwesomeIcon icon={faPlus} className="w-3 h-3 mr-2" />
-            เพิ่ม{subForm.title}
-          </GlassButton>
+            {/* Shimmer effect on hover */}
+            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+            <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5 relative z-10" />
+            <span className="relative z-10">เพิ่ม{subForm.title}</span>
+          </button>
         </div>
 
         {/* Table display similar to Submission List */}
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full subform-table-override">
             <thead>
               <tr className="border-b border-border/30">
                 {displayFields.map((field) => (
@@ -1083,15 +1465,8 @@ export default function SubmissionDetail({
                       value = rawValue.value;
                     }
 
-                    // 🔍 DEBUG: Log each field value lookup to diagnose data display issues
-                    console.log(`🔍 SubForm Field "${field.title}" (${field.id}):`, {
-                      fieldId: field.id,
-                      rawValue: rawValue,
-                      extractedValue: value,
-                      hasData: !!subSub.data,
-                      dataKeys: Object.keys(subSub.data || {}),
-                      allData: subSub.data
-                    });
+                    // ❌ REMOVED v0.7.13: Field value debug logging - caused 27+ logs per render
+                    // console.log(`🔍 SubForm Field "${field.title}" ...`)
 
                     // ✅ Display file names in table for file/image upload fields
                     if (field.type === 'file_upload' || field.type === 'image_upload') {
@@ -1384,21 +1759,34 @@ export default function SubmissionDetail({
     );
   };
 
-  // Show loading only after 1 second delay
-  if (showLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
-        <GlassCard className="glass-container">
-          <GlassCardContent className="text-center py-8">
-            <div className="text-xl font-semibold text-foreground/80">กำลังโหลดข้อมูล...</div>
-          </GlassCardContent>
-        </GlassCard>
-      </div>
-    );
+  // ❌ REMOVED: Full-screen loading page (causes screen flicker)
+  // Now show content immediately, no loading overlay
+
+  // Don't render anything if data is not loaded yet (prevent null reference errors)
+  if (!form || !submission) {
+    // Only show error if loading is complete
+    if (!loading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
+          <GlassCard className="glass-container">
+            <GlassCardContent className="text-center py-8">
+              <div className="text-xl font-semibold text-destructive">ไม่พบข้อมูลที่ระบุ</div>
+              {onBack && (
+                <GlassButton onClick={onBack} className="mt-4">
+                  กลับ
+                </GlassButton>
+              )}
+            </GlassCardContent>
+          </GlassCard>
+        </div>
+      );
+    }
+    // Still loading, show nothing (prevents flicker)
+    return null;
   }
 
-  // Only show "not found" error if loading is complete AND data is still missing
-  if (!loading && (!form || !submission)) {
+  // REMOVED: Old error check that's now handled above
+  if (false && (!form || !submission)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
         <GlassCard className="glass-container">
@@ -1455,103 +1843,11 @@ export default function SubmissionDetail({
           transition={{ duration: 0.6, delay: 0.1 }}
           className="max-w-3xl mx-auto mb-8 relative"
         >
-          {/* Previous Arrow - Floating Glass Button (Desktop) */}
-          {/* Show enabled version when hasPrevious, disabled version when !hasPrevious */}
-          <motion.div
-            onClick={hasPrevious && onNavigatePrevious ? onNavigatePrevious : undefined}
-            className={`hidden lg:flex absolute -left-24 top-1/2 -translate-y-1/2 w-20 h-20 items-center justify-center ${
-              hasPrevious && onNavigatePrevious ? 'cursor-pointer group' : 'cursor-not-allowed opacity-40'
-            }`}
-            title={hasPrevious ? "คลิกเพื่อดูข้อมูลก่อนหน้า" : "ไม่มีข้อมูลก่อนหน้า"}
-            whileHover={hasPrevious && onNavigatePrevious ? { scale: 1.15 } : {}}
-            whileTap={hasPrevious && onNavigatePrevious ? { scale: 0.9 } : {}}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-          >
-            {/* Glow Effect - Only show on enabled buttons */}
-            {hasPrevious && onNavigatePrevious && (
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500/30 to-orange-600/30 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            )}
-
-            {/* Glass Button */}
-            <div className={`relative w-16 h-16 rounded-full bg-gradient-to-br backdrop-blur-xl border shadow-2xl flex items-center justify-center overflow-hidden transition-all duration-300 ${
-              hasPrevious && onNavigatePrevious
-                ? 'from-white/10 to-white/5 dark:from-white/20 dark:to-white/10 border-white/20 dark:border-white/30 group-hover:border-orange-400/60'
-                : 'from-gray-400/10 to-gray-500/5 dark:from-gray-600/20 dark:to-gray-700/10 border-gray-400/20 dark:border-gray-500/30'
-            }`}>
-              {/* Inner Glow - Only on enabled buttons */}
-              {hasPrevious && onNavigatePrevious && (
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-400/0 to-orange-600/0 group-hover:from-orange-400/30 group-hover:to-orange-600/30 transition-all duration-500" />
-              )}
-
-              {/* Icon */}
-              <svg xmlns="http://www.w3.org/2000/svg" className={`relative h-7 w-7 transition-colors duration-300 ${
-                hasPrevious && onNavigatePrevious
-                  ? 'text-gray-700 dark:text-gray-300 group-hover:text-orange-500 dark:group-hover:text-orange-400'
-                  : 'text-gray-400 dark:text-gray-600'
-              }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
-              </svg>
-
-              {/* Shimmer Effect - Only on enabled buttons */}
-              {hasPrevious && onNavigatePrevious && (
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-                </div>
-              )}
-            </div>
-          </motion.div>
-
-          {/* Next Arrow - Floating Glass Button (Desktop) */}
-          {/* Show enabled version when hasNext, disabled version when !hasNext */}
-          <motion.div
-            onClick={hasNext && onNavigateNext ? onNavigateNext : undefined}
-            className={`hidden lg:flex absolute -right-24 top-1/2 -translate-y-1/2 w-20 h-20 items-center justify-center ${
-              hasNext && onNavigateNext ? 'cursor-pointer group' : 'cursor-not-allowed opacity-40'
-            }`}
-            title={hasNext ? "คลิกเพื่อดูข้อมูลถัดไป" : "ไม่มีข้อมูลถัดไป"}
-            whileHover={hasNext && onNavigateNext ? { scale: 1.15 } : {}}
-            whileTap={hasNext && onNavigateNext ? { scale: 0.9 } : {}}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-          >
-            {/* Glow Effect - Only show on enabled buttons */}
-            {hasNext && onNavigateNext && (
-              <div className="absolute inset-0 rounded-full bg-gradient-to-l from-orange-500/30 to-orange-600/30 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            )}
-
-            {/* Glass Button */}
-            <div className={`relative w-16 h-16 rounded-full bg-gradient-to-br backdrop-blur-xl border shadow-2xl flex items-center justify-center overflow-hidden transition-all duration-300 ${
-              hasNext && onNavigateNext
-                ? 'from-white/10 to-white/5 dark:from-white/20 dark:to-white/10 border-white/20 dark:border-white/30 group-hover:border-orange-400/60'
-                : 'from-gray-400/10 to-gray-500/5 dark:from-gray-600/20 dark:to-gray-700/10 border-gray-400/20 dark:border-gray-500/30'
-            }`}>
-              {/* Inner Glow - Only on enabled buttons */}
-              {hasNext && onNavigateNext && (
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-400/0 to-orange-600/0 group-hover:from-orange-400/30 group-hover:to-orange-600/30 transition-all duration-500" />
-              )}
-
-              {/* Icon */}
-              <svg xmlns="http://www.w3.org/2000/svg" className={`relative h-7 w-7 transition-colors duration-300 ${
-                hasNext && onNavigateNext
-                  ? 'text-gray-700 dark:text-gray-300 group-hover:text-orange-500 dark:group-hover:text-orange-400'
-                  : 'text-gray-400 dark:text-gray-600'
-              }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-              </svg>
-
-              {/* Shimmer Effect - Only on enabled buttons */}
-              {hasNext && onNavigateNext && (
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-                </div>
-              )}
-            </div>
-          </motion.div>
-
           {/* Previous Click Area - Arrows on narrow screens */}
           {hasPrevious && onNavigatePrevious && (
             <div
               onClick={onNavigatePrevious}
-              className="lg:hidden absolute left-0 top-0 bottom-0 w-16 z-10 cursor-pointer group"
+              className="md:hidden absolute left-0 top-0 bottom-0 w-16 z-10 cursor-pointer group"
               title="คลิกเพื่อดูข้อมูลก่อนหน้า"
             >
               <div className="absolute inset-0 rounded-l-[24px] bg-gradient-to-r from-orange-500/10 dark:from-orange-500/20 via-orange-500/30 dark:via-orange-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -1567,7 +1863,7 @@ export default function SubmissionDetail({
           {hasNext && onNavigateNext && (
             <div
               onClick={onNavigateNext}
-              className="lg:hidden absolute right-0 top-0 bottom-0 w-16 z-10 cursor-pointer group"
+              className="md:hidden absolute right-0 top-0 bottom-0 w-16 z-10 cursor-pointer group"
               title="คลิกเพื่อดูข้อมูลถัดไป"
             >
               <div className="absolute inset-0 rounded-r-[24px] bg-gradient-to-l from-orange-500/10 dark:from-orange-500/20 via-orange-500/30 dark:via-orange-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -1629,10 +1925,24 @@ export default function SubmissionDetail({
 
       </div>
 
+      {/* ✅ FIX v0.7.26: Fixed Navigation Buttons using Portal (Desktop only) */}
+      <FixedNavigationButtons
+        hasPrevious={hasPrevious}
+        hasNext={hasNext}
+        onNavigatePrevious={onNavigatePrevious}
+        onNavigateNext={onNavigateNext}
+      />
+
       {/* Floating Add Button using Portal */}
       <FloatingAddButton formId={formId} onAddNew={onAddNew} />
 
 
     </div>
   );
-}
+};
+
+// ✅ FIX v0.7.28: Remove React.memo comparison - it blocked navigation prop updates
+// Navigation callbacks (onNavigatePrevious, onNavigateNext) change when submissions load
+// React.memo was comparing only formId/submissionId but not callback functions
+// This caused navigation buttons to appear but not work (callbacks were stale)
+export default SubmissionDetailComponent;

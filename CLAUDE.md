@@ -2,11 +2,11 @@
 
 **Enterprise Form Builder & Data Collection System**
 
-## Version: 0.7.9-dev (2025-10-11)
+## Version: 0.7.29-dev (2025-10-16)
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection
-**Status:** 🟢 ngrok Mobile Testing Ready (CORS + Proxy Configuration Complete!)
+**Status:** 🟢 Production Ready
 
 ## Core Features
 
@@ -18,14 +18,16 @@
 ✅ Telegram Integration (notifications, field ordering, custom templates)
 ✅ Thai Localization (province selector, phone/date formatting)
 ✅ User Management (RBAC, 8 roles, 2FA, trusted devices)
-✅ Dynamic Tables (auto-creation, Thai-English real-time translation, PowerBI ready)
+✅ Dynamic Tables (auto-creation, Thai-English translation, PowerBI ready)
 ✅ MyMemory Translation (Free API, real-time Thai→English, excellent quality)
 ✅ File Management (MinIO, thumbnails, presigned URLs, smart downloads)
 ✅ Smart Token Redirect (return to original page after re-login)
 ✅ Mobile-Friendly Tables (56-64px rows, adaptive fonts)
 ✅ Token Refresh Working (7-day sessions, no false logouts)
-✅ **NEW:** ngrok Mobile Testing (HTTPS tunnel, React proxy pattern)
-✅ **NEW:** CORS Trailing Slash Fix (normalized origin matching)
+✅ ngrok Mobile Testing (HTTPS tunnel, React proxy pattern)
+✅ Image Stability (React.memo prevents unnecessary re-renders)
+✅ Navigation Arrows Working (md: breakpoint, visible on tablets+)
+✅ Portrait Images Optimized (50% size reduction, max-h-[35vh])
 
 ## Quick Start
 
@@ -36,640 +38,156 @@ npm run build && npm run lint
 
 ## Architecture
 
-**Components:** MainFormApp (routing) • EnhancedFormBuilder (form creator) • FormView (data entry) • FormSubmissionList (data management)
+**Components:** MainFormApp • EnhancedFormBuilder • FormView • FormSubmissionList
 
 **Field Types (17):** short_answer, paragraph, email, phone, number, url, file_upload, image_upload, date, time, datetime, multiple_choice, rating, slider, lat_long, province, factory
 
 **Design:** Orange primary (#f97316) • 8px grid • 44px+ touch targets • Glass morphism • Responsive (mobile-first)
 
-## Latest Updates
+---
 
-### v0.7.9-dev (2025-10-11) - ngrok Mobile Testing Setup Complete 🎉
+## Latest Version - v0.7.29-dev (2025-10-16)
 
-**Status:** ✅ Production-Ready Mobile Testing via HTTPS Tunnel
+### Critical Image Flicker Fix ✅
 
-**Problem Solved:**
-- ❌ **Local Network Testing Failed**: Router AP Isolation prevented mobile device connectivity
-- ❌ **Dual Tunnel Not Possible**: ngrok free tier only supports 1 tunnel (we have 2 servers: frontend + backend)
-- ✅ **Solution**: React Proxy Pattern with single ngrok tunnel + CORS trailing slash fix
+**Problem:** ภาพเก่ากระพริบเมื่อกดปุ่ม Next/Previous (Old images flicker during navigation)
 
-**Architecture Decision:**
-- **Single Tunnel Strategy**: ngrok → Frontend (port 3000) → React Proxy → Backend (port 5000)
-- **Why React Proxy?**: Eliminates need for dual tunnels, works within ngrok free tier constraints
-- **Traffic Flow**: Mobile → HTTPS tunnel → localhost:3000 → proxy → localhost:5000 → PostgreSQL/Redis/MinIO
+**Root Causes Found (4 Issues):**
+1. **`presignedUrl` fallback** → แสดงภาพเก่าเมื่อ blob URL ถูก clear
+2. **Timeout 50ms สั้นเกินไป** → React ยังทำงานไม่เสร็จ
+3. **`files` state ยังเก็บไฟล์เก่า** → ข้อมูลเก่ายังอยู่ใน component
+4. **`imageBlobUrlsRef` มี URL เก่า** → Reference ชี้ไป object เก่า
 
-**Configuration Changes:**
+**Solution (v0.7.29-v16):**
+- ✅ Block `presignedUrl` ระหว่าง transition: `!imagesTransitioning ? presignedUrl : null`
+- ✅ เพิ่ม timeout จาก 50ms → 100ms (ให้ React มีเวลาเพียงพอ)
+- ✅ เพิ่ม detailed logging ทุกขั้นตอน
+- ✅ ซ่อนภาพด้วย `imagesTransitioning` ก่อน clear
 
-1. **Frontend (.env)**
-   ```env
-   HOST=0.0.0.0                          # Bind to all network interfaces
-   DANGEROUSLY_DISABLE_HOST_CHECK=true   # Allow ngrok host headers
-   REACT_APP_API_URL=/api/v1             # Changed from absolute to relative path
-   ```
+**Files Modified:**
+- `src/components/SubmissionDetail.jsx` (lines 434-470, 1003)
 
-2. **Backend (backend/.env)**
-   ```env
-   CORS_ORIGIN=http://localhost:3000,http://localhost:5000,http://192.168.1.181:3000,https://78291324f2c7.ngrok-free.app
-   CORS_CREDENTIALS=true
-   ```
-
-3. **React Proxy (package.json)**
-   ```json
-   {
-     "proxy": "http://localhost:5000"
-   }
-   ```
-
-**Critical Fix: CORS Trailing Slash Bug**
-- **Problem**: React proxy sent `Origin: http://localhost:5000/` (with trailing slash) but CORS_ORIGIN had `http://localhost:5000` (without slash)
-- **Symptom**: `CORS: Origin http://localhost:5000/ - BLOCKED`
-- **Solution**: Implemented origin normalization in `backend/api/app.js` (lines 66-94)
-- **Code**:
-  ```javascript
-  // Remove trailing slash from origin for comparison
-  const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
-  const normalizedAllowed = allowedOrigins.map(o => o.endsWith('/') ? o.slice(0, -1) : o);
-  ```
-- **Result**: Now handles both `http://localhost:5000` and `http://localhost:5000/` correctly
-
-**Testing Results:**
-- ✅ **PC Login**: 200 OK response
-- ✅ **CORS Working**: `CORS: Origin http://localhost:5000/ - ALLOWED`
-- ✅ **Trusted Device**: Device recognized, session created successfully
-- 📱 **Mobile Ready**: `https://78291324f2c7.ngrok-free.app`
-
-**Files Modified:** 7 files total
-- `.env` - Frontend configuration (HOST, API_URL, host check)
-- `backend/.env` - CORS origins (added ngrok URL and localhost:5000)
-- `package.json` - Added proxy configuration + version bump
-- `backend/api/app.js` - CORS trailing slash normalization
-- `MOBILE-TESTING-COMPLETE.md` - Comprehensive setup guide (NEW)
-- `NGROK-SETUP.md` - Quick start guide (NEW)
-- `LOCAL-NETWORK-TESTING.md` - AP Isolation documentation (NEW)
-
-**Lines Changed:** ~300 lines total
-**Breaking Changes:** None (fully backward compatible)
-
-**Security Notes:**
-- ⚠️ `DANGEROUSLY_DISABLE_HOST_CHECK=true` is for **development only**
-- ⚠️ ngrok URL changes on every restart (free tier limitation)
-- ⚠️ Public HTTPS endpoint (anyone with URL can access)
-
-**Commands:**
-```bash
-# Start ngrok tunnel
-ngrok http 3000
-
-# Start servers (separate terminals)
-npm start              # Frontend
-cd backend && npm start  # Backend
+**Expected Behavior:**
+```
+User clicks Next → ภาพเก่าหายทันที (0ms)
+→ ช่วงว่าง 100ms (ไม่มีภาพ)
+→ ภาพใหม่แสดง (ไม่มีการกระพริบ!)
 ```
 
-**Documentation:**
-- `MOBILE-TESTING-COMPLETE.md` - Complete setup guide with troubleshooting
-- `NGROK-SETUP.md` - Quick start instructions
-- `LOCAL-NETWORK-TESTING.md` - AP Isolation problem documentation
+### Code Changes
 
----
-
-### v0.7.8-dev (2025-10-10) - Mobile UX + Critical Token Refresh Fix 🚀
-
-**Status:** ✅ 3 Major Fixes Complete
-
-**Critical Fixes:**
-1. ✅ **Token Refresh Bug Fixed** (CRITICAL): Storage key mismatch causing constant logouts
-   - Root Cause: ApiClient used `'access_token'` but config defined `'q-collector-auth-token'`
-   - Impact: Token refresh ALWAYS failed → Users logged out every 15 minutes
-   - Fix: Use consistent storage keys from API_CONFIG in all methods
-   - Result: Token refresh works correctly, 7-day sessions, no false logouts
-
-2. ✅ **Mobile-Friendly Table UX**: Enhanced submission list tables for better mobile usability
-   - Row height: 56-64px (exceeds 44px touch target minimum)
-   - Font sizes: 14-15px single-line, 11-12px two-line, 16-18px ratings
-   - Responsive: Mobile-first with sm: breakpoints
-   - Impact: Better clickability, readability, and overall mobile experience
-
-3. ✅ **Coordinate Display Formatting**: Show 4 decimal places in UI, store full precision in DB
-   - Display: `13.8063, 100.1235` (4 decimals)
-   - Storage: Full precision maintained in PostgreSQL POINT type
-   - Supports: `{lat, lng}`, `{x, y}`, and string formats
-
-**Technical Changes:**
-- `src/services/ApiClient.js` (Lines 54, 65, 317-335)
-  - Fixed getToken(), setToken(), getRefreshToken() to use API_CONFIG keys
-  - Fixed request interceptor to use consistent keys
-- `src/components/FormSubmissionList.jsx` (Lines 270-746, 1043)
-  - Enhanced renderFieldValue() with responsive font sizes
-  - Improved coordinate formatting with .toFixed(4)
-  - Increased row padding and min-height for mobile
-- `src/components/SubmissionDetail.jsx` (Lines 445-465 + bulk sed)
-  - Added coordinate formatting with .toFixed(4)
-  - Applied consistent table cell padding across all tables
-
-**Files Modified:** 3 files total
-- ApiClient.js (token refresh fix)
-- FormSubmissionList.jsx (mobile UX + coordinate formatting)
-- SubmissionDetail.jsx (mobile UX + coordinate formatting)
-
-**Lines Changed:** ~200 lines total
-**Breaking Changes:** None (fully backward compatible)
-
-**Impact:**
-- ❌ Before: Users logged out every 15 minutes (token refresh failed)
-- ✅ After: Users stay logged in for 7 days (token refresh works)
-- ✅ Mobile UX: 56-64px touch targets, adaptive fonts, better clickability
-- ✅ Coordinates: Clean 4-decimal display, full precision storage
-
-**User Action Required:**
-- Users may need to **re-login once** after deployment to get tokens stored with correct keys
-- Seamless transition - existing sessions continue working
-
-**Documentation:**
-- `TOKEN-REFRESH-FIX-COMPLETE.md` - Comprehensive token refresh fix guide
-- `POINT-FORMAT-FIX-COMPLETE.md` - Coordinate display formatting documentation
-- `SESSION-SUMMARY-2025-10-10.md` - Complete session summary with all 3 fixes
-
----
-
-### v0.7.7-dev (2025-10-10) - Translation System Complete (MyMemory FIRST + Slug Length Fix) 🎉
-
-**Status:** ✅ Day 1-6 Complete (Week 1 of Thai-English Translation System)
-
-**Critical Fixes:**
-- ✅ **Translation Priority Reversed** (Day 4): MyMemory API now primary source (was Dictionary)
-  - Before: 7.7% meaningful names (Dictionary limited vocabulary → transliterations)
-  - After: 100% meaningful names (MyMemory comprehensive ML translation)
-  - Test results: 10/10 passed (satisfaction_questionnaire, sales_department_form, waste_disposal, etc.)
-
-- ✅ **Slug Length Increased** (Day 6): Fixed truncation of long English phrases
-  - Before: 40 chars max → "enterprise_accident_risk_management_and_" (cut off mid-word!)
-  - After: 50 chars max → "enterprise_accident_risk_management_and_prevention" (full words!)
-  - Impact: 25% more space, 33% more words preserved, 100% complete phrases
-
-**New Features:**
-- ✅ **Context-Aware Translation**: Pass semantic hints to API ('form', 'field', 'department', 'action')
-- ✅ **Quality Validation**: Reject translations with match < 0.5
-- ✅ **Transliteration Detection**: Automatically reject phonetic conversions
-- ✅ **Bulk Migration Script**: translate-existing-forms.js ready for production (dry-run tested)
-
-**Translation Examples:**
-| Thai | Old Result (Dictionary) | New Result (MyMemory) | Quality |
-|------|------------------------|----------------------|---------|
-| แบบสอบถามความพึงพอใจ | aebbsobthamkhwamphuengphoaij ❌ | satisfaction_questionnaire ✅ | 0.85 |
-| แบบฟอร์มแผนกขาย | aebbformaephnkkhay ❌ | sales_department_form ✅ | 0.85 |
-| การกำจัดขยะ | karkamjadkhya ❌ | waste_disposal ✅ | 0.85 |
-| แผนกการตลาด | transliteration ❌ | marketing_department ✅ | 0.85 |
-
-**Technical Changes:**
-- `backend/utils/tableNameHelper.js` (Lines 52-93)
-  - Swapped MyMemory/Dictionary priority
-  - Added `rejectTransliteration: true` flag
-  - Enhanced Dictionary fallback with transliteration detection
-- `backend/services/MyMemoryTranslationService.js` (Lines 323-327)
-  - ✨ NEW (Day 6): Increased maxLength from 40 to 50 chars
-  - Preserves full English words from long Thai phrases
-  - PostgreSQL-safe: 50 + 8 hash + buffer = 59 chars (< 63 limit)
-- `backend/scripts/test-translation-priority-fix.js` (NEW)
-  - Automated test suite (10 test cases, 100% pass rate)
-- `backend/scripts/test-long-phrase-issue.js` (NEW - Day 6)
-  - Investigation script for user-reported transliteration issue
-  - Tests chunking strategy, raw API calls, transliteration detection
-- `backend/scripts/test-actual-form-creation.js` (NEW - Day 6)
-  - Production-equivalent form creation testing
-  - Validates full workflow from Thai input → English table name
-- `backend/scripts/translate-existing-forms.js` (VERIFIED)
-  - Bulk migration script for existing hash-based names
-  - Dry-run mode, transaction support, progress logging
-
-**Progress (Thai-English Translation System v0.7.7):**
-- ✅ Day 1-2: Translation Service Enhancement (context hints, quality validation)
-- ✅ Day 3: Sub-Form Translation Verification (tested, working)
-- ✅ Day 4: Fix Translation Priority (100% success rate achieved)
-- ✅ Day 5: Verify bulk migration script (ready for production)
-- ✅ Day 6: Comprehensive testing + Slug length fix (20 realistic forms tested, long phrases fixed)
-- 📋 Day 7: Performance testing (cache hit rate, translation speed)
-- 📋 Day 8: Staging deployment with dry-run
-- 📋 Day 9: Production deployment
-- 📋 Day 10: Documentation & training
-
-**Files Modified:** 5 files total
-- Day 4: tableNameHelper.js (translation priority)
-- Day 6: MyMemoryTranslationService.js (slug length fix)
-- Day 6: 3 new test scripts (long-phrase-issue, actual-form-creation, realistic-business-forms)
-**Lines Changed:** ~350 lines total
-**Breaking Changes:** None (improved accuracy + fuller English names)
-
-**Documentation:**
-- `TRANSLATION-PRIORITY-FIX-COMPLETE.md` - Day 4 fix with before/after metrics
-- `SLUG-LENGTH-FIX-COMPLETE.md` - ✨ NEW (Day 6): Slug truncation fix complete summary
-- `TRANSLATION-SERVICE-V1.1.0-COMPLETE.md` - Enhanced service documentation
-- `TRANSLATION-SYSTEM-TEST-RESULTS.md` - Detailed test findings
-- `backend/reports/business-forms-test-*.json` - ✨ NEW (Day 6): 20-form test results
-
----
-
-### v0.7.6-dev (2025-10-10) - Critical File Display Fix (Backend) - HOTFIX #2
-
-**Fixed:**
-- ✅ **Critical Sequelize UUID Serialization Bug**: Files not displaying in edit mode despite correct API response
-  - Root Cause #1: WHERE clause `submission_id = value` excludes NULL values (files uploaded during form creation)
-  - Root Cause #2: Sequelize's `toJSON()` serializes UUID columns as objects with LEFT JOIN
-  - Example broken format: `{"0": "4", "1": "f", ...}` instead of `"4f07653c-..."`
-  - Fix: Use `file.dataValues` directly instead of `file.toJSON()`
-
-**Technical Changes:**
-- `backend/services/FileService.js` (Lines 294-395)
-  - Lines 294-300: Removed submission_id WHERE clause (allows NULL values)
-  - Lines 335-395: Implemented field-based post-query filtering
-  - Lines 377-392: Fixed UUID serialization by accessing dataValues directly
-
-**Root Cause Analysis:**
 ```javascript
-// ❌ BEFORE (Lines 298-300):
-if (filters.submissionId) {
-  where.submission_id = filters.submissionId;  // ← Excludes NULL!
-}
+// Fix 1: Block presignedUrl during transition (line 1003)
+blobUrl={imageBlobUrls[file.id] || (!imagesTransitioning ? file.presignedUrl : null)}
 
-// ❌ BEFORE (Line 398):
-filteredFiles = rows.filter(file => {
-  const fileJson = file.toJSON();  // ← UUID becomes object!
-  const fieldId = fileJson.field_id;  // ← {"0": "4", "1": "f", ...}
-  return mainFormFieldIds.includes(fieldId);  // ← Always false!
-});
+// Fix 2: Increase timeout (line 467)
+setTimeout(() => {
+  setImagesTransitioning(false);
+}, 100);  // เพิ่มจาก 50ms → 100ms
 
-// ✅ AFTER (Lines 335-395):
-if (filters.submissionId) {
-  // Get form's main field IDs
-  const mainFormFieldIds = submission.form.fields
-    .filter(field => !field.sub_form_id)
-    .map(field => field.id);
-
-  // Use dataValues to avoid UUID serialization bug
-  filteredFiles = rows.filter(file => {
-    const fileData = file.dataValues || file;  // ← Direct access!
-    const fieldId = fileData.field_id;  // ← Correct UUID string
-    return mainFormFieldIds.includes(fieldId);  // ← Now works!
-  });
-}
+// Fix 3: Add detailed logging (lines 437-466)
+console.log('🔄 [v0.7.29-v16] Navigation detected...');
+console.log('🗑️ [v0.7.29-v16] Revoked blob URL for file:', fileId);
+console.log('✨ [v0.7.29-v16] Version incremented:', newVersion);
+console.log('✅ [v0.7.29-v16] Transition complete');
 ```
 
-**Additional Work:**
-- ✅ Database cleanup script: `clear-all-test-data.js` (deleted 17 files from MinIO)
-- ✅ Removed 4 orphaned sub-form columns from main table
-- ✅ Dropped 2 orphaned dynamic tables
-- ✅ System reset to clean state for testing
-
-**Impact:**
-- ✅ Files now display correctly in edit mode (both main form and submissions)
-- ✅ Includes files with NULL submission_id (uploaded during form creation)
-- ✅ Field-based filtering works properly with correct UUID comparison
-- ✅ Sub-form files remain isolated (no cross-contamination)
-- ✅ Clean database ready for fresh testing
-
-**Files Modified:** 3 files (FileService.js + 2 cleanup scripts)
-**Lines Changed:** ~150 lines (backend service + cleanup scripts)
-**Breaking Changes:** None (bug fix + maintenance)
-
-**Documentation:** `FILE-DISPLAY-FIX-COMPLETE.md` (comprehensive summary)
+**Documentation:** See `IMAGE-FLICKER-ROOT-CAUSE-ANALYSIS-V0.7.29-V16.md`
 
 ---
 
-### v0.7.6-dev (2025-10-10) - File Display Fix (Frontend) - HOTFIX #1
+## Recent Critical Fixes (Context)
 
-**Fixed:**
-- ✅ **Critical Bug #1**: File/image fields did not display uploaded filenames correctly
-  - Root Cause: Used `formData.fields` (form values object) instead of form schema
-  - Fix: Changed to use `loadedForm.fields` (freshly loaded API data)
+### v0.7.27-dev - Navigation Arrows Visibility
+- Changed breakpoint from `lg:` (1024px) to `md:` (768px)
+- Arrows now visible on tablets+ instead of desktop-only
+- Portrait thumbnails reduced by 50% (width: 7.5vw/15vw)
 
-- ✅ **Critical Bug #2**: Null reference error on form load
-  - Root Cause: Used `form.fields` before `setForm()` completed (async state update)
-  - Error: `Cannot read properties of null (reading 'fields')`
-  - Fix: Use `loadedForm` variable instead of `form` state during initial load
+### v0.7.20-dev - Image Flickering Fix
+- Wrapped SubmissionDetail with React.memo
+- Custom comparison prevents toast context re-renders
+- Images remain stable during toast notifications
 
-**Technical Changes:**
-- `src/components/FormView.jsx` (lines 122, 162) - Fixed variable naming and null reference
-  - Line 122: `const formData` → `const loadedForm` (avoid naming conflict)
-  - Line 162: `form.fields` → `loadedForm.fields` (use local variable, not state)
+### v0.7.15-dev - Duplicate Loading Prevention
+- Switched from useState to useRef for persistent tracking
+- Fixed black screen on image click with presignedUrl fallback
+- API calls reduced from 20+ to 1-2 per view (97% reduction)
 
-**Impact:**
-- ✅ Edit mode now correctly displays uploaded file names and thumbnails
-- ✅ No more null reference errors during form load
-- ✅ File download and delete buttons work properly
-- ✅ Both image_upload and file_upload fields show existing files
+### v0.7.10-dev - Thumbnail Stability
+- Changed useEffect dependency to fileIdsString (stable)
+- Added min-h-[200px] to prevent container collapse
+- Integrated mobile download toast notifications
 
-**Files Modified:** 1 file (FormView.jsx)
-**Lines Changed:** 4 lines (renamed variable + fixed reference + added comments)
-**Breaking Changes:** None (bug fix only)
+### v0.7.9-dev - ngrok Mobile Testing
+- Single tunnel: ngrok → Frontend → React Proxy → Backend
+- CORS trailing slash normalization
+- React proxy pattern for free tier compatibility
 
----
-
-### v0.7.5-dev (2025-10-10) - Enhanced UX & Smart Authentication
-
-**New Features:**
-- ✅ **File Display System Enhancements**: Complete fix for file thumbnails and downloads
-  - Fixed single file object handling in SubmissionDetail (lines 509-513)
-  - Added `presignedUrl` alias in FileService.getFile() for frontend compatibility
-  - File metadata optimization for faster display
-  - Support for both single files `{id, name, type}` and arrays `[{...}]`
-- ✅ **Modal Opacity Improvements**: Enhanced readability of image preview modals
-  - Backdrop opacity increased to 95% (`bg-black/95`)
-  - Modal container opacity increased to 95% (`bg-gray-900/95`)
-  - Improved text contrast and visibility
-- ✅ **Smart Download Behavior**: Files open in new tab without switching focus
-  - Uses `window.open(url, '_blank', 'noopener,noreferrer')`
-  - Applies to ImageThumbnail, FilePreview, and FileGallery components
-  - Maintains current app context for better UX
-- ✅ **Smart Token Redirect System**: Auto-return to original page after token expiry
-  - ApiClient saves current URL before redirect to login (3 locations)
-  - LoginPage checks sessionStorage for saved redirect path
-  - Works for both normal login and 2FA verification flows
-  - No more frustrating "always go to home" behavior
-
-**Technical Changes:**
-- `src/components/SubmissionDetail.jsx` - Single file object handling + metadata optimization
-- `backend/services/FileService.js` - Added `presignedUrl` alias (line 168)
-- `src/components/ui/image-thumbnail.jsx` - Modal opacity (95%) + download behavior
-- `src/services/ApiClient.js` - URL saving before redirect (lines 185-270)
-- `src/components/auth/LoginPage.jsx` - Redirect restoration (lines 154-196)
-
-**Files Modified:** 5 files (3 frontend, 1 backend, 1 service)
-**Lines Changed:** ~150 lines
-**Breaking Changes:** None (fully backward compatible)
+### v0.7.8-dev - Token Refresh Fix (CRITICAL)
+- Fixed storage key mismatch (access_token vs q-collector-auth-token)
+- Token refresh now works correctly
+- 7-day sessions, no false logouts
 
 ---
 
-### v0.7.4-dev (2025-10-06) - MyMemory API Translation System
+## Known Issues & Solutions
 
-**New Features:**
-- ✅ **MyMemory API Integration**: Real-time Thai→English translation (Free, unlimited)
-  - Replaces Dictionary-Based system with actual ML translation
-  - Free tier: 50,000 characters/day (with email), 5,000 anonymous
-  - Excellent translation quality (0.85-1.0 match scores)
-  - Examples: "แบบฟอร์มติดต่อ" → `contact_form`, "ใบลาป่วย" → `sick_leaves`
-- ✅ **Asynchronous Translation**: Non-blocking API calls with retry logic
-  - 3 retry attempts with exponential backoff
-  - Graceful fallback to simple transliteration on failure
-  - 10-second timeout per request
-- ✅ **PostgreSQL-Safe Output**: All slugs follow PostgreSQL identifier rules
-  - snake_case, max 63 chars, starts with letter/underscore
-  - Automatic sanitization and validation
-  - Context-aware translation quality reporting
+### Issue: Forms/Submissions Not Loading
+**Check:** Token expiry, API endpoints, database connection
+**Solution:** Check browser console, backend logs, verify token refresh
 
-**✅ Platform Support:**
-- ✅ **Windows** - Full support
-- ✅ **WSL2** - Full support
-- ✅ **Linux** - Full support
-- ✅ **macOS** - Full support
+### Issue: Images Not Displaying
+**Check:** MinIO connection, blob URL loading, presignedUrl fallback
+**Solution:** Verify FileService.js blob URL generation, check network tab
 
-**Technical:**
-- `backend/services/MyMemoryTranslationService.js` - MyMemory API client with caching
-- `backend/utils/tableNameHelper.js` - Async translation integration (v0.7.4-dev)
-- `backend/services/DynamicTableService.js` - Updated to support async translation
-- Test scripts: `test-mymemory-translation.js`, `test-mymemory-table-generation.js`
+### Issue: Navigation Not Working
+**Check:** React.memo blocking callbacks, stale closures
+**Solution:** Ensure callbacks not wrapped in React.memo comparison
 
-**Translation Examples (Actual Results):**
-| Thai | English | Table Name | Quality |
-|------|---------|------------|---------|
-| แบบฟอร์มติดต่อ | Contact form | `contact_form_426614174000` | excellent (0.99) |
-| ใบลาป่วย | Sick leaves | `sick_leaves_426614174001` | good (0.85) |
-| แบบฟอร์มการร้องเรียน | Complaint Form | `complaint_form_426614174002` | excellent (0.98) |
-| ชื่อเต็ม | Full Title | `full_title_z7ebvj` | excellent (0.99) |
-| เบอร์โทรศัพท์ | Phone Number | `phone_number_yp5aq0` | excellent (0.99) |
-| ที่อยู่ | Address | `address_sc1itq` | excellent (1.0) |
-
-**Removed:**
-- ❌ Argos Translate (WSL2 incompatible, complex Docker setup)
-- ❌ DeepL Free API (no Thai support on free tier)
-- ❌ Dictionary-Based system (limited vocabulary, static translations)
+### Issue: Mobile Testing
+**Setup:** ngrok tunnel + React proxy
+**Config:** HOST=0.0.0.0, proxy in package.json, CORS origins
 
 ---
 
-### v0.7.3-dev (2025-10-05) - Dictionary-Based Translation System (DEPRECATED)
+## Development Guidelines
 
-**New Features:**
-- ✅ **Dictionary-Based Thai→English Translation**: 500+ comprehensive translations (Windows/WSL2 compatible)
-  - Replaces Argos Translate which cannot run on Windows/WSL2
-  - Context-aware translation (form, field, action, department)
-  - 5-step algorithm: exact → compound → prefix/suffix → word-by-word → transliteration
-  - Examples: "แบบฟอร์มติดต่อ" → `contact_form_123`, "ใบลาป่วย" → `sick_leave_form_456`
-- ✅ **Comprehensive Dictionary**: 20+ categories covering all form-building scenarios
-  - formTypes, actions, departments, commonFields, workRelated, customer, etc.
-  - Special rules for Thai prefixes (แบบ, การ, ผู้) and compound words
-  - Easy to extend with new translations
-- ✅ **Synchronous Operation**: Fast in-memory translation (<1ms per operation)
-  - No async/await needed
-  - No external services required
-  - Works on any platform (Windows, WSL2, Linux, macOS)
-- ✅ **PostgreSQL Compliance**: All generated names follow PostgreSQL identifier rules
-  - snake_case, max 63 chars, starts with letter/underscore
-  - 100% test coverage for name generation
+### When Modifying Forms/Submissions:
+1. Always use stable dependencies in useEffect
+2. Use useRef for tracking state that doesn't trigger re-renders
+3. Add null checks in React.memo comparison functions
+4. Test on both mobile and desktop viewports
 
-**✅ Platform Support:**
-- ✅ **Windows** - Full support
-- ✅ **WSL2** - Full support
-- ✅ **Linux** - Full support
-- ✅ **macOS** - Full support
+### When Working with Images:
+1. Use presignedUrl as fallback for blob URLs
+2. Add min-height to containers to prevent layout shifts
+3. Use fileIdsString (not files array) as useEffect dependency
+4. Implement proper cleanup in useEffect return
 
-**Technical:**
-- `backend/dictionaries/thai-english-forms.json` - 500+ translation dictionary
-- `backend/services/DictionaryTranslationService.js` - Translation engine with caching
-- `backend/utils/tableNameHelper.js` - Synchronous translation integration (v0.7.3-dev)
-- `backend/services/DynamicTableService.js` - Updated to use synchronous translation
-- Test scripts: `test-dictionary-translation.js`, `test-table-name-generation.js`
-
-**Documentation:**
-- `docs/Dictionary-Translation-System.md` - Complete system documentation
-- Test coverage: 76% dictionary tests, 100% name generation tests
-
-**Translation Examples:**
-| Thai | English | Table Name |
-|------|---------|------------|
-| แบบฟอร์มติดต่อ | contact_form | `contact_form_123` |
-| ใบลาป่วย | sick_leave_form | `sick_leave_form_456` |
-| แบบฟอร์มบันทึกข้อมูล | data_record_form | `data_record_form_101` |
-| ชื่อเต็ม | full_name | `full_name_z7ebvj` |
-| เบอร์โทรศัพท์ | phone | `phone_yp5aq0` |
+### When Adding Features:
+1. Follow mobile-first responsive design
+2. Use API endpoints (not localStorage)
+3. Add proper error handling and loading states
+4. Test with ngrok for mobile compatibility
 
 ---
 
-### v0.7.2-dev (2025-10-05) - 2FA Three-State Toggle System
-
-**New Features:**
-- ✅ **3-State 2FA Toggle**: Visual admin interface with color-coded status indicators
-  - 🔴 Red: 2FA disabled (password-only login)
-  - 🟡 Yellow: 2FA setup pending (admin forced, waiting for user QR scan)
-  - 🟢 Green: 2FA fully enabled
-- ✅ **Complete Documentation**: `docs/2FA-Three-State-Toggle-System.md` (comprehensive guide)
-- ✅ **Enhanced Admin Control**: Toggle between states, force 2FA setup, reset 2FA completely
-
-**Technical:**
-- `src/components/UserManagement.jsx` - 3-state logic with color mapping
-- `backend/api/routes/admin.routes.js` - Verified endpoints for force/reset
-- Status determination: `get2FAStatus()` checks `twoFactorEnabled` + `requires_2fa_setup`
-- Color mapping: `get2FAColor()` returns Tailwind classes based on status
-
-**Workflow:**
-- Admin forces 2FA (Red → Yellow) → User scans QR & verifies OTP (Yellow → Green)
-- Admin resets 2FA (Green/Yellow → Red) → User can login with password only
-
----
-
-### v0.7.2-dev (2025-10-04) - Service Layer Cleanup & FileService Migration
-
-**Phase 1: Service Layer Improvements (Complete):**
-- ✅ **DataService Deprecation**: Added warnings to all methods pointing to API alternatives
-- ✅ **File Cleanup**: Removed unused services (FormService.js, SubmissionService.new.js, FileService.new.js)
-- ✅ **Component Migration**: 8/8 critical components now 100% API-based
-- ✅ **LocalStorage Reduction**: From 122 → 93 occurrences (29 removed, 74% reduction in dataService calls)
-
-**Phase 2: FileService Migration to MinIO (Complete):**
-- ✅ **FileService.api.js Created**: New MinIO-based file service (436 lines)
-- ✅ **FileService.js Deprecated**: Added warnings to all methods
-- ✅ **Migration Guide**: Comprehensive guide at `docs/FileService-Migration-Guide.md`
-- ✅ **Backend Verified**: 7 MinIO endpoints ready (upload, download, delete, list, stats)
-- 📋 **Ready to Migrate**: 6 components waiting for migration
-
-**Migration Status:**
-- Component Layer (Forms/Submissions): **100% Complete** ✅
-- Service Layer Cleanup: **100% Complete** ✅
-- FileService Infrastructure: **100% Ready** ✅
-- FileService Component Migration: **0% (Ready to start)** 📋
-
-**New Services:**
-- `FileService.api.js` - MinIO-based file management (uploadFile, getFileWithUrl, deleteFile)
-- Migration methods: uploadFile(), uploadMultipleFiles(), getFileWithUrl(), downloadFile()
-
-**Breaking Changes:**
-- ⚠️ DataService.js shows deprecation warnings (will be removed in v0.8.0)
-- ⚠️ FileService.js shows deprecation warnings (will be removed in v0.8.0)
-- ✅ All components should use apiClient, submissionService, and fileServiceAPI
-
----
-
-### v0.7.1 (2025-10-03) - Form Activation Fix & E2E Testing
-
-**Fixed:**
-- ✅ **Critical Bug**: Form activation hardcoded to false - Forms now active by default
-- ✅ **403 FORM_INACTIVE**: All new forms can accept submissions immediately
-- ✅ **Enhanced Logging**: Added validation error logging to submission/form routes
-- ✅ **E2E Testing**: Complete test suite for form creation and submission workflow
-
-**Investigation & Resolution:**
-- Created diagnostic scripts: check-form-ids.js, test-form-submission.js, check-last-form.js
-- Fixed FormService.js to respect `is_active` from formData (defaults to true)
-- Verified 100% UUID compliance for all form IDs
-- E2E test passes: Login → Create Form → Submit Data ✅
-
-**Technical:**
-- `backend/services/FormService.js` - Extract is_active from formData with default true
-- `backend/scripts/test-form-submission.js` - Comprehensive E2E workflow test
-- Enhanced error logging in form.routes.js and submission.routes.js
-- Database verification: Latest forms show Active: true
-
----
-
-### v0.7.0 (2025-10-03) - Permission System & Field Settings
-
-**Fixed:**
-- ✅ Field settings persistence (showInTable, sendTelegram, telegramOrder, telegramPrefix)
-- ✅ Form submission permissions (super_admin, admin, moderator now have access)
-- ✅ Form.toJSON() recursively calls Field.toJSON() for camelCase consistency
-- ✅ Email service disabled to eliminate SMTP warnings
-- ✅ Queue processor duplicate handler warnings downgraded
-
----
-
-### v0.6.6 (2025-10-03) - API Integration & Beautiful Navigation
-
-**Fixed:**
-- ✅ Submission list data display - Backend now includes field data in listSubmissions endpoint
-- ✅ Navigation arrows restored - API-based navigation state management
-- ✅ Beautiful glass morphism navigation - Floating buttons with Framer Motion animations
-- ✅ Completed API migration - Submission list and navigation fully use API endpoints
-
----
-
-### v0.6.5 (2025-10-03) - Database Schema & Role System
-
-**Fixed:**
-- ✅ Database schema alignment (Model ↔ Database)
-- ✅ Role migration: 4 roles → 8 roles (super_admin, admin, moderator, customer_service, technic, sale, marketing, general_user)
-- ✅ Added `roles_allowed` (JSONB) and `version` (INTEGER) columns
-- ✅ Fixed drag-and-drop null pointer in form builder
-
-**Migration:** `npx sequelize-cli db:migrate` then restart backend
-
----
-
-### v0.6.4 (2025-10-02) - User Management & Future Plans
-
-**Implemented:**
-- ✅ User Management with real API integration
-- ✅ Enhanced table UX (clickable rows, optimized columns, modal positioning)
-
-**Planned Features:**
-- 📋 Mandatory 2FA Setup Workflow (registration → 2FA setup → verify → access)
-- 📋 Thai-English Translation System (3-tier: Dictionary → Cache → MyMemory API)
-
-## 📋 Future Features
-
-### Plan 1: Mandatory 2FA Setup Workflow
-
-**Goal:** Force new users to setup 2FA immediately after registration
-
-**Flow:** Register → Create User (requires_2fa_setup=true) → 2FA Setup Page → QR Code + Backup Codes → Verify OTP → Access Granted
-
-**Tasks:**
-1. Backend: Add requires_2fa_setup column, create middleware, add routes (setup-required, verify-setup)
-2. Frontend: Create TwoFactorSetupRequired.jsx, update AuthContext/PrivateRoute
-3. Testing: E2E tests for registration flow, QR display, OTP verification
-
----
-
-### Plan 2: Thai-English Translation System
-
-**Goal:** Generate meaningful English slugs from Thai names
-
-**3-Tier System:**
-1. **Dictionary** (Instant) → Built-in ~200 common terms
-2. **Cache** (Fast) → translation_cache table
-3. **MyMemory API** (Accurate) → 1,000 req/day, fallback to transliteration
-
-**Example:** "ฟอร์มบันทึกการร้องขอทีมบริการเทคนิค" → `technic_service_request_form`
-
-**Tasks:**
-1. Create TranslationService with 3-tier lookup
-2. Build Thai-English dictionary (~200 words)
-3. Add translation_cache & api_usage tables
-4. Integrate with FormService.createForm()
-5. Create migration tool for existing forms
-
-## Previous Releases Summary
-
-**v0.6.3** - Edit pages, breadcrumb navigation, deep linking, URL parameters
-**v0.6.2** - Dynamic tables Phase 2, sub-form tables, theme system (glass/minimal/liquid)
-**v0.6.1** - Navigation arrows, PowerBI connection info, mobile layout fixes
-**v0.5.4** - User 2FA management, trusted device settings, admin endpoints
-**v0.5.3** - Direct form links, URL parameter navigation
-**v0.5.2** - Enhanced user menu, role-based colors
-**v0.5.1** - Previous/Next navigation, touch gestures
-**v0.5.0** - Complete backend (Node.js/Express/PostgreSQL/Redis/MinIO)
-**v0.4.x** - Conditional visibility, Telegram integration, UI refinements
-**v0.3.0** - Component library (AnimatedAddButton, toast system)
-**v0.2.0** - Frontend framework (ShadCN UI, form builder)
-
----
-
-## Configuration Notes
-
-**Status:** ✅ Production-ready v0.6.5
+## Configuration
 
 **Environment:**
 - Telegram: Bot Token และ Group ID ใน .env (ไม่เปิดเผย)
 - Super Admin: สร้างผ่าน script หรือ seed data
 - Servers: ตรวจสอบ Claude Code process ก่อน restart
 
-**License:** Internal use - Q-Collector Enterprise v0.6.5
-- if restart servers  do not kill claude process
-- do not kill claude process
+**Important:**
+- If restart servers, do NOT kill Claude process
 - สามารถให้ใช้ playwright mcp ช่วยตรวจสอบ console log ได้เลย
+
+**License:** Internal use - Q-Collector Enterprise v0.7.29-dev
+
+---
+
+## Archive
+
+**Full version history:** See CLAUDE.md.backup-2025-10-16
+**Detailed fix documentation:** See individual completion files (e.g., V0.7.28-COMPLETE-SUMMARY.md)
