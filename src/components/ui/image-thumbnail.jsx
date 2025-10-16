@@ -3,11 +3,13 @@
  * รองรับ responsive design และ modal สำหรับดูรูปเต็มขนาด
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/cn';
 import fileServiceAPI from '../../services/FileService.api';
 import API_CONFIG, { getFileStreamURL } from '../../config/api.config';
+import ImageLoadingQueue from '../../services/ImageLoadingQueue';
+import BlobUrlCache from '../../utils/BlobUrlCache';
 
 // ✅ FIX v0.7.17: Wrap entire component with React.memo to prevent unnecessary re-renders
 const ImageThumbnail = React.memo(({
@@ -20,12 +22,78 @@ const ImageThumbnail = React.memo(({
   onDownload,  // ✅ FIX v0.7.12: Accept onDownload prop from parent for mobile toast support
   adaptive = false  // ✅ FIX v0.7.23: Enable adaptive sizing based on image orientation
 }) => {
-  // ✅ CRITICAL FIX: ถ้ามี blobUrl แล้ว ให้ถือว่าโหลดเสร็จ (ป้องกันการกระพริบ)
+  // ✅ v0.7.30: Progressive Image Loading - 3 stages
+  const [loadingStage, setLoadingStage] = useState('blur'); // blur | thumbnail | full
+  const [thumbnailBlobUrl, setThumbnailBlobUrl] = useState(null);
+  const [fullBlobUrl, setFullBlobUrl] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(!!blobUrl);
   const [imageError, setImageError] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false); // ✅ NEW: Track download state
-  const [imageOrientation, setImageOrientation] = useState(null); // ✅ FIX v0.7.24: null until detected (prevents default landscape)
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [imageOrientation, setImageOrientation] = useState(null);
+  const thumbnailLoadTimeoutRef = useRef(null);
+  const isMountedRef = useRef(true);
+
+  // ✅ v0.7.30: Progressive Image Loading - Load thumbnail with 200ms delay
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    // Skip if no file or not an image with variants
+    if (!file || !file.id || !file.blurPreview || !file.thumbnailPath) {
+      return;
+    }
+
+    // Stage 1: Blur preview is already displayed (0ms, inline base64)
+    console.log(`🖼️  [Progressive Loading] Stage 1 (0ms): Showing blur preview for ${file.id.substring(0, 8)}`);
+
+    // Stage 2: Load thumbnail with 200ms delay (allows batching)
+    thumbnailLoadTimeoutRef.current = setTimeout(() => {
+      if (!isMountedRef.current) return;
+
+      // Check cache first
+      const cachedUrl = BlobUrlCache.get(file.id);
+      if (cachedUrl) {
+        console.log(`💾 [Progressive Loading] Stage 2: Using cached thumbnail for ${file.id.substring(0, 8)}`);
+        setThumbnailBlobUrl(cachedUrl);
+        setLoadingStage('thumbnail');
+        return;
+      }
+
+      // Load thumbnail via queue
+      console.log(`📥 [Progressive Loading] Stage 2 (200ms): Loading thumbnail for ${file.id.substring(0, 8)}`);
+      ImageLoadingQueue.enqueue(
+        file.id,
+        async (signal) => {
+          const token = localStorage.getItem('q-collector-auth-token');
+          const response = await fetch(`${API_CONFIG.baseURL}/files/${file.id}/stream`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            signal
+          });
+
+          if (!response.ok) throw new Error(`Failed to load thumbnail: ${response.status}`);
+
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+
+          if (isMountedRef.current) {
+            BlobUrlCache.set(file.id, blobUrl, blob.size);
+            setThumbnailBlobUrl(blobUrl);
+            setLoadingStage('thumbnail');
+            console.log(`✅ [Progressive Loading] Stage 2: Thumbnail loaded for ${file.id.substring(0, 8)}`);
+          }
+        },
+        'normal'
+      );
+    }, 200);
+
+    // Cleanup
+    return () => {
+      isMountedRef.current = false;
+      if (thumbnailLoadTimeoutRef.current) {
+        clearTimeout(thumbnailLoadTimeoutRef.current);
+      }
+    };
+  }, [file?.id, file?.blurPreview, file?.thumbnailPath]);
 
   // Size variants with better mobile responsiveness
   // ✅ MOBILE FIX: Increased base sizes by 40% for better visibility on small screens
@@ -49,6 +117,33 @@ const ImageThumbnail = React.memo(({
       } else {
         // Desktop: open modal
         setShowModal(true);
+
+        // ✅ v0.7.30: Stage 3 - Load full resolution when modal opens
+        if (file.fullPath && !fullBlobUrl) {
+          console.log(`📥 [Progressive Loading] Stage 3: Loading full resolution for ${file.id.substring(0, 8)}`);
+          ImageLoadingQueue.enqueue(
+            `${file.id}-full`,
+            async (signal) => {
+              const token = localStorage.getItem('q-collector-auth-token');
+              const response = await fetch(`${API_CONFIG.baseURL}/files/${file.id}/stream?quality=full`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+                signal
+              });
+
+              if (!response.ok) throw new Error(`Failed to load full image: ${response.status}`);
+
+              const blob = await response.blob();
+              const blobUrl = URL.createObjectURL(blob);
+
+              if (isMountedRef.current) {
+                setFullBlobUrl(blobUrl);
+                setLoadingStage('full');
+                console.log(`✅ [Progressive Loading] Stage 3: Full resolution loaded for ${file.id.substring(0, 8)}`);
+              }
+            },
+            'high'
+          );
+        }
       }
     }
   };
@@ -128,12 +223,38 @@ const ImageThumbnail = React.memo(({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // ✅ v0.7.30: Progressive Image Loading - Determine which image to show
+  const getImageUrl = (isModal = false) => {
+    // Priority for Progressive Loading:
+    // 1. Modal: fullBlobUrl > thumbnailBlobUrl > blobUrl > blur preview
+    // 2. Thumbnail: thumbnailBlobUrl > blobUrl > blur preview
+    // 3. Fallback: presignedUrl > API stream
+
+    if (isModal && fullBlobUrl) {
+      return fullBlobUrl;
+    }
+
+    if (thumbnailBlobUrl) {
+      return thumbnailBlobUrl;
+    }
+
+    if (blobUrl) {
+      return blobUrl;
+    }
+
+    // Stage 1: Show blur preview (base64, no HTTP request)
+    if (file.blurPreview) {
+      return file.blurPreview;
+    }
+
+    // Fallback for old files without variants
+    return file.presignedUrl || getFileStreamURL(file.id);
+  };
+
   // ✅ FIX v0.7.17: Define ImageContent as stable component (no local state, no useMemo)
   // All state is managed at parent level to prevent re-creation
   const ImageContent = ({ isModal = false }) => {
-    // ✅ MOBILE FIX: Use authenticated blob URL if provided (best for mobile)
-    // Priority: blobUrl (authenticated) > presignedUrl (may fail) > API stream (fallback)
-    const imageUrl = blobUrl || file.presignedUrl || getFileStreamURL(file.id);
+    const imageUrl = getImageUrl(isModal);
 
     // ✅ CRITICAL FIX: แสดง placeholder icon แทน error overlay
     if (!imageUrl || imageError) {
@@ -148,13 +269,15 @@ const ImageThumbnail = React.memo(({
 
     return (
       <>
-        {/* ✅ CRITICAL FIX: ถ้ามี blobUrl แล้ว ไม่ต้องแสดง loading spinner เลย */}
-        {/* Loading spinner จะแสดงเฉพาะเมื่อ: 1) อยู่ใน modal, 2) ยังโหลดไม่เสร็จ, 3) ไม่มี blobUrl */}
-        {isModal && !blobUrl && !imageLoaded && !imageError && (
+        {/* ✅ v0.7.30: Progressive Loading - Show stage indicator */}
+        {isModal && loadingStage !== 'full' && !imageError && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50">
             <div className="flex flex-col items-center gap-3">
               <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-              <div className="text-sm text-white/80">กำลังโหลดภาพ...</div>
+              <div className="text-sm text-white/80">
+                {loadingStage === 'blur' && 'กำลังโหลดภาพ...'}
+                {loadingStage === 'thumbnail' && 'กำลังโหลดความละเอียดสูง...'}
+              </div>
             </div>
           </div>
         )}
@@ -166,8 +289,9 @@ const ImageThumbnail = React.memo(({
             // ✅ FIX v0.7.29-v7: Remove w-full h-full to prevent expansion
             // Let parent container size dictate image display
             (isModal || adaptive) ? 'object-contain' : 'object-cover w-full h-full',
-            // ✅ FIX v0.7.17: Always show image (no opacity transitions that cause flicker)
-            'opacity-100'
+            // ✅ v0.7.30: Smooth transition between quality stages
+            'transition-opacity duration-300',
+            imageLoaded ? 'opacity-100' : 'opacity-0'
           )}
           onLoad={(e) => {
             setImageLoaded(true);

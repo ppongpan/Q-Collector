@@ -18,6 +18,8 @@ import fileServiceAPI from '../services/FileService.api.js';
 import apiClient from '../services/ApiClient';
 import { getFileStreamURL } from '../config/api.config.js'; // ✅ FIX v0.7.10: For blob URL stream
 import API_CONFIG from '../config/api.config.js'; // ✅ FIX v0.7.10: Default import for API_CONFIG
+import ImageLoadingQueue from '../services/ImageLoadingQueue'; // ✅ v0.7.30: Progressive Loading
+import BlobUrlCache from '../utils/BlobUrlCache'; // ✅ v0.7.30: Progressive Loading
 
 // Auth context
 import { useAuth } from '../contexts/AuthContext';
@@ -430,6 +432,15 @@ const SubmissionDetailComponent = function SubmissionDetail({
   useEffect(() => {
     loadSubmissionData();
   }, [formId, submissionId]);
+
+  // ✅ v0.7.30: Progressive Loading - Cancel pending requests on navigation
+  useEffect(() => {
+    return () => {
+      console.log('🛑 [v0.7.30] Navigation detected, cancelling all pending image requests');
+      ImageLoadingQueue.cancelAll();
+      // Note: BlobUrlCache is managed by LRU policy, no need to clear manually
+    };
+  }, [submissionId]);
 
   // ✅ FIX v0.7.29-v16: COMPLETE IMAGE CLEARING - Clear ALL image sources
   // This fixes all 4 flicker causes: blob URLs, ref, state, and presignedUrls
