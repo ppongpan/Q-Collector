@@ -697,8 +697,21 @@ export default SettingsPage;
 if (typeof window !== 'undefined') {
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!prefersReducedMotion) {
+    // Polyfill for requestIdleCallback (Safari/iOS compatibility)
+    const requestIdleCallbackPolyfill = window.requestIdleCallback || function(cb) {
+      const start = Date.now();
+      return setTimeout(function() {
+        cb({
+          didTimeout: false,
+          timeRemaining: function() {
+            return Math.max(0, 50 - (Date.now() - start));
+          }
+        });
+      }, 1);
+    };
+
     // Warm up the animation engine
-    requestIdleCallback(() => {
+    requestIdleCallbackPolyfill(() => {
       const warmupElement = document.createElement('div');
       warmupElement.style.transform = 'translateZ(0)';
       warmupElement.style.opacity = '0';

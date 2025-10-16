@@ -215,7 +215,19 @@ class SubmissionService {
               const columnName = await generateColumnName(field.label || field.title, field.id);
               logger.info(`🔍 DEBUG: Generated columnName: ${columnName} for field ${field.title}`);
 
-              subFormData[columnName] = value;
+              // ✅ CRITICAL FIX: For file_upload and image_upload fields, store first file ID only
+              let valueToStore = value;
+              if (field.type === 'file_upload' || field.type === 'image_upload') {
+                if (Array.isArray(value) && value.length > 0) {
+                  valueToStore = value[0];
+                  logger.info(`🔧 Converted file array [${value.join(', ')}] to single ID: ${valueToStore}`);
+                }
+              } else if (typeof value === 'object' && value !== null) {
+                // For other fields with objects/arrays, serialize to JSON string
+                valueToStore = JSON.stringify(value);
+              }
+
+              subFormData[columnName] = valueToStore;
             }
 
             logger.info(`🔍 DEBUG: Prepared subFormData:`, {
@@ -675,10 +687,32 @@ class SubmissionService {
         throw new ApiError(403, 'Not authorized to delete this submission', 'FORBIDDEN');
       }
 
+      // ✅ NEW v0.7.29: Delete all files from MinIO before deleting submission
+      const { File } = require('../models');
+      const FileService = require('./FileService');
+
+      const files = await File.findAll({
+        where: { submission_id: submissionId }
+      });
+
+      logger.info(`🗑️  Found ${files.length} file(s) to delete from MinIO for submission ${submissionId}`);
+
+      let filesDeleted = 0;
+      for (const file of files) {
+        try {
+          await FileService.deleteFile(file.id, userId);
+          filesDeleted++;
+          logger.info(`✅ Deleted file ${file.id} (${file.original_name}) from MinIO`);
+        } catch (error) {
+          logger.error(`❌ Failed to delete file ${file.id} from MinIO:`, error.message);
+          // Continue deletion even if some files fail
+        }
+      }
+
       // ✅ Check if this is a main form submission (has children) or sub-form submission
       const isSubFormSubmission = submission.parent_id !== null;
 
-      logger.info(`🗑️  Deleting submission ${submissionId}, isSubForm: ${isSubFormSubmission}`);
+      logger.info(`🗑️  Deleting submission ${submissionId}, isSubForm: ${isSubFormSubmission}, filesDeleted: ${filesDeleted}`);
 
       if (isSubFormSubmission) {
         // === SUB-FORM SUBMISSION DELETION ===
@@ -709,6 +743,30 @@ class SubmissionService {
         if (!form) {
           throw new ApiError(404, 'Form not found', 'FORM_NOT_FOUND');
         }
+
+        // ✅ NEW v0.7.29: Delete files from child sub-form submissions first
+        const childSubmissions = await Submission.findAll({
+          where: { parent_id: submission.id }
+        });
+
+        let childFilesDeleted = 0;
+        for (const childSub of childSubmissions) {
+          const childFiles = await File.findAll({
+            where: { submission_id: childSub.id }
+          });
+
+          for (const file of childFiles) {
+            try {
+              await FileService.deleteFile(file.id, userId);
+              childFilesDeleted++;
+              logger.info(`✅ Deleted child submission file ${file.id} (${file.original_name})`);
+            } catch (error) {
+              logger.error(`Failed to delete child file ${file.id}:`, error.message);
+            }
+          }
+        }
+
+        logger.info(`🗑️  Deleted ${childFilesDeleted} file(s) from ${childSubmissions.length} child submission(s)`);
 
         // 1. Delete all child sub-form submissions (cascade)
         const { SubForm } = require('../models');
@@ -766,7 +824,11 @@ class SubmissionService {
         action: 'delete',
         entityType: 'submission',
         entityId: submissionId,
-        oldValue: { formId: submission.form_id, status: submission.status },
+        oldValue: {
+          formId: submission.form_id,
+          status: submission.status,
+          filesDeleted: isSubFormSubmission ? filesDeleted : (filesDeleted + (childFilesDeleted || 0))
+        },
       });
 
       // Delete from submissions table (CASCADE will delete submission_data)
@@ -1209,6 +1271,175 @@ class SubmissionService {
       }
     } catch (error) {
       logger.error('Get sub-form submission detail failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update sub-form submission in dynamic table
+   * @param {string} subFormId - Sub-form ID
+   * @param {string} submissionId - Submission ID (row ID in dynamic table)
+   * @param {string} userId - User ID
+   * @param {Object} fieldData - Field data to update
+   * @returns {Promise<Object>} Updated sub-form submission
+   */
+  static async updateSubFormSubmission(subFormId, submissionId, userId, fieldData) {
+    try {
+      // Get sub-form details with fields
+      const subForm = await SubForm.findByPk(subFormId, {
+        include: [
+          {
+            model: Field,
+            as: 'fields',
+            attributes: ['id', 'title', 'type']
+          }
+        ]
+      });
+
+      if (!subForm || !subForm.table_name) {
+        throw new ApiError(404, 'Sub-form not found', 'SUBFORM_NOT_FOUND');
+      }
+
+      // Check permission
+      const user = await User.findByPk(userId);
+      const allowedRoles = ['super_admin', 'admin', 'moderator'];
+
+      // Query dynamic table to check ownership
+      const { Pool } = require('pg');
+      const pool = new Pool({
+        host: process.env.POSTGRES_HOST || 'localhost',
+        port: process.env.POSTGRES_PORT || 5432,
+        database: process.env.POSTGRES_DB || 'qcollector_db',
+        user: process.env.POSTGRES_USER || 'qcollector',
+        password: process.env.POSTGRES_PASSWORD || 'qcollector_dev_2025'
+      });
+
+      try {
+        // Check if submission exists
+        const checkQuery = `SELECT username FROM "${subForm.table_name}" WHERE id = $1`;
+        const checkResult = await pool.query(checkQuery, [submissionId]);
+
+        if (checkResult.rows.length === 0) {
+          throw new ApiError(404, 'Sub-form submission not found', 'SUBMISSION_NOT_FOUND');
+        }
+
+        const submissionUsername = checkResult.rows[0].username;
+
+        // Check permission (allow owner or admin/moderator)
+        if (submissionUsername !== user.username && !allowedRoles.includes(user.role)) {
+          throw new ApiError(403, 'Not authorized to update this submission', 'FORBIDDEN');
+        }
+
+        // Prepare UPDATE statement
+        const updateColumns = [];
+        const updateValues = [];
+        let paramIndex = 1;
+
+        // Create field map for quick lookup
+        const fieldMap = new Map();
+        subForm.fields.forEach(field => {
+          fieldMap.set(field.id, field);
+        });
+
+        logger.info(`🔍 updateSubFormSubmission - Processing ${Object.keys(fieldData).length} fields`);
+
+        for (const [fieldId, value] of Object.entries(fieldData)) {
+          const field = fieldMap.get(fieldId);
+
+          if (!field) {
+            logger.warn(`⚠️  Field ${fieldId} not found in sub-form, skipping`);
+            continue;
+          }
+
+          // Generate column name using the same method as creation
+          const columnName = await generateColumnName(field.title, field.id);
+
+          // ✅ CRITICAL FIX: For file_upload and image_upload fields, store first file ID only
+          // Arrays are serialized to JSON, but file IDs should be stored as single UUID strings
+          let valueToStore = value;
+          if (field.type === 'file_upload' || field.type === 'image_upload') {
+            if (Array.isArray(value) && value.length > 0) {
+              // Take the first file ID from the array
+              valueToStore = value[0];
+              logger.info(`🔧 Converted file array [${value.join(', ')}] to single ID: ${valueToStore}`);
+            }
+          } else if (typeof value === 'object' && value !== null) {
+            // For other fields with objects/arrays, serialize to JSON string
+            valueToStore = JSON.stringify(value);
+          }
+
+          logger.info(`✅ Updating column "${columnName}" for field "${field.title}" with value:`, valueToStore);
+
+          updateColumns.push(`"${columnName}" = $${paramIndex}`);
+          updateValues.push(valueToStore);
+          paramIndex++;
+        }
+
+        if (updateColumns.length === 0) {
+          logger.warn('No fields to update');
+          return await this.getSubFormSubmissionDetail(subFormId, submissionId, userId);
+        }
+
+        // Add submissionId as last parameter for WHERE clause
+        updateValues.push(submissionId);
+
+        const updateQuery = `
+          UPDATE "${subForm.table_name}"
+          SET ${updateColumns.join(', ')}
+          WHERE id = $${paramIndex}
+        `;
+
+        logger.info(`🔍 UPDATE query:`, {
+          query: updateQuery,
+          values: updateValues
+        });
+
+        const updateResult = await pool.query(updateQuery, updateValues);
+
+        logger.info(`✅ Updated ${updateResult.rowCount} row(s) in dynamic table ${subForm.table_name}`);
+
+        // Also update in submissions and submission_data tables for consistency
+        const submission = await Submission.findByPk(submissionId);
+        if (submission) {
+          // Delete existing submission data
+          await SubmissionData.destroy({
+            where: { submission_id: submissionId }
+          });
+
+          // Create new submission data
+          for (const [fieldId, value] of Object.entries(fieldData)) {
+            const field = fieldMap.get(fieldId);
+            if (!field) continue;
+
+            await SubmissionData.createWithEncryption(
+              submissionId,
+              fieldId,
+              value,
+              field
+            );
+          }
+
+          logger.info(`✅ Also updated submissions and submission_data tables`);
+        }
+
+        // Create audit log
+        await AuditLog.logAction({
+          userId,
+          action: 'update',
+          entityType: 'subform_submission',
+          entityId: submissionId,
+          newValue: { subFormId, fieldData }
+        });
+
+        logger.info(`✅ Sub-form submission updated: ${submissionId}`);
+
+        // Return updated submission
+        return await this.getSubFormSubmissionDetail(subFormId, submissionId, userId);
+      } finally {
+        await pool.end();
+      }
+    } catch (error) {
+      logger.error('Update sub-form submission failed:', error);
       throw error;
     }
   }

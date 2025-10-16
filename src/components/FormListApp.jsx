@@ -411,26 +411,16 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
 
       {/* Form List Content */}
       <main className="container-responsive py-8">
-        {loading ? (
-          <motion.div
-            className="flex items-center justify-center py-16"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="text-center">
-              <div className="text-xl font-semibold text-foreground/80 mb-2">กำลังโหลดฟอร์ม...</div>
-              <div className="text-sm text-muted-foreground">โปรดรอสักครู่</div>
-            </div>
-          </motion.div>
-        ) : (
+        {/* ❌ REMOVED: Full-screen loading page (causes screen flicker) */}
+        {/* Now show content immediately, no loading overlay */}
+        {!loading && (
           <motion.div
             className="form-list-grid-container"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <div className="animated-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="animated-grid grid grid-cols-1 lg:grid-cols-2">
               {forms.map((form, index) => (
               <motion.div
                 key={form.id}
@@ -483,92 +473,74 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
 
                   {/* Footer Area - Fixed at Bottom */}
                   <div className="mt-auto p-4 pt-0">
-                    {/* Stats with Action Icons */}
-                    <div className="form-card-stats flex items-center justify-between border-t border-border/20 pt-3">
-                      {/* Left side - Submissions and Update date as tags */}
-                      <div className="flex items-center gap-2 text-left">
-                        <span
-                          className="form-card-tag inline-flex items-center justify-center border border-muted-foreground/30 text-muted-foreground/60"
-                          title="จำนวนข้อมูล"
-                        >
-                          {form.submissions}
-                        </span>
-                        <span
-                          className="form-card-tag inline-flex items-center justify-center border border-muted-foreground/30 text-muted-foreground/60"
-                          title="Updated date"
-                        >
-                          {form.lastUpdated}
-                        </span>
+                    {/* Action Icons - Spread evenly across full width */}
+                    <div className="form-card-stats flex items-center justify-between border-t border-border/20 pt-4">
+                      {/* Action Icons - Distributed evenly with larger touch targets and individual hover effects */}
+                      {/* Icon 1: Copy Link - Blue */}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopyLink(form.id, form.title);
+                        }}
+                        className="flex items-center justify-center cursor-pointer group/copy w-12 h-12 sm:w-14 sm:h-14 touch-target-comfortable rounded-lg hover:bg-blue-500/10 transition-all duration-300"
+                        title="คัดลอกลิงก์"
+                      >
+                        <FontAwesomeIcon
+                          icon={faLink}
+                          className="text-xl sm:text-2xl text-muted-foreground/60 group-hover/copy:text-blue-500 group-hover/copy:scale-125 transition-all duration-300"
+                        />
                       </div>
 
-                      {/* Right side - Action Icons with touch-friendly areas */}
-                      <div className="flex items-center gap-6">
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopyLink(form.id, form.title);
-                          }}
-                          className="flex items-center justify-center cursor-pointer group"
-                          title="คัดลอกลิงก์"
-                          style={{ background: 'transparent' }}
-                        >
-                          <FontAwesomeIcon
-                            icon={faLink}
-                            className="text-lg text-muted-foreground/60 group-hover:text-blue-500 group-hover:scale-110 transition-all duration-300"
-                          />
-                        </div>
-
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleView(form.id);
-                          }}
-                          className="flex items-center justify-center cursor-pointer group"
-                          title="ดูข้อมูล"
-                          style={{ background: 'transparent' }}
-                        >
-                          <FontAwesomeIcon
-                            icon={faEye}
-                            className="text-lg text-muted-foreground/60 group-hover:text-cyan-400 group-hover:scale-110 transition-all duration-300"
-                          />
-                        </div>
-
-                        {canCreateOrEditForms() && (
-                          <>
-                            <div
-                              data-testid="edit-form-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEdit(form.id);
-                              }}
-                              className="flex items-center justify-center cursor-pointer group"
-                              title="แก้ไขฟอร์ม"
-                              style={{ background: 'transparent' }}
-                            >
-                              <FontAwesomeIcon
-                                icon={faEdit}
-                                className="text-lg text-muted-foreground/60 group-hover:text-cyan-400 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"
-                              />
-                            </div>
-
-                            <div
-                              data-testid="delete-form-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(form.id);
-                              }}
-                              className="flex items-center justify-center cursor-pointer group"
-                              title="ลบฟอร์ม"
-                              style={{ background: 'transparent' }}
-                            >
-                              <FontAwesomeIcon
-                                icon={faTrashAlt}
-                                className="text-lg text-muted-foreground/60 group-hover:text-red-500 group-hover:scale-110 transition-all duration-300"
-                              />
-                            </div>
-                          </>
-                        )}
+                      {/* Icon 2: View Submissions - Green */}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleView(form.id);
+                        }}
+                        className="flex items-center justify-center cursor-pointer group/view w-12 h-12 sm:w-14 sm:h-14 touch-target-comfortable rounded-lg hover:bg-green-500/10 transition-all duration-300"
+                        title="ดูข้อมูล"
+                      >
+                        <FontAwesomeIcon
+                          icon={faEye}
+                          className="text-xl sm:text-2xl text-muted-foreground/60 group-hover/view:text-green-500 group-hover/view:scale-125 transition-all duration-300"
+                        />
                       </div>
+
+                      {canCreateOrEditForms() && (
+                        <>
+                          {/* Icon 3: Edit Form - Orange */}
+                          <div
+                            data-testid="edit-form-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(form.id);
+                            }}
+                            className="flex items-center justify-center cursor-pointer group/edit w-12 h-12 sm:w-14 sm:h-14 touch-target-comfortable rounded-lg hover:bg-orange-500/10 transition-all duration-300"
+                            title="แก้ไขฟอร์ม"
+                          >
+                            <FontAwesomeIcon
+                              icon={faEdit}
+                              className="text-xl sm:text-2xl text-muted-foreground/60 group-hover/edit:text-orange-500 group-hover/edit:scale-125 group-hover/edit:rotate-12 transition-all duration-300"
+                            />
+                          </div>
+
+                          {/* Icon 4: Delete Form - Red */}
+                          <div
+                            data-testid="delete-form-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(form.id);
+                            }}
+                            className="flex items-center justify-center cursor-pointer group/delete w-12 h-12 sm:w-14 sm:h-14 touch-target-comfortable rounded-lg hover:bg-red-500/10 transition-all duration-300"
+                            title="ลบฟอร์ม"
+                          >
+                            <FontAwesomeIcon
+                              icon={faTrashAlt}
+                              className="text-xl sm:text-2xl text-muted-foreground/60 group-hover/delete:text-red-500 group-hover/delete:scale-125 transition-all duration-300"
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </GlassCard>

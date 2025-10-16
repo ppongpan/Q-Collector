@@ -155,6 +155,8 @@ const ThaiDateTimeInput = React.forwardRef(({
     'glass-interactive blur-edge',
     'focus-orange-neon hover-orange-neon',
     'transition-all duration-300 ease-out',
+    // Mobile-first responsive font sizing
+    'text-[14px] sm:text-[15px] md:text-base',
     'cursor-pointer', // FIXED v0.6.7: Show pointer cursor to indicate clickability
     error && 'border-destructive focus:border-destructive',
     hasValidationError && 'red-neon-focus',
@@ -209,7 +211,8 @@ const ThaiDateTimeInput = React.forwardRef(({
     )}>
       {label && (
         <label className={cn(
-          'text-sm font-medium text-foreground/80 mb-2 block transition-all duration-300',
+          // Mobile-first responsive label sizing
+          'text-[13px] sm:text-sm font-medium text-foreground/80 mb-2 block transition-all duration-300',
           'group-focus-within:text-primary group-hover:text-primary',
           'group-focus-within:font-semibold group-hover:font-medium',
           'group-focus-within:transform group-focus-within:-translate-y-0.5',

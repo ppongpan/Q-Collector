@@ -898,7 +898,7 @@ class FormService {
         include: [
           {
             association: 'subForms',
-            attributes: ['id', 'table_name']
+            attributes: ['id', 'title', 'table_name']
           }
         ]
       });
@@ -913,11 +913,38 @@ class FormService {
         throw new ApiError(403, 'Not authorized to delete this form', 'FORBIDDEN');
       }
 
-      // Get table names before deletion
+      // ✅ NEW v0.7.29: Delete all files from MinIO for all submissions in this form
+      const { Submission, File } = require('../models');
+      const FileService = require('./FileService');
+
+      // Get all submissions for this form (both main form and sub-forms)
+      const submissions = await Submission.findAll({
+        where: { form_id: formId }
+      });
+
+      let totalFilesDeleted = 0;
+      for (const submission of submissions) {
+        const files = await File.findAll({
+          where: { submission_id: submission.id }
+        });
+
+        for (const file of files) {
+          try {
+            await FileService.deleteFile(file.id, userId);
+            totalFilesDeleted++;
+          } catch (error) {
+            logger.error(`Failed to delete file ${file.id}:`, error.message);
+          }
+        }
+      }
+
+      logger.info(`🗑️  Deleted ${totalFilesDeleted} file(s) from ${submissions.length} submission(s)`);
+
+      // Get table names and metadata before deletion
       const mainTableName = form.table_name;
       const subFormTableNames = form.subForms?.map(sf => sf.table_name).filter(Boolean) || [];
 
-      logger.info(`Deleting form ${formId}: main table=${mainTableName}, sub-form tables=${subFormTableNames.length}`);
+      logger.info(`Deleting form ${formId}: main table=${mainTableName}, sub-form tables=${subFormTableNames.length}, files=${totalFilesDeleted}`);
 
       // Create audit log before deletion
       await AuditLog.logAction({
@@ -932,11 +959,43 @@ class FormService {
         },
       });
 
+      // ✅ NEW v0.7.29: Log table deletions to table_deletion_logs
+      const { TableDeletionLog } = require('../models');
+      const { Pool } = require('pg');
+      const pool = new Pool({
+        host: process.env.POSTGRES_HOST || 'localhost',
+        port: process.env.POSTGRES_PORT || 5432,
+        database: process.env.POSTGRES_DB || 'qcollector_db',
+        user: process.env.POSTGRES_USER || 'qcollector',
+        password: process.env.POSTGRES_PASSWORD
+      });
+
       // Delete dynamic tables first (before CASCADE deletes the records)
       if (mainTableName) {
         try {
+          // Get row count before deletion
+          const countResult = await pool.query(`SELECT COUNT(*) as count FROM "${mainTableName}"`);
+          const rowCount = parseInt(countResult.rows[0].count) || 0;
+
           await dynamicTableService.dropFormTable(mainTableName);
           logger.info(`Dropped main table: ${mainTableName}`);
+
+          // Log table deletion
+          await TableDeletionLog.logDeletion({
+            tableName: mainTableName,
+            tableType: 'main_form',
+            formId: formId,
+            formTitle: form.title,
+            rowCount,
+            deletedBy: userId,
+            deletedByUsername: user.username,
+            deletionReason: 'Form deletion',
+            backupCreated: false,
+            metadata: {
+              totalSubmissions: submissions.length,
+              totalFiles: totalFilesDeleted
+            }
+          });
         } catch (error) {
           logger.error(`Failed to drop main table ${mainTableName}:`, error.message);
           // Continue anyway - table might not exist
@@ -944,15 +1003,41 @@ class FormService {
       }
 
       // Delete sub-form tables
-      for (const tableName of subFormTableNames) {
-        try {
-          await dynamicTableService.dropFormTable(tableName);
-          logger.info(`Dropped sub-form table: ${tableName}`);
-        } catch (error) {
-          logger.error(`Failed to drop sub-form table ${tableName}:`, error.message);
-          // Continue anyway
+      for (let i = 0; i < form.subForms.length; i++) {
+        const subForm = form.subForms[i];
+        const tableName = subForm.table_name;
+
+        if (tableName) {
+          try {
+            // Get row count before deletion
+            const countResult = await pool.query(`SELECT COUNT(*) as count FROM "${tableName}"`);
+            const rowCount = parseInt(countResult.rows[0].count) || 0;
+
+            await dynamicTableService.dropFormTable(tableName);
+            logger.info(`Dropped sub-form table: ${tableName}`);
+
+            // Log table deletion
+            await TableDeletionLog.logDeletion({
+              tableName,
+              tableType: 'sub_form',
+              formId: formId,
+              formTitle: form.title,
+              subFormId: subForm.id,
+              subFormTitle: subForm.title,
+              rowCount,
+              deletedBy: userId,
+              deletedByUsername: user.username,
+              deletionReason: 'Form deletion (sub-form table)',
+              backupCreated: false
+            });
+          } catch (error) {
+            logger.error(`Failed to drop sub-form table ${tableName}:`, error.message);
+            // Continue anyway
+          }
         }
       }
+
+      await pool.end();
 
       // Explicitly delete sub-forms (in case CASCADE is not configured)
       if (form.subForms && form.subForms.length > 0) {

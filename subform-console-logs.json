@@ -1,0 +1,7 @@
+[
+  {
+    "type": "warning",
+    "text": "%c⚠️ DEPRECATED: DataService initialized - Consider migrating to API-based services color: #f97316; font-weight: bold; font-size: 12px; \n📝 DataService is deprecated and will be removed in v0.8.0 \n✅ Use apiClient and backend services instead \n📖 See migration guide in DataService.js header",
+    "timestamp": "2025-10-11T06:09:04.658Z"
+  }
+]

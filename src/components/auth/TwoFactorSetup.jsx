@@ -133,18 +133,7 @@ const TwoFactorSetup = ({ onComplete, onCancel, apiClient, tempToken, username }
           tempToken,
           verificationCode
         });
-
-        // Save tokens from response - backend returns data: { user, tokens }
-        if (response.data?.tokens) {
-          localStorage.setItem('access_token', response.data.tokens.accessToken);
-          if (response.data.tokens.refreshToken) {
-            localStorage.setItem('refresh_token', response.data.tokens.refreshToken);
-          }
-        }
-        // Save user data
-        if (response.data?.user) {
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-        }
+        // Note: Don't save tokens here - let parent component handle it
       } else {
         // Normal setup - use authenticated endpoint
         response = await apiClient.post('/auth/2fa/enable', {
@@ -155,7 +144,8 @@ const TwoFactorSetup = ({ onComplete, onCancel, apiClient, tempToken, username }
       if (response.success) {
         // Don't show toast here - let parent component (TwoFactorSetupPage) handle it
         // This prevents duplicate toast notifications
-        onComplete?.(response.data);
+        // Pass the complete response data (contains user and tokens)
+        onComplete?.(response.data || response);
       } else {
         throw new Error(response.message || 'Failed to enable 2FA');
       }
@@ -337,7 +327,8 @@ const TwoFactorSetup = ({ onComplete, onCancel, apiClient, tempToken, username }
             <div className="flex gap-3 justify-center">
               <button
                 onClick={initializeSetup}
-                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors"
+                className="btn-orange-rounded px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white"
+                style={{ transition: 'background-color 200ms ease-out' }}
               >
                 ลองใหม่อีกครั้ง
               </button>
@@ -406,7 +397,8 @@ const TwoFactorSetup = ({ onComplete, onCancel, apiClient, tempToken, username }
           {step < 3 && (
             <button
               onClick={() => setStep(step + 1)}
-              className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              className="btn-orange-rounded flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center gap-2"
+              style={{ transition: 'background-color 200ms ease-out' }}
             >
               ถัดไป
               <FontAwesomeIcon icon={faArrowRight} />

@@ -17,6 +17,7 @@ import EnhancedFormSlider from './ui/enhanced-form-slider';
 import submissionService from '../services/SubmissionService.js';
 import fileServiceAPI from '../services/FileService.api.js';
 import apiClient from '../services/ApiClient';
+import { getFileStreamURL } from '../config/api.config.js';
 
 // Utilities
 import { formatNumberInput, parseNumberInput, isValidNumber } from '../utils/numberFormatter.js';
@@ -38,6 +39,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   const [storageUsage, setStorageUsage] = useState(null);
   const [fieldVisibility, setFieldVisibility] = useState({});
   const [filesToDelete, setFilesToDelete] = useState([]); // ✅ Track files to delete on save
+  const [imageBlobUrls, setImageBlobUrls] = useState({}); // ✅ Authenticated blob URLs for images { fileId: blobUrl }
 
   // Enhanced toast notifications
   const toast = useEnhancedToast();
@@ -491,6 +493,61 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   useEffect(() => {
     updateFieldVisibility(formData);
   }, [formData, updateFieldVisibility]);
+
+  // ✅ Load authenticated image blob URLs for display
+  useEffect(() => {
+    const loadAuthenticatedImages = async () => {
+      const token = localStorage.getItem('q-collector-auth-token');
+      if (!token) {
+        console.warn('⚠️ No auth token found, skipping image loading');
+        return;
+      }
+
+      const newBlobUrls = {};
+
+      // Iterate through all uploaded files
+      for (const fieldGroup of uploadedFiles) {
+        for (const file of fieldGroup.files) {
+          // Only load images that don't already have blob URLs
+          if (file.isImage && file.id && !imageBlobUrls[file.id]) {
+            try {
+              console.log(`🔄 Loading authenticated image: ${file.id}`);
+              const streamUrl = getFileStreamURL(file.id);
+              const response = await fetch(streamUrl, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+
+              if (response.ok) {
+                const blob = await response.blob();
+                newBlobUrls[file.id] = URL.createObjectURL(blob);
+                console.log(`✅ Loaded image blob URL for: ${file.id}`);
+              } else {
+                console.error(`❌ Failed to load image ${file.id}: ${response.status} ${response.statusText}`);
+              }
+            } catch (error) {
+              console.error(`❌ Error loading image ${file.id}:`, error);
+            }
+          }
+        }
+      }
+
+      // Update state with new blob URLs
+      if (Object.keys(newBlobUrls).length > 0) {
+        setImageBlobUrls(prev => ({ ...prev, ...newBlobUrls }));
+      }
+    };
+
+    loadAuthenticatedImages();
+
+    // Cleanup blob URLs on unmount
+    return () => {
+      Object.values(imageBlobUrls).forEach(url => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    };
+  }, [uploadedFiles]); // Re-run when uploadedFiles changes
 
   const handleFileChange = async (fieldId, files) => {
     if (!files || files.length === 0) return;
@@ -1361,12 +1418,13 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
             {currentFile && !uploadProgress && (
               <div className="flex items-center gap-3 p-3 rounded-lg border border-border/40 bg-muted/10">
                 {/* File Icon/Preview */}
-                {currentFile.isImage && currentFile.presignedUrl ? (
+                {currentFile.isImage && imageBlobUrls[currentFile.id] ? (
                   <img
-                    src={currentFile.presignedUrl}
+                    src={imageBlobUrls[currentFile.id]}
                     alt={currentFile.name}
                     className="w-10 h-10 rounded object-cover flex-shrink-0"
                     onError={(e) => {
+                      console.error('❌ Image failed to load:', currentFile.id);
                       e.target.style.display = 'none';
                     }}
                   />
@@ -1627,19 +1685,10 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     }
   };
 
-  if (showLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
-        <GlassCard className="glass-container">
-          <GlassCardContent className="text-center py-8">
-            <div className="text-xl font-semibold text-foreground/80">กำลังโหลดข้อมูล...</div>
-          </GlassCardContent>
-        </GlassCard>
-      </div>
-    );
-  }
+  // ❌ REMOVED: Full-screen loading page (causes screen flicker)
+  // Now use toast notifications instead
 
-  if (!form) {
+  if (!form && !loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
         <GlassCard className="glass-container">
@@ -1654,6 +1703,11 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         </GlassCard>
       </div>
     );
+  }
+
+  // ✅ FIX v0.7.28: Add null check for form before rendering
+  if (!form) {
+    return null; // Still loading
   }
 
   return (

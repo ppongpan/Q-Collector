@@ -80,8 +80,8 @@ class AuthService {
         console.log('✅ AuthService - User saved to localStorage:', data.user.username);
       }
 
-      // Verify tokens were actually saved
-      const verifyAccessToken = localStorage.getItem('access_token');
+      // ✅ FIX v0.7.9-dev: Verify tokens were actually saved (use correct storage key!)
+      const verifyAccessToken = tokenManager.getAccessToken();
       console.log('🔍 AuthService - Verification check:', {
         tokenInLocalStorage: verifyAccessToken ? verifyAccessToken.substring(0, 20) + '...' : 'NONE',
         matchesNewToken: verifyAccessToken === data?.tokens?.accessToken
@@ -161,16 +161,29 @@ class AuthService {
   /**
    * Logout current user
    * @returns {Promise<void>}
+   *
+   * ✅ FIX v0.7.9-dev: Check token exists before calling API
+   * - Prevents 401 errors when tokens already cleared by refresh failure
+   * - Cleaner console output for better UX
    */
   async logout() {
     try {
-      // Call logout endpoint to invalidate token on server
-      await ApiClient.post(API_ENDPOINTS.auth.logout);
+      // ✅ FIX: Only call API if we have a valid token
+      const token = tokenManager.getAccessToken();
+      if (token) {
+        // Call logout endpoint to invalidate token on server
+        await ApiClient.post(API_ENDPOINTS.auth.logout);
+      } else {
+        console.info('Logout: No token to invalidate (already cleared)');
+      }
     } catch (error) {
-      console.warn('Logout API call failed:', error);
+      // ✅ FIX: Don't warn on 401 - expected if token already cleared
+      if (error.response?.status !== 401) {
+        console.warn('Logout API call failed:', error);
+      }
       // Continue with local logout even if API fails
     } finally {
-      // Always clear local tokens
+      // Always clear local tokens (safe to call even if already cleared)
       tokenManager.clearTokens();
     }
   }
@@ -182,6 +195,12 @@ class AuthService {
   async refreshToken() {
     try {
       const refreshToken = tokenManager.getRefreshToken();
+      console.log('🔄 AuthService.refreshToken - Debug:', {
+        hasRefreshToken: !!refreshToken,
+        refreshTokenPreview: refreshToken ? refreshToken.substring(0, 30) + '...' : 'NONE',
+        endpoint: API_ENDPOINTS.auth.refresh
+      });
+
       if (!refreshToken) {
         throw new Error('ไม่พบ refresh token');
       }
@@ -190,17 +209,36 @@ class AuthService {
         refreshToken
       });
 
+      console.log('✅ AuthService.refreshToken - Success:', {
+        hasNewAccessToken: !!response.data?.tokens?.accessToken,
+        hasNewRefreshToken: !!response.data?.tokens?.refreshToken,
+        hasUser: !!response.data?.user,
+        responseKeys: Object.keys(response),
+        dataKeys: response.data ? Object.keys(response.data) : []
+      });
+
+      // ✅ FIX v0.7.9-dev: Correct path to access tokens (response.data.tokens, not response.accessToken)
       // Store new access token
-      if (response.accessToken) {
-        tokenManager.setAccessToken(response.accessToken);
+      if (response.data?.tokens?.accessToken) {
+        tokenManager.setAccessToken(response.data.tokens.accessToken);
+        console.log('✅ AuthService.refreshToken - Access token saved to localStorage');
+      } else {
+        console.error('❌ AuthService.refreshToken - No access token in response:', response);
+      }
+
+      // Store new refresh token if provided
+      if (response.data?.tokens?.refreshToken) {
+        tokenManager.setRefreshToken(response.data.tokens.refreshToken);
+        console.log('✅ AuthService.refreshToken - Refresh token updated in localStorage');
       }
 
       // Update user data if provided
-      if (response.user) {
-        tokenManager.setUser(response.user);
+      if (response.data?.user) {
+        tokenManager.setUser(response.data.user);
+        console.log('✅ AuthService.refreshToken - User data updated in localStorage');
       }
 
-      return response.accessToken;
+      return response.data.tokens.accessToken;
     } catch (error) {
       // Clear tokens on refresh failure
       tokenManager.clearTokens();

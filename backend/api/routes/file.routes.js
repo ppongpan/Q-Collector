@@ -200,6 +200,44 @@ router.get(
 );
 
 /**
+ * GET /api/v1/files/:id/stream
+ * Stream file for preview/display (inline, not download)
+ * ✅ MOBILE-FRIENDLY: Works with ngrok proxy, no localhost:9000 URLs
+ */
+router.get(
+  '/:id/stream',
+  authenticate,
+  [
+    param('id')
+      .isUUID()
+      .withMessage('Invalid file ID'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { stream, filename, mimeType, size } = await FileService.downloadFile(
+      req.params.id,
+      req.userId
+    );
+
+    // Set headers for inline display (not download)
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+
+    // Set caching headers for better performance
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+
+    if (size) {
+      res.setHeader('Content-Length', size);
+    }
+
+    // Pipe stream to response
+    stream.pipe(res);
+
+    logger.info(`File streamed (preview): ${req.params.id} by ${req.user.username}`);
+  })
+);
+
+/**
  * GET /api/v1/files/:id/download
  * Download file directly
  */

@@ -364,6 +364,12 @@ export default function SubFormEditPage({
         const allFileIds = fieldFiles ? fieldFiles.files.map(f => f.id) : [];
         handleInputChange(fieldId, allFileIds);
 
+        // ✅ Clear validation error manually after successful upload
+        setFieldErrors(prev => ({
+          ...prev,
+          [fieldId]: ''
+        }));
+
         toast.success(`อัปโหลด ${successfulFiles.length} ไฟล์เรียบร้อยแล้ว`, {
           title: 'อัปโหลดสำเร็จ',
           duration: 3000
@@ -1001,7 +1007,20 @@ export default function SubFormEditPage({
       case 'factory':
         const factories = ['บางปะอิน', 'ระยอง', 'สระบุรี', 'สงขลา'];
         const allowMultipleFactory = field.options?.allowMultiple || false;
-        const selectedFactories = Array.isArray(fieldValue) ? fieldValue : (fieldValue ? [fieldValue] : []);
+
+        // ✅ Normalize factory values: Support both "ระยอง" and "โรงงานระยอง" formats
+        const normalizeFactoryValue = (value) => {
+          if (!value) return null;
+          if (typeof value === 'string' && value.startsWith('โรงงาน')) {
+            return value.substring(6); // Remove "โรงงาน" prefix
+          }
+          return value;
+        };
+
+        const normalizedFieldValue = normalizeFactoryValue(fieldValue);
+        const selectedFactories = Array.isArray(normalizedFieldValue)
+          ? normalizedFieldValue
+          : (normalizedFieldValue ? [normalizedFieldValue] : []);
 
         return (
           <div key={field.id} data-field-id={field.id} className="space-y-4">
@@ -1019,7 +1038,7 @@ export default function SubFormEditPage({
 
             <div className="grid grid-cols-2 gap-3">
               {factories.map((factory, idx) => {
-                const isSelected = allowMultipleFactory ? selectedFactories.includes(factory) : fieldValue === factory;
+                const isSelected = allowMultipleFactory ? selectedFactories.includes(factory) : normalizedFieldValue === factory;
 
                 return (
                   <button
@@ -1027,10 +1046,10 @@ export default function SubFormEditPage({
                     type="button"
                     onClick={() => handleFactoryClick(field.id, factory, allowMultipleFactory, fieldValue)}
                     className={`
-                      px-4 py-2 rounded-md text-sm font-medium border-2 transition-all
+                      px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all
                       ${isSelected
-                        ? 'bg-white text-orange-600 border-orange-600 hover:bg-orange-50'
-                        : 'border-input bg-background hover:bg-orange-50 hover:border-orange-300'
+                        ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90 dark:hover:bg-primary/80'
+                        : 'border-border bg-background text-foreground hover:bg-primary/10 hover:border-primary/50 hover:text-primary dark:hover:bg-primary/20'
                       }
                     `}
                   >
@@ -1075,12 +1094,10 @@ export default function SubFormEditPage({
     );
   }
 
+  // ✅ ไม่ต้องแสดงข้อความ "ไม่พบฟอร์มย่อย" ใน edit mode
+  // เพราะถ้าไม่มีข้อมูลจริง จะถูก handle ใน loadSubFormData() และ onCancel() แล้ว
   if (!subForm) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">ไม่พบฟอร์มย่อย</p>
-      </div>
-    );
+    return null;
   }
 
   return (

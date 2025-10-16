@@ -24,17 +24,23 @@ class FileService {
       const { submissionId, fieldId } = metadata;
 
       // Validate submission and field
-      if (submissionId) {
+      // ✅ FIX: Allow file upload without submissionId (for new fields in edit mode)
+      // Only validate submission if submissionId is provided AND it's not null
+      if (submissionId && submissionId !== 'null' && submissionId !== null) {
         const submission = await Submission.findByPk(submissionId);
-        if (!submission) {
-          throw new ApiError(404, 'Submission not found', 'SUBMISSION_NOT_FOUND');
-        }
 
-        // Check ownership
-        if (submission.submitted_by !== userId) {
-          const user = await User.findByPk(userId);
-          if (user.role !== 'admin') {
-            throw new ApiError(403, 'Not authorized to upload to this submission', 'FORBIDDEN');
+        // ✅ Only throw error if it's supposed to be a main form submission
+        // Sub-form submissions are stored in dynamic tables, so we can't validate them here
+        if (!submission) {
+          logger.warn(`Submission ${submissionId} not found - might be a sub-form submission in dynamic table`);
+          // Don't throw error - allow upload to continue
+        } else {
+          // Check ownership only if submission exists in main submissions table
+          if (submission.submitted_by !== userId) {
+            const user = await User.findByPk(userId);
+            if (user.role !== 'admin') {
+              throw new ApiError(403, 'Not authorized to upload to this submission', 'FORBIDDEN');
+            }
           }
         }
       }
@@ -77,8 +83,20 @@ class FileService {
       );
 
       // Create database record
+      // ✅ FIX: Only set submission_id if it exists in submissions table
+      // For sub-form submissions, set to null (they're in dynamic tables)
+      let validSubmissionId = null;
+      if (submissionId && submissionId !== 'null') {
+        const submission = await Submission.findByPk(submissionId);
+        if (submission) {
+          validSubmissionId = submissionId;
+        } else {
+          logger.info(`Submission ${submissionId} not in submissions table (sub-form) - setting submission_id to null`);
+        }
+      }
+
       const fileRecord = await File.create({
-        submission_id: submissionId,
+        submission_id: validSubmissionId,
         field_id: fieldId,
         filename: uniqueFileName,
         original_name: file.originalname,
@@ -156,16 +174,14 @@ class FileService {
         throw new ApiError(403, 'Access denied to this file', 'FORBIDDEN');
       }
 
-      // Generate presigned URL
-      const downloadUrl = await minioClient.getPresignedUrl(
-        file.minio_path,
-        expirySeconds
-      );
+      // ✅ MOBILE FIX: Don't generate presignedUrl (uses localhost:9000)
+      // Frontend now uses API stream endpoint instead (/api/v1/files/:id/stream)
+      // This works with ngrok single-tunnel setup (port 3000 → React proxy → port 5000 → MinIO)
 
       return {
         ...file.toJSON(),
-        downloadUrl,
-        presignedUrl: downloadUrl,  // ✅ Add presignedUrl as alias for frontend compatibility
+        // downloadUrl removed - frontend uses API endpoints
+        // presignedUrl removed - frontend uses getFileStreamURL() helper
         expiresAt: new Date(Date.now() + expirySeconds * 1000),
       };
     } catch (error) {
@@ -332,47 +348,13 @@ class FileService {
       logger.info(`📋 WHERE clause: ${JSON.stringify(where)}`);
       logger.info(`👤 User: ${userId}, Role: ${user.role}`);
 
-      // ✅ Filter files when submissionId is provided
-      // This ensures only files related to this submission are returned
+      // ✅ CRITICAL FIX v0.7.29: Only return files that EXACTLY match the submission_id
+      // DO NOT include files with submission_id = NULL even if they match field_id
+      // Files with NULL submission_id are orphaned and should not appear in any submission
       let filteredFiles = rows;
       if (filters.submissionId) {
-        logger.info(`Filtering files for submission ${filters.submissionId}:`);
-        logger.info(`Total files from query: ${rows.length}`);
-
-        // Get the submission and its form's field IDs
-        const submission = await Submission.findByPk(filters.submissionId, {
-          include: [{
-            model: require('../models').Form,
-            as: 'form',
-            include: [{
-              model: Field,
-              as: 'fields',
-              attributes: ['id', 'sub_form_id'],
-            }]
-          }]
-        });
-
-        if (!submission || !submission.form) {
-          logger.warn(`Submission ${filters.submissionId} or its form not found`);
-          return {
-            files: [],
-            pagination: {
-              total: 0,
-              page,
-              limit,
-              totalPages: 0,
-              hasMore: false,
-            },
-          };
-        }
-
-        // Get main form field IDs (exclude sub-form fields)
-        const mainFormFieldIds = submission.form.fields
-          .filter(field => !field.sub_form_id)
-          .map(field => field.id);
-
-        logger.info(`Main form field IDs: ${JSON.stringify(mainFormFieldIds)}`);
-        logger.info(`🔎 Starting to filter ${rows.length} files...`);
+        logger.info(`🔍 [v0.7.29] Filtering files for submission ${filters.submissionId}:`);
+        logger.info(`📊 Total files from query: ${rows.length}`);
 
         filteredFiles = rows.filter(file => {
           // ✅ FIX: Use dataValues to avoid Sequelize UUID serialization bug
@@ -381,17 +363,17 @@ class FileService {
           const submissionId = fileData.submission_id || file.submission_id;
           const fieldId = fileData.field_id || file.field_id;
 
-          // Check if file matches submission_id OR belongs to main form fields
+          // ✅ CRITICAL FIX: ONLY keep files where submission_id exactly matches
+          // Reject ALL files with NULL submission_id (orphaned files)
+          // Reject ALL files from other submissions (even if field_id matches)
           const matchesSubmission = submissionId === filters.submissionId;
-          const belongsToMainForm = fieldId && mainFormFieldIds.includes(fieldId);
-          const shouldKeep = matchesSubmission || belongsToMainForm;
 
-          logger.info(`📄 File ${fileId ? fileId.substring(0, 8) : 'NO-ID'}: submission_id=${submissionId ? submissionId.substring(0, 8) : 'NULL'}, field_id=${fieldId ? fieldId.substring(0, 8) : 'NULL'}, shouldKeep=${shouldKeep}`);
+          logger.info(`📄 File ${fileId ? fileId.substring(0, 8) : 'NO-ID'}: submission_id=${submissionId ? submissionId.substring(0, 8) : 'NULL'}, field_id=${fieldId ? fieldId.substring(0, 8) : 'NULL'}, matchesSubmission=${matchesSubmission}`);
 
-          return shouldKeep;
+          return matchesSubmission;
         });
 
-        logger.info(`✅ Files after filtering: ${filteredFiles.length}`);
+        logger.info(`✅ [v0.7.29] Files after filtering: ${filteredFiles.length} (strict submission_id match only)`);
       }
 
       return {

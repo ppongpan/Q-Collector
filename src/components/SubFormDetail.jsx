@@ -10,10 +10,12 @@ import { FileDisplay } from './ui/file-display';
 import { ImageThumbnail, FileGallery } from './ui/image-thumbnail';
 import { PhoneIcon } from './ui/phone-icon';
 import { LocationMap } from './ui/location-map';
+import { useEnhancedToast } from './ui/enhanced-toast'; // ✅ FIX v0.7.29: Add toast for mobile downloads
 
 // Data services
 import fileServiceAPI from '../services/FileService.api.js';
 import apiClient from '../services/ApiClient';
+import API_CONFIG from '../config/api.config.js';
 
 // Utilities
 import { formatNumberByContext } from '../utils/numberFormatter.js';
@@ -43,6 +45,7 @@ export default function SubFormDetail({
     subSubmissionId
   });
 
+  const toast = useEnhancedToast(); // ✅ FIX v0.7.29: Initialize toast for mobile downloads
   const [form, setForm] = useState(null);
   const [subForm, setSubForm] = useState(null);
   const [subSubmission, setSubSubmission] = useState(null);
@@ -208,6 +211,58 @@ export default function SubFormDetail({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // ✅ FIX v0.7.29: Mobile download handler with toast notifications
+  const handleFileDownload = async (file) => {
+    const isMobile = window.innerWidth < 768;
+
+    if (isMobile) {
+      toast.loading('กำลังเตรียมดาวน์โหลด...', { id: file.id });
+    }
+
+    try {
+      const downloadUrl = `${API_CONFIG.baseURL}/files/${file.id}/download`;
+      const token = localStorage.getItem(API_CONFIG.token.storageKey);
+
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = file.name || 'download';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      window.URL.revokeObjectURL(blobUrl);
+
+      // ✅ Success toast (mobile only)
+      if (isMobile) {
+        toast.success('ดาวน์โหลดสำเร็จ!', { id: file.id, duration: 2000 });
+      }
+    } catch (error) {
+      console.error('❌ Download failed:', error);
+
+      // ✅ Error toast
+      if (isMobile) {
+        toast.error('ดาวน์โหลดไม่สำเร็จ', { id: file.id });
+      } else {
+        alert('ไม่สามารถดาวน์โหลดไฟล์ได้: ' + error.message);
+      }
+    }
+  };
+
   // Create separate component for file fields to use hooks properly
   const FileFieldDisplay = ({ field, value }) => {
     const isEmpty = !value && value !== 0;
@@ -259,6 +314,7 @@ export default function SubFormDetail({
 
     const [files, setFiles] = useState([]);
     const [filesLoading, setFilesLoading] = useState(true);
+    const [imageBlobUrls, setImageBlobUrls] = useState({});
 
     useEffect(() => {
       const loadFiles = async () => {
@@ -286,7 +342,12 @@ export default function SubFormDetail({
               }
             })
           );
-          setFiles(filesWithUrls.filter(file => file));
+          const validFiles = filesWithUrls.filter(file => file);
+          setFiles(validFiles);
+
+          // ✅ FIX: Load blob URLs for images (authenticated stream)
+          await loadImageBlobUrls(validFiles);
+
           setFilesLoading(false);
           return;
         }
@@ -314,11 +375,57 @@ export default function SubFormDetail({
           })
         );
 
-        setFiles(loadedFiles.filter(file => file)); // Remove null/undefined files
+        const validFiles = loadedFiles.filter(file => file);
+        setFiles(validFiles);
+
+        // ✅ FIX: Load blob URLs for images (authenticated stream)
+        await loadImageBlobUrls(validFiles);
+
         setFilesLoading(false);
       };
 
+      // ✅ FIX: Helper function to load authenticated blob URLs for images
+      const loadImageBlobUrls = async (fileList) => {
+        const token = apiClient.getToken();
+        if (!token) {
+          console.warn('⚠️ No auth token available for image loading');
+          return;
+        }
+
+        const blobUrlMap = {};
+        for (const file of fileList) {
+          if (file.isImage && file.id) {
+            try {
+              // ✅ Use API_CONFIG.baseURL instead of apiClient.defaults.baseURL
+              const streamUrl = `${API_CONFIG.baseURL}/files/${file.id}/stream`;
+              const response = await fetch(streamUrl, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+
+              if (!response.ok) {
+                console.error(`Failed to load image ${file.id}: ${response.status}`);
+                continue;
+              }
+
+              const blob = await response.blob();
+              const blobUrl = URL.createObjectURL(blob);
+              blobUrlMap[file.id] = blobUrl;
+            } catch (error) {
+              console.error(`Error loading blob URL for ${file.id}:`, error);
+            }
+          }
+        }
+        setImageBlobUrls(blobUrlMap);
+      };
+
       loadFiles();
+
+      // Cleanup blob URLs on unmount
+      return () => {
+        Object.values(imageBlobUrls).forEach(url => URL.revokeObjectURL(url));
+      };
     }, [JSON.stringify(fileIds), JSON.stringify(fileObjects)]); // Dependency on fileIds and fileObjects
 
     return (
@@ -332,36 +439,29 @@ export default function SubFormDetail({
             ? 'bg-muted/40'
             : 'bg-background/50'
         }`}>
-          {filesLoading ? (
+          {filesLoading && files.length === 0 ? (
+            // ✅ CRITICAL FIX: Only show loading text if there are NO files yet
+            // If files exist, show them immediately (don't replace with text)
             <div className="text-center py-6 text-muted-foreground">
               <div className="text-sm">กำลังโหลดไฟล์...</div>
             </div>
           ) : files.length > 0 ? (
             <div className="space-y-3">
               {field.type === 'image_upload' ? (
-                // ✅ Left-right layout สำหรับรูปภาพ (เหมือน main form)
-                <div className="space-y-2">
+                // ✅ FIX v0.7.29: Use ImageThumbnail with adaptive sizing and download functionality
+                // Same pattern as main form: vertical stack for horizontal thumbnail+info layout
+                // ✅ FIX v0.7.29-v4: Add sm:max-w-fit to prevent expansion on tablet/desktop
+                <div className="space-y-2 w-full sm:max-w-fit">
                   {files.map((file, index) => (
-                    <div key={file.id || index} className="flex items-start gap-4">
-                      {/* รูปภาพด้านซ้าย */}
-                      <div className="flex-shrink-0">
-                        <ImageThumbnail
-                          file={file}
-                          size="lg"
-                          showFileName={false}
-                        />
-                      </div>
-
-                      {/* รายละเอียดด้านขวา */}
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <div className="text-sm font-medium text-foreground truncate" title={file.name}>
-                          {file.name}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatFileSize(file.size)}
-                        </div>
-                      </div>
-                    </div>
+                    <ImageThumbnail
+                      key={file.id || index}
+                      file={file}
+                      blobUrl={imageBlobUrls[file.id] || file.presignedUrl}
+                      size="lg"
+                      showFileName={true}
+                      onDownload={handleFileDownload}  // ✅ FIX v0.7.29: Pass download handler with toast
+                      adaptive={true}  // ✅ FIX v0.7.29: Enable adaptive sizing (uniform across screens)
+                    />
                   ))}
                 </div>
               ) : (
@@ -675,21 +775,11 @@ export default function SubFormDetail({
     );
   };
 
-  // Show loading only after 1 second delay
-  if (showLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
-        <GlassCard className="glass-container">
-          <GlassCardContent className="text-center py-8">
-            <div className="text-xl font-semibold text-foreground/80">กำลังโหลดข้อมูล...</div>
-          </GlassCardContent>
-        </GlassCard>
-      </div>
-    );
-  }
+  // ❌ REMOVED: Full-screen loading page (causes screen flicker)
+  // Now show content immediately, no loading overlay
 
   // Only show "not found" error if loading is complete AND data is still missing
-  if (!loading && (!form || !subForm || !subSubmission)) {
+  if ((!form || !subForm || !subSubmission) && !loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
         <GlassCard className="glass-container">

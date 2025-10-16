@@ -1345,31 +1345,18 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
 
     if (subSubs.length === 0) {
       return (
-        <div className="text-center py-8 flex flex-col items-center">
+        <div className="py-8 flex flex-col items-center">
           <div className="text-4xl mb-4 opacity-50">📝</div>
-          <p className="text-muted-foreground mb-4">ยังไม่มีข้อมูลใน{subForm.title}</p>
+          <p className="text-muted-foreground mb-4 text-center">ยังไม่มีข้อมูลใน{subForm.title}</p>
           <button
             onClick={() => handleAddSubForm(subForm.id)}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-all duration-300 relative overflow-hidden group"
+            className="btn-orange-rounded inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium"
             style={{
-              background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-              boxShadow: '0 4px 15px 0 rgba(249, 115, 22, 0.4)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)';
-              e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(249, 115, 22, 0.6)';
-              e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
-              e.currentTarget.style.boxShadow = '0 4px 15px 0 rgba(249, 115, 22, 0.4)';
-              e.currentTarget.style.transform = 'translateY(0) scale(1)';
+              transition: 'background-color 200ms ease-out'
             }}
           >
-            {/* Shimmer effect on hover */}
-            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
-            <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5 relative z-10" />
-            <span className="relative z-10">เพิ่ม{subForm.title}</span>
+            <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5" />
+            <span>เพิ่ม{subForm.title}</span>
           </button>
         </div>
       );
@@ -1403,29 +1390,16 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
             background-color: rgb(55 65 81) !important;
           }
         `}</style>
-        <div className="flex items-center justify-end mb-3">
+        <div className="flex items-center justify-center mb-3">
           <button
             onClick={() => handleAddSubForm(subForm.id)}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-all duration-300 relative overflow-hidden group"
+            className="btn-orange-rounded inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium"
             style={{
-              background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-              boxShadow: '0 4px 15px 0 rgba(249, 115, 22, 0.4)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)';
-              e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(249, 115, 22, 0.6)';
-              e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
-              e.currentTarget.style.boxShadow = '0 4px 15px 0 rgba(249, 115, 22, 0.4)';
-              e.currentTarget.style.transform = 'translateY(0) scale(1)';
+              transition: 'background-color 200ms ease-out'
             }}
           >
-            {/* Shimmer effect on hover */}
-            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
-            <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5 relative z-10" />
-            <span className="relative z-10">เพิ่ม{subForm.title}</span>
+            <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5" />
+            <span>เพิ่ม{subForm.title}</span>
           </button>
         </div>
 

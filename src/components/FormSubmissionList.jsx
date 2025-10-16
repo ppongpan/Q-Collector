@@ -33,6 +33,16 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
   const loadData = useCallback(async () => {
     setLoading(true);
+
+    // Show loading toast if taking longer than 1 second
+    let loadingToastId = null;
+    const loadingTimer = setTimeout(() => {
+      loadingToastId = toast.info('กำลังโหลดข้อมูล...', {
+        title: 'โปรดรอสักครู่',
+        duration: Infinity // Keep showing until we dismiss it
+      });
+    }, 1000);
+
     try {
       // Load form from API first, fallback to LocalStorage
       let formData = null;
@@ -42,6 +52,8 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         console.log('✅ Form loaded from API:', formData?.title);
       } catch (apiError) {
         console.error('Failed to load form from API:', apiError);
+        clearTimeout(loadingTimer);
+        if (loadingToastId) toast.dismiss(loadingToastId);
         toast.error('ไม่สามารถโหลดข้อมูลฟอร์มจาก API ได้', {
           title: 'เกิดข้อผิดพลาด',
           duration: 5000
@@ -52,6 +64,8 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
       if (!formData) {
         console.error('Form not found:', formId);
+        clearTimeout(loadingTimer);
+        if (loadingToastId) toast.dismiss(loadingToastId);
         toast.error('ไม่พบฟอร์มที่ต้องการ', {
           title: 'เกิดข้อผิดพลาด',
           duration: 5000
@@ -72,6 +86,8 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         }
       } catch (apiError) {
         console.error('Failed to load submissions from API:', apiError);
+        clearTimeout(loadingTimer);
+        if (loadingToastId) toast.dismiss(loadingToastId);
         toast.error('ไม่สามารถโหลดรายการข้อมูลจาก API ได้', {
           title: 'เกิดข้อผิดพลาด',
           duration: 5000
@@ -80,8 +96,16 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
       }
 
       setSubmissions(submissionsData);
+
+      // Clear loading toast on success
+      clearTimeout(loadingTimer);
+      if (loadingToastId) {
+        toast.dismiss(loadingToastId);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
+      clearTimeout(loadingTimer);
+      if (loadingToastId) toast.dismiss(loadingToastId);
       toast.error('เกิดข้อผิดพลาดในการโหลดข้อมูล', {
         title: 'เกิดข้อผิดพลาด',
         duration: 5000
@@ -89,7 +113,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
     } finally {
       setLoading(false);
     }
-  }, [formId, toast]);
+  }, [formId]); // ✅ FIX v0.7.11: Remove toast from dependencies - it's a stable context reference
 
   // Load form and submissions data
   useEffect(() => {
@@ -745,29 +769,28 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-xl font-semibold text-foreground/80">กำลังโหลดข้อมูล...</div>
-        </div>
-      </div>
-    );
-  }
+  // ❌ REMOVED: Full-screen loading page (causes screen flicker)
+  // Now show content immediately, no loading overlay
 
+  // Don't render anything if form is not loaded yet (prevent null reference errors)
   if (!form) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-xl font-semibold text-destructive">ไม่พบฟอร์มที่ระบุ</div>
-          {onBack && (
-            <GlassButton onClick={onBack} className="mt-4">
-              กลับ
-            </GlassButton>
-          )}
+    // Only show error if loading is complete
+    if (!loading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-xl font-semibold text-destructive">ไม่พบฟอร์มที่ระบุ</div>
+            {onBack && (
+              <GlassButton onClick={onBack} className="mt-4">
+                กลับ
+              </GlassButton>
+            )}
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
+    // Still loading, show nothing (prevents flicker)
+    return null;
   }
 
   const tableFields = getTableFields();
@@ -837,127 +860,22 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         </motion.div>
 
         {/* Enhanced Submissions Table - Only Selected Fields */}
-        {filteredSubmissions.length > 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
+        {/* ✅ FIX v0.7.11: Don't hide content during loading - show when ready */}
+        {!loading && filteredSubmissions.length > 0 ? (
+          <div>
             <GlassCard className="glass-container">
               <style>{`
+                /* ✅ Simple hover effect - only change background color */
                 .submission-table-override tbody tr {
-                  background: transparent !important;
+                  cursor: pointer;
                 }
-                /* Disable all transitions and animations globally in table */
-                .submission-table-override,
-                .submission-table-override *,
-                .submission-table-override *::before,
-                .submission-table-override *::after {
-                  transition: none !important;
-                  animation: none !important;
-                  transform: none !important;
-                }
+
                 .submission-table-override tbody tr:hover {
-                  background: rgb(229 231 235) !important;
-                  border-radius: 0 !important;
+                  background-color: rgb(229 231 235) !important;
                 }
-                .submission-table-override tbody tr:hover td,
-                .submission-table-override tbody tr:hover td *,
-                .submission-table-override tbody tr:hover td div,
-                .submission-table-override tbody tr:hover td span,
-                .submission-table-override tbody tr:hover td a,
-                .submission-table-override tbody tr:hover td div *,
-                .submission-table-override tbody tr:hover td span *,
-                .submission-table-override tbody tr:hover td a * {
-                  background: transparent !important;
-                  background-color: transparent !important;
-                  border: none !important;
-                  border-radius: 0 !important;
-                  box-shadow: none !important;
-                  outline: none !important;
-                }
+
                 .dark .submission-table-override tbody tr:hover {
-                  background: rgb(55 65 81) !important;
-                }
-                .submission-table-override tbody td *,
-                .submission-table-override tbody td div,
-                .submission-table-override tbody td span,
-                .submission-table-override tbody td a {
-                  background: transparent !important;
-                  background-color: transparent !important;
-                  border: none !important;
-                  border-radius: 0 !important;
-                  box-shadow: none !important;
-                  outline: none !important;
-                  transition: none !important;
-                  animation: none !important;
-                }
-                /* Specific override for ALL date field containers including auto_date */
-                .submission-table-override tbody td div.text-center,
-                .submission-table-override tbody td div.text-\\[12px\\],
-                .submission-table-override tbody td div.font-medium,
-                .submission-table-override tbody td div.text-foreground\\/80 {
-                  background: transparent !important;
-                  background-color: transparent !important;
-                  border: none !important;
-                  border-radius: 0 !important;
-                  box-shadow: none !important;
-                  outline: none !important;
-                  transition: none !important;
-                  animation: none !important;
-                }
-                /* Nuclear option: Override ALL divs in table cells */
-                .submission-table-override tbody td div {
-                  background: transparent !important;
-                  background-color: transparent !important;
-                  border: none !important;
-                  border-radius: 0 !important;
-                  box-shadow: none !important;
-                  outline: none !important;
-                  transition: none !important;
-                  animation: none !important;
-                  transform: none !important;
-                  filter: none !important;
-                  backdrop-filter: none !important;
-                }
-                /* Override any glass effects or backdrop filters */
-                .submission-table-override tbody td *::before,
-                .submission-table-override tbody td *::after {
-                  display: none !important;
-                  content: none !important;
-                  background: transparent !important;
-                  backdrop-filter: none !important;
-                  filter: none !important;
-                }
-                /* Force remove any hover states on individual elements */
-                .submission-table-override tbody td:hover *,
-                .submission-table-override tbody td *:hover,
-                .submission-table-override tbody td:hover div,
-                .submission-table-override tbody td div:hover {
-                  background: transparent !important;
-                  background-color: transparent !important;
-                  border: none !important;
-                  border-radius: 0 !important;
-                  box-shadow: none !important;
-                  outline: none !important;
-                  transform: none !important;
-                  filter: none !important;
-                  backdrop-filter: none !important;
-                }
-                /* Specific override for auto date fields on hover */
-                .submission-table-override tbody td:hover div.text-center,
-                .submission-table-override tbody td:hover div.font-medium,
-                .submission-table-override tbody td:hover div.text-\\[12px\\],
-                .submission-table-override tbody td:hover div.text-foreground\\/80 {
-                  background: transparent !important;
-                  background-color: transparent !important;
-                  border: none !important;
-                  border-radius: 0 !important;
-                  box-shadow: none !important;
-                  outline: none !important;
-                  transform: none !important;
-                  filter: none !important;
-                  backdrop-filter: none !important;
+                  background-color: rgb(55 65 81) !important;
                 }
               `}</style>
               <div className="overflow-x-auto">
@@ -976,49 +894,15 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                       const formattedSubmission = formatSubmissionForDisplay(submission);
 
                       return (
-                        <motion.tr
+                        <tr
                           key={submission.id}
                           data-testid="submission-row"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.05 }}
-                          className={`border-b border-border/20 transition-all duration-300 cursor-pointer group relative ${
+                          className={`border-b border-border/20 cursor-pointer group relative ${
                             selectedSubmissionId === submission.id && isOpen
                               ? 'bg-muted/30'
                               : ''
                           }`}
                           onClick={() => onViewSubmission && onViewSubmission(submission.id)}
-                          onMouseEnter={(e) => {
-                            // Force clean styling with JavaScript
-                            const row = e.currentTarget;
-                            const allElements = row.querySelectorAll('*');
-
-                            allElements.forEach(element => {
-                              // Remove all computed styles
-                              element.style.cssText = '';
-                              // Force specific overrides
-                              element.style.setProperty('background', 'transparent', 'important');
-                              element.style.setProperty('background-color', 'transparent', 'important');
-                              element.style.setProperty('border', 'none', 'important');
-                              element.style.setProperty('border-radius', '0', 'important');
-                              element.style.setProperty('box-shadow', 'none', 'important');
-                              element.style.setProperty('outline', 'none', 'important');
-                              element.style.setProperty('transform', 'none', 'important');
-                              element.style.setProperty('filter', 'none', 'important');
-                              element.style.setProperty('backdrop-filter', 'none', 'important');
-                              element.style.setProperty('transition', 'none', 'important');
-                              element.style.setProperty('animation', 'none', 'important');
-                            });
-
-                            // Set row background to darker gray for better readability
-                            const isDarkMode = document.documentElement.classList.contains('dark');
-                            const hoverColor = isDarkMode ? 'rgb(55, 65, 81)' : 'rgb(229, 231, 235)';
-                            row.style.setProperty('background-color', hoverColor, 'important');
-                          }}
-                          onMouseLeave={(e) => {
-                            const row = e.currentTarget;
-                            row.style.removeProperty('background-color');
-                          }}
                         >
                           {tableFields.map((field, fieldIndex) => {
                             let fieldData;
@@ -1040,21 +924,21 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                             return (
                               <td
                                 key={field.id}
-                                className={`py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center transition-colors duration-300 [&_*]:!bg-transparent [&_*]:!border-none [&_*]:!rounded-none [&_*]:!shadow-none min-h-[56px] sm:min-h-[64px]`}
+                                className={`py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center min-h-[56px] sm:min-h-[64px]`}
                               >
                                 {renderFieldValue(fieldData, field)}
                               </td>
                             );
                           })}
-                        </motion.tr>
+                        </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
             </GlassCard>
-          </motion.div>
-        ) : (
+          </div>
+        ) : !loading ? (
           <div className="text-center py-12 sm:py-16">
             <GlassCard className="glass-container max-w-md mx-auto">
               <div className="p-8 sm:p-12">
@@ -1073,7 +957,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
               </div>
             </GlassCard>
           </div>
-        )}
+        ) : null}
 
         {/* Action Menu */}
         <SubmissionActionMenu

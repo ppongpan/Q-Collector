@@ -15,15 +15,8 @@ const LocationMap = ({
   const lat = parseFloat(latitude);
   const lng = parseFloat(longitude);
 
-  // ✅ DEBUG: Log coordinates to verify they're correct
-  console.log('🗺️ LocationMap coordinates:', {
-    latitude,
-    longitude,
-    lat,
-    lng,
-    latType: typeof latitude,
-    lngType: typeof longitude
-  });
+  // ❌ REMOVED v0.7.13: Debug logging - caused excessive console spam
+  // console.log('🗺️ LocationMap coordinates:', {...})
 
   if (isNaN(lat) || isNaN(lng)) {
     console.error('❌ Invalid coordinates:', { latitude, longitude, lat, lng });
@@ -51,7 +44,8 @@ const LocationMap = ({
   // Generate Google Maps link for opening in new tab
   const mapsLink = `https://www.google.com/maps?q=${latFormatted},${lngFormatted}`;
 
-  console.log('🗺️ Map URLs:', { embedMapUrl, mapsLink });
+  // ❌ REMOVED v0.7.13: Debug logging - caused excessive console spam
+  // console.log('🗺️ Map URLs:', {...})
 
   // Handle map load error
   const handleMapError = () => {

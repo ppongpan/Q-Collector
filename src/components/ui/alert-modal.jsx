@@ -68,11 +68,12 @@ export const AlertModal = ({
   const config = ALERT_TYPES[type] || ALERT_TYPES.info;
   const modalTitle = title || config.defaultTitle;
 
+  // Mobile-first responsive sizing
   const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-xl',
-    xl: 'max-w-2xl'
+    sm: 'max-w-[90vw] sm:max-w-md',
+    md: 'max-w-[90vw] sm:max-w-lg',
+    lg: 'max-w-[95vw] sm:max-w-xl',
+    xl: 'max-w-[95vw] sm:max-w-2xl'
   };
 
   const handleConfirm = () => {

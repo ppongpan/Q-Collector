@@ -11,7 +11,7 @@
  * - API integration with backend
  */
 
-import dataService from './DataService.js';
+// ✅ REMOVED: dataService import (deprecated, replaced with apiClient)
 import apiClient from './ApiClient.js';
 import telegramService from './TelegramService.js';
 
@@ -140,6 +140,7 @@ class SubmissionService {
 
   /**
    * Update existing form submission
+   * ✅ UPDATED: Removed obsolete sub-form redirect (now handled by SubFormEditPage via API)
    * @param {string} formId - Form ID
    * @param {string} submissionId - Submission ID to update
    * @param {Object} formData - Updated form field data
@@ -148,11 +149,6 @@ class SubmissionService {
    */
   async updateSubmission(formId, submissionId, formData, files = []) {
     try {
-      // Check if this is a sub-form update (formId starts with "sub-")
-      if (formId.startsWith('sub-')) {
-        return this.updateSubFormSubmission(formId, submissionId, formData, files);
-      }
-
       // Get form configuration from API for validation
       const formResponse = await apiClient.getForm(formId);
       const form = formResponse.data?.form || formResponse.data;
@@ -197,154 +193,13 @@ class SubmissionService {
     }
   }
 
-  /**
-   * Update existing sub form submission
-   * @param {string} subFormId - Sub form ID
-   * @param {string} subSubmissionId - Sub submission ID to update
-   * @param {Object} formData - Updated form field data
-   * @param {Array} files - Uploaded files
-   * @returns {Promise<Object>} Update result
-   */
-  async updateSubFormSubmission(subFormId, subSubmissionId, formData, files = []) {
-    try {
-      // Get existing sub submission
-      const existingSubSubmission = dataService.getSubSubmission(subSubmissionId);
-      if (!existingSubSubmission) {
-        throw new Error(`Sub submission with ID ${subSubmissionId} not found`);
-      }
+  // ✅ REMOVED: updateSubFormSubmission() - Obsolete localStorage-based method
+  // Sub-form updates now handled by SubFormEditPage.jsx via API endpoints:
+  // PUT /api/v1/subforms/:subFormId/submissions/:submissionId
 
-      // Get parent submission to find main form
-      const parentSubmission = dataService.getSubmission(existingSubSubmission.parentSubmissionId);
-      if (!parentSubmission) {
-        throw new Error('Parent submission not found');
-      }
-
-      // Get main form to access sub form configuration
-      const mainForm = dataService.getForm(parentSubmission.formId);
-      if (!mainForm) {
-        throw new Error('Main form not found');
-      }
-
-      // Find sub form configuration
-      const subForm = mainForm.subForms.find(sf => sf.id === subFormId);
-      if (!subForm) {
-        throw new Error(`Sub form with ID ${subFormId} not found`);
-      }
-
-      // Validate sub form data
-      const validationResult = this.validateSubFormData(subForm, formData);
-      if (!validationResult.isValid) {
-        throw new Error(`Validation failed: ${validationResult.errors.join(', ')}`);
-      }
-
-      // Process uploaded files
-      const processedFiles = await this.processUploadedFiles(files);
-
-      // Process GPS data
-      const processedData = await this.processGPSFields(subForm, formData);
-
-      // Merge file data, preserving existing files if no new files for a field
-      const existingFiles = {};
-      subForm.fields.forEach(field => {
-        if ((field.type === this.FIELD_TYPES.FILE_UPLOAD || field.type === this.FIELD_TYPES.IMAGE_UPLOAD) &&
-            existingSubSubmission.data[field.id] && !processedFiles[field.id]) {
-          existingFiles[field.id] = existingSubSubmission.data[field.id];
-        }
-      });
-
-      const completeData = {
-        ...processedData,
-        ...existingFiles,
-        ...processedFiles
-      };
-
-      // Update sub submission
-      const updatedSubSubmission = dataService.updateSubSubmission(subSubmissionId, completeData);
-
-      return {
-        success: true,
-        submission: updatedSubSubmission,
-        message: 'ข้อมูลถูกอัปเดตเรียบร้อยแล้ว'
-      };
-
-    } catch (error) {
-      console.error('Sub submission update error:', error);
-      return {
-        success: false,
-        error: error.message,
-        message: 'เกิดข้อผิดพลาดในการอัปเดตข้อมูลฟอร์มย่อย'
-      };
-    }
-  }
-
-  /**
-   * Process and submit sub form data
-   * @param {string} parentSubmissionId - Parent submission ID
-   * @param {string} subFormId - Sub form ID
-   * @param {Object} formData - Sub form field data
-   * @param {Array} files - Uploaded files
-   * @returns {Promise<Object>} Submission result
-   */
-  async submitSubForm(parentSubmissionId, subFormId, formData, files = []) {
-    try {
-      // Get parent submission
-      const parentSubmission = dataService.getSubmission(parentSubmissionId);
-      if (!parentSubmission) {
-        throw new Error(`Parent submission with ID ${parentSubmissionId} not found`);
-      }
-
-      // Get main form to access sub form configuration
-      const mainForm = dataService.getForm(parentSubmission.formId);
-      if (!mainForm) {
-        throw new Error('Main form not found');
-      }
-
-      // Find sub form configuration
-      const subForm = mainForm.subForms.find(sf => sf.id === subFormId);
-      if (!subForm) {
-        throw new Error(`Sub form with ID ${subFormId} not found`);
-      }
-
-      // Validate sub form data
-      const validationResult = this.validateSubFormData(subForm, formData);
-      if (!validationResult.isValid) {
-        throw new Error(`Validation failed: ${validationResult.errors.join(', ')}`);
-      }
-
-      // Process uploaded files
-      const processedFiles = await this.processUploadedFiles(files);
-
-      // Process GPS data
-      const processedData = await this.processGPSFields(subForm, formData);
-
-      // Merge file data
-      const completeData = {
-        ...processedData,
-        ...processedFiles
-      };
-
-      // Create sub submission
-      const subSubmission = dataService.createSubSubmission(
-        parentSubmissionId,
-        subFormId,
-        completeData
-      );
-
-      return {
-        success: true,
-        subSubmission: subSubmission,
-        message: 'ข้อมูลฟอร์มย่อยถูกบันทึกเรียบร้อยแล้ว'
-      };
-
-    } catch (error) {
-      console.error('Sub form submission error:', error);
-      return {
-        success: false,
-        error: error.message,
-        message: 'เกิดข้อผิดพลาดในการบันทึกฟอร์มย่อย'
-      };
-    }
-  }
+  // ✅ REMOVED: submitSubForm() - Obsolete localStorage-based method
+  // Sub-form submissions now handled by SubFormView.jsx via API endpoints:
+  // POST /api/v1/subforms/:subFormId/submissions
 
   // ========== VALIDATION ==========
 
@@ -375,26 +230,8 @@ class SubmissionService {
     };
   }
 
-  /**
-   * Validate sub form data
-   * @param {Object} subForm - Sub form configuration
-   * @param {Object} formData - Form data to validate
-   * @returns {Object} Validation result
-   */
-  validateSubFormData(subForm, formData) {
-    const errors = [];
-
-    subForm.fields.forEach(field => {
-      const value = formData[field.id];
-      const fieldErrors = this.validateField(field, value);
-      errors.push(...fieldErrors);
-    });
-
-    return {
-      isValid: errors.length === 0,
-      errors: errors
-    };
-  }
+  // ✅ REMOVED: validateSubFormData() - Obsolete method only used by deleted sub-form methods
+  // Sub-form validation now handled by backend via API endpoints
 
   /**
    * Validate individual field
@@ -735,43 +572,17 @@ class SubmissionService {
 
   /**
    * Generate document number if configured
+   * ✅ UPDATED: Document number generation moved to backend
+   * This method now just passes through the formData
+   * Backend handles document number generation in SubmissionService.createSubmission()
    * @param {Object} form - Form configuration
    * @param {Object} formData - Form data
-   * @returns {Object} Form data with document number
+   * @returns {Object} Form data (unchanged - backend will add document number)
    */
   generateDocumentNumber(form, formData) {
-    const settings = form.settings?.documentNumber;
-    if (!settings?.enabled) {
-      return formData;
-    }
-
-    const year = new Date().getFullYear();
-    const buddhistYear = year + 543;
-    const displayYear = settings.yearFormat === 'buddhist' ? buddhistYear : year;
-
-    // Get current count for this year
-    const submissions = dataService.getSubmissionsByFormId(form.id);
-    const currentYearSubmissions = submissions.filter(sub => {
-      const subYear = new Date(sub.submittedAt).getFullYear();
-      return subYear === year;
-    });
-
-    // Calculate next number based on initial number setting
-    const initialNumber = settings.initialNumber || 1;
-    const nextNumber = currentYearSubmissions.length + initialNumber;
-    const paddedNumber = nextNumber.toString().padStart(4, '0');
-
-    let documentNumber;
-    if (settings.format === 'prefix-number/year') {
-      documentNumber = `${settings.prefix}-${paddedNumber}/${displayYear}`;
-    } else {
-      documentNumber = `${settings.prefix}-${displayYear}/${paddedNumber}`;
-    }
-
-    return {
-      ...formData,
-      documentNumber: documentNumber
-    };
+    // Document number generation now handled by backend
+    // Backend has access to accurate submission counts via database
+    return formData;
   }
 
   // ========== TELEGRAM NOTIFICATIONS ==========

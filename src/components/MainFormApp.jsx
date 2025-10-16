@@ -148,6 +148,34 @@ function MainFormAppContent() {
     return ['super_admin', 'admin', 'moderator'].includes(user.role);
   };
 
+  // ✅ NEW: Smart back navigation - goes back one step in breadcrumb
+  const handleSmartBack = () => {
+    console.log('🔙 Smart Back - Current state:', {
+      currentPage,
+      breadcrumbsLength: breadcrumbs?.length,
+      breadcrumbs: breadcrumbs?.map(b => b.label)
+    });
+
+    // If breadcrumbs exist and has more than 1 item, go to previous breadcrumb
+    if (breadcrumbs && breadcrumbs.length > 1) {
+      const previousBreadcrumb = breadcrumbs[breadcrumbs.length - 2]; // Second to last
+      console.log('🎯 Going back to:', previousBreadcrumb);
+
+      handleNavigate(
+        previousBreadcrumb.path,
+        previousBreadcrumb.params?.formId,
+        false,
+        previousBreadcrumb.params?.submissionId,
+        previousBreadcrumb.params?.subFormId,
+        previousBreadcrumb.params?.subSubmissionId
+      );
+    } else {
+      // Fallback: Go to form-list
+      console.log('⚠️ No breadcrumbs, fallback to form-list');
+      handleNavigate('form-list');
+    }
+  };
+
 
 
 
@@ -197,6 +225,7 @@ function MainFormAppContent() {
       currentPage,
       currentSubFormId,
       currentSubmissionId,
+      currentSubSubmissionId,
       conditionPassed: currentPage === 'subform-detail' && !!currentSubFormId && !!currentSubmissionId
     });
 
@@ -205,11 +234,21 @@ function MainFormAppContent() {
         try {
           console.log('🔍 Loading sub-form submissions for navigation:', {
             currentSubFormId,
-            currentSubmissionId
+            currentSubmissionId,
+            apiEndpoint: `/submissions/${currentSubmissionId}/sub-forms/${currentSubFormId}`
           });
           // ✅ FIX: Use correct API endpoint that matches SubmissionDetail.jsx
           const response = await apiClient.get(`/submissions/${currentSubmissionId}/sub-forms/${currentSubFormId}`);
-          const subs = response.data?.submissions || response.data || [];
+          console.log('🔍 Raw API response:', {
+            response,
+            responseData: response.data,
+            responseDataSubFormSubmissions: response.data?.subFormSubmissions,
+            responseDataSubmissions: response.data?.submissions,
+            responseDataType: typeof response.data,
+            responseDataKeys: response.data ? Object.keys(response.data) : []
+          });
+          // ✅ FIX: Support multiple response formats (match SubmissionDetail.jsx line 348)
+          const subs = response.data?.subFormSubmissions || response.data?.submissions || response.data || [];
           console.log('✅ Sub-form submissions loaded:', {
             count: subs.length,
             submissions: subs.map(s => ({ id: s.id, submittedAt: s.submittedAt }))
@@ -217,15 +256,26 @@ function MainFormAppContent() {
           setAllSubSubmissions(subs);
         } catch (error) {
           console.error('❌ Failed to load sub-form submissions:', error);
+          console.error('❌ Error details:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status
+          });
           setAllSubSubmissions([]);
         }
       } else {
-        console.log('⏭️ Skipping sub-form load (condition not met) - Setting empty array');
+        console.log('⏭️ Skipping sub-form load (condition not met) - Setting empty array', {
+          why: {
+            wrongPage: currentPage !== 'subform-detail',
+            noSubFormId: !currentSubFormId,
+            noSubmissionId: !currentSubmissionId
+          }
+        });
         setAllSubSubmissions([]);
       }
     }
     loadSubFormSubmissions();
-  }, [currentPage, currentSubFormId, currentSubmissionId]);
+  }, [currentPage, currentSubFormId, currentSubmissionId, currentSubSubmissionId]);
 
   const handleNewForm = () => {
     if (!canCreateOrEditForms()) {
@@ -318,13 +368,13 @@ function MainFormAppContent() {
         transition={{ duration: 0.6 }}
       >
         <div className="container-responsive">
-          <div className="flex items-center justify-between h-16 lg:h-20">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between h-14 sm:h-16 lg:h-20">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
               {canGoBack && (
                 <div
-                  onClick={() => handleNavigate('form-list')}
-                  title="กลับสู่รายการฟอร์ม"
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                  onClick={handleSmartBack}
+                  title="ย้อนกลับ"
+                  className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 cursor-pointer touch-target-comfortable group flex-shrink-0"
                   style={{
                     background: 'transparent',
                     border: 'none'
@@ -332,13 +382,13 @@ function MainFormAppContent() {
                 >
                   <FontAwesomeIcon
                     icon={faArrowLeft}
-                    className="text-base text-muted-foreground group-hover:text-primary group-hover:scale-110 group-hover:-translate-x-1 transition-all duration-300"
+                    className="text-sm sm:text-base text-muted-foreground group-hover:text-primary group-hover:scale-110 group-hover:-translate-x-1 transition-all duration-300"
                   />
                 </div>
               )}
 
-              <div className="flex items-center gap-3">
-                <h1 className="text-base font-bold text-[#10B981]">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <h1 className="text-sm sm:text-base lg:text-lg font-bold text-[#10B981] truncate">
                   {getPageTitle()}
                 </h1>
                 {/* Dark mode toggle - only on form list page */}
@@ -348,14 +398,14 @@ function MainFormAppContent() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               {/* New Form button - only for Super Admin, Admin, Moderator */}
               {currentPage === 'form-list' && canCreateOrEditForms() && (
                 <div
                   data-testid="create-form-btn"
                   onClick={handleNewForm}
                   title="สร้างฟอร์มใหม่"
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                  className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
                     border: 'none'
@@ -363,7 +413,7 @@ function MainFormAppContent() {
                 >
                   <FontAwesomeIcon
                     icon={faPlus}
-                    className="text-xl text-muted-foreground group-hover:text-[#ff6400] group-hover:scale-110 group-hover:rotate-90 transition-all duration-300"
+                    className="text-lg sm:text-xl text-muted-foreground group-hover:text-[#ff6400] group-hover:scale-110 group-hover:rotate-90 transition-all duration-300"
                   />
                 </div>
               )}
@@ -594,7 +644,7 @@ function MainFormAppContent() {
                 <div
                   onClick={() => handleNavigate('form-view', currentFormId)}
                   title="เพิ่มข้อมูลใหม่"
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                  className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
                     border: 'none'
@@ -602,7 +652,7 @@ function MainFormAppContent() {
                 >
                   <FontAwesomeIcon
                     icon={faPlus}
-                    className="text-xl text-muted-foreground group-hover:text-[#ff6400] group-hover:scale-110 group-hover:rotate-90 transition-all duration-300"
+                    className="text-lg sm:text-xl text-muted-foreground group-hover:text-[#ff6400] group-hover:scale-110 group-hover:rotate-90 transition-all duration-300"
                   />
                 </div>
               )}
@@ -613,7 +663,7 @@ function MainFormAppContent() {
                   <div
                     onClick={() => handleNavigate('main-form-edit', currentFormId, false, currentSubmissionId)}
                     title="แก้ไขข้อมูล"
-                    className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                    className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 cursor-pointer touch-target-comfortable group"
                     style={{
                       background: 'transparent',
                       border: 'none'
@@ -621,7 +671,7 @@ function MainFormAppContent() {
                   >
                     <FontAwesomeIcon
                       icon={faEdit}
-                      className="text-muted-foreground group-hover:text-primary group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"
+                      className="text-sm sm:text-base text-muted-foreground group-hover:text-primary group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"
                     />
                   </div>
 
@@ -654,7 +704,7 @@ function MainFormAppContent() {
                       });
                     }}
                     title="ลบข้อมูล"
-                    className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                    className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 cursor-pointer touch-target-comfortable group"
                     style={{
                       background: 'transparent',
                       border: 'none'
@@ -662,7 +712,7 @@ function MainFormAppContent() {
                   >
                     <FontAwesomeIcon
                       icon={faTrashAlt}
-                      className="text-muted-foreground group-hover:text-destructive group-hover:scale-110 transition-all duration-300"
+                      className="text-sm sm:text-base text-muted-foreground group-hover:text-destructive group-hover:scale-110 transition-all duration-300"
                     />
                   </div>
                 </>
@@ -675,7 +725,7 @@ function MainFormAppContent() {
                   <div
                     onClick={() => handleNavigate('subform-edit', currentFormId, false, currentSubmissionId, currentSubFormId, currentSubSubmissionId)}
                     title="แก้ไขข้อมูล"
-                    className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                    className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 cursor-pointer touch-target-comfortable group"
                     style={{
                       background: 'transparent',
                       border: 'none'
@@ -683,7 +733,7 @@ function MainFormAppContent() {
                   >
                     <FontAwesomeIcon
                       icon={faEdit}
-                      className="text-muted-foreground group-hover:text-primary group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"
+                      className="text-sm sm:text-base text-muted-foreground group-hover:text-primary group-hover:scale-110 group-hover:rotate-12 transition-all duration-300"
                     />
                   </div>
 
@@ -717,7 +767,7 @@ function MainFormAppContent() {
                       });
                     }}
                     title="ลบข้อมูลฟอร์มย่อย"
-                    className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                    className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 cursor-pointer touch-target-comfortable group"
                     style={{
                       background: 'transparent',
                       border: 'none'
@@ -725,7 +775,7 @@ function MainFormAppContent() {
                   >
                     <FontAwesomeIcon
                       icon={faTrashAlt}
-                      className="text-muted-foreground group-hover:text-destructive group-hover:scale-110 transition-all duration-300"
+                      className="text-sm sm:text-base text-muted-foreground group-hover:text-destructive group-hover:scale-110 transition-all duration-300"
                     />
                   </div>
                 </>
@@ -736,7 +786,7 @@ function MainFormAppContent() {
                 <div
                   onClick={() => handleNavigate('user-management')}
                   title="จัดการผู้ใช้งาน"
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer touch-target-comfortable group"
+                  className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
                     border: 'none'
@@ -744,7 +794,7 @@ function MainFormAppContent() {
                 >
                   <FontAwesomeIcon
                     icon={faUsers}
-                    className="text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all duration-300"
+                    className="text-sm sm:text-base text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all duration-300"
                   />
                 </div>
               )}
@@ -755,7 +805,7 @@ function MainFormAppContent() {
               <div
                 onClick={() => handleNavigate('form-list')}
                 title="หน้าหลัก"
-                className="w-12 h-12 cursor-pointer touch-target-comfortable group"
+                className="w-10 h-10 sm:w-12 sm:h-12 cursor-pointer touch-target-comfortable group"
                 style={{
                   background: 'transparent',
                   border: 'none'
@@ -895,6 +945,18 @@ function MainFormAppContent() {
           setNavCurrentIndex(index);
           setNavHasPrevious(index > 0);
           setNavHasNext(index < submissions.length - 1);
+
+          // ✅ v0.7.26 DEBUG: Navigation state logging
+          console.log('🔍 [v0.7.26] Navigation Debug - MainFormApp:', {
+            currentPage,
+            currentFormId,
+            currentSubmissionId,
+            submissionsLoaded: submissions.length,
+            submissionIds: submissions.map(s => s.id),
+            currentIndex: index,
+            navHasPrevious: index > 0,
+            navHasNext: index < submissions.length - 1
+          });
         } catch (error) {
           console.error('Failed to load submissions for navigation:', error);
         }
@@ -963,7 +1025,17 @@ function MainFormAppContent() {
 
   const renderSubFormDetail = () => {
     // ✅ FIX: Use state-loaded sub-form submissions for navigation
-    const currentIndex = allSubSubmissions.findIndex(sub => sub.id === currentSubSubmissionId);
+    console.log('🔍 renderSubFormDetail - Raw data check:', {
+      allSubSubmissionsArray: allSubSubmissions,
+      allSubSubmissionsCount: allSubSubmissions.length,
+      currentSubSubmissionId,
+      currentSubSubmissionIdType: typeof currentSubSubmissionId
+    });
+
+    const currentIndex = allSubSubmissions.findIndex(sub => {
+      console.log(`  Comparing: sub.id="${sub.id}" (${typeof sub.id}) === currentSubSubmissionId="${currentSubSubmissionId}" (${typeof currentSubSubmissionId})`);
+      return sub.id === currentSubSubmissionId;
+    });
     const hasPrevious = currentIndex > 0;
     const hasNext = currentIndex < allSubSubmissions.length - 1;
 

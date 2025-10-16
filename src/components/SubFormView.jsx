@@ -719,19 +719,10 @@ export default function SubFormView({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
-        <GlassCard className="glass-container">
-          <GlassCardContent className="text-center py-8">
-            <div className="text-xl font-semibold text-foreground/80">กำลังโหลดข้อมูล...</div>
-          </GlassCardContent>
-        </GlassCard>
-      </div>
-    );
-  }
+  // ❌ REMOVED: Full-screen loading page (causes screen flicker)
+  // Now use toast notifications instead
 
-  if (!form || !subForm) {
+  if ((!form || !subForm) && !loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center">
         <GlassCard className="glass-container">
@@ -746,6 +737,11 @@ export default function SubFormView({
         </GlassCard>
       </div>
     );
+  }
+
+  // ✅ FIX v0.7.28: Add null check for form and subForm before rendering
+  if (!form || !subForm) {
+    return null; // Still loading
   }
 
   return (
@@ -779,17 +775,18 @@ export default function SubFormView({
                     ยกเลิก
                   </GlassButton>
                 )}
-                <GlassButton
+                <button
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="orange-neon-button w-full sm:w-auto"
+                  className="btn-orange-rounded inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 disabled:cursor-not-allowed text-white text-sm font-medium w-full sm:w-auto"
+                  style={{ transition: 'background-color 200ms ease-out' }}
                 >
                   <FontAwesomeIcon
                     icon={faSave}
-                    className="w-4 h-4 mr-2"
+                    className="w-4 h-4"
                   />
-                  {submitting ? 'กำลังบันทึก...' : subSubmissionId ? 'อัพเดทข้อมูล' : 'บันทึกข้อมูล'}
-                </GlassButton>
+                  <span>{submitting ? 'กำลังบันทึก...' : subSubmissionId ? 'อัพเดทข้อมูล' : 'บันทึกข้อมูล'}</span>
+                </button>
               </div>
             </GlassCardContent>
           </GlassCard>

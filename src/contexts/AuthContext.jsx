@@ -10,6 +10,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AuthService from '../services/AuthService';
+import * as tokenManager from '../utils/tokenManager'; // ✅ FIX v0.7.9-dev: Import for token expiry check
 import {
   hasPermission,
   canAccessForm,
@@ -96,19 +97,48 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Auto-refresh token before expiration
+  // ✅ FIX v0.7.9-dev: Add retry logic with exponential backoff
   useEffect(() => {
     if (!user) return;
 
     const interval = setInterval(async () => {
       if (AuthService.shouldRefresh()) {
-        try {
-          await AuthService.refreshToken();
-          const updatedUser = AuthService.getStoredUser();
-          setUser(updatedUser);
-        } catch (error) {
-          console.error('Auto token refresh failed:', error);
-          // Logout on refresh failure
-          await logout();
+        const maxRetries = 3;
+        let retryCount = 0;
+        let refreshSuccess = false;
+
+        // Retry loop with exponential backoff
+        while (retryCount < maxRetries && !refreshSuccess) {
+          try {
+            await AuthService.refreshToken();
+            const updatedUser = AuthService.getStoredUser();
+            setUser(updatedUser);
+            refreshSuccess = true;
+            console.info(`✅ Token refreshed successfully (attempt ${retryCount + 1})`);
+          } catch (error) {
+            retryCount++;
+            console.warn(`⚠️ Token refresh attempt ${retryCount}/${maxRetries} failed:`, error.message);
+
+            // Only logout if:
+            // 1. All retries exhausted AND
+            // 2. Token is actually expired (not just network error)
+            if (retryCount >= maxRetries) {
+              const token = tokenManager.getAccessToken();
+              const isExpired = !token || tokenManager.isTokenExpired(token);
+
+              if (isExpired) {
+                console.error('❌ Token expired after all retry attempts - logging out');
+                await logout();
+              } else {
+                console.warn('⚠️ Token still valid despite refresh failures - will retry next interval');
+              }
+            } else {
+              // Wait before retry (exponential backoff: 2s, 4s, 8s)
+              const backoffDelay = Math.pow(2, retryCount) * 1000;
+              console.info(`⏳ Waiting ${backoffDelay}ms before retry...`);
+              await new Promise(resolve => setTimeout(resolve, backoffDelay));
+            }
+          }
         }
       }
     }, 60000); // Check every minute

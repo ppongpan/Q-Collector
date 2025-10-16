@@ -4,9 +4,43 @@
  * @version 0.4.1
  */
 
+// ✅ PWA Support: Auto-detect if running as standalone app
+const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+const isNgrok = window.location.hostname.includes('ngrok');
+
+// Determine API base URL
+const getBaseURL = () => {
+  // If REACT_APP_API_URL is set, use it
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+
+  // If running on ngrok (PWA or browser), use same origin + /api/v1
+  if (isNgrok) {
+    return `${window.location.origin}/api/v1`;
+  }
+
+  // If PWA mode, use current origin (same as ngrok URL)
+  if (isPWA) {
+    return `${window.location.origin}/api/v1`;
+  }
+
+  // Default: relative path for React proxy to work
+  return '/api/v1';
+};
+
+// Debug logging
+console.log('🔧 API Config:', {
+  isPWA,
+  isNgrok,
+  hostname: window.location.hostname,
+  origin: window.location.origin,
+  baseURL: getBaseURL()
+});
+
 const API_CONFIG = {
   // Base URL for all API requests
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1',
+  baseURL: getBaseURL(),
 
   // Request timeout in milliseconds (30 seconds)
   timeout: 30000,
@@ -58,7 +92,8 @@ const API_CONFIG = {
     files: {
       upload: '/files/upload',
       byId: (id) => `/files/${id}`,
-      download: (id) => `/files/${id}/download`,
+      stream: (id) => `/files/${id}/stream`, // ✅ Stream for thumbnails/preview (inline)
+      download: (id) => `/files/${id}/download`, // Download as attachment
     },
   },
 };
@@ -94,9 +129,22 @@ export const API_ENDPOINTS = {
   files: {
     upload: '/files/upload',
     get: (id) => `/files/${id}`,
+    stream: (id) => `/files/${id}/stream`, // ✅ Stream for thumbnails/preview (inline)
     download: (id) => `/files/${id}/download`,
     delete: (id) => `/files/${id}`,
   },
+};
+
+/**
+ * Get file stream URL for thumbnails/preview
+ * ✅ MOBILE-FRIENDLY: Works with ngrok proxy, no localhost:9000 URLs
+ * @param {string} fileId - File UUID
+ * @returns {string} Full URL to stream endpoint
+ */
+export const getFileStreamURL = (fileId) => {
+  if (!fileId) return null;
+  const baseURL = API_CONFIG.baseURL;
+  return `${baseURL}/files/${fileId}/stream`;
 };
 
 export default API_CONFIG;

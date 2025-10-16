@@ -249,7 +249,8 @@ const TrustedDeviceDuration = () => {
             <button
               onClick={handleCustomSave}
               disabled={saving || !customDuration}
-              className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="btn-orange-rounded px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              style={{ transition: 'background-color 200ms ease-out' }}
             >
               {saving ? (
                 <>

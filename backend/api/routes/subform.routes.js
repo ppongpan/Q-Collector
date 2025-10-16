@@ -185,7 +185,7 @@ router.get(
 
 /**
  * PUT /api/v1/subforms/:subFormId/submissions/:submissionId
- * Update sub-form submission
+ * Update sub-form submission in dynamic table
  */
 router.put(
   '/:subFormId/submissions/:submissionId',
@@ -204,16 +204,15 @@ router.put(
   ],
   validate,
   asyncHandler(async (req, res) => {
-    const { submissionId } = req.params;
+    const { subFormId, submissionId } = req.params;
     const { data } = req.body;
 
-    const submission = await SubmissionService.updateSubmission(
+    // ✅ Use new method that updates dynamic table directly
+    const submission = await SubmissionService.updateSubFormSubmission(
+      subFormId,
       submissionId,
       req.userId,
-      {
-        fieldData: data,
-        status: 'submitted'
-      }
+      data
     );
 
     logger.info(`Sub-form submission updated: ${submissionId}`);

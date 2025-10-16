@@ -2,7 +2,7 @@
 
 **Enterprise Form Builder & Data Collection System**
 
-## Version: 0.7.29-dev (2025-10-16)
+## Version: 0.7.30-dev (2025-10-16)
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection
@@ -46,57 +46,73 @@ npm run build && npm run lint
 
 ---
 
-## Latest Version - v0.7.29-dev (2025-10-16)
+## Latest Version - v0.7.30-dev (2025-10-16)
 
-### Critical Image Flicker Fix ✅
+### New Features & Improvements ✅
 
-**Problem:** ภาพเก่ากระพริบเมื่อกดปุ่ม Next/Previous (Old images flicker during navigation)
+**Feature 1: Form List Icon Hover Effects**
+- ✅ Each icon has independent hover effect (not group hover)
+- ✅ 4 different colors for better visual hierarchy:
+  - Copy Link: Blue (#3b82f6)
+  - View Submissions: Green (#22c55e)
+  - Edit Form: Orange (#f97316)
+  - Delete Form: Red (#ef4444)
+- **File Modified:** `src/components/FormListApp.jsx` (lines 476-544)
+- **Implementation:** Tailwind CSS named groups (`group/copy`, `group/view`, etc.)
 
-**Root Causes Found (4 Issues):**
-1. **`presignedUrl` fallback** → แสดงภาพเก่าเมื่อ blob URL ถูก clear
-2. **Timeout 50ms สั้นเกินไป** → React ยังทำงานไม่เสร็จ
-3. **`files` state ยังเก็บไฟล์เก่า** → ข้อมูลเก่ายังอยู่ใน component
-4. **`imageBlobUrlsRef` มี URL เก่า** → Reference ชี้ไป object เก่า
+**Feature 2: Progressive Image Loading System (In Progress)**
+- 📋 Comprehensive architecture plan created
+- 🎯 Target: 95% bandwidth reduction, 80% faster page loads
+- 🚀 3-phase implementation: Backend → Frontend → Memory Management
+- **Documentation:** See `qtodo.md` for full implementation plan
 
-**Solution (v0.7.29-v16):**
-- ✅ Block `presignedUrl` ระหว่าง transition: `!imagesTransitioning ? presignedUrl : null`
-- ✅ เพิ่ม timeout จาก 50ms → 100ms (ให้ React มีเวลาเพียงพอ)
-- ✅ เพิ่ม detailed logging ทุกขั้นตอน
-- ✅ ซ่อนภาพด้วย `imagesTransitioning` ก่อน clear
-
-**Files Modified:**
-- `src/components/SubmissionDetail.jsx` (lines 434-470, 1003)
-
-**Expected Behavior:**
-```
-User clicks Next → ภาพเก่าหายทันที (0ms)
-→ ช่วงว่าง 100ms (ไม่มีภาพ)
-→ ภาพใหม่แสดง (ไม่มีการกระพริบ!)
-```
+**Database Analysis Completed:**
+- ✅ Verified all core tables are in active use
+- ✅ Found production data in `sub_forms`, `submission_data`, `submissions`
+- ✅ Confirmed dual-write system (EAV + Dynamic Tables)
+- **Scripts Created:** `backend/check-tables.js`, `backend/check-submissions-detail.js`, `backend/check-dynamic-tables.js`
 
 ### Code Changes
 
 ```javascript
-// Fix 1: Block presignedUrl during transition (line 1003)
-blobUrl={imageBlobUrls[file.id] || (!imagesTransitioning ? file.presignedUrl : null)}
+// Form List Icon Hover - Named Groups (FormListApp.jsx lines 476-544)
+{/* Copy Link - Blue */}
+<div className="group/copy ...">
+  <FontAwesomeIcon
+    className="group-hover/copy:text-blue-500 group-hover/copy:scale-125 ..."
+  />
+</div>
 
-// Fix 2: Increase timeout (line 467)
-setTimeout(() => {
-  setImagesTransitioning(false);
-}, 100);  // เพิ่มจาก 50ms → 100ms
+{/* View - Green */}
+<div className="group/view ...">
+  <FontAwesomeIcon
+    className="group-hover/view:text-green-500 group-hover/view:scale-125 ..."
+  />
+</div>
 
-// Fix 3: Add detailed logging (lines 437-466)
-console.log('🔄 [v0.7.29-v16] Navigation detected...');
-console.log('🗑️ [v0.7.29-v16] Revoked blob URL for file:', fileId);
-console.log('✨ [v0.7.29-v16] Version incremented:', newVersion);
-console.log('✅ [v0.7.29-v16] Transition complete');
+{/* Edit - Orange */}
+<div className="group/edit ...">
+  <FontAwesomeIcon
+    className="group-hover/edit:text-orange-500 group-hover/edit:scale-125 group-hover/edit:rotate-12 ..."
+  />
+</div>
+
+{/* Delete - Red */}
+<div className="group/delete ...">
+  <FontAwesomeIcon
+    className="group-hover/delete:text-red-500 group-hover/delete:scale-125 ..."
+  />
+</div>
 ```
-
-**Documentation:** See `IMAGE-FLICKER-ROOT-CAUSE-ANALYSIS-V0.7.29-V16.md`
 
 ---
 
 ## Recent Critical Fixes (Context)
+
+### v0.7.29-dev - Image Flicker Fix
+- Block presignedUrl during transition
+- Increased timeout from 50ms to 100ms
+- Prevents old images from showing during navigation
 
 ### v0.7.27-dev - Navigation Arrows Visibility
 - Changed breakpoint from `lg:` (1024px) to `md:` (768px)
@@ -183,7 +199,7 @@ console.log('✅ [v0.7.29-v16] Transition complete');
 - If restart servers, do NOT kill Claude process
 - สามารถให้ใช้ playwright mcp ช่วยตรวจสอบ console log ได้เลย
 
-**License:** Internal use - Q-Collector Enterprise v0.7.29-dev
+**License:** Internal use - Q-Collector Enterprise v0.7.30-dev
 
 ---
 

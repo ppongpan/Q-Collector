@@ -6,10 +6,14 @@
  * - Token validation
  * - JWT parsing
  * - Token expiration checking
+ *
+ * CRITICAL: Uses same storage keys as API_CONFIG to prevent token mismatch
  */
 
-const ACCESS_TOKEN_KEY = 'access_token';
-const REFRESH_TOKEN_KEY = 'refresh_token';
+// ✅ FIX: Use same keys as API_CONFIG (api.config.js)
+// This prevents the bug where tokens are saved but ApiClient can't find them
+const ACCESS_TOKEN_KEY = 'q-collector-auth-token';
+const REFRESH_TOKEN_KEY = 'q-collector-refresh-token';
 const USER_KEY = 'user';
 
 /**
@@ -223,15 +227,20 @@ export function updateUser(updates) {
 }
 
 /**
- * Check if refresh is needed (token expires in less than 5 minutes)
+ * Check if refresh is needed (token expires in less than 10 minutes)
  * @returns {boolean}
+ *
+ * ✅ FIX v0.7.9-dev: Expanded from 5 to 10 minutes
+ * - Provides more time for retry attempts (10 min vs 5 min)
+ * - Reduces risk of token expiring during retry
+ * - With 60-second interval: ~10 retry opportunities instead of ~5
  */
 export function shouldRefreshToken() {
   const token = getAccessToken();
   if (!token) return false;
 
   const expiresIn = getTokenExpiresIn(token);
-  return expiresIn > 0 && expiresIn < 300; // Less than 5 minutes
+  return expiresIn > 0 && expiresIn < 600; // ✅ Less than 10 minutes (was 300 = 5 min)
 }
 
 /**

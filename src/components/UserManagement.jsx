@@ -432,12 +432,9 @@ export default function UserManagement({ onEditUser }) {
         >
           <GlassCard>
             <GlassCardContent className="p-0">
-              {isLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                  <p className="mt-4 text-sm text-muted-foreground">กำลังโหลดข้อมูล...</p>
-                </div>
-              ) : filteredUsers.length === 0 ? (
+              {/* ❌ REMOVED: Loading spinner with text (causes unnecessary wait) */}
+              {/* Now show content immediately or empty state */}
+              {!isLoading && filteredUsers.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4 opacity-30">👥</div>
                   <h3 className="text-lg font-semibold text-foreground/80 mb-2">

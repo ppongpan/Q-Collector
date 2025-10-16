@@ -367,7 +367,8 @@ const TwoFactorVerification = ({
             <button
               onClick={handleVerify}
               disabled={loading || !backupCode}
-              className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="btn-orange-rounded flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{ transition: 'background-color 200ms ease-out' }}
             >
               {loading ? (
                 <>

@@ -95,8 +95,12 @@ export function LoginPage() {
       // Clear all old tokens BEFORE login to prevent race conditions
       // This prevents FormListApp from using stale tokens while login is in progress
       console.log('LoginPage - Clearing old tokens before login');
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+
+      // ✅ Clear both old AND new storage keys for compatibility
+      localStorage.removeItem('access_token'); // Old key
+      localStorage.removeItem('refresh_token'); // Old key
+      localStorage.removeItem('q-collector-auth-token'); // New key
+      localStorage.removeItem('q-collector-refresh-token'); // New key
       localStorage.removeItem('user');
 
       // Get device fingerprint
@@ -121,6 +125,8 @@ export function LoginPage() {
         // Check if mandatory 2FA setup is required (admin-created account)
         if (loginResponse.requires2FASetup || loginResponse.mandatory) {
           console.log('LoginPage - Mandatory 2FA setup required, redirecting to setup');
+          // Clear any saved redirect path - 2FA setup is mandatory
+          sessionStorage.removeItem('redirectAfterLogin');
           navigate('/2fa-setup', {
             state: {
               tempToken: loginResponse.tempToken || loginResponse.data?.tempToken,
@@ -148,8 +154,48 @@ export function LoginPage() {
           // This triggers isAuthenticated to become true
           setUser(loginResponse.user);
 
-          // Wait a bit longer to ensure tokens and state are fully synced
-          await new Promise(resolve => setTimeout(resolve, 200));
+          // 🔄 CRITICAL FIX: Poll for tokens with retry logic
+          // This prevents race condition where FormListApp loads before tokens are available
+          console.log('LoginPage - Waiting for tokens to be saved to localStorage...');
+
+          const waitForTokens = async () => {
+            const maxAttempts = 20; // Try for 2 seconds max (20 × 100ms)
+
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+              // ✅ FIX: Check for correct storage keys matching API_CONFIG
+              const hasToken = !!localStorage.getItem('q-collector-auth-token');
+              const hasRefreshToken = !!localStorage.getItem('q-collector-refresh-token');
+              const hasUser = !!localStorage.getItem('user');
+
+              console.log(`LoginPage - Token check attempt ${attempt}/${maxAttempts}:`, {
+                hasToken,
+                hasRefreshToken,
+                hasUser
+              });
+
+              if (hasToken && hasRefreshToken && hasUser) {
+                console.log('✅ LoginPage - All tokens confirmed in localStorage!');
+                return true;
+              }
+
+              // Wait 100ms before next check
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            console.error('❌ LoginPage - Timeout: Tokens never appeared in localStorage after 2 seconds!');
+            return false;
+          };
+
+          const tokensReady = await waitForTokens();
+
+          if (!tokensReady) {
+            console.error('❌ LoginPage - Cannot navigate: Tokens not available!');
+            setApiError('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+            return; // Don't navigate if tokens aren't ready
+          }
+
+          // ✅ Tokens confirmed - safe to navigate now
+          console.log('LoginPage - Navigating to home page with confirmed tokens');
 
           // ✅ FIX: Check if there's a saved redirect URL (from token expiry)
           const redirectPath = sessionStorage.getItem('redirectAfterLogin');
@@ -168,7 +214,7 @@ export function LoginPage() {
   };
 
   // Handle 2FA verification success
-  const handle2FASuccess = (data) => {
+  const handle2FASuccess = async (data) => {
     try {
       console.log('handle2FASuccess - received data:', data);
 
@@ -184,6 +230,48 @@ export function LoginPage() {
         // Update AuthContext state immediately
         setUser(data.user);
       }
+
+      // 🔄 CRITICAL FIX: Poll for tokens with retry logic (same as normal login)
+      console.log('handle2FASuccess - Waiting for tokens to be saved to localStorage...');
+
+      const waitForTokens = async () => {
+        const maxAttempts = 20; // Try for 2 seconds max (20 × 100ms)
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          // ✅ FIX: Check for correct storage keys matching API_CONFIG
+          const hasToken = !!localStorage.getItem('q-collector-auth-token');
+          const hasRefreshToken = !!localStorage.getItem('q-collector-refresh-token');
+          const hasUser = !!localStorage.getItem('user');
+
+          console.log(`handle2FASuccess - Token check attempt ${attempt}/${maxAttempts}:`, {
+            hasToken,
+            hasRefreshToken,
+            hasUser
+          });
+
+          if (hasToken && hasRefreshToken && hasUser) {
+            console.log('✅ handle2FASuccess - All tokens confirmed in localStorage!');
+            return true;
+          }
+
+          // Wait 100ms before next check
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        console.error('❌ handle2FASuccess - Timeout: Tokens never appeared in localStorage after 2 seconds!');
+        return false;
+      };
+
+      const tokensReady = await waitForTokens();
+
+      if (!tokensReady) {
+        console.error('❌ handle2FASuccess - Cannot navigate: Tokens not available!');
+        setApiError('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+        return; // Don't navigate if tokens aren't ready
+      }
+
+      // ✅ Tokens confirmed - safe to navigate now
+      console.log('handle2FASuccess - Navigating with confirmed tokens');
 
       // ✅ FIX: Check if there's a saved redirect URL (from token expiry)
       const redirectPath = sessionStorage.getItem('redirectAfterLogin');

@@ -1,0 +1,147 @@
+[
+  {
+    "type": "info",
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "timestamp": "2025-10-11T06:18:54.829Z"
+  },
+  {
+    "type": "warning",
+    "text": "%c⚠️ DEPRECATED: DataService initialized - Consider migrating to API-based services color: #f97316; font-weight: bold; font-size: 12px; \n📝 DataService is deprecated and will be removed in v0.8.0 \n✅ Use apiClient and backend services instead \n📖 See migration guide in DataService.js header",
+    "timestamp": "2025-10-11T06:18:55.047Z"
+  },
+  {
+    "type": "log",
+    "text": "Storage config saved: {maxStorageSize: 8, warningThreshold: 6, maxFileSize: 10, imageCompression: true, imageQuality: 0.8}",
+    "timestamp": "2025-10-11T06:18:55.347Z"
+  },
+  {
+    "type": "log",
+    "text": "Applying font settings: {fontFamily: 'Noto Sans Thai', sans-serif, scale: 1}",
+    "timestamp": "2025-10-11T06:18:55.348Z"
+  },
+  {
+    "type": "log",
+    "text": "Font scale applied: 1",
+    "timestamp": "2025-10-11T06:18:55.350Z"
+  },
+  {
+    "type": "log",
+    "text": "Storage config saved: {maxStorageSize: 8, warningThreshold: 6, maxFileSize: 10, imageCompression: true, imageQuality: 0.8}",
+    "timestamp": "2025-10-11T06:18:55.355Z"
+  },
+  {
+    "type": "log",
+    "text": "Applying font settings: {fontFamily: 'Noto Sans Thai', sans-serif, scale: 1}",
+    "timestamp": "2025-10-11T06:18:55.356Z"
+  },
+  {
+    "type": "log",
+    "text": "Font scale applied: 1",
+    "timestamp": "2025-10-11T06:18:55.356Z"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "timestamp": "2025-10-11T06:18:55.721Z"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "timestamp": "2025-10-11T06:18:55.731Z"
+  },
+  {
+    "type": "verbose",
+    "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"current-password\"): (More info: https://goo.gl/9p2vKq) %o",
+    "timestamp": "2025-10-11T06:18:55.762Z"
+  },
+  {
+    "type": "log",
+    "text": "LoginPage - Clearing old tokens before login",
+    "timestamp": "2025-10-11T06:18:58.230Z"
+  },
+  {
+    "type": "log",
+    "text": "🔐 LOGIN REQUEST DEBUG: {url: /auth/login, isPublic: true, hasToken: false, authHeader: NONE, data: Object}",
+    "timestamp": "2025-10-11T06:18:58.785Z"
+  },
+  {
+    "type": "log",
+    "text": "[API Request] {method: POST, url: /auth/login, baseURL: /api/v1, isPublic: true, hasToken: false}",
+    "timestamp": "2025-10-11T06:18:58.785Z"
+  },
+  {
+    "type": "log",
+    "text": "✅ LOGIN RESPONSE DEBUG: {status: 200, hasUser: false, hasToken: false, hasTokens: false, requires2FA: true}",
+    "timestamp": "2025-10-11T06:19:00.177Z"
+  },
+  {
+    "type": "log",
+    "text": "[API Response] {status: 200, url: /auth/login, data: Object}",
+    "timestamp": "2025-10-11T06:19:00.178Z"
+  },
+  {
+    "type": "log",
+    "text": "AuthService - API response: {\n  \"success\": true,\n  \"requires2FA\": true,\n  \"message\": \"2FA verification required\",\n  \"data\": {\n    \"tempToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJhMjQzYWM1OC1kMGM5LTRhMDgtOWZiMC1lYmI4YTI5YWM1MzUiLCJ0eXBlIjoidGVtcF8yZmEiLCJ1c2VybmFtZSI6InBvbmdwYW5wIiwiaWF0IjoxNzYwMTYzNTQwLCJleHAiOjE3NjAxNjM4NDB9.kyDHh78b1swjOM80whX1irxCabEYu4ubTnHJ2Ey7Eiw\",\n    \"username\": \"pongpanp\"\n  }\n}",
+    "timestamp": "2025-10-11T06:19:00.178Z"
+  },
+  {
+    "type": "log",
+    "text": "LoginPage - Login response: {\n  \"requires2FA\": true,\n  \"tempToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJhMjQzYWM1OC1kMGM5LTRhMDgtOWZiMC1lYmI4YTI5YWM1MzUiLCJ0eXBlIjoidGVtcF8yZmEiLCJ1c2VybmFtZSI6InBvbmdwYW5wIiwiaWF0IjoxNzYwMTYzNTQwLCJleHAiOjE3NjAxNjM4NDB9.kyDHh78b1swjOM80whX1irxCabEYu4ubTnHJ2Ey7Eiw\",\n  \"username\": \"pongpanp\",\n  \"data\": {\n    \"success\": true,\n    \"requires2FA\": true,\n    \"message\": \"2FA verification required\",\n    \"data\": {\n      \"tempToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJhMjQzYWM1OC1kMGM5LTRhMDgtOWZiMC1lYmI4YTI5YWM1MzUiLCJ0eXBlIjoidGVtcF8yZmEiLCJ1c2VybmFtZSI6InBvbmdwYW5wIiwiaWF0IjoxNzYwMTYzNTQwLCJleHAiOjE3NjAxNjM4NDB9.kyDHh78b1swjOM80whX1irxCabEYu4ubTnHJ2Ey7Eiw\",\n      \"username\": \"pongpanp\"\n    }\n  }\n}",
+    "timestamp": "2025-10-11T06:19:00.180Z"
+  },
+  {
+    "type": "log",
+    "text": "LoginPage - requires2FASetup check: {\n  \"hasRequires2FA\": true,\n  \"tempToken\": \"eyJhbGciOiJIUzI1NiIs...\"\n}",
+    "timestamp": "2025-10-11T06:19:00.181Z"
+  },
+  {
+    "type": "log",
+    "text": "LoginPage - 2FA verification required, setting state: {tempToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiO…4NDB9.kyDHh78b1swjOM80whX1irxCabEYu4ubTnHJ2Ey7Eiw, username: pongpanp}",
+    "timestamp": "2025-10-11T06:19:00.185Z"
+  },
+  {
+    "type": "info",
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "timestamp": "2025-10-11T06:19:05.399Z"
+  },
+  {
+    "type": "warning",
+    "text": "%c⚠️ DEPRECATED: DataService initialized - Consider migrating to API-based services color: #f97316; font-weight: bold; font-size: 12px; \n📝 DataService is deprecated and will be removed in v0.8.0 \n✅ Use apiClient and backend services instead \n📖 See migration guide in DataService.js header",
+    "timestamp": "2025-10-11T06:19:05.528Z"
+  },
+  {
+    "type": "log",
+    "text": "Storage config saved: {maxStorageSize: 8, warningThreshold: 6, maxFileSize: 10, imageCompression: true, imageQuality: 0.8}",
+    "timestamp": "2025-10-11T06:19:05.750Z"
+  },
+  {
+    "type": "log",
+    "text": "Applying font settings: {fontFamily: 'Noto Sans Thai', sans-serif, scale: 1}",
+    "timestamp": "2025-10-11T06:19:05.752Z"
+  },
+  {
+    "type": "log",
+    "text": "Font scale applied: 1",
+    "timestamp": "2025-10-11T06:19:05.753Z"
+  },
+  {
+    "type": "log",
+    "text": "Storage config saved: {maxStorageSize: 8, warningThreshold: 6, maxFileSize: 10, imageCompression: true, imageQuality: 0.8}",
+    "timestamp": "2025-10-11T06:19:05.757Z"
+  },
+  {
+    "type": "log",
+    "text": "Applying font settings: {fontFamily: 'Noto Sans Thai', sans-serif, scale: 1}",
+    "timestamp": "2025-10-11T06:19:05.758Z"
+  },
+  {
+    "type": "log",
+    "text": "Font scale applied: 1",
+    "timestamp": "2025-10-11T06:19:05.759Z"
+  },
+  {
+    "type": "verbose",
+    "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"current-password\"): (More info: https://goo.gl/9p2vKq) %o",
+    "timestamp": "2025-10-11T06:19:06.165Z"
+  }
+]

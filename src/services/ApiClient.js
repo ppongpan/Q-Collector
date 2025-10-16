@@ -354,30 +354,83 @@ class ApiClient {
 
   /**
    * Refresh authentication token
+   * ✅ CRITICAL FIX: Enhanced with proper error handling and logging
    */
   async refreshToken() {
     const refreshToken = this.getRefreshToken();
 
+    console.log('🔄 [Token Refresh] Starting token refresh...', {
+      hasRefreshToken: !!refreshToken,
+      refreshTokenPreview: refreshToken ? `${refreshToken.substring(0, 20)}...` : 'NONE',
+      endpoint: `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.refresh}`
+    });
+
     if (!refreshToken) {
+      console.error('❌ [Token Refresh] No refresh token available');
       throw new Error('No refresh token available');
     }
 
     try {
+      // ✅ FIX: Use axios directly (NOT this.client) to avoid circular interceptor calls
+      // This is correct - we don't want the request interceptor to add expired token
       const response = await axios.post(
         `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.refresh}`,
         { refreshToken },
-        { withCredentials: API_CONFIG.withCredentials }
+        {
+          withCredentials: API_CONFIG.withCredentials,
+          timeout: 10000 // 10 second timeout for refresh
+        }
       );
 
-      const { token, refreshToken: newRefreshToken } = response.data;
+      console.log('✅ [Token Refresh] Response received:', {
+        status: response.status,
+        hasData: !!response.data,
+        hasTokens: !!response.data?.tokens,
+        hasAccessToken: !!response.data?.tokens?.accessToken,
+        hasRefreshToken: !!response.data?.tokens?.refreshToken,
+        dataKeys: Object.keys(response.data || {}),
+        tokensKeys: response.data?.tokens ? Object.keys(response.data.tokens) : []
+      });
 
-      if (newRefreshToken) {
-        this.setRefreshToken(newRefreshToken);
+      // ✅ FIX v0.7.9-dev: Correct path to tokens (response.data.tokens, not response.data directly)
+      const tokens = response.data?.tokens;
+      if (!tokens || !tokens.accessToken) {
+        console.error('❌ [Token Refresh] No tokens in response:', {
+          responseData: response.data,
+          hasData: !!response.data,
+          hasTokens: !!response.data?.tokens
+        });
+        throw new Error('No access token returned from refresh endpoint');
       }
 
-      return token;
+      // Update refresh token if provided
+      if (tokens.refreshToken) {
+        console.log('🔄 [Token Refresh] Updating refresh token in localStorage');
+        this.setRefreshToken(tokens.refreshToken);
+      }
+
+      console.log('✅ [Token Refresh] Success! New access token obtained');
+      return tokens.accessToken;
     } catch (error) {
-      throw new Error('Token refresh failed');
+      // ✅ FIX: Detailed error logging for debugging
+      console.error('❌ [Token Refresh] Failed:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        isTimeout: error.code === 'ECONNABORTED',
+        isNetworkError: !error.response
+      });
+
+      // ✅ FIX: Preserve original error information
+      const refreshError = new Error(
+        error.response?.data?.message ||
+        error.message ||
+        'Token refresh failed'
+      );
+      refreshError.originalError = error;
+      refreshError.status = error.response?.status;
+      throw refreshError;
     }
   }
 
