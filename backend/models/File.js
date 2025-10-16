@@ -80,6 +80,22 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
+    // Progressive Image Loading columns (v0.7.30)
+    blur_preview: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Base64 data URL for blur preview (20x20px, inline, no HTTP request)',
+    },
+    thumbnail_path: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      comment: 'MinIO path to thumbnail image (400px width, 50-100KB)',
+    },
+    full_path: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      comment: 'MinIO path to full resolution image',
+    },
   }, {
     tableName: 'files',
     timestamps: true,
@@ -180,6 +196,10 @@ module.exports = (sequelize, DataTypes) => {
       uploadedAt: values.uploaded_at,
       createdAt: values.createdAt,
       updatedAt: values.updatedAt,
+      // Progressive Image Loading fields (v0.7.30)
+      blurPreview: values.blur_preview,
+      thumbnailPath: values.thumbnail_path,
+      fullPath: values.full_path,
       // Additional metadata
       humanSize: this.getHumanSize(),
       isImage: this.isImage(),

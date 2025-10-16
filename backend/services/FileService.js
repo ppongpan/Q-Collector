@@ -5,11 +5,14 @@
 
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const fs = require('fs').promises;
+const os = require('os');
 const { File, Submission, Field, User, AuditLog } = require('../models');
 const minioClient = require('../config/minio.config');
 const logger = require('../utils/logger.util');
 const { ApiError } = require('../middleware/error.middleware');
 const { generateChecksum } = require('../utils/encryption.util');
+const imageProcessingService = require('./ImageProcessingService');
 
 class FileService {
   /**
@@ -95,6 +98,41 @@ class FileService {
         }
       }
 
+      // Generate image variants for Progressive Image Loading (v0.7.30)
+      let blurPreview = null;
+      let thumbnailPath = null;
+      let fullPath = minioPath; // Default to original path
+
+      if (file.mimetype.startsWith('image/') && imageProcessingService.isImage(file.originalname)) {
+        try {
+          logger.info(`📸 [Progressive Loading] Generating image variants for ${file.originalname}`);
+
+          // Save buffer to temporary file for Sharp processing
+          const tempFilePath = path.join(os.tmpdir(), uniqueFileName);
+          await fs.writeFile(tempFilePath, file.buffer);
+
+          // Generate variants
+          const variants = await imageProcessingService.generateImageVariants(
+            tempFilePath,
+            uuidv4(), // Use a temporary ID, we'll use the real fileRecord.id later
+            file.originalname
+          );
+
+          blurPreview = variants.blurPreview;
+          thumbnailPath = variants.thumbnailPath;
+          fullPath = variants.fullPath || minioPath;
+
+          // Clean up temp file
+          await fs.unlink(tempFilePath);
+
+          logger.info(`✅ [Progressive Loading] Generated variants: blur=${Math.round(Buffer.from(blurPreview.split(',')[1], 'base64').length / 1024)}KB, thumbnail=${thumbnailPath}`);
+        } catch (error) {
+          logger.error(`❌ [Progressive Loading] Failed to generate variants: ${error.message}`);
+          logger.error(`   Continuing with upload, variants will be null`);
+          // Don't throw - continue with upload even if variant generation fails
+        }
+      }
+
       const fileRecord = await File.create({
         submission_id: validSubmissionId,
         field_id: fieldId,
@@ -107,6 +145,10 @@ class FileService {
         checksum,
         uploaded_by: userId,
         uploaded_at: new Date(),
+        // Progressive Image Loading fields (v0.7.30)
+        blur_preview: blurPreview,
+        thumbnail_path: thumbnailPath,
+        full_path: fullPath,
       });
 
       // Create audit log
@@ -119,10 +161,11 @@ class FileService {
           filename: uniqueFileName,
           size: file.size,
           mimeType: file.mimetype,
+          hasImageVariants: blurPreview !== null,
         },
       });
 
-      logger.info(`File uploaded: ${uniqueFileName} by user ${userId}`);
+      logger.info(`File uploaded: ${uniqueFileName} by user ${userId}${blurPreview ? ' (with image variants)' : ''}`);
 
       return fileRecord.toJSON();
     } catch (error) {
