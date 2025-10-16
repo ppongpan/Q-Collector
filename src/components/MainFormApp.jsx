@@ -1076,6 +1076,11 @@ function MainFormAppContent() {
           handleNavigate('submission-detail', currentFormId, false, currentSubmissionId);
         }}
         onBack={() => handleNavigate('submission-detail', currentFormId, false, currentSubmissionId)}
+        onAddNew={(formId, submissionId, subFormId) => {
+          // ✅ FIX v0.7.31: Add new sub-form submission
+          console.log('Add new sub-form submission:', { formId, submissionId, subFormId });
+          handleNavigate('subform-view', formId, false, submissionId, subFormId);
+        }}
         onNavigatePrevious={handleNavigatePrevious}
         onNavigateNext={handleNavigateNext}
         hasPrevious={hasPrevious}  // ✅ FIX: Use local variable instead of navHasPrevious

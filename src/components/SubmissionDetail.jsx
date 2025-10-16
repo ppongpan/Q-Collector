@@ -1006,7 +1006,8 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
                 // Provides: modal preview, download button, responsive horizontal layout on desktop
                 // ✅ LAYOUT: Vertical stack for horizontal thumbnail+info layout
                 // ✅ FIX v0.7.29-v4: Add sm:max-w-fit to prevent expansion on tablet/desktop
-                <div className="space-y-2 w-full sm:max-w-fit">
+                // ✅ FIX v0.7.31: Add responsive padding - none on mobile, 200px left/right on desktop (md:px-[200px])
+                <div className="space-y-2 w-full sm:max-w-fit md:px-[200px]">
                   {files.map((file, index) => (
                     <ImageThumbnail
                       key={`${file.id}-${imageBlobUrlsVersion}`}  // ✅ FIX v0.7.29-v13: Force unmount on navigation

@@ -95,13 +95,14 @@ const ImageThumbnail = React.memo(({
     };
   }, [file?.id, file?.blurPreview, file?.thumbnailPath]);
 
-  // Size variants with better mobile responsiveness
-  // ✅ MOBILE FIX: Increased base sizes by 40% for better visibility on small screens
+  // ✅ v0.7.31: Optimized thumbnail sizes - smaller on PC/Tablet
+  // Mobile: Keep original sizes for touch targets
+  // Desktop/Tablet: Reduce by 30% for better space utilization
   const sizeClasses = {
-    sm: 'w-20 h-20 sm:w-24 sm:h-24',                    // 80px → 96px mobile (+40%)
-    md: 'w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36',   // 112px → 128px → 144px (+40%)
-    lg: 'w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40',   // 128px → 144px → 160px (+40%)
-    xl: 'w-36 h-36 sm:w-40 sm:h-40 md:w-44 md:h-44'    // 144px → 160px → 176px (+40%)
+    sm: 'w-20 h-20 sm:w-24 sm:h-24 md:w-20 md:h-20',        // Mobile 96px → Desktop 80px (-30%)
+    md: 'w-28 h-28 sm:w-32 sm:h-32 md:w-24 md:h-24',        // Mobile 128px → Desktop 96px (-30%)
+    lg: 'w-32 h-32 sm:w-36 sm:h-36 md:w-28 md:h-28',        // Mobile 144px → Desktop 112px (-30%)
+    xl: 'w-36 h-36 sm:w-40 sm:h-40 md:w-32 md:h-32'         // Mobile 160px → Desktop 128px (-30%)
   };
 
   const handleThumbnailClick = () => {
@@ -315,13 +316,12 @@ const ImageThumbnail = React.memo(({
   return (
     <>
       {/* Thumbnail Container - Balanced layout with proper spacing */}
-      {/* ✅ FIX v0.7.29-v5: Remove w-full to prevent expansion on desktop */}
+      {/* ✅ v0.7.31: Compact and elegant layout for PC/Tablet */}
       <div className={cn(
-        'group relative flex flex-col items-center md:flex-row md:items-start',
-        'gap-2 md:gap-4',  // เพิ่ม gap บน desktop เป็น 16px
-        'p-2 md:p-3',  // เพิ่ม padding เพื่อให้ดูสมดุล
+        'group relative flex flex-col items-center md:flex-row md:items-center',  // Center align on desktop
+        'gap-2 md:gap-3',  // Reduced gap on desktop (16px → 12px)
+        'p-2 md:p-2',  // Reduced padding on desktop for compact look
         'rounded-lg md:bg-muted/5',  // พื้นหลังเบา ๆ บน desktop
-        // ✅ FIX v0.7.29-v5: No w-full, let image size dictate container width
         'max-w-fit',  // Always fit-content to prevent expansion
         className
       )}>
@@ -333,21 +333,21 @@ const ImageThumbnail = React.memo(({
             // Desktop only: hover effects
             'md:hover:border-primary/50 md:hover:shadow-lg md:hover:shadow-primary/10',
             'md:transition-all md:duration-300 md:hover:scale-105',
-            // ✅ FIX v0.7.29-v6: Fixed sizing at 390px/240px for all screen sizes
-            // No viewport-based sizing to prevent expansion
+            // ✅ v0.7.31: Reduced adaptive sizes by 35% on PC/Tablet for better space utilization
+            // Mobile: Keep larger for visibility | Desktop: Smaller for elegance
             adaptive ? (
               imageOrientation === 'landscape' ? [
-                'w-[390px]',  // ✅ Fixed 390px for all screens (no expansion)
+                'w-full sm:w-[390px] md:w-[280px]',  // Mobile 390px → Tablet/Desktop 280px (-28%)
                 'aspect-video',  // 16:9 ratio
-                'max-h-[60vh]'  // Prevent overflow
+                'max-h-[45vh] md:max-h-[40vh]'  // Reduced max height
               ] : imageOrientation === 'portrait' ? [
-                'w-[240px]',  // ✅ Fixed 240px for all screens (compact portrait)
-                'max-h-[35vh]',
+                'w-full sm:w-[240px] md:w-[180px]',  // Mobile 240px → Tablet/Desktop 180px (-25%)
+                'max-h-[35vh] md:max-h-[30vh]',  // Reduced max height
                 'h-auto'
               ] : [
                 // Default to portrait size until orientation detected
-                'w-[240px]',  // ✅ Fixed 240px for all screens
-                'max-h-[35vh]',
+                'w-full sm:w-[240px] md:w-[180px]',  // Mobile 240px → Desktop 180px
+                'max-h-[35vh] md:max-h-[30vh]',
                 'h-auto'
               ]
             ) : sizeClasses[size]  // Use fixed size when adaptive=false
@@ -440,14 +440,14 @@ const ImageThumbnail = React.memo(({
         </div>
 
         {/* File Info - Mobile: centered below, Desktop: right side with details */}
-        {/* ✅ BALANCED LAYOUT: ชื่อ+ขนาดไฟล์บน desktop, เฉพาะชื่อบน mobile */}
+        {/* ✅ v0.7.31: Compact text layout for PC/Tablet */}
         {showFileName && (
-          <div className="flex-1 text-center md:text-left min-w-0 md:px-2">
+          <div className="flex-1 text-center md:text-left min-w-0 md:px-1">
             {/* ✅ FIX v0.7.22: Mobile - Orange color to indicate clickability */}
             {/* ✅ FIX v0.7.29-v8: Mobile tooltip shows "คลิกเพื่อดาวน์โหลด" */}
             <div
               className={cn(
-                "text-xs sm:text-sm md:text-base font-medium truncate transition-colors",
+                "text-xs sm:text-sm md:text-sm font-medium truncate transition-colors",  // Smaller text on desktop
                 // Mobile: สีส้มเพื่อบ่งบอกว่าคลิกได้
                 "text-orange-500 md:text-foreground",
                 "cursor-pointer md:cursor-default",
@@ -468,7 +468,7 @@ const ImageThumbnail = React.memo(({
               {file.name}
             </div>
             {/* ✅ DESKTOP ONLY: แสดงขนาดไฟล์บน desktop เท่านั้น */}
-            <div className="hidden md:block text-sm text-muted-foreground mt-1">
+            <div className="hidden md:block text-xs text-muted-foreground mt-0.5">
               {formatFileSize(file.size)}
             </div>
           </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { GlassCard, GlassCardContent } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
@@ -24,6 +25,212 @@ import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../uti
 // Hooks
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
 
+// ✅ FIX v0.7.31: Floating Add Button Component using Portal (same as main form)
+const FloatingAddButtonSubForm = ({ formId, submissionId, subFormId, onAddNew }) => {
+  const [portalElement, setPortalElement] = useState(null);
+
+  useEffect(() => {
+    // Create portal element
+    const element = document.createElement('div');
+    element.id = 'floating-button-portal-subform';
+    element.style.cssText = `
+      position: fixed !important;
+      bottom: 24px !important;
+      right: 24px !important;
+      z-index: 2147483647 !important;
+      pointer-events: none !important;
+    `;
+    document.body.appendChild(element);
+    setPortalElement(element);
+
+    return () => {
+      if (document.body.contains(element)) {
+        document.body.removeChild(element);
+      }
+    };
+  }, []);
+
+  const handleClick = () => {
+    console.log('Floating button clicked - adding new sub-form submission:', { formId, submissionId, subFormId });
+    if (onAddNew) {
+      onAddNew(formId, submissionId, subFormId);
+    } else {
+      console.warn('onAddNew callback not provided to FloatingAddButtonSubForm');
+    }
+  };
+
+  if (!portalElement) return null;
+
+  return createPortal(
+    <motion.div
+      initial={{ scale: 0, opacity: 0, y: 100 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      transition={{
+        delay: 0.8,
+        type: "spring",
+        stiffness: 200,
+        damping: 15,
+        opacity: { duration: 0.3 }
+      }}
+      style={{
+        position: 'relative',
+        pointerEvents: 'auto'
+      }}
+    >
+      {/* Ripple Background Effect */}
+      <motion.div
+        className="absolute inset-0 rounded-full bg-orange-400"
+        animate={{
+          scale: [1, 1.3, 1],
+          opacity: [0.3, 0.1, 0.3]
+        }}
+        transition={{
+          duration: 2.5,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        style={{
+          width: '58px',
+          height: '58px',
+          borderRadius: '50%',
+          position: 'absolute',
+          top: '-3px',
+          left: '-3px'
+        }}
+      />
+
+      {/* Outer Glow Ring */}
+      <motion.div
+        className="absolute inset-0 rounded-full border-2 border-orange-300"
+        animate={{
+          scale: [1, 1.4, 1],
+          opacity: [0.6, 0, 0.6],
+          rotate: [0, 180, 360]
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+        style={{
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          position: 'absolute',
+          top: '-6px',
+          left: '-6px'
+        }}
+      />
+
+      {/* Main Button */}
+      <motion.button
+        onClick={handleClick}
+        whileHover={{
+          scale: 1.15,
+          backgroundColor: '#ea580c',
+          boxShadow: [
+            '0 8px 32px rgba(249, 115, 22, 0.4)',
+            '0 12px 40px rgba(249, 115, 22, 0.6)',
+            '0 8px 32px rgba(249, 115, 22, 0.4)'
+          ]
+        }}
+        whileTap={{
+          scale: 0.9,
+          transition: { duration: 0.1 }
+        }}
+        animate={{
+          boxShadow: [
+            '0 4px 20px rgba(249, 115, 22, 0.3)',
+            '0 8px 30px rgba(249, 115, 22, 0.5)',
+            '0 4px 20px rgba(249, 115, 22, 0.3)'
+          ]
+        }}
+        transition={{
+          boxShadow: {
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }
+        }}
+        className="relative overflow-hidden"
+        style={{
+          width: '52px',
+          height: '52px',
+          borderRadius: '50%',
+          border: 'none',
+          background: 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%)',
+          color: 'white',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          outline: 'none'
+        }}
+        title="เพิ่มข้อมูลใหม่"
+      >
+        {/* Shimmer Effect */}
+        <motion.div
+          className="absolute inset-0 rounded-full"
+          animate={{
+            background: [
+              'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)',
+              'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)'
+            ],
+            x: ['-100%', '100%']
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%'
+          }}
+        />
+
+        {/* Plus Icon with Animation */}
+        <motion.div
+          animate={{
+            rotate: [0, 90, 180, 270, 360],
+            scale: [1, 1.1, 1, 1.1, 1]
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          style={{
+            fontSize: '22px',
+            fontWeight: '300',
+            zIndex: 2,
+            position: 'relative'
+          }}
+        >
+          +
+        </motion.div>
+
+        {/* Inner Highlight */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '6px',
+            left: '10px',
+            width: '20px',
+            height: '20px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%)',
+            zIndex: 1
+          }}
+        />
+      </motion.button>
+    </motion.div>,
+    portalElement
+  );
+};
+
 export default function SubFormDetail({
   formId,
   submissionId,
@@ -35,7 +242,8 @@ export default function SubFormDetail({
   onNavigatePrevious,
   onNavigateNext,
   hasPrevious,
-  hasNext
+  hasNext,
+  onAddNew  // ✅ FIX v0.7.31: Add onAddNew prop for floating button
 }) {
   console.log('🎯 SubFormDetail props received:', {
     hasPrevious,
@@ -450,8 +658,8 @@ export default function SubFormDetail({
               {field.type === 'image_upload' ? (
                 // ✅ FIX v0.7.29: Use ImageThumbnail with adaptive sizing and download functionality
                 // Same pattern as main form: vertical stack for horizontal thumbnail+info layout
-                // ✅ FIX v0.7.29-v4: Add sm:max-w-fit to prevent expansion on tablet/desktop
-                <div className="space-y-2 w-full sm:max-w-fit">
+                // ✅ FIX v0.7.31: Add md:px-[200px] for responsive padding (200px left/right on PC)
+                <div className="space-y-2 w-full sm:max-w-fit md:px-[200px]">
                   {files.map((file, index) => (
                     <ImageThumbnail
                       key={file.id || index}
@@ -968,6 +1176,14 @@ export default function SubFormDetail({
         </motion.div>
 
       </div>
+
+      {/* ✅ FIX v0.7.31: Floating Add Button using Portal (same as main form) */}
+      <FloatingAddButtonSubForm
+        formId={formId}
+        submissionId={submissionId}
+        subFormId={subFormId}
+        onAddNew={onAddNew}
+      />
     </div>
   );
 }
