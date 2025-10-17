@@ -4,8 +4,9 @@ import { GlassCard } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
 import { GlassInput } from './ui/glass-input';
 import SubmissionActionMenu, { useSubmissionActionMenu } from './ui/submission-action-menu';
+import { PaginationControls } from './ui/pagination-controls';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faCalendar, faCalendarAlt, faSortAmountDown, faSortAmountUp, faList, faChevronDown, faCheck, faCog } from '@fortawesome/free-solid-svg-icons';
 import { FileDisplayCompact } from './ui/file-display';
 import { useEnhancedToast } from './ui/enhanced-toast';
 import { PhoneIcon } from './ui/phone-icon';
@@ -24,6 +25,24 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
+
+  // Filter and sort state
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1); // Default to current month (1-12)
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear()); // Default to current year
+  const [sortBy, setSortBy] = useState('_auto_date'); // Default sort by date
+  const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
+
+  // Pagination state
+  const [itemsPerPage, setItemsPerPage] = useState(20); // 20, 50, 80, 100
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Dropdown states for compact filter buttons
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
+  const [showYearDropdown, setShowYearDropdown] = useState(false);
+  const [showSortModal, setShowSortModal] = useState(false); // Changed to modal
+  const [showDateFieldModal, setShowDateFieldModal] = useState(false); // Date field selector modal
+  const [selectedDateField, setSelectedDateField] = useState(null); // Selected date field for filtering
 
   // Action menu state
   const { isOpen, position, openMenu, closeMenu } = useSubmissionActionMenu();
@@ -75,11 +94,29 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
       setForm(formData);
 
       // Load submissions from API first, fallback to LocalStorage
+      // ✅ FIX: Request ALL submissions by passing limit=10000 (backend max is 100, but we'll paginate in frontend)
       let submissionsData = [];
       try {
-        const response = await apiClient.listSubmissions(formId);
-        submissionsData = response.data?.submissions || response.data || [];
-        console.log('✅ Submissions loaded from API:', submissionsData.length, 'items');
+        // Make multiple requests if needed to get all submissions
+        let page = 1;
+        let allSubmissions = [];
+        let hasMore = true;
+
+        while (hasMore) {
+          const response = await apiClient.listSubmissions(formId, { page, limit: 100 });
+          const pageSubmissions = response.data?.submissions || response.data || [];
+          allSubmissions = [...allSubmissions, ...pageSubmissions];
+
+          // Check if there are more pages
+          const totalPages = response.data?.totalPages || 1;
+          hasMore = page < totalPages;
+          page++;
+
+          console.log(`✅ Loaded page ${page - 1} with ${pageSubmissions.length} submissions`);
+        }
+
+        submissionsData = allSubmissions;
+        console.log('✅ All submissions loaded from API:', submissionsData.length, 'items');
         if (submissionsData.length > 0) {
           console.log('📦 First submission structure:', submissionsData[0]);
           console.log('📦 First submission JSON:', JSON.stringify(submissionsData[0], null, 2));
@@ -119,6 +156,31 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Auto-select date field if only one exists
+  useEffect(() => {
+    if (form && form.fields) {
+      const dateFields = form.fields.filter(field =>
+        (field.type === 'date' || field.type === 'datetime') && !field.subFormId
+      );
+
+      // If only one date field, auto-select it
+      if (dateFields.length === 1 && !selectedDateField) {
+        setSelectedDateField(dateFields[0].id);
+        console.log('✅ Auto-selected date field:', dateFields[0].title);
+      }
+      // If no date field selected but multiple exist, default to submittedAt
+      else if (dateFields.length > 1 && !selectedDateField) {
+        setSelectedDateField('_auto_date'); // Use submission date as default
+        console.log('✅ Defaulted to submission date (multiple date fields available)');
+      }
+      // If no date fields exist, use submittedAt
+      else if (dateFields.length === 0 && !selectedDateField) {
+        setSelectedDateField('_auto_date');
+        console.log('✅ Using submission date (no date fields in form)');
+      }
+    }
+  }, [form, selectedDateField]);
 
   // Get table display fields (max 5 fields that are marked to show in table)
   // If less than 5 fields are selected, automatically add date and time columns to fill up to 5 total
@@ -170,8 +232,84 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
     return submissionService.formatSubmissionForDisplay(submission, form);
   };
 
-  // Filter submissions based on search term
+  // Get available years from submissions data
+  const getAvailableYears = () => {
+    const years = new Set();
+    submissions.forEach(sub => {
+      if (sub.submittedAt) {
+        const date = new Date(sub.submittedAt);
+        if (!isNaN(date.getTime())) {
+          years.add(date.getFullYear());
+        }
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // Newest first
+  };
+
+  const availableYears = getAvailableYears();
+
+  // Thai month names
+  const monthNames = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+
+  // Get date fields for filtering
+  const getDateFields = () => {
+    if (!form || !form.fields) return [];
+    return form.fields.filter(field =>
+      (field.type === 'date' || field.type === 'datetime') && !field.subFormId
+    );
+  };
+
+  // Filter submissions based on month, year, and search term
   const filteredSubmissions = submissions.filter(submission => {
+    // Month/Year filter based on selected date field
+    if (selectedDateField) {
+      let dateValue = null;
+
+      // Get date value based on selected field
+      if (selectedDateField === '_auto_date') {
+        // Use submission date
+        dateValue = submission.submittedAt;
+      } else {
+        // Use custom date field
+        const formattedSubmission = formatSubmissionForDisplay(submission);
+        const fieldData = formattedSubmission.fields[selectedDateField];
+        dateValue = fieldData?.rawValue || fieldData?.value;
+      }
+
+      // Parse and filter by date
+      if (dateValue) {
+        const date = new Date(dateValue);
+        if (!isNaN(date.getTime())) {
+          const subMonth = date.getMonth() + 1; // 1-12
+          const subYear = date.getFullYear();
+
+          // If selectedMonth is not null, filter by selected month
+          if (selectedMonth !== null && subMonth !== selectedMonth) {
+            return false;
+          }
+
+          // If selectedYear is not null, filter by selected year
+          if (selectedYear !== null && subYear !== selectedYear) {
+            return false;
+          }
+        } else {
+          // Invalid date - exclude from results when filtering
+          if (selectedMonth !== null || selectedYear !== null) {
+            return false;
+          }
+        }
+      } else {
+        // No date value - exclude from results when filtering
+        if (selectedMonth !== null || selectedYear !== null) {
+          return false;
+        }
+      }
+    }
+
+    // Search term filter
     if (!searchTerm) return true;
 
     const formattedSubmission = formatSubmissionForDisplay(submission);
@@ -182,6 +320,52 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
     return searchString.includes(searchTerm.toLowerCase());
   });
+
+  // Sort filtered submissions
+  const sortedSubmissions = [...filteredSubmissions].sort((a, b) => {
+    let aValue, bValue;
+
+    // Handle auto columns
+    if (sortBy === '_auto_date' || sortBy === '_auto_time') {
+      aValue = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+      bValue = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+    } else {
+      // Get field values
+      const aFormatted = formatSubmissionForDisplay(a);
+      const bFormatted = formatSubmissionForDisplay(b);
+
+      const aField = aFormatted.fields[sortBy];
+      const bField = bFormatted.fields[sortBy];
+
+      aValue = aField?.value || '';
+      bValue = bField?.value || '';
+
+      // Convert to numbers if both are numeric
+      const aNum = parseFloat(aValue);
+      const bNum = parseFloat(bValue);
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        aValue = aNum;
+        bValue = bNum;
+      }
+    }
+
+    // Compare values
+    if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Calculate pagination
+  const totalItems = sortedSubmissions.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedSubmissions = sortedSubmissions.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedMonth, selectedYear, sortBy, sortOrder, searchTerm]);
 
   const handleViewSubmission = (submissionId) => {
     if (onViewSubmission) {
@@ -815,18 +999,30 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
               </h1>
             </div>
 
-            {/* Right side: Search Box */}
-            <div className="relative w-80 flex-shrink-0">
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60">
-                <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
+            {/* Right side: Search Box with Gear Icon */}
+            <div className="relative w-80 flex-shrink-0 flex items-center gap-2">
+              <div className="relative flex-1">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60">
+                  <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
+                </div>
+                <GlassInput
+                  type="text"
+                  placeholder="ค้นหาข้อมูล..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
               </div>
-              <GlassInput
-                type="text"
-                placeholder="ค้นหาข้อมูล..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+              {/* Gear Icon for Date Field Selector - No border, just icon */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowDateFieldModal(!showDateFieldModal)}
+                  className="p-2 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                  title="เลือกฟิลด์วันที่สำหรับ Filter"
+                >
+                  <FontAwesomeIcon icon={faCog} className="text-lg" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -835,17 +1031,29 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
             <h1 className="text-xl font-bold text-primary mb-4 text-left" style={{ fontSize: '20px' }}>
               {form.title}
             </h1>
-            <div className="relative max-w-md">
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60">
-                <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
+            <div className="flex items-center gap-2 max-w-md">
+              <div className="relative flex-1">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60">
+                  <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
+                </div>
+                <GlassInput
+                  type="text"
+                  placeholder="ค้นหาข้อมูล..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
               </div>
-              <GlassInput
-                type="text"
-                placeholder="ค้นหาข้อมูล..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+              {/* Gear Icon for Date Field Selector (Mobile) - No border, just icon */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowDateFieldModal(!showDateFieldModal)}
+                  className="p-2 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                  title="เลือกฟิลด์วันที่สำหรับ Filter"
+                >
+                  <FontAwesomeIcon icon={faCog} className="text-lg" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -859,9 +1067,277 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           )}
         </motion.div>
 
+        {/* Filter and Sort Controls */}
+        {!loading && form && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mb-6 relative z-50"
+          >
+            <GlassCard className="p-2.5 overflow-visible">
+              <div className="flex gap-2 items-center justify-start">
+                {/* Month Filter Button */}
+                <div className="relative z-[60]">
+                  <GlassButton
+                    variant="secondary"
+                    onClick={() => {
+                      setShowMonthDropdown(!showMonthDropdown);
+                      setShowYearDropdown(false);
+                      setShowSortModal(false);
+                    }}
+                    className="px-2.5 py-1.5 text-xs flex items-center gap-1.5 min-w-fit"
+                  >
+                    <FontAwesomeIcon icon={faCalendar} className="text-primary" />
+                    <span>{selectedMonth === null ? 'ทั้งหมด' : monthNames[selectedMonth - 1]}</span>
+                    <FontAwesomeIcon icon={faChevronDown} className="text-xs opacity-60" />
+                  </GlassButton>
+
+                  {/* Month Dropdown */}
+                  {showMonthDropdown && (
+                    <>
+                      {/* Backdrop overlay */}
+                      <div
+                        className="fixed inset-0 z-[100]"
+                        onClick={() => setShowMonthDropdown(false)}
+                      />
+                      <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border-2 border-primary rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[101] max-h-[500px] overflow-y-auto min-w-[110px]">
+                      {/* All months option */}
+                      <button
+                        onClick={() => {
+                          setSelectedMonth(null);
+                          setShowMonthDropdown(false);
+                        }}
+                        className={`w-full px-2.5 py-1.5 text-xs text-left hover:bg-primary/10 transition-colors border-b border-border/20 ${
+                          selectedMonth === null ? 'bg-primary/20 text-primary font-semibold' : 'text-foreground'
+                        }`}
+                      >
+                        ทั้งหมด
+                      </button>
+                      {monthNames.map((month, index) => (
+                        <button
+                          key={index + 1}
+                          onClick={() => {
+                            setSelectedMonth(index + 1);
+                            setShowMonthDropdown(false);
+                          }}
+                          className={`w-full px-2.5 py-1.5 text-xs text-left hover:bg-primary/10 transition-colors ${index < monthNames.length - 1 ? 'border-b border-border/20' : ''} ${
+                            selectedMonth === index + 1 ? 'bg-primary/20 text-primary font-semibold' : 'text-foreground'
+                          }`}
+                        >
+                          {month}
+                        </button>
+                      ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Year Filter Button */}
+                <div className="relative z-[60]">
+                  <GlassButton
+                    variant="secondary"
+                    onClick={() => {
+                      setShowYearDropdown(!showYearDropdown);
+                      setShowMonthDropdown(false);
+                      setShowSortModal(false);
+                    }}
+                    className="px-2.5 py-1.5 text-xs flex items-center gap-1.5 min-w-fit"
+                  >
+                    <FontAwesomeIcon icon={faCalendarAlt} className="text-primary" />
+                    <span>{selectedYear === null ? 'ทั้งหมด' : selectedYear}</span>
+                    <FontAwesomeIcon icon={faChevronDown} className="text-xs opacity-60" />
+                  </GlassButton>
+
+                  {/* Year Dropdown */}
+                  {showYearDropdown && (
+                    <>
+                      {/* Backdrop overlay */}
+                      <div
+                        className="fixed inset-0 z-[100]"
+                        onClick={() => setShowYearDropdown(false)}
+                      />
+                      <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border-2 border-primary rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[101] max-h-64 overflow-y-auto min-w-[100px]">
+                      {/* All years option */}
+                      <button
+                        onClick={() => {
+                          setSelectedYear(null);
+                          setShowYearDropdown(false);
+                        }}
+                        className={`w-full px-3 py-2 text-xs text-left hover:bg-primary/10 transition-colors border-b border-border/20 ${
+                          selectedYear === null ? 'bg-primary/20 text-primary font-semibold' : 'text-foreground'
+                        }`}
+                      >
+                        ทั้งหมด
+                      </button>
+                      {(availableYears.length > 0 ? availableYears : [currentDate.getFullYear()]).map(year => (
+                        <button
+                          key={year}
+                          onClick={() => {
+                            setSelectedYear(year);
+                            setShowYearDropdown(false);
+                          }}
+                          className={`w-full px-3 py-2 text-xs text-left hover:bg-primary/10 transition-colors ${
+                            selectedYear === year ? 'bg-primary/20 text-primary font-semibold' : 'text-foreground'
+                          }`}
+                        >
+                          {year}
+                        </button>
+                      ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div className="h-5 w-px bg-border"></div>
+
+                {/* Sort By Button */}
+                <div className="relative z-[60]">
+                  <GlassButton
+                    variant="secondary"
+                    onClick={() => {
+                      setShowSortModal(true);
+                      setShowMonthDropdown(false);
+                      setShowYearDropdown(false);
+                    }}
+                    className="px-2.5 py-1.5 text-xs flex items-center gap-1.5 min-w-fit"
+                  >
+                  <FontAwesomeIcon
+                    icon={sortOrder === 'asc' ? faSortAmountUp : faSortAmountDown}
+                    className="text-primary"
+                  />
+                  <span className="max-w-[100px] truncate">
+                    {sortBy === '_auto_date' ? 'วันที่' :
+                     sortBy === '_auto_time' ? 'เวลา' :
+                     form.fields?.find(f => f.id === sortBy)?.title || 'เรียง'}
+                  </span>
+                  <FontAwesomeIcon icon={faChevronDown} className="text-xs opacity-60" />
+                </GlassButton>
+
+                  {/* Sort Dropdown Modal - Centered */}
+                  {showSortModal && (
+                    <>
+                      {/* Backdrop overlay */}
+                      <div
+                        className="fixed inset-0 bg-black/60 z-[100]"
+                        onClick={() => setShowSortModal(false)}
+                      />
+                      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 border-2 border-primary rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[101] w-[360px] max-h-[500px] overflow-y-auto">
+                        <div className="p-3">
+                          <div className="grid grid-cols-2 gap-2">
+                            {/* Auto columns */}
+                            <button
+                              onClick={() => {
+                                setSortBy('_auto_date');
+                                setShowSortModal(false);
+                              }}
+                              className={`px-3 py-2.5 text-sm text-left rounded border transition-all ${
+                                sortBy === '_auto_date'
+                                  ? 'bg-primary/20 border-primary text-primary font-semibold'
+                                  : 'bg-background border-border hover:border-primary/50 hover:bg-primary/5'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <FontAwesomeIcon icon={faCalendar} className="text-primary text-xs" />
+                                <span className="truncate">วันที่</span>
+                                {sortBy === '_auto_date' && (
+                                  <FontAwesomeIcon icon={faCheck} className="ml-auto text-xs" />
+                                )}
+                              </div>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setSortBy('_auto_time');
+                                setShowSortModal(false);
+                              }}
+                              className={`px-3 py-2.5 text-sm text-left rounded border transition-all ${
+                                sortBy === '_auto_time'
+                                  ? 'bg-primary/20 border-primary text-primary font-semibold'
+                                  : 'bg-background border-border hover:border-primary/50 hover:bg-primary/5'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <FontAwesomeIcon icon={faCalendarAlt} className="text-primary text-xs" />
+                                <span className="truncate">เวลา</span>
+                                {sortBy === '_auto_time' && (
+                                  <FontAwesomeIcon icon={faCheck} className="ml-auto text-xs" />
+                                )}
+                              </div>
+                            </button>
+
+                            {/* Form fields */}
+                            {form.fields && form.fields
+                              .filter(field => !field.subFormId && field.type !== 'file_upload' && field.type !== 'image_upload')
+                              .map(field => (
+                                <button
+                                  key={field.id}
+                                  onClick={() => {
+                                    setSortBy(field.id);
+                                    setShowSortModal(false);
+                                  }}
+                                  className={`px-3 py-2.5 text-sm text-left rounded border transition-all ${
+                                    sortBy === field.id
+                                      ? 'bg-primary/20 border-primary text-primary font-semibold'
+                                      : 'bg-background border-border hover:border-primary/50 hover:bg-primary/5'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="truncate">{field.title}</span>
+                                    {sortBy === field.id && (
+                                      <FontAwesomeIcon icon={faCheck} className="ml-auto flex-shrink-0 text-xs" />
+                                    )}
+                                  </div>
+                                </button>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Sort Order Toggle */}
+                <GlassButton
+                  variant="secondary"
+                  onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  className="px-2.5 py-1.5 text-xs flex items-center gap-1"
+                  title={sortOrder === 'asc' ? 'น้อย→มาก' : 'มาก→น้อย'}
+                >
+                  <span className="hidden sm:inline">{sortOrder === 'asc' ? '↑ น้อย→มาก' : '↓ มาก→น้อย'}</span>
+                  <span className="sm:hidden">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                </GlassButton>
+              </div>
+            </GlassCard>
+          </motion.div>
+        )}
+
+        {/* Pagination Controls (Top) */}
+        {!loading && sortedSubmissions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="mb-4"
+          >
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={sortedSubmissions.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={(page) => setCurrentPage(page)}
+              onItemsPerPageChange={(perPage) => {
+                setItemsPerPage(perPage);
+                setCurrentPage(1); // Reset to first page
+              }}
+            />
+          </motion.div>
+        )}
+
         {/* Enhanced Submissions Table - Only Selected Fields */}
         {/* ✅ FIX v0.7.11: Don't hide content during loading - show when ready */}
-        {!loading && filteredSubmissions.length > 0 ? (
+        {!loading && sortedSubmissions.length > 0 ? (
           <div>
             <GlassCard className="glass-container">
               <style>{`
@@ -890,7 +1366,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredSubmissions.map((submission, index) => {
+                    {paginatedSubmissions.map((submission, index) => {
                       const formattedSubmission = formatSubmissionForDisplay(submission);
 
                       return (
@@ -937,6 +1413,26 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                 </table>
               </div>
             </GlassCard>
+
+            {/* Pagination Controls (Bottom) */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="mt-6"
+            >
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedSubmissions.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={(page) => setCurrentPage(page)}
+                onItemsPerPageChange={(perPage) => {
+                  setItemsPerPage(perPage);
+                  setCurrentPage(1);
+                }}
+              />
+            </motion.div>
           </div>
         ) : !loading ? (
           <div className="text-center py-12 sm:py-16">
@@ -959,6 +1455,109 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           </div>
         ) : null}
 
+        {/* Date Field Selector Modal - Dropdown style near gear icon */}
+        {showDateFieldModal && (
+          <>
+            {/* Backdrop overlay */}
+            <div
+              className="fixed inset-0 z-[200]"
+              onClick={() => setShowDateFieldModal(false)}
+            />
+            {/* Modal - positioned near top, aligned right */}
+            <div className="fixed top-[120px] right-8 lg:right-12 bg-white dark:bg-gray-800 border-2 border-primary rounded-xl shadow-[0_10px_60px_rgba(0,0,0,0.9)] z-[201] w-[90vw] max-w-md max-h-[calc(100vh-140px)] overflow-y-auto">
+              <div className="p-4">
+                {/* Header */}
+                <div className="mb-4 pb-3 border-b border-border">
+                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCalendar} className="text-primary" />
+                    เลือกฟิลด์วันที่สำหรับ Filter
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    เลือกฟิลด์ที่ต้องการใช้กรองข้อมูลตามเดือน/ปี
+                  </p>
+                </div>
+
+                {/* Date field options */}
+                <div className="space-y-2">
+                  {/* Always show submission date option */}
+                  <button
+                    onClick={() => {
+                      setSelectedDateField('_auto_date');
+                      setShowDateFieldModal(false);
+                    }}
+                    className={`w-full px-4 py-3 text-left rounded-lg border transition-all ${
+                      selectedDateField === '_auto_date'
+                        ? 'bg-primary/20 border-primary text-primary font-semibold'
+                        : 'bg-background border-border hover:border-primary/50 hover:bg-primary/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <FontAwesomeIcon icon={faCalendar} className="text-primary" />
+                      <div className="flex-1">
+                        <div className="font-medium">วันที่บันทึกข้อมูล</div>
+                        <div className="text-xs text-muted-foreground">วันที่ส่งข้อมูล (submittedAt)</div>
+                      </div>
+                      {selectedDateField === '_auto_date' && (
+                        <FontAwesomeIcon icon={faCheck} className="text-primary" />
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Form date fields */}
+                  {getDateFields().map(field => (
+                    <button
+                      key={field.id}
+                      onClick={() => {
+                        setSelectedDateField(field.id);
+                        setShowDateFieldModal(false);
+                      }}
+                      className={`w-full px-4 py-3 text-left rounded-lg border transition-all ${
+                        selectedDateField === field.id
+                          ? 'bg-primary/20 border-primary text-primary font-semibold'
+                          : 'bg-background border-border hover:border-primary/50 hover:bg-primary/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <FontAwesomeIcon
+                          icon={field.type === 'datetime' ? faCalendarAlt : faCalendar}
+                          className="text-primary"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium">{field.title}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {field.type === 'datetime' ? 'วันที่และเวลา' : 'วันที่'}
+                          </div>
+                        </div>
+                        {selectedDateField === field.id && (
+                          <FontAwesomeIcon icon={faCheck} className="text-primary" />
+                        )}
+                      </div>
+                    </button>
+                  ))}
+
+                  {/* Show message if no date fields */}
+                  {getDateFields().length === 0 && (
+                    <div className="text-center py-4 text-muted-foreground text-sm">
+                      ฟอร์มนี้ไม่มีฟิลด์วันที่ จะใช้วันที่บันทึกข้อมูลสำหรับ Filter
+                    </div>
+                  )}
+                </div>
+
+                {/* Close button */}
+                <div className="mt-4 pt-3 border-t border-border">
+                  <GlassButton
+                    variant="ghost"
+                    onClick={() => setShowDateFieldModal(false)}
+                    className="w-full"
+                  >
+                    ปิด
+                  </GlassButton>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* Action Menu */}
         <SubmissionActionMenu
           isOpen={isOpen}
@@ -968,6 +1567,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           onEdit={handleMenuEdit}
           onDelete={handleMenuDelete}
         />
+
       </div>
     </div>
   );
