@@ -1087,6 +1087,11 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
   const renderFieldValue = (field, value) => {
     const isEmpty = !value && value !== 0;
 
+    // ✅ v0.7.38: Hide fields with no data (empty, '-', or 'ไม่มีข้อมูล')
+    if (isEmpty || value === '-' || value === 'ไม่มีข้อมูล') {
+      return null; // Don't render empty fields
+    }
+
     // Special handling for file upload fields - use component with hooks
     if (field.type === 'file_upload' || field.type === 'image_upload') {
       // ✅ FIX v0.7.21: Return memoized component instead of creating new one
@@ -1102,38 +1107,77 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
 
     // Special handling for LatLong fields
     if (field.type === 'lat_long') {
-      const hasValidCoordinates = value && typeof value === 'object' && value.lat && value.lng;
-      const lat = hasValidCoordinates ? parseFloat(value.lat) : null;
-      const lng = hasValidCoordinates ? parseFloat(value.lng) : null;
-      const isValidCoordinates = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng);
+      // ✅ v0.7.37: Enhanced coordinate validation and Google Maps link
+      const hasCoordinateData = value && typeof value === 'object' && (
+        (value.lat !== undefined && value.lng !== undefined) ||
+        (value.x !== undefined && value.y !== undefined)
+      );
+
+      const lat = hasCoordinateData ? parseFloat(value.lat || value.x) : null;
+      const lng = hasCoordinateData ? parseFloat(value.lng || value.y) : null;
+
+      // Validate coordinate ranges: lat [-90, 90], lng [-180, 180]
+      const isValidLat = lat !== null && !isNaN(lat) && lat >= -90 && lat <= 90;
+      const isValidLng = lng !== null && !isNaN(lng) && lng >= -180 && lng <= 180;
+      const isValidCoordinates = isValidLat && isValidLng;
 
       return (
         <div key={field.id} className="space-y-3">
-          <label className="block text-sm font-bold text-orange-300">
+          <label className="block text-sm font-semibold text-orange-300/90">
             {field.title}
             {field.required && <span className="text-destructive ml-1">*</span>}
           </label>
-          <div className={`w-full border border-border/50 rounded-lg backdrop-blur-sm ${
+          <div className={`w-full border rounded-lg backdrop-blur-sm ${
             isEmpty || !isValidCoordinates
-              ? 'bg-muted/40'
-              : 'bg-background/50'
+              ? 'border-border/30 bg-muted/20'
+              : 'border-orange-400/40 bg-background/40'
           }`}>
             {isValidCoordinates ? (
-              <div className="p-3 space-y-3">
+              <div className="p-4 space-y-4">
+                {/* Coordinates Display with Google Maps Link */}
+                <div className="flex items-center justify-between bg-background/60 rounded-md p-3 border border-border/20">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span className="text-sm font-medium text-foreground/90">
+                      {lat.toFixed(6)}, {lng.toFixed(6)}
+                    </span>
+                  </div>
+                  <a
+                    href={`https://www.google.com/maps?q=${lat},${lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-500/90 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    <span>เปิดใน Google Maps</span>
+                  </a>
+                </div>
                 {/* Map Display */}
                 <LocationMap
                   latitude={lat}
                   longitude={lng}
                   responsive={true}
-                  showCoordinates={true}
+                  showCoordinates={false}
                   className="w-full"
                 />
               </div>
             ) : (
-              <div className="p-3 text-center text-muted-foreground">
-                {isEmpty ? 'ไม่มีพิกัด' : 'พิกัดไม่ถูกต้อง'}
+              <div className="p-4 text-center">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 mb-3">
+                  <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <p className="text-red-500 font-medium mb-1">
+                  {isEmpty ? 'ไม่มีพิกัด' : 'พิกัดไม่ถูกต้อง'}
+                </p>
                 {value && !isValidCoordinates && (
-                  <div className="text-xs mt-1 text-muted-foreground/70">
+                  <div className="text-xs text-muted-foreground/70 mt-2 font-mono bg-background/50 px-3 py-2 rounded border border-border/20">
                     ข้อมูล: {typeof value === 'object' ? JSON.stringify(value) : value}
                   </div>
                 )}
@@ -1149,40 +1193,28 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
       const isValidEmail = value && typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
       return (
-        <div key={field.id}>
-          <div className="flex items-center gap-3 py-0.5">
-            <label className="text-sm font-bold shrink-0 text-orange-300">
-              {field.title}{field.required && <span className="text-destructive ml-1">*</span>} :
-            </label>
-            <div className={`text-sm min-w-0 flex-1 ${
-              isEmpty ? 'text-muted-foreground/50' : 'text-foreground'
-            }`}>
-              {isValidEmail ? (
-                <a
-                  href={`mailto:${value}`}
-                  className="text-primary break-all"
-                  style={{
-                    transition: 'all 200ms ease-out',
-                    display: 'inline-block',
-                    fontSize: '14px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.fontSize = '16.8px';
-                    e.target.style.fontWeight = '600';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.fontSize = '14px';
-                    e.target.style.fontWeight = '400';
-                  }}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {value}
-                </a>
-              ) : (
-                value || '-'
-              )}
-            </div>
+        <div key={field.id} className="space-y-2">
+          <label className="block text-sm font-semibold text-orange-300/90">
+            {field.title}{field.required && <span className="text-destructive ml-1">*</span>}
+          </label>
+          <div className={`px-3 py-2 rounded-md bg-background/30 border border-border/20 ${
+            isEmpty ? 'text-muted-foreground/60 italic' : ''
+          }`}>
+            {isValidEmail ? (
+              <a
+                href={`mailto:${value}`}
+                className="text-primary font-medium break-all hover:text-orange-400 transition-colors inline-flex items-center gap-2"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span>{value}</span>
+              </a>
+            ) : (
+              <span className="text-foreground/90 font-medium">{value || 'ไม่มีข้อมูล'}</span>
+            )}
           </div>
         </div>
       );
@@ -1208,42 +1240,26 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
       const formattedPhone = formatPhoneDisplay(value);
 
       return (
-        <div key={field.id}>
-          <div className="flex items-center gap-3 py-0.5">
-            <label className="text-sm font-bold shrink-0 text-orange-300">
-              {field.title}{field.required && <span className="text-destructive ml-1">*</span>} :
-            </label>
-            <div className={`text-sm min-w-0 flex-1 ${
-              isEmpty ? 'text-muted-foreground/50' : 'text-foreground'
-            }`}>
-              {phoneProps.isClickable ? (
-                <div className="flex items-center gap-2">
-                  <PhoneIcon />
-                  <a
-                    href={phoneProps.telLink}
-                    className="text-primary break-all hover:underline transition-all duration-200"
-                    style={{
-                      display: 'inline-block',
-                      fontSize: '14px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.fontSize = '16.8px';
-                      e.target.style.fontWeight = '600';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.fontSize = '14px';
-                      e.target.style.fontWeight = '400';
-                    }}
-                    title={phoneProps.title}
-                    aria-label={phoneProps.ariaLabel}
-                  >
-                    {phoneProps.display}
-                  </a>
-                </div>
-              ) : (
-                <span>{formattedPhone || value || '-'}</span>
-              )}
-            </div>
+        <div key={field.id} className="space-y-2">
+          <label className="block text-sm font-semibold text-orange-300/90">
+            {field.title}{field.required && <span className="text-destructive ml-1">*</span>}
+          </label>
+          <div className={`px-3 py-2 rounded-md bg-background/30 border border-border/20 ${
+            isEmpty ? 'text-muted-foreground/60 italic' : ''
+          }`}>
+            {phoneProps.isClickable ? (
+              <a
+                href={phoneProps.telLink}
+                className="text-primary font-medium break-all hover:text-orange-400 transition-colors inline-flex items-center gap-2"
+                title={phoneProps.title}
+                aria-label={phoneProps.ariaLabel}
+              >
+                <PhoneIcon />
+                <span>{phoneProps.display}</span>
+              </a>
+            ) : (
+              <span className="text-foreground/90 font-medium">{formattedPhone || value || 'ไม่มีข้อมูล'}</span>
+            )}
           </div>
         </div>
       );
@@ -1274,40 +1290,28 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
       const validUrl = formatUrlForDisplay(value);
 
       return (
-        <div key={field.id}>
-          <div className="flex items-center gap-3 py-0.5">
-            <label className="text-sm font-bold shrink-0 text-orange-300">
-              {field.title}{field.required && <span className="text-destructive ml-1">*</span>} :
-            </label>
-            <div className={`text-sm min-w-0 flex-1 ${
-              isEmpty ? 'text-muted-foreground/50' : 'text-foreground'
-            }`}>
-              {validUrl ? (
-                <a
-                  href={validUrl}
-                  className="text-primary break-all"
-                  style={{
-                    transition: 'all 200ms ease-out',
-                    display: 'inline-block',
-                    fontSize: '14px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.fontSize = '16.8px';
-                    e.target.style.fontWeight = '600';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.fontSize = '14px';
-                    e.target.style.fontWeight = '400';
-                  }}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {value}
-                </a>
-              ) : (
-                value || '-'
-              )}
-            </div>
+        <div key={field.id} className="space-y-2">
+          <label className="block text-sm font-semibold text-orange-300/90">
+            {field.title}{field.required && <span className="text-destructive ml-1">*</span>}
+          </label>
+          <div className={`px-3 py-2 rounded-md bg-background/30 border border-border/20 ${
+            isEmpty ? 'text-muted-foreground/60 italic' : ''
+          }`}>
+            {validUrl ? (
+              <a
+                href={validUrl}
+                className="text-primary font-medium break-all hover:text-orange-400 transition-colors inline-flex items-center gap-2"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                <span>{value}</span>
+              </a>
+            ) : (
+              <span className="text-foreground/90 font-medium">{value || 'ไม่มีข้อมูล'}</span>
+            )}
           </div>
         </div>
       );
@@ -1335,25 +1339,33 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
 
 
     return (
-      <div key={field.id}>
-        <div className="flex items-center gap-3 py-1">
-          <label className="text-sm font-bold shrink-0 text-orange-300">
-            {field.title}{field.required && <span className="text-destructive ml-1">*</span>} :
-          </label>
-          <div className={`text-sm min-w-0 flex-1 ${
-            isEmpty
-              ? 'text-muted-foreground/50'
-              : 'text-foreground'
-          }`}>
-            {formattedValue || '-'}
-          </div>
+      <div key={field.id} className="space-y-2">
+        {/* ✅ v0.7.37: Improved typography with better spacing */}
+        <label className="block text-sm font-semibold text-orange-300/90">
+          {field.title}{field.required && <span className="text-destructive ml-1">*</span>}
+        </label>
+        <div className={`text-base font-medium px-3 py-2 rounded-md bg-background/30 border border-border/20 ${
+          isEmpty
+            ? 'text-muted-foreground/60 italic'
+            : 'text-foreground/90'
+        }`}>
+          {formattedValue || 'ไม่มีข้อมูล'}
         </div>
       </div>
     );
   };
 
   const renderSubFormSubmissionList = (subForm) => {
-    const subSubs = subSubmissions[subForm.id] || [];
+    const allSubSubs = subSubmissions[subForm.id] || [];
+
+    // ✅ Sort by submittedAt (newest first) and take only latest 10 records
+    const subSubs = [...allSubSubs]
+      .sort((a, b) => {
+        const dateA = new Date(a.submittedAt);
+        const dateB = new Date(b.submittedAt);
+        return dateB - dateA; // Descending order (newest first)
+      })
+      .slice(0, 10); // Take only 10 latest records
 
     if (subSubs.length === 0) {
       return (
@@ -1376,9 +1388,10 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
 
     // ✅ Filter fields by showInTable setting, show up to 5 fields (max allowed)
     // Support both camelCase (showInTable) and snake_case (show_in_table) from backend
-    const visibleFields = (subForm.fields || []).filter(field =>
-      field.showInTable === true || field.show_in_table === true
-    );
+    // ✅ FIX v0.7.33: Sort by order before displaying in table
+    const visibleFields = (subForm.fields || [])
+      .filter(field => field.showInTable === true || field.show_in_table === true)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
     const maxDisplayFields = 5; // Maximum fields to display in table
     const displayFields = visibleFields.slice(0, maxDisplayFields);
     const hasMoreFields = visibleFields.length > maxDisplayFields;
@@ -1867,20 +1880,71 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
           >
-            <div className="p-4">
-              <div className="space-y-2 sm:space-y-3">
-                {/* ⚠️ CRITICAL FIX: Filter out sub-form fields (sub_form_id !== null) and sort by order */}
-                {/* Only display main form fields in the main form section */}
-                {(form.fields || [])
-                  .filter(field => !field.sub_form_id && !field.subFormId)
-                  .sort((a, b) => (a.order || 0) - (b.order || 0))
-                  .map(field => {
-                    // Extract value from API response structure: {fieldId, fieldTitle, fieldType, value}
-                    const fieldData = submission.data[field.id];
-                    const value = fieldData?.value !== undefined ? fieldData.value : fieldData;
-                    return renderFieldValue(field, value);
-                  })}
+            {/* ✅ v0.7.37: Responsive Grid Layout - Desktop 2-column → Mobile stacked */}
+            <div className="p-6">
+              {/* 🎯 Section 1: Basic Information */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
+                  ข้อมูลพื้นฐาน
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                  {(form.fields || [])
+                    .filter(field => !field.sub_form_id && !field.subFormId)
+                    .filter(field => !['file_upload', 'image_upload', 'lat_long'].includes(field.type))
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .map(field => {
+                      const fieldData = submission.data[field.id];
+                      const value = fieldData?.value !== undefined ? fieldData.value : fieldData;
+                      return renderFieldValue(field, value);
+                    })}
+                </div>
               </div>
+
+              {/* 🎯 Section 2: Location (if exists) */}
+              {(form.fields || [])
+                .filter(field => !field.sub_form_id && !field.subFormId)
+                .filter(field => field.type === 'lat_long')
+                .length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
+                    ตำแหน่งที่ตั้ง
+                  </h3>
+                  <div className="space-y-6">
+                    {(form.fields || [])
+                      .filter(field => !field.sub_form_id && !field.subFormId)
+                      .filter(field => field.type === 'lat_long')
+                      .sort((a, b) => (a.order || 0) - (b.order || 0))
+                      .map(field => {
+                        const fieldData = submission.data[field.id];
+                        const value = fieldData?.value !== undefined ? fieldData.value : fieldData;
+                        return renderFieldValue(field, value);
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {/* 🎯 Section 3: Files & Images (if exists) */}
+              {(form.fields || [])
+                .filter(field => !field.sub_form_id && !field.subFormId)
+                .filter(field => ['file_upload', 'image_upload'].includes(field.type))
+                .length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
+                    ไฟล์และรูปภาพ
+                  </h3>
+                  <div className="space-y-6">
+                    {(form.fields || [])
+                      .filter(field => !field.sub_form_id && !field.subFormId)
+                      .filter(field => ['file_upload', 'image_upload'].includes(field.type))
+                      .sort((a, b) => (a.order || 0) - (b.order || 0))
+                      .map(field => {
+                        const fieldData = submission.data[field.id];
+                        const value = fieldData?.value !== undefined ? fieldData.value : fieldData;
+                        return renderFieldValue(field, value);
+                      })}
+                  </div>
+                </div>
+              )}
             </div>
           </GlassCard>
         </motion.div>

@@ -6,7 +6,7 @@ import { GlassInput } from './ui/glass-input';
 import SubmissionActionMenu, { useSubmissionActionMenu } from './ui/submission-action-menu';
 import { PaginationControls } from './ui/pagination-controls';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faCalendar, faCalendarAlt, faSortAmountDown, faSortAmountUp, faList, faChevronDown, faCheck, faCog } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faCalendar, faCalendarAlt, faSortAmountDown, faSortAmountUp, faList, faChevronDown, faCheck, faCog, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FileDisplayCompact } from './ui/file-display';
 import { useEnhancedToast } from './ui/enhanced-toast';
 import { PhoneIcon } from './ui/phone-icon';
@@ -14,12 +14,17 @@ import { PhoneIcon } from './ui/phone-icon';
 // Data services
 import submissionService from '../services/SubmissionService.js';
 import apiClient from '../services/ApiClient.js';
+import userPreferencesService from '../services/UserPreferencesService.js'; // ✅ v0.7.38: User preferences
 
 // Utilities
 import { formatNumberByContext } from '../utils/numberFormatter.js';
 import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../utils/phoneFormatter.js';
 
+// Auth context
+import { useAuth } from '../contexts/AuthContext'; // ✅ v0.7.38: Get user ID for preferences
+
 export default function FormSubmissionList({ formId, onNewSubmission, onViewSubmission, onEditSubmission, onBack }) {
+  const { user } = useAuth(); // ✅ v0.7.38: Get current user for preferences
   const [submissions, setSubmissions] = useState([]);
   const [form, setForm] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,14 +33,16 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
   // Filter and sort state
   const currentDate = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1); // Default to current month (1-12)
-  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear()); // Default to current year
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1); // ✅ DEFAULT: Current month (1-12)
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear()); // ✅ DEFAULT: Current year
   const [sortBy, setSortBy] = useState('_auto_date'); // Default sort by date
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
+  const [hideEmptyRows, setHideEmptyRows] = useState(true); // ✅ DEFAULT: Hide empty rows enabled
 
   // Pagination state
   const [itemsPerPage, setItemsPerPage] = useState(20); // 20, 50, 80, 100
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0); // Total count from backend
 
   // Dropdown states for compact filter buttons
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
@@ -49,6 +56,48 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
   // Enhanced toast notifications
   const toast = useEnhancedToast();
+
+  // ✅ v0.7.38: Load saved preferences on component mount
+  useEffect(() => {
+    if (user?.id && formId) {
+      const savedPrefs = userPreferencesService.loadFormListPreferences(user.id, formId);
+
+      if (savedPrefs) {
+        console.log('📥 [Preferences] Loading saved preferences:', savedPrefs);
+
+        // Restore saved preferences
+        if (savedPrefs.sortBy) setSortBy(savedPrefs.sortBy);
+        if (savedPrefs.sortOrder) setSortOrder(savedPrefs.sortOrder);
+        if (savedPrefs.selectedDateField) setSelectedDateField(savedPrefs.selectedDateField);
+        if (savedPrefs.month) setSelectedMonth(savedPrefs.month === 'all' ? 'all' : parseInt(savedPrefs.month));
+        if (savedPrefs.year) setSelectedYear(savedPrefs.year === 'all' ? 'all' : parseInt(savedPrefs.year));
+        if (savedPrefs.itemsPerPage) setItemsPerPage(savedPrefs.itemsPerPage);
+      } else {
+        console.log('ℹ️ [Preferences] No saved preferences, using defaults');
+      }
+    }
+  }, [user?.id, formId]); // Only run once when user/form changes
+
+  // ✅ v0.7.38: Auto-save preferences when they change
+  useEffect(() => {
+    if (user?.id && formId && form) {
+      // Don't save on initial render (wait for user interaction)
+      const timer = setTimeout(() => {
+        const prefs = {
+          sortBy,
+          sortOrder,
+          selectedDateField,
+          month: selectedMonth === 'all' ? 'all' : String(selectedMonth),
+          year: selectedYear === 'all' ? 'all' : String(selectedYear),
+          itemsPerPage
+        };
+
+        userPreferencesService.saveFormListPreferences(user.id, formId, prefs);
+      }, 500); // Debounce: save 500ms after last change
+
+      return () => clearTimeout(timer);
+    }
+  }, [user?.id, formId, form, sortBy, sortOrder, selectedDateField, selectedMonth, selectedYear, itemsPerPage]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -93,34 +142,49 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
       }
       setForm(formData);
 
-      // Load submissions from API first, fallback to LocalStorage
-      // ✅ FIX: Request ALL submissions by passing limit=10000 (backend max is 100, but we'll paginate in frontend)
+      // ✅ OPTIMIZED: Load only current page data with server-side filtering
+      // This prevents loading all 750+ items at once, improving performance significantly
       let submissionsData = [];
+      let totalCount = 0;
+      let paginationInfo = null;
+
       try {
-        // Make multiple requests if needed to get all submissions
-        let page = 1;
-        let allSubmissions = [];
-        let hasMore = true;
+        // ✅ v0.7.36: Build comprehensive filter parameters for server-side processing
+        const filters = {
+          page: currentPage,
+          limit: itemsPerPage
+        };
 
-        while (hasMore) {
-          const response = await apiClient.listSubmissions(formId, { page, limit: 100 });
-          const pageSubmissions = response.data?.submissions || response.data || [];
-          allSubmissions = [...allSubmissions, ...pageSubmissions];
-
-          // Check if there are more pages
-          const totalPages = response.data?.totalPages || 1;
-          hasMore = page < totalPages;
-          page++;
-
-          console.log(`✅ Loaded page ${page - 1} with ${pageSubmissions.length} submissions`);
+        // Add month/year filter if selected
+        if (selectedMonth !== null || selectedYear !== null) {
+          filters.month = selectedMonth;
+          filters.year = selectedYear;
+          // ✅ NEW v0.7.36: Add dateField parameter for custom date field filtering
+          filters.dateField = selectedDateField || '_auto_date';
         }
 
-        submissionsData = allSubmissions;
-        console.log('✅ All submissions loaded from API:', submissionsData.length, 'items');
-        if (submissionsData.length > 0) {
-          console.log('📦 First submission structure:', submissionsData[0]);
-          console.log('📦 First submission JSON:', JSON.stringify(submissionsData[0], null, 2));
+        // ✅ NEW v0.7.36: Add search filter
+        if (searchTerm && searchTerm.trim()) {
+          filters.search = searchTerm.trim();
         }
+
+        // ✅ NEW v0.7.36: Add sorting parameters
+        // Convert sortBy from UI field (including _auto_date) to backend field
+        if (sortBy === '_auto_date' || sortBy === '_auto_time') {
+          filters.sortBy = 'submittedAt'; // Backend uses submittedAt for both date and time sorting
+        } else {
+          filters.sortBy = sortBy;
+        }
+        filters.sortOrder = sortOrder;
+
+        console.log('📡 Requesting data with filters:', filters);
+
+        const response = await apiClient.listSubmissions(formId, filters);
+        submissionsData = response.data?.submissions || response.data || [];
+        paginationInfo = response.data?.pagination || {};
+        totalCount = paginationInfo.total || submissionsData.length;
+
+        console.log(`✅ Loaded ${submissionsData.length} items (Page ${currentPage}, Total: ${totalCount})`);
       } catch (apiError) {
         console.error('Failed to load submissions from API:', apiError);
         clearTimeout(loadingTimer);
@@ -133,6 +197,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
       }
 
       setSubmissions(submissionsData);
+      setTotalItems(totalCount); // Store total count for pagination
 
       // Clear loading toast on success
       clearTimeout(loadingTimer);
@@ -150,7 +215,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
     } finally {
       setLoading(false);
     }
-  }, [formId]); // ✅ FIX v0.7.11: Remove toast from dependencies - it's a stable context reference
+  }, [formId, currentPage, itemsPerPage, selectedMonth, selectedYear, searchTerm, sortBy, sortOrder, selectedDateField]); // ✅ v0.7.36: Added search, sort, and dateField dependencies
 
   // Load form and submissions data
   useEffect(() => {
@@ -182,48 +247,86 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
     }
   }, [form, selectedDateField]);
 
-  // Get table display fields (max 5 fields that are marked to show in table)
-  // If less than 5 fields are selected, automatically add date and time columns to fill up to 5 total
+  // Get table display fields based on showInTable setting
+  // ✅ FIX: Use showInTable setting from form definition, with fallback to submission data
   const getTableFields = () => {
-    if (!form) return [];
+    if (!form || !form.fields) return [];
 
-    // ✅ FIX: Only show main form fields, exclude sub-form fields
-    // Support both camelCase and snake_case for compatibility
-    const selectedFields = form.fields
-      .filter(field => (field.showInTable === true || field.show_in_table === true) && !field.subFormId) // Exclude sub-form fields
-      .slice(0, 5);
+    // Step 1: Get fields with showInTable = true
+    const fieldsMarkedForTable = form.fields
+      .filter(field => field.showInTable === true && !field.subFormId)
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map(field => ({
+        id: field.id,
+        title: field.title,
+        type: field.type,
+        options: field.options || {}
+      }));
 
-    // If we have less than 5 fields, add automatic columns to fill up to 5 total
-    if (selectedFields.length < 5) {
-      const autoColumns = [];
-      const availableSlots = 5 - selectedFields.length;
+    console.log('📋 Fields with showInTable=true:', fieldsMarkedForTable.length);
 
-      // Add auto columns based on available slots
-      if (availableSlots >= 1) {
-        // Add date column first
-        autoColumns.push({
-          id: '_auto_date',
-          title: 'วันที่บันทึกข้อมูล',
-          type: 'auto_date',
-          isAutoColumn: true
-        });
+    // Step 2: If we have fields marked for table, use them (max 5)
+    if (fieldsMarkedForTable.length > 0) {
+      const selectedFields = fieldsMarkedForTable.slice(0, 5);
+
+      // If less than 5 fields, add auto columns to fill up
+      if (selectedFields.length < 5) {
+        const availableSlots = 5 - selectedFields.length;
+        const autoColumns = [];
+
+        if (availableSlots >= 1) {
+          autoColumns.push({
+            id: '_auto_date',
+            title: 'วันที่บันทึกข้อมูล',
+            type: 'auto_date',
+            isAutoColumn: true
+          });
+        }
+
+        if (availableSlots >= 2) {
+          autoColumns.push({
+            id: '_auto_time',
+            title: 'เวลาบันทึก',
+            type: 'auto_time',
+            isAutoColumn: true
+          });
+        }
+
+        return [...selectedFields, ...autoColumns];
       }
 
-      if (availableSlots >= 2) {
-        // Add time column second
-        autoColumns.push({
-          id: '_auto_time',
-          title: 'เวลาบันทึก',
-          type: 'auto_time',
-          isAutoColumn: true
-        });
-      }
-
-      // Return auto columns first, then selected fields (total = 5 or less)
-      return [...autoColumns, ...selectedFields];
+      return selectedFields;
     }
 
-    return selectedFields;
+    // Step 3: Fallback - No fields marked with showInTable, use first 5 fields from form
+    console.log('⚠️  No fields with showInTable=true, using first 5 fields');
+    const fallbackFields = form.fields
+      .filter(field => !field.subFormId)
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .slice(0, 3)
+      .map(field => ({
+        id: field.id,
+        title: field.title,
+        type: field.type,
+        options: field.options || {}
+      }));
+
+    // Add auto columns
+    return [
+      {
+        id: '_auto_date',
+        title: 'วันที่บันทึกข้อมูล',
+        type: 'auto_date',
+        isAutoColumn: true
+      },
+      {
+        id: '_auto_time',
+        title: 'เวลาบันทึก',
+        type: 'auto_time',
+        isAutoColumn: true
+      },
+      ...fallbackFields
+    ];
   };
 
   // Format submission data for display
@@ -232,18 +335,16 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
     return submissionService.formatSubmissionForDisplay(submission, form);
   };
 
-  // Get available years from submissions data
+  // ✅ v0.7.36: Use fixed year range instead of client-side data
+  // Improved performance by not iterating through submissions
   const getAvailableYears = () => {
-    const years = new Set();
-    submissions.forEach(sub => {
-      if (sub.submittedAt) {
-        const date = new Date(sub.submittedAt);
-        if (!isNaN(date.getTime())) {
-          years.add(date.getFullYear());
-        }
-      }
-    });
-    return Array.from(years).sort((a, b) => b - a); // Newest first
+    const currentYear = new Date().getFullYear();
+    const startYear = 2024; // System start year
+    const years = [];
+    for (let year = currentYear; year >= startYear; year--) {
+      years.push(year);
+    }
+    return years;
   };
 
   const availableYears = getAvailableYears();
@@ -262,110 +363,53 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
     );
   };
 
-  // Filter submissions based on month, year, and search term
-  const filteredSubmissions = submissions.filter(submission => {
-    // Month/Year filter based on selected date field
-    if (selectedDateField) {
-      let dateValue = null;
+  // ✅ IMPROVED: Check if submission is mostly empty (based on table fields only)
+  const isSubmissionMostlyEmpty = (submission) => {
+    if (!form || !submission) return false;
 
-      // Get date value based on selected field
-      if (selectedDateField === '_auto_date') {
-        // Use submission date
-        dateValue = submission.submittedAt;
-      } else {
-        // Use custom date field
-        const formattedSubmission = formatSubmissionForDisplay(submission);
-        const fieldData = formattedSubmission.fields[selectedDateField];
-        dateValue = fieldData?.rawValue || fieldData?.value;
-      }
-
-      // Parse and filter by date
-      if (dateValue) {
-        const date = new Date(dateValue);
-        if (!isNaN(date.getTime())) {
-          const subMonth = date.getMonth() + 1; // 1-12
-          const subYear = date.getFullYear();
-
-          // If selectedMonth is not null, filter by selected month
-          if (selectedMonth !== null && subMonth !== selectedMonth) {
-            return false;
-          }
-
-          // If selectedYear is not null, filter by selected year
-          if (selectedYear !== null && subYear !== selectedYear) {
-            return false;
-          }
-        } else {
-          // Invalid date - exclude from results when filtering
-          if (selectedMonth !== null || selectedYear !== null) {
-            return false;
-          }
-        }
-      } else {
-        // No date value - exclude from results when filtering
-        if (selectedMonth !== null || selectedYear !== null) {
-          return false;
-        }
-      }
-    }
-
-    // Search term filter
-    if (!searchTerm) return true;
+    // Get the fields that are actually displayed in the table
+    const displayedFields = getTableFields();
+    if (displayedFields.length === 0) return false;
 
     const formattedSubmission = formatSubmissionForDisplay(submission);
-    const searchString = [
-      formattedSubmission.documentNumber,
-      ...Object.values(formattedSubmission.fields).map(field => field.value)
-    ].join(' ').toLowerCase();
 
-    return searchString.includes(searchTerm.toLowerCase());
-  });
+    let emptyCount = 0;
+    displayedFields.forEach(field => {
+      let value;
 
-  // Sort filtered submissions
-  const sortedSubmissions = [...filteredSubmissions].sort((a, b) => {
-    let aValue, bValue;
-
-    // Handle auto columns
-    if (sortBy === '_auto_date' || sortBy === '_auto_time') {
-      aValue = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
-      bValue = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
-    } else {
-      // Get field values
-      const aFormatted = formatSubmissionForDisplay(a);
-      const bFormatted = formatSubmissionForDisplay(b);
-
-      const aField = aFormatted.fields[sortBy];
-      const bField = bFormatted.fields[sortBy];
-
-      aValue = aField?.value || '';
-      bValue = bField?.value || '';
-
-      // Convert to numbers if both are numeric
-      const aNum = parseFloat(aValue);
-      const bNum = parseFloat(bValue);
-      if (!isNaN(aNum) && !isNaN(bNum)) {
-        aValue = aNum;
-        bValue = bNum;
+      // Handle auto columns
+      if (field.isAutoColumn) {
+        value = submission.submittedAt;
+      } else {
+        const fieldData = formattedSubmission.fields[field.id];
+        value = fieldData?.value;
       }
-    }
 
-    // Compare values
-    if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-    if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-    return 0;
-  });
+      // Consider empty if: null, undefined, empty string, or "-"
+      if (value === null || value === undefined || value === '' || value === '-') {
+        emptyCount++;
+      }
+    });
 
-  // Calculate pagination
-  const totalItems = sortedSubmissions.length;
+    // Return true if >70% of displayed fields are empty (stricter threshold)
+    return (emptyCount / displayedFields.length) > 0.7;
+  };
+
+  // ✅ v0.7.36: Backend returns filtered, sorted, and paginated data
+  // Only apply client-side hideEmptyRows filter (optional UI enhancement)
+  const displaySubmissions = hideEmptyRows
+    ? submissions.filter(submission => !isSubmissionMostlyEmpty(submission))
+    : submissions;
+
+  // ✅ v0.7.36 FIX: Always use backend's totalItems - it's the source of truth
+  // Do NOT adjust based on displaySubmissions.length (that's only current page!)
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedSubmissions = sortedSubmissions.slice(startIndex, endIndex);
+  const paginatedSubmissions = displaySubmissions;
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedMonth, selectedYear, sortBy, sortOrder, searchTerm]);
+  }, [selectedMonth, selectedYear, sortBy, sortOrder, searchTerm, hideEmptyRows]);
 
   const handleViewSubmission = (submissionId) => {
     if (onViewSubmission) {
@@ -1087,6 +1131,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                       setShowSortModal(false);
                     }}
                     className="px-2.5 py-1.5 text-xs flex items-center gap-1.5 min-w-fit"
+                    title={`กรองตามเดือนจาก: ${selectedDateField === '_auto_date' ? 'วันที่บันทึกข้อมูล' : form.fields?.find(f => f.id === selectedDateField)?.title || 'ฟิลด์วันที่'}`}
                   >
                     <FontAwesomeIcon icon={faCalendar} className="text-primary" />
                     <span>{selectedMonth === null ? 'ทั้งหมด' : monthNames[selectedMonth - 1]}</span>
@@ -1108,9 +1153,9 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                           setSelectedMonth(null);
                           setShowMonthDropdown(false);
                         }}
-                        className={`w-full px-2.5 py-1.5 text-xs text-left hover:bg-primary/10 transition-colors border-b border-border/20 ${
+                        className={'w-full px-2.5 py-1.5 text-xs text-left hover:bg-primary/10 transition-colors border-b border-border/20 ' + (
                           selectedMonth === null ? 'bg-primary/20 text-primary font-semibold' : 'text-foreground'
-                        }`}
+                        )}
                       >
                         ทั้งหมด
                       </button>
@@ -1121,9 +1166,9 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                             setSelectedMonth(index + 1);
                             setShowMonthDropdown(false);
                           }}
-                          className={`w-full px-2.5 py-1.5 text-xs text-left hover:bg-primary/10 transition-colors ${index < monthNames.length - 1 ? 'border-b border-border/20' : ''} ${
+                          className={'w-full px-2.5 py-1.5 text-xs text-left hover:bg-primary/10 transition-colors ' + (index < monthNames.length - 1 ? 'border-b border-border/20 ' : '') + (
                             selectedMonth === index + 1 ? 'bg-primary/20 text-primary font-semibold' : 'text-foreground'
-                          }`}
+                          )}
                         >
                           {month}
                         </button>
@@ -1143,6 +1188,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                       setShowSortModal(false);
                     }}
                     className="px-2.5 py-1.5 text-xs flex items-center gap-1.5 min-w-fit"
+                    title={`กรองตามปีจาก: ${selectedDateField === '_auto_date' ? 'วันที่บันทึกข้อมูล' : form.fields?.find(f => f.id === selectedDateField)?.title || 'ฟิลด์วันที่'}`}
                   >
                     <FontAwesomeIcon icon={faCalendarAlt} className="text-primary" />
                     <span>{selectedYear === null ? 'ทั้งหมด' : selectedYear}</span>
@@ -1164,9 +1210,9 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                           setSelectedYear(null);
                           setShowYearDropdown(false);
                         }}
-                        className={`w-full px-3 py-2 text-xs text-left hover:bg-primary/10 transition-colors border-b border-border/20 ${
+                        className={'w-full px-3 py-2 text-xs text-left hover:bg-primary/10 transition-colors border-b border-border/20 ' + (
                           selectedYear === null ? 'bg-primary/20 text-primary font-semibold' : 'text-foreground'
-                        }`}
+                        )}
                       >
                         ทั้งหมด
                       </button>
@@ -1177,9 +1223,9 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                             setSelectedYear(year);
                             setShowYearDropdown(false);
                           }}
-                          className={`w-full px-3 py-2 text-xs text-left hover:bg-primary/10 transition-colors ${
+                          className={'w-full px-3 py-2 text-xs text-left hover:bg-primary/10 transition-colors ' + (
                             selectedYear === year ? 'bg-primary/20 text-primary font-semibold' : 'text-foreground'
-                          }`}
+                          )}
                         >
                           {year}
                         </button>
@@ -1214,88 +1260,6 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                   </span>
                   <FontAwesomeIcon icon={faChevronDown} className="text-xs opacity-60" />
                 </GlassButton>
-
-                  {/* Sort Dropdown Modal - Centered */}
-                  {showSortModal && (
-                    <>
-                      {/* Backdrop overlay */}
-                      <div
-                        className="fixed inset-0 bg-black/60 z-[100]"
-                        onClick={() => setShowSortModal(false)}
-                      />
-                      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 border-2 border-primary rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[101] w-[360px] max-h-[500px] overflow-y-auto">
-                        <div className="p-3">
-                          <div className="grid grid-cols-2 gap-2">
-                            {/* Auto columns */}
-                            <button
-                              onClick={() => {
-                                setSortBy('_auto_date');
-                                setShowSortModal(false);
-                              }}
-                              className={`px-3 py-2.5 text-sm text-left rounded border transition-all ${
-                                sortBy === '_auto_date'
-                                  ? 'bg-primary/20 border-primary text-primary font-semibold'
-                                  : 'bg-background border-border hover:border-primary/50 hover:bg-primary/5'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <FontAwesomeIcon icon={faCalendar} className="text-primary text-xs" />
-                                <span className="truncate">วันที่</span>
-                                {sortBy === '_auto_date' && (
-                                  <FontAwesomeIcon icon={faCheck} className="ml-auto text-xs" />
-                                )}
-                              </div>
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setSortBy('_auto_time');
-                                setShowSortModal(false);
-                              }}
-                              className={`px-3 py-2.5 text-sm text-left rounded border transition-all ${
-                                sortBy === '_auto_time'
-                                  ? 'bg-primary/20 border-primary text-primary font-semibold'
-                                  : 'bg-background border-border hover:border-primary/50 hover:bg-primary/5'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <FontAwesomeIcon icon={faCalendarAlt} className="text-primary text-xs" />
-                                <span className="truncate">เวลา</span>
-                                {sortBy === '_auto_time' && (
-                                  <FontAwesomeIcon icon={faCheck} className="ml-auto text-xs" />
-                                )}
-                              </div>
-                            </button>
-
-                            {/* Form fields */}
-                            {form.fields && form.fields
-                              .filter(field => !field.subFormId && field.type !== 'file_upload' && field.type !== 'image_upload')
-                              .map(field => (
-                                <button
-                                  key={field.id}
-                                  onClick={() => {
-                                    setSortBy(field.id);
-                                    setShowSortModal(false);
-                                  }}
-                                  className={`px-3 py-2.5 text-sm text-left rounded border transition-all ${
-                                    sortBy === field.id
-                                      ? 'bg-primary/20 border-primary text-primary font-semibold'
-                                      : 'bg-background border-border hover:border-primary/50 hover:bg-primary/5'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <span className="truncate">{field.title}</span>
-                                    {sortBy === field.id && (
-                                      <FontAwesomeIcon icon={faCheck} className="ml-auto flex-shrink-0 text-xs" />
-                                    )}
-                                  </div>
-                                </button>
-                              ))}
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </div>
 
                 {/* Sort Order Toggle */}
@@ -1308,13 +1272,135 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                   <span className="hidden sm:inline">{sortOrder === 'asc' ? '↑ น้อย→มาก' : '↓ มาก→น้อย'}</span>
                   <span className="sm:hidden">{sortOrder === 'asc' ? '↑' : '↓'}</span>
                 </GlassButton>
+
+                {/* Divider */}
+                <div className="h-5 w-px bg-border"></div>
+
+                {/* ✅ NEW: Hide Empty Rows Checkbox */}
+                <label
+                  className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer hover:bg-primary/5 rounded transition-colors"
+                  title="ซ่อนแถวที่มีข้อมูลว่างมากกว่า 50%"
+                >
+                  <input
+                    type="checkbox"
+                    checked={hideEmptyRows}
+                    onChange={(e) => setHideEmptyRows(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded border-2 border-primary/40 text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                  />
+                  <FontAwesomeIcon icon={faEyeSlash} className="text-primary text-xs" />
+                  <span className="text-xs text-foreground/80 hidden sm:inline">ซ่อนข้อมูลว่าง</span>
+                </label>
               </div>
             </GlassCard>
           </motion.div>
         )}
 
+        {/* Sort Modal - OUTSIDE of GlassCard container */}
+        {showSortModal && (
+          <div
+            className="fixed inset-0 z-[9999] flex items-start justify-center pt-32 bg-black/20"
+            onClick={() => {
+              console.log('🔍 Backdrop clicked');
+              setShowSortModal(false);
+            }}
+          >
+            {/* Modal content - Fixed width 360px, responsive height */}
+            <div
+              className="relative bg-white dark:bg-gray-800 border-2 border-primary rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] w-[360px]"
+              onClick={(e) => {
+                console.log('🔍 Modal content clicked');
+                e.stopPropagation();
+              }}
+            >
+              {/* Scrollable content area with responsive height */}
+              <div className="p-3 max-h-[60vh] sm:max-h-[70vh] md:max-h-[80vh] overflow-y-auto">
+                <style>{`
+                  .sort-modal-button {
+                    transition: background-color 150ms, border-color 150ms, transform 150ms;
+                  }
+                  .sort-modal-button:hover:not(.selected) {
+                    background-color: rgba(249, 115, 22, 0.15) !important;
+                    border-color: rgba(249, 115, 22, 1) !important;
+                    transform: scale(1.02) !important;
+                  }
+                  .dark .sort-modal-button:hover:not(.selected) {
+                    background-color: rgba(249, 115, 22, 0.15) !important;
+                  }
+                `}</style>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Auto columns */}
+                  <button
+                    onClick={() => {
+                      setSortBy('_auto_date');
+                      setShowSortModal(false);
+                    }}
+                    className={'sort-modal-button px-3 py-2.5 text-sm text-left rounded border ' + (
+                      sortBy === '_auto_date'
+                        ? 'selected bg-primary/20 border-primary text-primary font-semibold'
+                        : 'bg-background border-border'
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FontAwesomeIcon icon={faCalendar} className="text-primary text-xs" />
+                      <span className="truncate">วันที่</span>
+                      {sortBy === '_auto_date' && (
+                        <FontAwesomeIcon icon={faCheck} className="ml-auto text-xs" />
+                      )}
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setSortBy('_auto_time');
+                      setShowSortModal(false);
+                    }}
+                    className={'sort-modal-button px-3 py-2.5 text-sm text-left rounded border ' + (
+                      sortBy === '_auto_time'
+                        ? 'selected bg-primary/20 border-primary text-primary font-semibold'
+                        : 'bg-background border-border'
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FontAwesomeIcon icon={faCalendarAlt} className="text-primary text-xs" />
+                      <span className="truncate">เวลา</span>
+                      {sortBy === '_auto_time' && (
+                        <FontAwesomeIcon icon={faCheck} className="ml-auto text-xs" />
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Form fields - show all main form fields */}
+                  {form && form.fields && form.fields
+                    .filter(field => !field.subFormId)
+                    .map(field => (
+                      <button
+                        key={field.id}
+                        onClick={() => {
+                          setSortBy(field.id);
+                          setShowSortModal(false);
+                        }}
+                        className={'sort-modal-button px-3 py-2.5 text-sm text-left rounded border ' + (
+                          sortBy === field.id
+                            ? 'selected bg-primary/20 border-primary text-primary font-semibold'
+                            : 'bg-background border-border'
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="truncate">{field.title}</span>
+                          {sortBy === field.id && (
+                            <FontAwesomeIcon icon={faCheck} className="ml-auto flex-shrink-0 text-xs" />
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Pagination Controls (Top) */}
-        {!loading && sortedSubmissions.length > 0 && (
+        {!loading && totalItems > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1324,7 +1410,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
             <PaginationControls
               currentPage={currentPage}
               totalPages={totalPages}
-              totalItems={sortedSubmissions.length}
+              totalItems={totalItems}
               itemsPerPage={itemsPerPage}
               onPageChange={(page) => setCurrentPage(page)}
               onItemsPerPageChange={(perPage) => {
@@ -1337,23 +1423,9 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
         {/* Enhanced Submissions Table - Only Selected Fields */}
         {/* ✅ FIX v0.7.11: Don't hide content during loading - show when ready */}
-        {!loading && sortedSubmissions.length > 0 ? (
+        {!loading && totalItems > 0 ? (
           <div>
             <GlassCard className="glass-container">
-              <style>{`
-                /* ✅ Simple hover effect - only change background color */
-                .submission-table-override tbody tr {
-                  cursor: pointer;
-                }
-
-                .submission-table-override tbody tr:hover {
-                  background-color: rgb(229 231 235) !important;
-                }
-
-                .dark .submission-table-override tbody tr:hover {
-                  background-color: rgb(55 65 81) !important;
-                }
-              `}</style>
               <div className="overflow-x-auto">
                 <table data-testid="submission-list" className="w-full submission-table-override">
                   <thead>
@@ -1369,15 +1441,26 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                     {paginatedSubmissions.map((submission, index) => {
                       const formattedSubmission = formatSubmissionForDisplay(submission);
 
+                      // ✅ DEBUG: Log formatted data for first row
+                      if (index === 0) {
+                        console.log('🔍 First submission formatted data:', {
+                          submissionId: submission.id,
+                          formattedFields: formattedSubmission.fields,
+                          fieldKeys: Object.keys(formattedSubmission.fields || {}),
+                          fieldCount: Object.keys(formattedSubmission.fields || {}).length
+                        });
+                        console.log('🔍 Table fields expecting:', tableFields.map(f => ({ id: f.id, title: f.title })));
+                      }
+
                       return (
                         <tr
                           key={submission.id}
                           data-testid="submission-row"
-                          className={`border-b border-border/20 cursor-pointer group relative ${
+                          className={'border-b border-border/20 cursor-pointer group relative ' + (
                             selectedSubmissionId === submission.id && isOpen
                               ? 'bg-muted/30'
                               : ''
-                          }`}
+                          )}
                           onClick={() => onViewSubmission && onViewSubmission(submission.id)}
                         >
                           {tableFields.map((field, fieldIndex) => {
@@ -1393,6 +1476,11 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                               }
                             } else {
                               fieldData = formattedSubmission.fields[field.id];
+
+                              // ✅ DEBUG: Log field data lookup for first row
+                              if (index === 0) {
+                                console.log(`🔍 Looking up field "${field.title}" (${field.id}):`, fieldData);
+                              }
                             }
 
                             const isFirst = fieldIndex === 0;
@@ -1400,7 +1488,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                             return (
                               <td
                                 key={field.id}
-                                className={`py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center min-h-[56px] sm:min-h-[64px]`}
+                                className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center min-h-[56px] sm:min-h-[64px]"
                               >
                                 {renderFieldValue(fieldData, field)}
                               </td>
@@ -1424,7 +1512,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
               <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalPages}
-                totalItems={sortedSubmissions.length}
+                totalItems={totalItems}
                 itemsPerPage={itemsPerPage}
                 onPageChange={(page) => setCurrentPage(page)}
                 onItemsPerPageChange={(perPage) => {
@@ -1485,11 +1573,11 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                       setSelectedDateField('_auto_date');
                       setShowDateFieldModal(false);
                     }}
-                    className={`w-full px-4 py-3 text-left rounded-lg border transition-all ${
+                    className={'w-full px-4 py-3 text-left rounded-lg border transition-all ' + (
                       selectedDateField === '_auto_date'
                         ? 'bg-primary/20 border-primary text-primary font-semibold'
                         : 'bg-background border-border hover:border-primary/50 hover:bg-primary/5'
-                    }`}
+                    )}
                   >
                     <div className="flex items-center gap-3">
                       <FontAwesomeIcon icon={faCalendar} className="text-primary" />
@@ -1511,11 +1599,11 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                         setSelectedDateField(field.id);
                         setShowDateFieldModal(false);
                       }}
-                      className={`w-full px-4 py-3 text-left rounded-lg border transition-all ${
+                      className={'w-full px-4 py-3 text-left rounded-lg border transition-all ' + (
                         selectedDateField === field.id
                           ? 'bg-primary/20 border-primary text-primary font-semibold'
                           : 'bg-background border-border hover:border-primary/50 hover:bg-primary/5'
-                      }`}
+                      )}
                     >
                       <div className="flex items-center gap-3">
                         <FontAwesomeIcon
