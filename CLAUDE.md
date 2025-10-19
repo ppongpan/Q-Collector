@@ -2,7 +2,7 @@
 
 **Enterprise Form Builder & Data Collection System**
 
-## Version: 0.7.41-dev (2025-10-19)
+## Version: 0.7.42-dev (2025-10-19)
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection
@@ -67,7 +67,49 @@
 
 ---
 
-## Latest Updates - v0.7.41-dev (2025-10-19)
+## Latest Updates - v0.7.42-dev (2025-10-19)
+
+### ✅ Number Field Formatting Options
+**Status**: ✅ Complete and Working
+**Git Commit**: 646aa96 - "feat: Number field formatting options in Form Builder v0.7.42-dev"
+
+**Features Implemented:**
+- ✅ User-configurable decimal formatting for number fields
+- ✅ 6 format options: No format, Integer, Decimal 1-4 places
+- ✅ Applied to both main forms and sub-forms
+- ✅ Uses Thai number format (comma separators)
+- ✅ Backward compatible with existing forms
+
+**Format Options:**
+1. **ไม่จัดรูปแบบ** - Raw value without formatting
+2. **จำนวนเต็ม (xxx,xxx)** - Integer with commas (e.g., 1,234)
+3. **ทศนิยม 1 ตำแหน่ง (xxx,xxx.x)** - 1 decimal place (e.g., 1,234.5)
+4. **ทศนิยม 2 ตำแหน่ง (xxx,xxx.xx)** - 2 decimal places (e.g., 1,234.56)
+5. **ทศนิยม 3 ตำแหน่ง (xxx,xxx.xxx)** - 3 decimal places (e.g., 1,234.567)
+6. **ทศนิยม 4 ตำแหน่ง (xxx,xxx.xxxx)** - 4 decimal places (e.g., 1,234.5678)
+
+**Implementation:**
+- **Form Builder UI**: Dropdown selector in number field settings (EnhancedFormBuilder.jsx lines 607-644)
+- **Storage**: Configuration saved in `field.options.decimalPlaces` (0-4 or undefined)
+- **Formatter Utility**: Enhanced `formatNumberByContext()` to support decimalPlaces (numberFormatter.js lines 145-181)
+- **Display Components**: Updated FormSubmissionList, SubmissionDetail, SubFormDetail to pass field.options
+
+**Files Modified:**
+- `src/components/EnhancedFormBuilder.jsx` - Added format selector UI
+- `src/components/FormSubmissionList.jsx` - Pass field.options to formatter (line 678)
+- `src/components/SubmissionDetail.jsx` - Pass field.options to formatter (lines 669, 1739)
+- `src/components/SubFormDetail.jsx` - Pass field.options to formatter (line 403)
+- `src/utils/numberFormatter.js` - Enhanced formatNumberByContext function
+
+**Testing:**
+- ✅ Build successful (no errors)
+- ✅ Visual feedback in Form Builder showing example format
+- ✅ All submission views updated consistently
+- ✅ Works for both main forms and sub-forms
+
+---
+
+## Previous Updates - v0.7.41-dev (2025-10-19)
 
 ### ✅ Formula Validation & Toast Alert System
 **Status**: ✅ Complete and Working
@@ -468,14 +510,29 @@ TELEGRAM_GROUP_ID=[your-group-id]
 
 ## Version History
 
-**Current**: v0.7.36-dev (2025-10-19) - Custom Date Field Filtering & Sorting
-**Previous**: v0.7.35-dev → v0.7.30-dev → v0.7.20-dev → v0.7.15-dev
+**Current**: v0.7.42-dev (2025-10-19) - Number Field Formatting Options
+**Previous**: v0.7.41-dev → v0.7.40-dev → v0.7.36-dev → v0.7.35-dev
+
+**Key Changes in v0.7.42:**
+- User-configurable decimal formatting for number fields (6 options)
+- Applied to both main forms and sub-forms
+- Uses Thai number format (comma separators)
+- Backward compatible with existing forms
+
+**Key Changes in v0.7.41:**
+- Formula validation with toast error messages
+- Real-time and save-time validation
+- Updated formula syntax guidance
+
+**Key Changes in v0.7.40:**
+- Field visibility system with conditional formulas
+- FormulaEngine integration (Google AppSheet-compatible)
+- Three-state visibility: always show, always hide, conditional
 
 **Key Changes in v0.7.36:**
 - Custom date field filtering (select any date/datetime field for month/year filters)
 - EAV model sorting support (LEFT JOIN approach for custom fields)
 - Fixed Sequelize "Submission->Submission" error with separate count/findAll
-- Improved pagination accuracy with complex JOINs
 
 **Full version history**: See `CLAUDE.md.backup-2025-10-16`
 **Detailed documentation**: See individual completion files in project root
@@ -484,6 +541,6 @@ TELEGRAM_GROUP_ID=[your-group-id]
 
 ## License
 
-**Internal Use** - Q-Collector Enterprise v0.7.36-dev
-**Last Updated**: 2025-10-19 09:30:00 UTC+7
+**Internal Use** - Q-Collector Enterprise v0.7.42-dev
+**Last Updated**: 2025-10-19 17:30:00 UTC+7
 **Status**: ✅ OPERATIONAL & READY FOR TESTING
