@@ -2,185 +2,345 @@
 
 **Enterprise Form Builder & Data Collection System**
 
-## Version: 0.7.30-dev (2025-10-16)
+## Version: 0.7.40-dev (2025-10-19)
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection
-**Status:** 🟢 Production Ready
+**Status:** 🟢 Production Ready & Testing
+
+---
+
+## 🎯 Current Status (2025-10-19)
+
+### Servers Running
+- ✅ **Backend**: Port 5000 (Q-Collector API v0.7.3-dev)
+- ✅ **Frontend**: Port 3000 (q-collector v0.7.17-dev)
+- ✅ **Docker**: PostgreSQL 16 + Redis 7 + MinIO
+
+### Recent Activity
+- User "pongpanp" logged in with 2FA (16:42:03)
+- Token refresh successful (7-day sessions working)
+- Form submissions loaded with pagination
+- All services operational
+
+**Access Points:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5000/api/v1
+- API Docs: http://localhost:5000/api/v1/docs
+
+---
 
 ## Core Features
 
-✅ Form Builder (17 field types, drag-and-drop, conditional visibility)
-✅ Full CRUD Operations (dual-write system, edit pages, validation)
-✅ Navigation System (breadcrumbs, deep linking, URL parameters)
-✅ Modern UI (ShadCN, glass morphism, animated buttons, toast system)
-✅ Sub-Forms (nested forms, drag-drop ordering, dynamic tables)
-✅ Telegram Integration (notifications, field ordering, custom templates)
-✅ Thai Localization (province selector, phone/date formatting)
-✅ User Management (RBAC, 8 roles, 2FA, trusted devices)
-✅ Dynamic Tables (auto-creation, Thai-English translation, PowerBI ready)
-✅ MyMemory Translation (Free API, real-time Thai→English, excellent quality)
-✅ File Management (MinIO, thumbnails, presigned URLs, smart downloads)
-✅ Smart Token Redirect (return to original page after re-login)
-✅ Mobile-Friendly Tables (56-64px rows, adaptive fonts)
-✅ Token Refresh Working (7-day sessions, no false logouts)
-✅ ngrok Mobile Testing (HTTPS tunnel, React proxy pattern)
-✅ Image Stability (React.memo prevents unnecessary re-renders)
-✅ Navigation Arrows Working (md: breakpoint, visible on tablets+)
-✅ Portrait Images Optimized (50% size reduction, max-h-[35vh])
+### ✅ Form Management
+- 17 field types (short_answer, paragraph, email, phone, number, url, file_upload, image_upload, date, time, datetime, multiple_choice, rating, slider, lat_long, province, factory)
+- Drag-and-drop builder with conditional visibility
+- Full CRUD operations with dual-write system (EAV + Dynamic Tables)
+- Sub-forms support with nested relationships
+
+### ✅ User Experience
+- Modern UI: ShadCN components, glass morphism, animated buttons
+- Mobile-first responsive design (8px grid, 44px+ touch targets)
+- Thai localization (province selector, phone/date formatting)
+- Toast notification system with enhanced UX
+- Date field filtering with auto-detection
+
+### ✅ Authentication & Security
+- RBAC with 8 roles (super_admin, admin, moderator, customer_service, sale, marketing, inventory, general_user)
+- 2FA authentication with trusted devices (24-hour cookies)
+- Token refresh working (7-day sessions, no false logouts)
+- Smart token redirect (return to original page after re-login)
+
+### ✅ Integrations
+- **Telegram**: Notifications, field ordering, custom templates (Bot: "QKnowledgebot")
+- **File Management**: MinIO integration with thumbnails, presigned URLs, smart downloads
+- **Translation**: MyMemory API for Thai→English (real-time, excellent quality)
+- **Real-time**: WebSocket service for live updates
+
+### ✅ Performance Optimizations
+- Image stability (React.memo prevents unnecessary re-renders)
+- Progressive loading architecture (95% bandwidth reduction target)
+- Mobile-friendly tables (56-64px rows, adaptive fonts)
+- Navigation arrows optimized (md: breakpoint, visible on tablets+)
+- Portrait images optimized (50% size reduction, max-h-[35vh])
+- Token refresh working correctly (no false logouts)
+
+---
+
+## Latest Updates - v0.7.40-dev (2025-10-19)
+
+### ✅ Field Visibility & Conditional Formula System
+**Status**: ✅ Complete and Working
+
+**Features Implemented:**
+- ✅ Field visibility checkbox working correctly (show/hide fields)
+- ✅ Conditional formula support using FormulaEngine (Google AppSheet-compatible)
+- ✅ Three-state visibility system:
+  - **Checked**: Always show field
+  - **Unchecked without formula**: Always hide field
+  - **Unchecked with formula**: Show field based on condition evaluation
+- ✅ Real-time field visibility updates in FormView
+- ✅ Support for complex formulas: AND, OR, NOT, IF, CONTAINS, ISBLANK, etc.
+- ✅ Thai field name support in formulas using `[ชื่อฟิลด์]` syntax
+- ✅ Filter bar UI improvements (compact, fixed height 44px)
+
+**Bugs Fixed:**
+1. **Inverted boolean logic** in checkbox onChange handler (`EnhancedFormBuilder.jsx:483`)
+   - Changed from `enabled: !isVisible` to `enabled: isAlwaysVisible ? undefined : false`
+2. **Null value assignment** issue (`EnhancedFormBuilder.jsx:1736`)
+   - Used conditional spread to only add property if it exists
+3. **Missing camelCase→snake_case conversion** (`EnhancedFormBuilder.jsx:1780-1788`)
+   - Added conversion from `showCondition` to `show_condition` for backend
+4. **Variable scoping error** during destructuring (`EnhancedFormBuilder.jsx:1757-1759`)
+   - Saved values BEFORE destructuring to prevent undefined errors
+5. **Debug log filter** using wrong property (`EnhancedFormBuilder.jsx:1876`)
+   - Changed from `f.showCondition` to `f.show_condition`
+6. **⭐ Backend toJSON() missing mapping** (`Field.js:366-370`) - **Root Cause**
+   - Added `show_condition` → `showCondition` mapping in Field model
+
+**Files Modified:**
+- `backend/models/Field.js` - Added show_condition mapping in toJSON()
+- `src/components/EnhancedFormBuilder.jsx` - Fixed checkbox logic and data serialization
+- `src/components/FormSubmissionList.jsx` - Compact filter bar UI (44px fixed height)
+
+**Formula Syntax Examples:**
+```javascript
+// Simple comparison
+[สถานะ] = "ปิดการขายได้"
+[ยอดขาย] > 100000
+
+// Logical operators
+OR([สถานะ] = "ชนะ", [สถานะ] = "ปิดการขายได้")
+AND(ISNOTBLANK([คะแนน]), [คะแนน] > 3)
+
+// String functions
+CONTAINS([ชื่อลูกค้า], "VIP")
+
+// Complex conditions
+IF([ยอดขาย] > 100000, TRUE, [สถานะ] = "VIP")
+```
+
+**Technical Implementation:**
+- FormView evaluates formulas using `formulaEngine.evaluate()` on every input change
+- Visibility state updated in real-time via `updateFieldVisibility()` callback
+- Backend saves `show_condition` as JSONB: `{"enabled": false, "formula": "[field] = value"}`
+- Console logs show formula evaluation results for debugging
+
+---
+
+## Previous Updates - v0.7.36-dev (2025-10-19)
+
+### ✅ Custom Date Field Filtering & Sorting with EAV Model
+**Status**: ✅ Complete and Working
+
+**Problem Solved:**
+- Server-side filtering and sorting for submissions using custom date fields
+- EAV (Entity-Attribute-Value) model compatibility for dynamic field sorting
+- Fixed Sequelize "Submission->Submission" error when counting with JOINs
+
+**Backend Changes (`backend/services/SubmissionService.js`):**
+
+1. **Custom Field Sorting with LEFT JOIN** (lines 714-734)
+   - Changed from subquery to LEFT JOIN approach for better Sequelize compatibility
+   - Uses `sortFieldData` association to join `submission_data` table
+   - Sorts by `value_text` column with proper ORDER BY clause
+
+2. **Separate Count & FindAll Queries** (lines 764-782)
+   - Fixed "missing FROM-clause entry for table Submission->Submission" error
+   - Separated `count()` and `findAll()` to avoid `col` parameter issues
+   - Count query runs without JOINs for accurate totals
+   - FindAll includes all necessary associations for data display
+
+**Features:**
+- ✅ Date field selector modal (dropdown-style, gear icon trigger)
+- ✅ Auto-select date field when only one exists
+- ✅ Month/year filtering using custom date fields (not just submittedAt)
+- ✅ Sorting by submittedAt or any custom field (works with EAV model)
+- ✅ Correct pagination with accurate total counts
+- ✅ Tooltips showing active filter field
+- ✅ Default filter: current month/year
+- ✅ Multiple date/datetime field support
+- ✅ Always includes "วันที่บันทึกข้อมูล" (submittedAt) option
+- ✅ Responsive design (mobile + desktop)
+
+**Technical Details:**
+```javascript
+// Custom field sorting (LEFT JOIN approach)
+sortInclude = {
+  model: SubmissionData,
+  as: 'sortFieldData',
+  where: { field_id: sortBy },
+  required: false,
+  duplicating: false,
+};
+
+// Separate count & findAll
+const count = await Submission.count({ where, distinct: true });
+const rows = await Submission.findAll({
+  where,
+  include: includeArray,
+  order: orderClause,
+  limit,
+  offset,
+});
+```
+
+**Files Modified:**
+- `backend/services/SubmissionService.js` (Custom field sorting, separate count/findAll)
+- `backend/models/Submission.js` (Added sortFieldData association)
+- `backend/api/routes/submission.routes.js` (Pass filter parameters)
+- `src/components/FormSubmissionList.jsx` (Frontend filtering UI)
+
+**Benefits:**
+- 📊 Filter submissions by any date field, not just submission date
+- 🔄 Sort by custom fields stored in EAV model
+- ✅ Accurate pagination even with complex JOINs
+- 🚀 Better UX with tooltips and auto-detection
+
+---
+
+## Previous Updates - v0.7.35-dev (2025-10-17)
+
+### ✅ Enhanced FormSubmissionList UI
+- Date field selector modal implementation
+- Month filter dropdown improvements
+- Pagination controls component
+- See v0.7.36 above for complete feature list
+
+---
+
+## Recent Critical Fixes (v0.7.20-v0.7.30)
+
+### Image System
+- ✅ Image flicker fixed (React.memo with custom comparison)
+- ✅ Black screen on image click resolved (presignedUrl fallback)
+- ✅ Duplicate API calls eliminated (useState → useRef, 97% reduction)
+- ✅ Thumbnail stability improved (fileIdsString dependency)
+- ✅ Navigation arrows visibility (lg: → md: breakpoint)
+
+### Authentication
+- ✅ Token refresh bug fixed (storage key mismatch resolved)
+- ✅ 7-day sessions working correctly
+- ✅ No false logouts
+- ✅ Smart redirect after re-login
+
+### Mobile Testing
+- ✅ ngrok setup working (single tunnel: Frontend → React Proxy → Backend)
+- ✅ CORS trailing slash normalization
+- ✅ HOST=0.0.0.0 configuration
+- ✅ Mobile-friendly tables and touch targets
+
+---
 
 ## Quick Start
 
+### Development
 ```bash
-npm install && npm run dev
-npm run build && npm run lint
+# Start Docker services
+docker-compose up -d
+
+# Start backend (from project root)
+cd backend && npm start
+
+# Start frontend (new terminal, from project root)
+npm start
 ```
+
+### Production Build
+```bash
+npm run build
+npm run lint
+```
+
+### Testing
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5000/api/v1
+- API Docs: http://localhost:5000/api/v1/docs
+
+---
 
 ## Architecture
 
-**Components:** MainFormApp • EnhancedFormBuilder • FormView • FormSubmissionList
+### Components
+- **MainFormApp**: Main router and state management
+- **EnhancedFormBuilder**: Drag-and-drop form creator
+- **FormView**: Public form display and submission
+- **FormSubmissionList**: Data table with filters and pagination
+- **SubmissionDetail**: Individual submission view with edit mode
 
-**Field Types (17):** short_answer, paragraph, email, phone, number, url, file_upload, image_upload, date, time, datetime, multiple_choice, rating, slider, lat_long, province, factory
+### Design System
+- **Primary Color**: Orange (#f97316)
+- **Grid System**: 8px base grid
+- **Touch Targets**: Minimum 44px (mobile-friendly)
+- **Style**: Glass morphism with backdrop blur
+- **Responsive**: Mobile-first approach
 
-**Design:** Orange primary (#f97316) • 8px grid • 44px+ touch targets • Glass morphism • Responsive (mobile-first)
-
----
-
-## Latest Version - v0.7.30-dev (2025-10-16)
-
-### New Features & Improvements ✅
-
-**Feature 1: Form List Icon Hover Effects**
-- ✅ Each icon has independent hover effect (not group hover)
-- ✅ 4 different colors for better visual hierarchy:
-  - Copy Link: Blue (#3b82f6)
-  - View Submissions: Green (#22c55e)
-  - Edit Form: Orange (#f97316)
-  - Delete Form: Red (#ef4444)
-- **File Modified:** `src/components/FormListApp.jsx` (lines 476-544)
-- **Implementation:** Tailwind CSS named groups (`group/copy`, `group/view`, etc.)
-
-**Feature 2: Progressive Image Loading System (In Progress)**
-- 📋 Comprehensive architecture plan created
-- 🎯 Target: 95% bandwidth reduction, 80% faster page loads
-- 🚀 3-phase implementation: Backend → Frontend → Memory Management
-- **Documentation:** See `qtodo.md` for full implementation plan
-
-**Database Analysis Completed:**
-- ✅ Verified all core tables are in active use
-- ✅ Found production data in `sub_forms`, `submission_data`, `submissions`
-- ✅ Confirmed dual-write system (EAV + Dynamic Tables)
-- **Scripts Created:** `backend/check-tables.js`, `backend/check-submissions-detail.js`, `backend/check-dynamic-tables.js`
-
-### Code Changes
-
-```javascript
-// Form List Icon Hover - Named Groups (FormListApp.jsx lines 476-544)
-{/* Copy Link - Blue */}
-<div className="group/copy ...">
-  <FontAwesomeIcon
-    className="group-hover/copy:text-blue-500 group-hover/copy:scale-125 ..."
-  />
-</div>
-
-{/* View - Green */}
-<div className="group/view ...">
-  <FontAwesomeIcon
-    className="group-hover/view:text-green-500 group-hover/view:scale-125 ..."
-  />
-</div>
-
-{/* Edit - Orange */}
-<div className="group/edit ...">
-  <FontAwesomeIcon
-    className="group-hover/edit:text-orange-500 group-hover/edit:scale-125 group-hover/edit:rotate-12 ..."
-  />
-</div>
-
-{/* Delete - Red */}
-<div className="group/delete ...">
-  <FontAwesomeIcon
-    className="group-hover/delete:text-red-500 group-hover/delete:scale-125 ..."
-  />
-</div>
+### Data Flow
+```
+User Input → FormView → SubmissionService
+  ↓
+Dual-Write System:
+  1. EAV Tables (submission_data)
+  2. Dynamic Tables (form_[tablename])
+  ↓
+PowerBI Ready (Thai-English column names)
 ```
 
 ---
 
-## Recent Critical Fixes (Context)
+## Configuration
 
-### v0.7.29-dev - Image Flicker Fix
-- Block presignedUrl during transition
-- Increased timeout from 50ms to 100ms
-- Prevents old images from showing during navigation
+### Environment Variables
 
-### v0.7.27-dev - Navigation Arrows Visibility
-- Changed breakpoint from `lg:` (1024px) to `md:` (768px)
-- Arrows now visible on tablets+ instead of desktop-only
-- Portrait thumbnails reduced by 50% (width: 7.5vw/15vw)
+**Frontend** (`.env`):
+```env
+HOST=0.0.0.0
+REACT_APP_API_URL=/api/v1
+```
 
-### v0.7.20-dev - Image Flickering Fix
-- Wrapped SubmissionDetail with React.memo
-- Custom comparison prevents toast context re-renders
-- Images remain stable during toast notifications
+**Backend** (`backend/.env`):
+```env
+# Required
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=qcollector_dev_2025
+DB_USER=postgres
+DB_PASSWORD=qcollector_dev_2025
+REDIS_URL=redis://localhost:6379
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+JWT_SECRET=[your-secret]
+JWT_REFRESH_SECRET=[your-refresh-secret]
 
-### v0.7.15-dev - Duplicate Loading Prevention
-- Switched from useState to useRef for persistent tracking
-- Fixed black screen on image click with presignedUrl fallback
-- API calls reduced from 20+ to 1-2 per view (97% reduction)
+# Optional
+TELEGRAM_BOT_TOKEN=[your-token]
+TELEGRAM_GROUP_ID=[your-group-id]
+```
 
-### v0.7.10-dev - Thumbnail Stability
-- Changed useEffect dependency to fileIdsString (stable)
-- Added min-h-[200px] to prevent container collapse
-- Integrated mobile download toast notifications
-
-### v0.7.9-dev - ngrok Mobile Testing
-- Single tunnel: ngrok → Frontend → React Proxy → Backend
-- CORS trailing slash normalization
-- React proxy pattern for free tier compatibility
-
-### v0.7.8-dev - Token Refresh Fix (CRITICAL)
-- Fixed storage key mismatch (access_token vs q-collector-auth-token)
-- Token refresh now works correctly
-- 7-day sessions, no false logouts
-
----
-
-## Known Issues & Solutions
-
-### Issue: Forms/Submissions Not Loading
-**Check:** Token expiry, API endpoints, database connection
-**Solution:** Check browser console, backend logs, verify token refresh
-
-### Issue: Images Not Displaying
-**Check:** MinIO connection, blob URL loading, presignedUrl fallback
-**Solution:** Verify FileService.js blob URL generation, check network tab
-
-### Issue: Navigation Not Working
-**Check:** React.memo blocking callbacks, stale closures
-**Solution:** Ensure callbacks not wrapped in React.memo comparison
-
-### Issue: Mobile Testing
-**Setup:** ngrok tunnel + React proxy
-**Config:** HOST=0.0.0.0, proxy in package.json, CORS origins
+### Important Notes
+- **Telegram**: Bot Token และ Group ID ใน .env (ไม่เปิดเผย)
+- **Super Admin**: สร้างผ่าน script หรือ seed data
+- **Servers**: ตรวจสอบ Claude Code process ก่อน restart
+- **DO NOT kill Claude process** when restarting servers
+- สามารถให้ใช้ playwright mcp ช่วยตรวจสอบ console log ได้เลย
 
 ---
 
 ## Development Guidelines
 
-### When Modifying Forms/Submissions:
+### When Modifying Forms/Submissions
 1. Always use stable dependencies in useEffect
 2. Use useRef for tracking state that doesn't trigger re-renders
 3. Add null checks in React.memo comparison functions
 4. Test on both mobile and desktop viewports
 
-### When Working with Images:
+### When Working with Images
 1. Use presignedUrl as fallback for blob URLs
 2. Add min-height to containers to prevent layout shifts
 3. Use fileIdsString (not files array) as useEffect dependency
 4. Implement proper cleanup in useEffect return
 
-### When Adding Features:
+### When Adding Features
 1. Follow mobile-first responsive design
 2. Use API endpoints (not localStorage)
 3. Add proper error handling and loading states
@@ -188,22 +348,79 @@ npm run build && npm run lint
 
 ---
 
-## Configuration
+## Known Issues & Solutions
 
-**Environment:**
-- Telegram: Bot Token และ Group ID ใน .env (ไม่เปิดเผย)
-- Super Admin: สร้างผ่าน script หรือ seed data
-- Servers: ตรวจสอบ Claude Code process ก่อน restart
+### Issue: Forms/Submissions Not Loading
+- **Check**: Token expiry, API endpoints, database connection
+- **Solution**: Check browser console, backend logs, verify token refresh
 
-**Important:**
-- If restart servers, do NOT kill Claude process
-- สามารถให้ใช้ playwright mcp ช่วยตรวจสอบ console log ได้เลย
+### Issue: Images Not Displaying
+- **Check**: MinIO connection, blob URL loading, presignedUrl fallback
+- **Solution**: Verify FileService.js blob URL generation, check network tab
 
-**License:** Internal use - Q-Collector Enterprise v0.7.30-dev
+### Issue: Navigation Not Working
+- **Check**: React.memo blocking callbacks, stale closures
+- **Solution**: Ensure callbacks not wrapped in React.memo comparison
+
+### Issue: Mobile Testing
+- **Setup**: ngrok tunnel + React proxy
+- **Config**: HOST=0.0.0.0, proxy in package.json, CORS origins
 
 ---
 
-## Archive
+## Project Structure
 
-**Full version history:** See CLAUDE.md.backup-2025-10-16
-**Detailed fix documentation:** See individual completion files (e.g., V0.7.28-COMPLETE-SUMMARY.md)
+```
+24Sep25/
+├── backend/
+│   ├── api/
+│   │   ├── routes/          # API endpoints
+│   │   ├── middleware/      # Auth, RBAC, validation
+│   │   └── server.js        # Express app
+│   ├── models/              # Sequelize models
+│   ├── services/            # Business logic
+│   │   ├── FormService.js
+│   │   ├── SubmissionService.js
+│   │   ├── FileService.js
+│   │   └── TelegramService.js
+│   └── migrations/          # Database migrations
+├── src/
+│   ├── components/
+│   │   ├── MainFormApp.jsx
+│   │   ├── EnhancedFormBuilder.jsx
+│   │   ├── FormView.jsx
+│   │   ├── FormSubmissionList.jsx
+│   │   ├── SubmissionDetail.jsx
+│   │   └── ui/              # Reusable UI components
+│   ├── contexts/            # React contexts
+│   ├── services/            # Frontend API clients
+│   └── utils/               # Helper functions
+├── docker-compose.yml       # Docker services
+├── CLAUDE.md               # This file
+├── qtodo.md                # Current tasks and status
+└── package.json            # Dependencies
+```
+
+---
+
+## Version History
+
+**Current**: v0.7.36-dev (2025-10-19) - Custom Date Field Filtering & Sorting
+**Previous**: v0.7.35-dev → v0.7.30-dev → v0.7.20-dev → v0.7.15-dev
+
+**Key Changes in v0.7.36:**
+- Custom date field filtering (select any date/datetime field for month/year filters)
+- EAV model sorting support (LEFT JOIN approach for custom fields)
+- Fixed Sequelize "Submission->Submission" error with separate count/findAll
+- Improved pagination accuracy with complex JOINs
+
+**Full version history**: See `CLAUDE.md.backup-2025-10-16`
+**Detailed documentation**: See individual completion files in project root
+
+---
+
+## License
+
+**Internal Use** - Q-Collector Enterprise v0.7.36-dev
+**Last Updated**: 2025-10-19 09:30:00 UTC+7
+**Status**: ✅ OPERATIONAL & READY FOR TESTING

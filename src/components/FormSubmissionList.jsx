@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { GlassCard } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
@@ -19,6 +19,7 @@ import userPreferencesService from '../services/UserPreferencesService.js'; // �
 // Utilities
 import { formatNumberByContext } from '../utils/numberFormatter.js';
 import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../utils/phoneFormatter.js';
+import { getConditionalStyle } from '../utils/conditionalFormattingEngine'; // ✅ v0.7.40: Conditional Formatting
 
 // Auth context
 import { useAuth } from '../contexts/AuthContext'; // ✅ v0.7.38: Get user ID for preferences
@@ -519,7 +520,8 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
   };
 
   // Enhanced field value renderer for different field types
-  const renderFieldValue = (fieldData, field) => {
+  // ✅ v0.7.40: Added conditionalStyle parameter for formatting
+  const renderFieldValue = (fieldData, field, conditionalStyle = {}) => {
     if (!fieldData || (!fieldData.value && fieldData.value !== 0)) {
       return <span className="text-muted-foreground text-[14px] sm:text-[15px]">-</span>;
     }
@@ -532,14 +534,14 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           return <span className="text-muted-foreground text-[14px] sm:text-[15px]">-</span>;
         }
         return (
-          <div className="text-[14px] sm:text-[15px] text-foreground/80 text-center">
+          <div className="text-[14px] sm:text-[15px] text-center" style={conditionalStyle}>
             <div className="font-medium">{value === 'Invalid Date' ? '-' : value}</div>
           </div>
         );
 
       case 'time':
         return (
-          <div className="text-[14px] sm:text-[15px] text-foreground/80 font-mono text-center">
+          <div className="text-[14px] sm:text-[15px] font-mono text-center" style={conditionalStyle}>
             {value}
           </div>
         );
@@ -552,7 +554,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         if (typeof value === 'string' && value.includes(' ') && value !== 'Invalid Date') {
           const parts = value.split(' ');
           return (
-            <div className="text-[11px] sm:text-[12px] text-foreground/80 text-center leading-relaxed">
+            <div className="text-[11px] sm:text-[12px] text-center leading-relaxed" style={conditionalStyle}>
               <div className="font-medium">{parts[0]}</div>
               <div className="text-muted-foreground">{parts[1]}</div>
             </div>
@@ -563,7 +565,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           return <span className="text-muted-foreground text-[14px] sm:text-[15px]">-</span>;
         }
         return (
-          <div className="text-[11px] sm:text-[12px] text-foreground/80 text-center leading-relaxed">
+          <div className="text-[11px] sm:text-[12px] text-center leading-relaxed" style={conditionalStyle}>
             <div className="font-medium">{formatDate(value)}</div>
             <div className="text-muted-foreground">{date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
           </div>
@@ -572,7 +574,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
       case 'rating':
         const rating = parseInt(value) || 0;
         return (
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center" style={conditionalStyle}>
             <span className="text-[16px] sm:text-[18px]">{'⭐'.repeat(rating)}</span>
           </div>
         );
@@ -583,7 +585,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           // Check for lat/lng format
           if (value.lat !== undefined && value.lng !== undefined) {
             return (
-              <div className="text-[11px] sm:text-[12px] text-foreground/80 font-mono text-center leading-relaxed">
+              <div className="text-[11px] sm:text-[12px] font-mono text-center leading-relaxed" style={conditionalStyle}>
                 <div>Lat: {parseFloat(value.lat).toFixed(4)}</div>
                 <div>Lng: {parseFloat(value.lng).toFixed(4)}</div>
               </div>
@@ -592,7 +594,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           // Check for x/y format (alternative coordinate format)
           if (value.x !== undefined && value.y !== undefined) {
             return (
-              <div className="text-[11px] sm:text-[12px] text-foreground/80 font-mono text-center leading-relaxed">
+              <div className="text-[11px] sm:text-[12px] font-mono text-center leading-relaxed" style={conditionalStyle}>
                 <div>Lat: {parseFloat(value.y).toFixed(4)}</div>
                 <div>Lng: {parseFloat(value.x).toFixed(4)}</div>
               </div>
@@ -607,7 +609,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
             const lng = parseFloat(parts[1]);
             if (!isNaN(lat) && !isNaN(lng)) {
               return (
-                <div className="text-[11px] sm:text-[12px] text-foreground/80 font-mono text-center leading-relaxed">
+                <div className="text-[11px] sm:text-[12px] font-mono text-center leading-relaxed" style={conditionalStyle}>
                   <div>Lat: {lat.toFixed(4)}</div>
                   <div>Lng: {lng.toFixed(4)}</div>
                 </div>
@@ -615,26 +617,26 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
             }
           }
         }
-        return <span className="text-[14px] sm:text-[15px] text-foreground/80 text-center">{value || '-'}</span>;
+        return <span className="text-[14px] sm:text-[15px] text-center" style={conditionalStyle}>{value || '-'}</span>;
 
       case 'multiple_choice':
         if (Array.isArray(value)) {
           return (
-            <div className="flex flex-wrap gap-1 justify-center">
+            <div className="flex flex-wrap gap-1 justify-center" style={conditionalStyle}>
               {value.slice(0, 2).map((item, index) => (
-                <span key={index} className="inline-block text-primary text-[14px] sm:text-[15px]">
+                <span key={index} className="inline-block text-[14px] sm:text-[15px]">
                   {item}
                 </span>
               ))}
               {value.length > 2 && (
-                <span className="text-[14px] sm:text-[15px] text-muted-foreground">+{value.length - 2}</span>
+                <span className="text-[14px] sm:text-[15px] opacity-70">+{value.length - 2}</span>
               )}
             </div>
           );
         }
         return (
-          <div className="text-center">
-            <span className="inline-block text-primary text-[14px] sm:text-[15px]">
+          <div className="text-center" style={conditionalStyle}>
+            <span className="inline-block text-[14px] sm:text-[15px]">
               {value}
             </span>
           </div>
@@ -653,8 +655,8 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         }
 
         return (
-          <div className="text-center">
-            <span className="inline-block text-primary text-[14px] sm:text-[15px]">
+          <div className="text-center" style={conditionalStyle}>
+            <span className="inline-block text-[14px] sm:text-[15px]">
               {displayValue}
             </span>
           </div>
@@ -672,14 +674,14 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
       case 'number':
         return (
-          <span className="text-[14px] sm:text-[15px] text-foreground/80 font-mono text-center block">
+          <span className="text-[14px] sm:text-[15px] font-mono text-center block" style={conditionalStyle}>
             {formatNumberByContext(value, 'table')}
           </span>
         );
 
       case 'email':
         return (
-          <div className="text-center">
+          <div className="text-center" style={conditionalStyle}>
             <a href={`mailto:${value}`} className="text-[14px] sm:text-[15px] text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
               {value}
             </a>
@@ -706,7 +708,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           });
 
           return (
-            <div className="text-center">
+            <div className="text-center" style={conditionalStyle}>
               {phoneProps.isClickable ? (
                 <div className="flex items-center justify-center gap-1">
                   <PhoneIcon />
@@ -721,7 +723,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                   </a>
                 </div>
               ) : (
-                <span className="text-[14px] sm:text-[15px] text-foreground/80">
+                <span className="text-[14px] sm:text-[15px]">
                   {formatPhoneDisplay(value) || value || '-'}
                 </span>
               )}
@@ -731,8 +733,8 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
         // Fallback for standard phone display
         return (
-          <div className="text-center">
-            <span className="text-[14px] sm:text-[15px] text-foreground/80">
+          <div className="text-center" style={conditionalStyle}>
+            <span className="text-[14px] sm:text-[15px]">
               {formatPhoneDisplay(value) || value || '-'}
             </span>
           </div>
@@ -778,7 +780,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           const displayText = value.length > 30 ? `${value.substring(0, 30)}...` : value;
 
           return (
-            <div className="text-center">
+            <div className="text-center" style={conditionalStyle}>
               {validUrl ? (
                 <a
                   href={validUrl}
@@ -790,7 +792,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                   {displayText}
                 </a>
               ) : (
-                <span className="text-[14px] sm:text-[15px] text-foreground/80">{displayText}</span>
+                <span className="text-[14px] sm:text-[15px]">{displayText}</span>
               )}
             </div>
           );
@@ -798,8 +800,8 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
         // Fallback for standard URL display
         return (
-          <div className="text-center">
-            <span className="text-[14px] sm:text-[15px] text-foreground/80">
+          <div className="text-center" style={conditionalStyle}>
+            <span className="text-[14px] sm:text-[15px]">
               {value?.length > 30 ? `${value.substring(0, 30)}...` : value}
             </span>
           </div>
@@ -809,14 +811,14 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         const sliderValue = parseFloat(value) || 0;
         const unit = field.options?.unit || '';
         return (
-          <div className="flex items-center gap-2 justify-center">
+          <div className="flex items-center gap-2 justify-center" style={conditionalStyle}>
             <div className="flex-1 bg-muted/30 h-1 max-w-16">
               <div
                 className="bg-primary h-1"
                 style={{ width: `${(sliderValue / (field.options?.max || 100)) * 100}%` }}
               />
             </div>
-            <span className="text-[14px] sm:text-[15px] text-foreground/80 font-mono">{sliderValue}{unit}</span>
+            <span className="text-[14px] sm:text-[15px] font-mono">{sliderValue}{unit}</span>
           </div>
         );
 
@@ -903,7 +905,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           });
 
           return (
-            <div className="text-center">
+            <div className="text-center" style={conditionalStyle}>
               {phoneProps.isClickable ? (
                 <div className="flex items-center justify-center gap-1">
                   <PhoneIcon />
@@ -918,7 +920,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                   </a>
                 </div>
               ) : (
-                <span className="text-[14px] sm:text-[15px] text-foreground/80">
+                <span className="text-[14px] sm:text-[15px]">
                   {formatPhoneDisplay(value) || value || '-'}
                 </span>
               )}
@@ -952,7 +954,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           const displayText = value && value.length > 30 ? `${value.substring(0, 30)}...` : value;
 
           return (
-            <div className="text-center">
+            <div className="text-center" style={conditionalStyle}>
               {validUrl ? (
                 <a
                   href={validUrl}
@@ -964,7 +966,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                   {displayText}
                 </a>
               ) : (
-                <span className="text-[14px] sm:text-[15px] text-foreground/80">{displayText}</span>
+                <span className="text-[14px] sm:text-[15px]">{displayText}</span>
               )}
             </div>
           );
@@ -973,7 +975,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         // Handle email field
         if (isEmailFromTitle || isEmailFromValue) {
           return (
-            <div className="text-center">
+            <div className="text-center" style={conditionalStyle}>
               <a
                 href={`mailto:${value}`}
                 className="text-[14px] sm:text-[15px] text-primary hover:underline"
@@ -988,14 +990,29 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         // For other text fields
         const text = String(value);
         return (
-          <div className="text-[14px] sm:text-[15px] text-foreground/80 max-w-[180px] text-center">
-            <span className={text.length > 50 ? "truncate block" : ""} title={text.length > 50 ? text : undefined}>
+          <div
+            className="text-[14px] sm:text-[15px] max-w-[180px] text-center"
+            style={conditionalStyle}
+          >
+            <span
+              className={text.length > 50 ? "truncate block" : ""}
+              title={text.length > 50 ? text : undefined}
+            >
               {text}
             </span>
           </div>
         );
     }
   };
+
+  // ✅ v0.7.40: Field map for conditional formatting formula evaluation
+  const fieldMap = useMemo(() => {
+    const map = {};
+    (form?.fields || []).forEach(field => {
+      map[field.id] = field;
+    });
+    return map;
+  }, [form?.fields]);
 
   // ❌ REMOVED: Full-screen loading page (causes screen flicker)
   // Now show content immediately, no loading overlay
@@ -1119,8 +1136,8 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
             transition={{ duration: 0.4 }}
             className="mb-6 relative z-50"
           >
-            <GlassCard className="p-2.5 overflow-visible">
-              <div className="flex gap-2 items-center justify-start">
+            <GlassCard className="p-1.5 overflow-visible">
+              <div className="flex gap-1.5 items-center justify-start">
                 {/* Month Filter Button */}
                 <div className="relative z-[60]">
                   <GlassButton
@@ -1130,7 +1147,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                       setShowYearDropdown(false);
                       setShowSortModal(false);
                     }}
-                    className="px-2.5 py-1.5 text-xs flex items-center gap-1.5 min-w-fit"
+                    className="px-2 py-1 text-xs flex items-center gap-1.5 min-w-fit h-8"
                     title={`กรองตามเดือนจาก: ${selectedDateField === '_auto_date' ? 'วันที่บันทึกข้อมูล' : form.fields?.find(f => f.id === selectedDateField)?.title || 'ฟิลด์วันที่'}`}
                   >
                     <FontAwesomeIcon icon={faCalendar} className="text-primary" />
@@ -1187,7 +1204,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                       setShowMonthDropdown(false);
                       setShowSortModal(false);
                     }}
-                    className="px-2.5 py-1.5 text-xs flex items-center gap-1.5 min-w-fit"
+                    className="px-2 py-1 text-xs flex items-center gap-1.5 min-w-fit h-8"
                     title={`กรองตามปีจาก: ${selectedDateField === '_auto_date' ? 'วันที่บันทึกข้อมูล' : form.fields?.find(f => f.id === selectedDateField)?.title || 'ฟิลด์วันที่'}`}
                   >
                     <FontAwesomeIcon icon={faCalendarAlt} className="text-primary" />
@@ -1236,7 +1253,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                 </div>
 
                 {/* Divider */}
-                <div className="h-5 w-px bg-border"></div>
+                <div className="h-4 w-px bg-border"></div>
 
                 {/* Sort By Button */}
                 <div className="relative z-[60]">
@@ -1247,7 +1264,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                       setShowMonthDropdown(false);
                       setShowYearDropdown(false);
                     }}
-                    className="px-2.5 py-1.5 text-xs flex items-center gap-1.5 min-w-fit"
+                    className="px-2 py-1 text-xs flex items-center gap-1.5 min-w-fit h-8"
                   >
                   <FontAwesomeIcon
                     icon={sortOrder === 'asc' ? faSortAmountUp : faSortAmountDown}
@@ -1266,7 +1283,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                 <GlassButton
                   variant="secondary"
                   onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                  className="px-2.5 py-1.5 text-xs flex items-center gap-1"
+                  className="px-2 py-1 text-xs flex items-center gap-1 h-8"
                   title={sortOrder === 'asc' ? 'น้อย→มาก' : 'มาก→น้อย'}
                 >
                   <span className="hidden sm:inline">{sortOrder === 'asc' ? '↑ น้อย→มาก' : '↓ มาก→น้อย'}</span>
@@ -1274,11 +1291,11 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                 </GlassButton>
 
                 {/* Divider */}
-                <div className="h-5 w-px bg-border"></div>
+                <div className="h-4 w-px bg-border"></div>
 
                 {/* ✅ NEW: Hide Empty Rows Checkbox */}
                 <label
-                  className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer hover:bg-primary/5 rounded transition-colors"
+                  className="flex items-center gap-1.5 px-2 py-1 cursor-pointer hover:bg-primary/5 rounded transition-colors h-8"
                   title="ซ่อนแถวที่มีข้อมูลว่างมากกว่า 50%"
                 >
                   <input
@@ -1485,12 +1502,22 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
 
                             const isFirst = fieldIndex === 0;
                             const isLast = fieldIndex === tableFields.length - 1;
+
+                            // ✅ v0.7.40: Apply conditional formatting to table cells
+                            const conditionalStyle = getConditionalStyle(
+                              form?.settings,
+                              field.id,
+                              fieldData?.value,
+                              formattedSubmission.fields,
+                              fieldMap
+                            );
+
                             return (
                               <td
                                 key={field.id}
                                 className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] text-center min-h-[56px] sm:min-h-[64px]"
                               >
-                                {renderFieldValue(fieldData, field)}
+                                {renderFieldValue(fieldData, field, conditionalStyle)}
                               </td>
                             );
                           })}

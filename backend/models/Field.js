@@ -169,9 +169,12 @@ module.exports = (sequelize, DataTypes) => {
         break;
 
       case 'phone':
-        const phoneRegex = /^[0-9]{9,10}$/;
-        if (!phoneRegex.test(value.replace(/[\s-]/g, ''))) {
-          return { valid: false, error: 'Invalid phone number' };
+        // ✅ FIX: More flexible phone validation for Google Sheets import
+        // Accept: 08x-xxx-xxxx, 02-xxx-xxxx, or any format with 9-15 digits
+        const cleanPhone = String(value).replace(/[\s\-()]/g, '');
+        const phoneRegex = /^[0-9]{9,15}$/;
+        if (!phoneRegex.test(cleanPhone)) {
+          return { valid: false, error: 'Invalid phone number (must contain 9-15 digits)' };
         }
         break;
 
@@ -358,6 +361,12 @@ module.exports = (sequelize, DataTypes) => {
     if (values.sub_form_id !== undefined) {
       values.subFormId = values.sub_form_id;
       delete values.sub_form_id;
+    }
+
+    // ✅ v0.7.40: Map show_condition to showCondition for field visibility
+    if (values.show_condition !== undefined) {
+      values.showCondition = values.show_condition;
+      delete values.show_condition;
     }
 
     // ✅ CRITICAL FIX: Don't call async getColumnName() here!

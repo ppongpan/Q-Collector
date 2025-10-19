@@ -40,6 +40,8 @@ import AnimatedAddButton from './ui/animated-add-button';
 import TelegramNotificationSettings from './ui/telegram-notification-settings';
 // ✅ NEW: Migration preview modal for field change confirmation
 import MigrationPreviewModal from './ui/MigrationPreviewModal';
+// ✅ v0.7.40: Conditional Formatting components
+import { FormattingRuleCard } from './ui/formatting-rule-card';
 // import EnhancedSlider from "./ui/enhanced-slider"; // Commented out - not used
 
 // ShadCN UI components
@@ -57,7 +59,7 @@ import {
   faEllipsisV, faArrowUp, faArrowDown, faCopy,
   faQuestionCircle, faLayerGroup, faComments, faFileUpload, faCog, faHashtag as faNumbers,
   faClipboardList, faSave, faUsers, faTrash,
-  faDatabase, faCheck, faTimes
+  faDatabase, faCheck, faTimes, faPalette
 } from '@fortawesome/free-solid-svg-icons';
 
 // User Role definitions with colors for access control
@@ -473,12 +475,12 @@ function FieldEditor({
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={field.showCondition?.enabled !== true}
+                  checked={field.showCondition?.enabled !== false}
                   onChange={(e) => {
                     const isAlwaysVisible = e.target.checked;
                     updateField({
                       showCondition: {
-                        enabled: !isAlwaysVisible,
+                        enabled: isAlwaysVisible ? undefined : false,
                         formula: isAlwaysVisible ? '' : (field.showCondition?.formula || '')
                       }
                     });
@@ -486,12 +488,12 @@ function FieldEditor({
                   className="w-4 h-4 text-primary focus:ring-primary/20 focus:ring-2 rounded"
                 />
                 <span className="text-sm text-foreground/80">
-                  แสดง <span className="text-xs text-muted-foreground ml-1">(แสดงฟิลด์นี้เสมอ)</span>
+                  แสดงฟิลด์ <span className="text-xs text-muted-foreground ml-1">(แสดงเสมอ)</span>
                 </span>
               </label>
 
               {/* Conditional Formula Input - Only show when checkbox is unchecked */}
-              {field.showCondition?.enabled === true && (
+              {field.showCondition?.enabled === false && (
                 <div className="space-y-3 pl-7 animate-in slide-in-from-top-2 duration-300">
                   <div className="flex items-center gap-2">
                     <FontAwesomeIcon icon={faCog} className="w-3 h-3 text-orange-600" />
@@ -1187,6 +1189,11 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       dateFormat: {
         yearFormat: initialForm?.settings?.dateFormat?.yearFormat || 'christian',
         format: initialForm?.settings?.dateFormat?.format || 'dd/mm/yyyy'
+      },
+      // ✅ v0.7.40: Conditional Formatting
+      conditionalFormatting: {
+        enabled: initialForm?.settings?.conditionalFormatting?.enabled || false,
+        rules: initialForm?.settings?.conditionalFormatting?.rules || []
       }
     },
     // New telegram settings structure for enhanced component
@@ -1390,6 +1397,14 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   };
 
   const updateField = (fieldId, fieldData) => {
+    // Debug logging
+    console.log('🔧 updateField called:', {
+      fieldId,
+      fieldData,
+      hasShowCondition: !!fieldData.showCondition,
+      showConditionValue: fieldData.showCondition
+    });
+
     const updatedFields = form.fields.map(field =>
       field.id === fieldId ? fieldData : field
     );
@@ -1705,23 +1720,56 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
           show_in_table: field.show_in_table,
           required: field.required,
           sendTelegram: field.sendTelegram,
-          send_telegram: field.send_telegram
+          send_telegram: field.send_telegram,
+          showCondition: field.showCondition,
+          show_condition: field.show_condition
         });
 
         // First, ensure camelCase versions exist by copying from snake_case if needed
         // ✅ CRITICAL: Use !== undefined to preserve false values
+        // ✅ v0.7.40: Only add properties if they exist (don't add null values)
         const normalizedField = {
           ...field,
           showInTable: field.showInTable !== undefined ? field.showInTable : (field.show_in_table ?? false),
           sendTelegram: field.sendTelegram !== undefined ? field.sendTelegram : (field.send_telegram ?? false),
           telegramOrder: field.telegramOrder !== undefined ? field.telegramOrder : (field.telegram_order ?? null),
           telegramPrefix: field.telegramPrefix !== undefined ? field.telegramPrefix : (field.telegram_prefix ?? ''),
-          showCondition: field.showCondition !== undefined ? field.showCondition : (field.show_condition ?? null),
-          telegramConfig: field.telegramConfig !== undefined ? field.telegramConfig : (field.telegram_config ?? null),
-          validationRules: field.validationRules !== undefined ? field.validationRules : (field.validation_rules ?? null)
+          // Only add these if they exist (don't set to null)
+          ...(field.showCondition !== undefined || field.show_condition !== undefined
+            ? { showCondition: field.showCondition !== undefined ? field.showCondition : field.show_condition }
+            : {}),
+          ...(field.telegramConfig !== undefined || field.telegram_config !== undefined
+            ? { telegramConfig: field.telegramConfig !== undefined ? field.telegramConfig : field.telegram_config }
+            : {}),
+          ...(field.validationRules !== undefined || field.validation_rules !== undefined
+            ? { validationRules: field.validationRules !== undefined ? field.validationRules : field.validation_rules }
+            : {})
         };
 
+        console.log('🔍 normalizedField:', {
+          id: normalizedField.id,
+          title: normalizedField.title,
+          showCondition: normalizedField.showCondition,
+          show_condition: normalizedField.show_condition
+        });
+
+        // ✅ v0.7.40: Save camelCase values before destructuring
+        const savedShowCondition = normalizedField.showCondition;
+        const savedTelegramConfig = normalizedField.telegramConfig;
+        const savedValidationRules = normalizedField.validationRules;
+
+        console.log('💾 Saved values:', {
+          id: normalizedField.id,
+          savedShowCondition,
+          savedTelegramConfig,
+          savedValidationRules,
+          savedShowConditionType: typeof savedShowCondition,
+          isUndefined: savedShowCondition === undefined,
+          isNull: savedShowCondition === null
+        });
+
         // Then remove snake_case duplicates and timestamps
+        // ✅ v0.7.40: Convert camelCase back to snake_case for backend
         const {
           show_in_table,
           send_telegram,
@@ -1730,10 +1778,32 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
           show_condition,
           telegram_config,
           validation_rules,
+          showCondition,    // Remove camelCase version
+          telegramConfig,   // Remove camelCase version
+          validationRules,  // Remove camelCase version
           createdAt,
           updatedAt,
           ...cleanedField
         } = normalizedField;
+
+        // Re-add as snake_case for backend using saved values
+        console.log('🔄 Re-adding snake_case:', {
+          id: normalizedField.id,
+          willAddShowCondition: savedShowCondition !== undefined,
+          willAddTelegramConfig: savedTelegramConfig !== undefined,
+          willAddValidationRules: savedValidationRules !== undefined
+        });
+
+        if (savedShowCondition !== undefined) {
+          cleanedField.show_condition = savedShowCondition;
+          console.log('✅ Added show_condition:', cleanedField.show_condition);
+        }
+        if (savedTelegramConfig !== undefined) {
+          cleanedField.telegram_config = savedTelegramConfig;
+        }
+        if (savedValidationRules !== undefined) {
+          cleanedField.validation_rules = savedValidationRules;
+        }
 
         // 🔍 Debug: Log cleaned field after cleaning
         console.log('✅ cleanFieldData - AFTER:', {
@@ -1741,7 +1811,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
           title: cleanedField.title,
           showInTable: cleanedField.showInTable,
           required: cleanedField.required,
-          sendTelegram: cleanedField.sendTelegram
+          sendTelegram: cleanedField.sendTelegram,
+          show_condition: cleanedField.show_condition
         });
 
         return cleanedField;
@@ -1781,6 +1852,13 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       // ตรวจสอบว่าเป็นการแก้ไขหรือสร้างใหม่
       let savedForm;
       if (initialForm?.id) {
+        // 🔍 Debug: Log form.fields BEFORE cleaning to check if showCondition exists
+        console.log('🔍 form.fields BEFORE cleaning:', form.fields.map(f => ({
+          id: f.id,
+          title: f.title,
+          showCondition: f.showCondition
+        })));
+
         // แก้ไขฟอร์มที่มีอยู่ - Use API
         const payload = {
           title: form.title,
@@ -1795,6 +1873,11 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
         console.log('📤 Sending UPDATE payload to backend:', {
           title: payload.title,
           fields: payload.fields.length,
+          fieldsWithShowCondition: payload.fields.filter(f => f.show_condition).map(f => ({
+            id: f.id,
+            title: f.title,
+            show_condition: f.show_condition
+          })),
           sub_forms_count: payload.sub_forms.length,
           sub_forms_detail: payload.sub_forms.map(sf => ({
             id: sf.id,
@@ -2291,6 +2374,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                     <AnimatedAddButton
                       onClick={addSubForm}
                       tooltip="เพิ่มฟอร์มย่อย"
+                      colorScheme="green"
                     />
                   </div>
                 </div>
@@ -2462,6 +2546,159 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                   className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out"
                 />
 
+                {/* ✅ v0.7.40: Conditional Formatting Settings */}
+                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
+                  <GlassCardHeader>
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500/20 to-pink-600/20 flex items-center justify-center"
+                        style={{ clipPath: 'circle(50% at center)' }}
+                      >
+                        <FontAwesomeIcon icon={faPalette} className="text-pink-600 w-4 h-4" />
+                      </div>
+                      <div>
+                        <GlassCardTitle className="form-card-title">การจัดรูปแบบตามเงื่อนไข</GlassCardTitle>
+                        <GlassCardDescription className="form-card-description">
+                          กำหนดสีและรูปแบบการแสดงผลข้อมูลตามเงื่อนไขที่กำหนด
+                        </GlassCardDescription>
+                      </div>
+                    </div>
+                  </GlassCardHeader>
+                  <GlassCardContent className="space-y-6">
+                    {/* Enable Toggle */}
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={form.settings.conditionalFormatting?.enabled || false}
+                        onChange={(e) => {
+                          updateForm({
+                            settings: {
+                              ...form.settings,
+                              conditionalFormatting: {
+                                ...form.settings.conditionalFormatting,
+                                enabled: e.target.checked
+                              }
+                            }
+                          });
+                        }}
+                        className="w-4 h-4 rounded border-2 border-border bg-background checked:bg-primary checked:border-primary focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer"
+                      />
+                      <span className="text-[14px] font-medium text-foreground/80 group-hover:text-foreground transition-colors">
+                        เปิดใช้งาน Conditional Formatting
+                      </span>
+                    </label>
+
+                    {/* Formatting Rules */}
+                    {form.settings.conditionalFormatting?.enabled && (
+                      <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                        {/* Rules List */}
+                        {(form.settings.conditionalFormatting.rules || []).map((rule, index) => (
+                          <FormattingRuleCard
+                            key={rule.id}
+                            rule={rule}
+                            index={index}
+                            fieldOptions={(() => {
+                              const options = [];
+                              // Main form fields
+                              if (form.fields && form.fields.length > 0) {
+                                options.push({
+                                  group: "Main Form",
+                                  fields: form.fields.map(f => ({
+                                    id: f.id,
+                                    title: f.title,
+                                    source: "main",
+                                    subFormId: null
+                                  }))
+                                });
+                              }
+                              // Sub-form fields
+                              if (form.subForms && form.subForms.length > 0) {
+                                form.subForms.forEach(subForm => {
+                                  if (subForm.fields && subForm.fields.length > 0) {
+                                    options.push({
+                                      group: `Sub-Form: ${subForm.title}`,
+                                      fields: subForm.fields.map(f => ({
+                                        id: f.id,
+                                        title: f.title,
+                                        source: "subform",
+                                        subFormId: subForm.id
+                                      }))
+                                    });
+                                  }
+                                });
+                              }
+                              return options;
+                            })()}
+                            onUpdate={(updatedRule) => {
+                              const newRules = [...(form.settings.conditionalFormatting.rules || [])];
+                              newRules[index] = updatedRule;
+                              updateForm({
+                                settings: {
+                                  ...form.settings,
+                                  conditionalFormatting: {
+                                    ...form.settings.conditionalFormatting,
+                                    rules: newRules
+                                  }
+                                }
+                              });
+                            }}
+                            onDelete={() => {
+                              const newRules = (form.settings.conditionalFormatting.rules || []).filter((_, i) => i !== index);
+                              updateForm({
+                                settings: {
+                                  ...form.settings,
+                                  conditionalFormatting: {
+                                    ...form.settings.conditionalFormatting,
+                                    rules: newRules
+                                  }
+                                }
+                              });
+                            }}
+                          />
+                        ))}
+
+                        {/* Add New Rule Button */}
+                        <GlassButton
+                          onClick={() => {
+                            const newRule = {
+                              id: `rule_${Date.now()}`,
+                              order: (form.settings.conditionalFormatting.rules?.length || 0) + 1,
+                              fieldId: '',
+                              fieldSource: 'main',
+                              subFormId: null,
+                              fieldTitle: '',
+                              condition: '',
+                              style: {
+                                textColor: null,
+                                backgroundColor: null,
+                                fontWeight: 'normal'
+                              }
+                            };
+
+                            updateForm({
+                              settings: {
+                                ...form.settings,
+                                conditionalFormatting: {
+                                  ...form.settings.conditionalFormatting,
+                                  rules: [...(form.settings.conditionalFormatting.rules || []), newRule]
+                                }
+                              }
+                            });
+                          }}
+                          className="w-full"
+                        >
+                          <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                          เพิ่มกฎใหม่
+                        </GlassButton>
+
+                        {/* Help Text */}
+                        <p className="text-xs text-muted-foreground">
+                          💡 กฎจะถูกประเมินตามลำดับ (กฎแรกที่ตรงเงื่อนไขจะถูกใช้)
+                        </p>
+                      </div>
+                    )}
+                  </GlassCardContent>
+                </GlassCard>
 
                 {/* Document Number Settings - 8px Grid */}
                 <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
