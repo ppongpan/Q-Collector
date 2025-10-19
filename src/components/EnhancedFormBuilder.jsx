@@ -604,6 +604,45 @@ function FieldEditor({
           </div>
         );
 
+      case 'number':
+        return (
+          <div className="space-y-4">
+            <GlassSelect
+              label="รูปแบบการแสดงผล"
+              value={field.options?.decimalPlaces !== undefined ? field.options.decimalPlaces : '-1'}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                updateField({
+                  options: {
+                    ...field.options,
+                    decimalPlaces: value === -1 ? undefined : value
+                  }
+                });
+              }}
+              minimal
+            >
+              <option value="-1">ไม่จัดรูปแบบ</option>
+              <option value="0">จำนวนเต็ม (xxx,xxx)</option>
+              <option value="1">ทศนิยม 1 ตำแหน่ง (xxx,xxx.x)</option>
+              <option value="2">ทศนิยม 2 ตำแหน่ง (xxx,xxx.xx)</option>
+              <option value="3">ทศนิยม 3 ตำแหน่ง (xxx,xxx.xxx)</option>
+              <option value="4">ทศนิยม 4 ตำแหน่ง (xxx,xxx.xxxx)</option>
+            </GlassSelect>
+
+            {(field.options?.decimalPlaces === undefined || field.options?.decimalPlaces === null) && (
+              <p className="text-xs text-muted-foreground">
+                ℹ️ เมื่อเลือก "ไม่จัดรูปแบบ" ตัวเลขจะแสดงตามที่ผู้ใช้ป้อนโดยไม่มี comma คั่น
+              </p>
+            )}
+
+            {field.options?.decimalPlaces !== undefined && field.options?.decimalPlaces !== null && (
+              <p className="text-xs text-success">
+                ✅ ตัวเลขจะแสดงในรูปแบบ: {field.options.decimalPlaces === 0 ? '1,234' : `1,234.${'0'.repeat(field.options.decimalPlaces)}`}
+              </p>
+            )}
+          </div>
+        );
+
       case 'rating':
         return (
           <GlassInput

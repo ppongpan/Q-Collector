@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { GlassCard, GlassCardContent } from './ui/glass-card';
@@ -21,6 +21,7 @@ import API_CONFIG from '../config/api.config.js';
 // Utilities
 import { formatNumberByContext } from '../utils/numberFormatter.js';
 import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../utils/phoneFormatter.js';
+import { getConditionalStyle } from '../utils/conditionalFormattingEngine'; // ✅ v0.7.40: Conditional Formatting
 
 // Hooks
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
@@ -399,7 +400,7 @@ export default function SubFormDetail({
         const unit = field.options?.unit || '';
         return `${value} ${unit}`;
       case 'number':
-        return formatNumberByContext(value, 'display');
+        return formatNumberByContext(value, 'display', field.options);
       case 'phone':
         // Return raw value for phone fields - formatting will be handled in render
         return value;
@@ -703,8 +704,26 @@ export default function SubFormDetail({
     );
   };
 
+  // ✅ v0.7.40: Field map for conditional formatting formula evaluation
+  const fieldMap = useMemo(() => {
+    const map = {};
+    // Include both main form and sub-form fields for formula evaluation
+    (form?.fields || []).forEach(field => {
+      map[field.id] = field;
+    });
+    (subForm?.fields || []).forEach(field => {
+      map[field.id] = field;
+    });
+    return map;
+  }, [form?.fields, subForm?.fields]);
+
   const renderFieldValue = (field, value) => {
     const isEmpty = !value && value !== 0;
+
+    // ✅ v0.7.39: Hide fields with no data (empty, '-', or 'ไม่มีข้อมูล')
+    if (isEmpty || value === '-' || value === 'ไม่มีข้อมูล') {
+      return null; // Don't render empty fields
+    }
 
     // Special handling for file upload fields - use component with hooks
     if (field.type === 'file_upload' || field.type === 'image_upload') {
@@ -776,51 +795,36 @@ export default function SubFormDetail({
       );
     }
 
-    // Special handling for email fields - simple format เหมือน main form
+    // ✅ v0.7.39: Enhanced email field with vertical card layout
     if (field.type === 'email') {
       const isValidEmail = value && typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
       return (
-        <div key={field.id}>
-          <div className="flex items-center gap-3 py-0.5">
-            <label className="text-sm font-bold shrink-0 text-orange-300">
-              {field.title}{field.required && <span className="text-destructive ml-1">*</span>} :
-            </label>
-            <div className={`text-sm min-w-0 flex-1 ${
-              isEmpty ? 'text-muted-foreground/50' : 'text-foreground'
-            }`}>
-              {isValidEmail ? (
-                <a
-                  href={`mailto:${value}`}
-                  className="text-primary break-all"
-                  style={{
-                    transition: 'all 200ms ease-out',
-                    display: 'inline-block',
-                    fontSize: '14px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.fontSize = '16.8px';
-                    e.target.style.fontWeight = '600';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.fontSize = '14px';
-                    e.target.style.fontWeight = '400';
-                  }}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {value}
-                </a>
-              ) : (
-                value || '-'
-              )}
-            </div>
+        <div key={field.id} className="space-y-2">
+          <label className="block text-sm font-semibold text-orange-300/90">
+            {field.title}{field.required && <span className="text-destructive ml-1">*</span>}
+          </label>
+          <div className={`text-base font-medium px-3 py-2 rounded-md bg-background/30 border border-border/20 ${
+            isEmpty ? 'text-muted-foreground/60 italic' : 'text-foreground/90'
+          }`}>
+            {isValidEmail ? (
+              <a
+                href={`mailto:${value}`}
+                className="text-primary hover:underline break-all"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {value}
+              </a>
+            ) : (
+              value || 'ไม่มีข้อมูล'
+            )}
           </div>
         </div>
       );
     }
 
-    // Special handling for phone fields - simple format เหมือน main form
+    // ✅ v0.7.39: Enhanced phone field with vertical card layout
     const isPhoneField = field.type === 'phone' ||
                         shouldFormatAsPhone(value, field.type) ||
                         field.title?.toLowerCase().includes('เบอร์') ||
@@ -840,48 +844,34 @@ export default function SubFormDetail({
       const formattedPhone = formatPhoneDisplay(value);
 
       return (
-        <div key={field.id}>
-          <div className="flex items-center gap-3 py-0.5">
-            <label className="text-sm font-bold shrink-0 text-orange-300">
-              {field.title}{field.required && <span className="text-destructive ml-1">*</span>} :
-            </label>
-            <div className={`text-sm min-w-0 flex-1 ${
-              isEmpty ? 'text-muted-foreground/50' : 'text-foreground'
-            }`}>
-              {phoneProps.isClickable ? (
-                <div className="flex items-center gap-2">
-                  <PhoneIcon />
-                  <a
-                    href={phoneProps.telLink}
-                    className="text-primary break-all hover:underline transition-all duration-200"
-                    style={{
-                      display: 'inline-block',
-                      fontSize: '14px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.fontSize = '16.8px';
-                      e.target.style.fontWeight = '600';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.fontSize = '14px';
-                      e.target.style.fontWeight = '400';
-                    }}
-                    title={phoneProps.title}
-                    aria-label={phoneProps.ariaLabel}
-                  >
-                    {phoneProps.display}
-                  </a>
-                </div>
-              ) : (
-                <span>{formattedPhone || value || '-'}</span>
-              )}
-            </div>
+        <div key={field.id} className="space-y-2">
+          <label className="block text-sm font-semibold text-orange-300/90">
+            {field.title}{field.required && <span className="text-destructive ml-1">*</span>}
+          </label>
+          <div className={`text-base font-medium px-3 py-2 rounded-md bg-background/30 border border-border/20 ${
+            isEmpty ? 'text-muted-foreground/60 italic' : 'text-foreground/90'
+          }`}>
+            {phoneProps.isClickable ? (
+              <div className="flex items-center gap-2">
+                <PhoneIcon />
+                <a
+                  href={phoneProps.telLink}
+                  className="text-primary hover:underline break-all"
+                  title={phoneProps.title}
+                  aria-label={phoneProps.ariaLabel}
+                >
+                  {phoneProps.display}
+                </a>
+              </div>
+            ) : (
+              <span>{formattedPhone || value || 'ไม่มีข้อมูล'}</span>
+            )}
           </div>
         </div>
       );
     }
 
-    // Special handling for URL/website fields - simple format เหมือน main form
+    // ✅ v0.7.39: Enhanced URL field with vertical card layout
     const isUrlField = field.type === 'url' ||
                       field.title?.toLowerCase().includes('url') ||
                       field.title?.toLowerCase().includes('link') ||
@@ -906,46 +896,31 @@ export default function SubFormDetail({
       const validUrl = formatUrlForDisplay(value);
 
       return (
-        <div key={field.id}>
-          <div className="flex items-center gap-3 py-0.5">
-            <label className="text-sm font-bold shrink-0 text-orange-300">
-              {field.title}{field.required && <span className="text-destructive ml-1">*</span>} :
-            </label>
-            <div className={`text-sm min-w-0 flex-1 ${
-              isEmpty ? 'text-muted-foreground/50' : 'text-foreground'
-            }`}>
-              {validUrl ? (
-                <a
-                  href={validUrl}
-                  className="text-primary break-all"
-                  style={{
-                    transition: 'all 200ms ease-out',
-                    display: 'inline-block',
-                    fontSize: '14px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.fontSize = '16.8px';
-                    e.target.style.fontWeight = '600';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.fontSize = '14px';
-                    e.target.style.fontWeight = '400';
-                  }}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {value}
-                </a>
-              ) : (
-                value || '-'
-              )}
-            </div>
+        <div key={field.id} className="space-y-2">
+          <label className="block text-sm font-semibold text-orange-300/90">
+            {field.title}{field.required && <span className="text-destructive ml-1">*</span>}
+          </label>
+          <div className={`text-base font-medium px-3 py-2 rounded-md bg-background/30 border border-border/20 ${
+            isEmpty ? 'text-muted-foreground/60 italic' : 'text-foreground/90'
+          }`}>
+            {validUrl ? (
+              <a
+                href={validUrl}
+                className="text-primary hover:underline break-all"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {value}
+              </a>
+            ) : (
+              value || 'ไม่มีข้อมูล'
+            )}
           </div>
         </div>
       );
     }
 
-    // Standard handling for other field types - simple format เหมือน main form
+    // ✅ v0.7.39: Enhanced field display with vertical card layout (matching Main Form)
     const rawFormattedValue = formatFieldValue(field, value);
 
     // Defensive conversion for objects to prevent React rendering errors
@@ -965,19 +940,35 @@ export default function SubFormDetail({
       return rawFormattedValue;
     })();
 
+    // ✅ v0.7.40: Apply conditional formatting from parent form settings
+    const conditionalStyle = getConditionalStyle(
+      form?.settings, // Use parent form settings
+      field.id,
+      value,
+      subSubmission?.data || {},
+      fieldMap
+    );
+
+    // ✅ v0.7.39: Vertical card layout with better typography (matching Main Form Detail View)
     return (
-      <div key={field.id}>
-        <div className="flex items-center gap-3 py-1">
-          <label className="text-sm font-bold shrink-0 text-orange-300">
-            {field.title}{field.required && <span className="text-destructive ml-1">*</span>} :
-          </label>
-          <div className={`text-sm min-w-0 flex-1 ${
+      <div key={field.id} className="space-y-2">
+        <label className="block text-sm font-semibold text-orange-300/90">
+          {field.title}{field.required && <span className="text-destructive ml-1">*</span>}
+        </label>
+        <div
+          className={`text-base font-medium px-3 py-2 rounded-md border ${
             isEmpty
-              ? 'text-muted-foreground/50'
-              : 'text-foreground'
-          }`}>
-            {formattedValue || '-'}
-          </div>
+              ? 'text-muted-foreground/60 italic bg-background/30 border-border/20'
+              : 'text-foreground/90'
+          }`}
+          style={{
+            ...conditionalStyle,
+            // ✅ v0.7.40: Apply conditional background with fallback
+            backgroundColor: conditionalStyle.backgroundColor || 'rgb(var(--background) / 0.3)',
+            borderColor: conditionalStyle.backgroundColor ? 'transparent' : 'rgb(var(--border) / 0.2)'
+          }}
+        >
+          {formattedValue || 'ไม่มีข้อมูล'}
         </div>
       </div>
     );
@@ -1138,38 +1129,93 @@ export default function SubFormDetail({
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
           >
-            <div className="p-3 sm:p-4">
-              <div className="space-y-3 sm:space-y-4 lg:space-y-6">
-                {(subForm.fields || []).map(field => {
-                  let value = subSubmission.data[field.id];
-
-                  console.log(`🔍 Field "${field.title}" (${field.type}):`, {
-                    fieldId: field.id,
-                    rawValue: value,
-                    valueType: typeof value,
-                    isObject: value && typeof value === 'object',
-                    isArray: Array.isArray(value),
-                    hasFieldId: value && typeof value === 'object' && 'fieldId' in value
-                  });
-
-                  // 🔧 Fix: Backend returns object {fieldId, fieldTitle, fieldType, value}
-                  // Extract the actual value from the wrapper object
-                  if (value && typeof value === 'object' && !Array.isArray(value) && 'fieldId' in value) {
-                    console.log(`🔧 Extracting value from wrapper object for field "${field.title}":`, value);
-                    // Extract the actual value, defaulting to null if undefined
-                    value = value.value !== undefined ? value.value : null;
-                    console.log(`✅ Extracted value:`, value);
-                  }
-
-                  return renderFieldValue(field, value);
-                })}
-              </div>
-
-              {(!subForm.fields || subForm.fields.length === 0) && (
+            {/* ✅ v0.7.39: Responsive Grid Layout - Desktop 2-column → Mobile stacked */}
+            <div className="p-6">
+              {(!subForm.fields || subForm.fields.length === 0) ? (
                 <div className="text-center py-6 sm:py-8">
                   <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 opacity-50">📝</div>
                   <p className="text-sm sm:text-base text-muted-foreground">ฟอร์มย่อยนี้ไม่มีฟิลด์</p>
                 </div>
+              ) : (
+                <>
+                  {/* 🎯 Section 1: Basic Information (Non-file, non-location fields) */}
+                  {(subForm.fields || [])
+                    .filter(field => !['file_upload', 'image_upload', 'lat_long'].includes(field.type))
+                    .length > 0 && (
+                    <div className="mb-8">
+                      <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
+                        ข้อมูลพื้นฐาน
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                        {(subForm.fields || [])
+                          .filter(field => !['file_upload', 'image_upload', 'lat_long'].includes(field.type))
+                          .sort((a, b) => (a.order || 0) - (b.order || 0))
+                          .map(field => {
+                            let value = subSubmission.data[field.id];
+
+                            // 🔧 Fix: Backend returns object {fieldId, fieldTitle, fieldType, value}
+                            if (value && typeof value === 'object' && !Array.isArray(value) && 'fieldId' in value) {
+                              value = value.value !== undefined ? value.value : null;
+                            }
+
+                            return renderFieldValue(field, value);
+                          })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 🎯 Section 2: Location (lat_long fields only) */}
+                  {(subForm.fields || [])
+                    .filter(field => field.type === 'lat_long')
+                    .length > 0 && (
+                    <div className="mb-8">
+                      <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
+                        ตำแหน่งที่ตั้ง
+                      </h3>
+                      <div className="space-y-6">
+                        {(subForm.fields || [])
+                          .filter(field => field.type === 'lat_long')
+                          .sort((a, b) => (a.order || 0) - (b.order || 0))
+                          .map(field => {
+                            let value = subSubmission.data[field.id];
+
+                            // 🔧 Fix: Backend returns object {fieldId, fieldTitle, fieldType, value}
+                            if (value && typeof value === 'object' && !Array.isArray(value) && 'fieldId' in value) {
+                              value = value.value !== undefined ? value.value : null;
+                            }
+
+                            return renderFieldValue(field, value);
+                          })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 🎯 Section 3: Files & Images (file_upload and image_upload fields) */}
+                  {(subForm.fields || [])
+                    .filter(field => ['file_upload', 'image_upload'].includes(field.type))
+                    .length > 0 && (
+                    <div className="mb-0">
+                      <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
+                        ไฟล์และรูปภาพ
+                      </h3>
+                      <div className="space-y-6">
+                        {(subForm.fields || [])
+                          .filter(field => ['file_upload', 'image_upload'].includes(field.type))
+                          .sort((a, b) => (a.order || 0) - (b.order || 0))
+                          .map(field => {
+                            let value = subSubmission.data[field.id];
+
+                            // 🔧 Fix: Backend returns object {fieldId, fieldTitle, fieldType, value}
+                            if (value && typeof value === 'object' && !Array.isArray(value) && 'fieldId' in value) {
+                              value = value.value !== undefined ? value.value : null;
+                            }
+
+                            return renderFieldValue(field, value);
+                          })}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </GlassCard>

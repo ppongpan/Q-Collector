@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { useEnhancedToast } from './ui/enhanced-toast'; // ✅ FIX v0.7.10: Use project's toast system
@@ -31,6 +31,7 @@ import { useDelayedLoading } from '../hooks/useDelayedLoading';
 import { formatNumberByContext } from '../utils/numberFormatter.js';
 import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../utils/phoneFormatter.js';
 import { cn } from '../lib/utils'; // ✅ FIX v0.7.10: For className composition
+import { getConditionalStyle } from '../utils/conditionalFormattingEngine'; // ✅ v0.7.40: Conditional Formatting
 
 // ✅ FIX v0.7.26: Fixed Navigation Buttons Component using Portal
 // Buttons stay on screen edges even when scrolling (fixed position)
@@ -665,7 +666,7 @@ const SubmissionDetailComponent = function SubmissionDetail({
         const unit = field.options?.unit || '';
         return `${value} ${unit}`;
       case 'number':
-        return formatNumberByContext(value, 'display');
+        return formatNumberByContext(value, 'display', field.options);
       case 'phone':
         // Return raw value for phone fields - formatting will be handled in render
         return value;
@@ -1084,6 +1085,15 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
     return fileFields;
   }, [form?.fields, submissionId, imageBlobUrls, imageBlobUrlsVersion, imagesTransitioning]);
 
+  // ✅ v0.7.40: Field map for conditional formatting formula evaluation
+  const fieldMap = useMemo(() => {
+    const map = {};
+    (form?.fields || []).forEach(field => {
+      map[field.id] = field;
+    });
+    return map;
+  }, [form?.fields]);
+
   const renderFieldValue = (field, value) => {
     const isEmpty = !value && value !== 0;
 
@@ -1337,6 +1347,14 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
       return rawFormattedValue;
     })();
 
+    // ✅ v0.7.40: Apply conditional formatting
+    const conditionalStyle = getConditionalStyle(
+      form?.settings,
+      field.id,
+      value,
+      submission?.data || {},
+      fieldMap
+    );
 
     return (
       <div key={field.id} className="space-y-2">
@@ -1344,11 +1362,19 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
         <label className="block text-sm font-semibold text-orange-300/90">
           {field.title}{field.required && <span className="text-destructive ml-1">*</span>}
         </label>
-        <div className={`text-base font-medium px-3 py-2 rounded-md bg-background/30 border border-border/20 ${
-          isEmpty
-            ? 'text-muted-foreground/60 italic'
-            : 'text-foreground/90'
-        }`}>
+        <div
+          className={`text-base font-medium px-3 py-2 rounded-md border ${
+            isEmpty
+              ? 'text-muted-foreground/60 italic bg-background/30 border-border/20'
+              : 'text-foreground/90'
+          }`}
+          style={{
+            ...conditionalStyle,
+            // ✅ v0.7.40: Apply conditional background with fallback
+            backgroundColor: conditionalStyle.backgroundColor || 'rgb(var(--background) / 0.3)',
+            borderColor: conditionalStyle.backgroundColor ? 'transparent' : 'rgb(var(--border) / 0.2)'
+          }}
+        >
           {formattedValue || 'ไม่มีข้อมูล'}
         </div>
       </div>
@@ -1710,7 +1736,7 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
 
                     let formattedValue;
                     if (field.type === 'number') {
-                      formattedValue = formatNumberByContext(value, 'table');
+                      formattedValue = formatNumberByContext(value, 'table', field.options);
                     } else {
                       formattedValue = formatFieldValue(field, value);
                     }

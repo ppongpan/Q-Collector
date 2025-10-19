@@ -675,7 +675,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
       case 'number':
         return (
           <span className="text-[14px] sm:text-[15px] font-mono text-center block" style={conditionalStyle}>
-            {formatNumberByContext(value, 'table')}
+            {formatNumberByContext(value, 'table', field.options)}
           </span>
         );
 

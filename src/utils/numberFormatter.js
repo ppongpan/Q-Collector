@@ -143,6 +143,14 @@ export const isValidNumber = (value) => {
  * @returns {string} Formatted value
  */
 export const formatNumberByContext = (value, context = 'display', fieldOptions = {}) => {
+  // Handle decimalPlaces from field options (Form Builder setting)
+  const decimalPlaces = fieldOptions.decimalPlaces !== undefined ? fieldOptions.decimalPlaces : fieldOptions.decimals;
+
+  // If decimalPlaces is undefined or null, return unformatted number (user's choice)
+  if (decimalPlaces === undefined || decimalPlaces === null) {
+    return value || '';
+  }
+
   if (!isValidNumber(value)) {
     return context === 'table' ? '-' : (value || '');
   }
@@ -164,9 +172,9 @@ export const formatNumberByContext = (value, context = 'display', fieldOptions =
       break;
   }
 
-  // Apply field-specific options
-  if (fieldOptions.decimals !== undefined) {
-    options.decimals = fieldOptions.decimals;
+  // Apply field-specific decimal places
+  if (decimalPlaces !== undefined && decimalPlaces !== null) {
+    options.decimals = decimalPlaces;
   }
 
   return formatNumberDisplay(value, options);
