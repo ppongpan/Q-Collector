@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import apiClient from '../services/ApiClient';
 // ✅ NEW: Migration service for field change detection and migration operations
 import MigrationService from '../services/MigrationService';
+// ✅ v0.7.40: Formula engine for validation
+import formulaEngine from '../utils/formulaEngine';
 
 // Auth context
 import { useAuth } from '../contexts/AuthContext';
@@ -271,7 +273,9 @@ function FieldEditor({
   allFields = [],
   tableFieldCount: propTableFieldCount,
   maxTableFields = 5,
-  formTitle = ''
+  formTitle = '',
+  validateFormula,
+  toast
 }) {
   const [isExpanded, setIsExpanded] = useState(false); // Default to collapsed for better overview
   const fieldCardRef = useRef(null);
@@ -505,22 +509,43 @@ function FieldEditor({
                   <div className="space-y-2">
                     <GlassTextarea
                       value={field.showCondition?.formula || ''}
-                      onChange={(e) => updateField({
-                        showCondition: {
-                          ...field.showCondition,
-                          formula: e.target.value
+                      onChange={(e) => {
+                        const newFormula = e.target.value;
+
+                        // Update field immediately for responsive UX
+                        updateField({
+                          showCondition: {
+                            ...field.showCondition,
+                            formula: newFormula
+                          }
+                        });
+
+                        // Validate formula with debounce (only if not empty)
+                        if (newFormula.trim()) {
+                          // Clear previous validation timeout
+                          if (window.formulaValidationTimeout) {
+                            clearTimeout(window.formulaValidationTimeout);
+                          }
+
+                          // Validate after 1 second of no typing
+                          window.formulaValidationTimeout = setTimeout(() => {
+                            const validation = validateFormula(newFormula, field.title);
+                            if (!validation.valid) {
+                              toast.error(`❌ สูตรผิด (${field.title}): ${validation.error}`);
+                            }
+                          }, 1000);
                         }
-                      })}
-                      placeholder="เช่น: field_1 == 'value' หรือ field_2 > 10"
+                      }}
+                      placeholder='เช่น: [สถานะ] = "ปิดการขายได้" หรือ [ยอดขาย] > 100000'
                       className="min-h-20 font-mono text-xs bg-orange-500/5 border-orange-200/30"
                       minimal
                     />
 
                     <div className="text-xs text-muted-foreground space-y-1">
-                      <p>• ใช้ชื่อฟิลด์: field_1, field_2, ...</p>
-                      <p>• เปรียบเทียบ: ==, !=, &gt;, &lt;, &gt;=, &lt;=</p>
-                      <p>• ตรรกะ: &amp;&amp; (และ), || (หรือ), ! (ไม่)</p>
-                      <p>• ตัวอย่าง: field_1 == 'ใช่' &amp;&amp; field_2 &gt; 5</p>
+                      <p>• ใช้อ้างฟิลด์: [ชื่อฟิลด์], [field_1], [field_2], ...</p>
+                      <p>• เปรียบเทียบ: =, &lt;&gt;, &gt;, &lt;, &gt;=, &lt;=</p>
+                      <p>• ตรรกะ: AND (และ), OR (หรือ), NOT (ไม่)</p>
+                      <p>• ตัวอย่าง: [field_1] = "ใช่" AND [field_2] &gt; 5</p>
                     </div>
                   </div>
                 </div>
@@ -712,7 +737,7 @@ function MultipleChoiceOptions({ options = [], onChange }) {
 }
 
 // Enhanced Sub Form Builder with Main Form Structure
-function SubFormBuilder({ subForm, onChange, onFieldUpdate, onRemove, canMoveUp, canMoveDown, onMoveUp, onMoveDown, onDuplicate, isDefaultEmpty = false }) {
+function SubFormBuilder({ subForm, onChange, onFieldUpdate, onRemove, canMoveUp, canMoveDown, onMoveUp, onMoveDown, onDuplicate, isDefaultEmpty = false, validateFormula, toast }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentTab, setCurrentTab] = useState('fields'); // 'fields' or 'settings'
   const subFormCardRef = useRef(null);
@@ -1048,6 +1073,8 @@ function SubFormBuilder({ subForm, onChange, onFieldUpdate, onRemove, canMoveUp,
                             tableFieldCount={tableFieldCount}
                             maxTableFields={maxTableFields}
                             formTitle={subForm.title}
+                            validateFormula={validateFormula}
+                            toast={toast}
                           />
                         ))}
                       </div>
@@ -1210,6 +1237,32 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
 
   // Enhanced toast notifications
   const toast = useEnhancedToast();
+
+  // ✅ v0.7.40: Formula validation function
+  const validateFormula = useCallback((formula, fieldTitle) => {
+    if (!formula || formula.trim() === '') {
+      return { valid: true, error: null };
+    }
+
+    try {
+      // Create a field map for validation (use current form fields)
+      const fieldMap = {};
+      form.fields.forEach(field => {
+        fieldMap[field.id] = field;
+      });
+
+      // Try to evaluate with dummy data to check syntax
+      formulaEngine.evaluate(formula, {}, fieldMap);
+
+      return { valid: true, error: null };
+    } catch (error) {
+      console.error(`❌ [Formula Validation] Field "${fieldTitle}":`, error.message);
+      return {
+        valid: false,
+        error: error.message
+      };
+    }
+  }, [form.fields]);
 
   // ✅ NEW: Migration state for field change detection and preview
   const [showMigrationPreview, setShowMigrationPreview] = useState(false);
@@ -1633,6 +1686,31 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   };
 
   const handleSave = useCallback(async () => {
+    // ✅ v0.7.40: Validate all formulas before saving
+    const invalidFormulas = [];
+    form.fields.forEach(field => {
+      if (field.showCondition?.enabled === false && field.showCondition?.formula) {
+        const validation = validateFormula(field.showCondition.formula, field.title);
+        if (!validation.valid) {
+          invalidFormulas.push({
+            fieldTitle: field.title,
+            error: validation.error
+          });
+        }
+      }
+    });
+
+    // If there are invalid formulas, show errors and abort save
+    if (invalidFormulas.length > 0) {
+      invalidFormulas.forEach(({ fieldTitle, error }) => {
+        toast.error(`❌ สูตรผิด (${fieldTitle}): ${error}`, {
+          title: "ตรวจสอบเงื่อนไขการแสดงฟิลด์",
+          duration: 8000
+        });
+      });
+      return; // Abort save
+    }
+
     // Show loading toast immediately
     const loadingToastId = toast.loading('กำลังบันทึกฟอร์ม...', {
       title: "กรุณารอสักครู่"
@@ -1949,7 +2027,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
         }
       });
     }
-  }, [form, initialForm, onSave]);
+  }, [form, initialForm, onSave, toast, validateFormula]);
 
   // ✅ NEW: Handle confirmed save after migration preview
   const handleConfirmedSave = useCallback(async () => {
@@ -2322,6 +2400,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                           allFields={form.fields}
                           maxTableFields={5}
                           formTitle={form.title}
+                          validateFormula={validateFormula}
+                          toast={toast}
                         />
                       ))}
                     </div>
@@ -2365,6 +2445,8 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                         onMoveUp={() => moveSubForm(subForm.id, 'up')}
                         onMoveDown={() => moveSubForm(subForm.id, 'down')}
                         onDuplicate={() => duplicateSubForm(subForm.id)}
+                        validateFormula={validateFormula}
+                        toast={toast}
                         />
                       </div>
                   ))}

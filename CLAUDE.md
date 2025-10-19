@@ -2,7 +2,7 @@
 
 **Enterprise Form Builder & Data Collection System**
 
-## Version: 0.7.40-dev (2025-10-19)
+## Version: 0.7.41-dev (2025-10-19)
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection
@@ -67,7 +67,70 @@
 
 ---
 
-## Latest Updates - v0.7.40-dev (2025-10-19)
+## Latest Updates - v0.7.41-dev (2025-10-19)
+
+### ✅ Formula Validation & Toast Alert System
+**Status**: ✅ Complete and Working
+
+**Features Implemented:**
+- ✅ Real-time formula validation with toast error messages
+- ✅ Debounced validation (1-second delay) for better UX
+- ✅ Save-time validation prevents saving forms with invalid formulas
+- ✅ Updated formula syntax guidance to show correct syntax
+- ✅ Fixed ESLint compilation errors (validateFormula and toast scoping)
+
+**Validation Features:**
+- **Real-time validation**: Shows error toast after 1 second of no typing
+- **Save-time validation**: Checks all formulas before saving, blocks save if errors found
+- **Error messages**: Clear, specific error messages showing which field and what's wrong
+- **Syntax help**: Updated placeholder and help text with correct formula syntax
+
+**Formula Syntax Guidance:**
+```
+• ใช้อ้างฟิลด์: [ชื่อฟิลด์], [field_1], [field_2], ...
+• เปรียบเทียบ: =, <>, >, <, >=, <=
+• ตรรกะ: AND (และ), OR (หรือ), NOT (ไม่)
+• ตัวอย่าง: [field_1] = "ใช่" AND [field_2] > 5
+```
+
+**Example Placeholders:**
+```javascript
+'เช่น: [สถานะ] = "ปิดการขายได้" หรือ [ยอดขาย] > 100000'
+```
+
+**Bugs Fixed:**
+1. **ESLint errors** - validateFormula and toast undefined (`EnhancedFormBuilder.jsx:530, 532`)
+   - Passed `validateFormula` and `toast` as props through component tree
+   - Added props to `FieldEditor`, `SubFormBuilder`, and `SortableFieldEditor`
+2. **Unicode escape sequence error** - Placeholder string syntax (`EnhancedFormBuilder.jsx:537`)
+   - Changed from double quotes with escapes to single quotes
+3. **Incorrect formula syntax in help text** - Wrong operators shown
+   - Updated from `==, &&, ||` to `=, AND, OR`
+
+**Files Modified:**
+- `src/components/EnhancedFormBuilder.jsx`:
+  - Line 277-278: Added `validateFormula` and `toast` to FieldEditor props
+  - Line 510-536: Added onChange handler with debounced validation
+  - Line 537: Fixed placeholder string (single quotes)
+  - Line 542-547: Updated formula syntax help text
+  - Line 740: Added props to SubFormBuilder signature
+  - Line 1076-1077: Passed props to SortableFieldEditor in SubFormBuilder
+  - Line 1238-1266: Added validateFormula function with useCallback
+  - Line 1687-1710: Added save-time validation in handleSave
+  - Line 2028: Added validateFormula to handleSave dependency array
+  - Line 2401-2402: Passed props to SortableFieldEditor in main form
+  - Line 2448-2449: Passed props to SubFormBuilder call
+
+**Technical Implementation:**
+- Formula validation uses `formulaEngine.evaluate()` with try/catch
+- Debounce implemented with `window.formulaValidationTimeout`
+- Toast notifications show field title and specific error message
+- Save-time validation loops through all fields and collects errors
+- Invalid formulas prevent form save with 8-second toast duration
+
+---
+
+## Previous Updates - v0.7.40-dev (2025-10-19)
 
 ### ✅ Field Visibility & Conditional Formula System
 **Status**: ✅ Complete and Working
