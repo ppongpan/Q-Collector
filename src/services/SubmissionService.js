@@ -52,9 +52,10 @@ class SubmissionService {
    * @param {string} formId - Form ID
    * @param {Object} formData - Form field data
    * @param {Array} files - Uploaded files
+   * @param {Array} visibleFieldIds - IDs of visible fields for validation
    * @returns {Promise<Object>} Submission result
    */
-  async submitForm(formId, formData, files = []) {
+  async submitForm(formId, formData, files = [], visibleFieldIds = null) {
     try {
       // Get form configuration from API for validation
       const formResponse = await apiClient.getForm(formId);
@@ -64,7 +65,8 @@ class SubmissionService {
       }
 
       // Validate form data including files
-      const validationResult = this.validateFormData(form, formData, files);
+      // ✅ CRITICAL FIX: Pass visibleFieldIds to skip validation for hidden fields
+      const validationResult = this.validateFormData(form, formData, files, null, visibleFieldIds);
       if (!validationResult.isValid) {
         throw new Error(`Validation failed: ${validationResult.errors.join(', ')}`);
       }
@@ -101,9 +103,11 @@ class SubmissionService {
       });
 
       // Submit to backend API with filtered data
+      console.log('🔍 DEBUG: Sending visibleFieldIds to API:', visibleFieldIds);
       const response = await apiClient.createSubmission(formId, mainFormFieldData, {
         ipAddress: await this.getClientIP(),
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        visibleFieldIds  // ✅ CRITICAL FIX: Pass visible field IDs for backend validation
       });
 
       // Extract submission from response
@@ -145,9 +149,10 @@ class SubmissionService {
    * @param {string} submissionId - Submission ID to update
    * @param {Object} formData - Updated form field data
    * @param {Array} files - Uploaded files
+   * @param {Array} visibleFieldIds - IDs of visible fields for validation
    * @returns {Promise<Object>} Update result
    */
-  async updateSubmission(formId, submissionId, formData, files = []) {
+  async updateSubmission(formId, submissionId, formData, files = [], visibleFieldIds = null) {
     try {
       // Get form configuration from API for validation
       const formResponse = await apiClient.getForm(formId);
@@ -157,7 +162,8 @@ class SubmissionService {
       }
 
       // Validate form data including files
-      const validationResult = this.validateFormData(form, formData, files);
+      // ✅ CRITICAL FIX: Pass visibleFieldIds to skip validation for hidden fields
+      const validationResult = this.validateFormData(form, formData, files, null, visibleFieldIds);
       if (!validationResult.isValid) {
         throw new Error(`Validation failed: ${validationResult.errors.join(', ')}`);
       }
@@ -209,20 +215,36 @@ class SubmissionService {
    * @param {Object} formData - Form data to validate
    * @param {Array} files - Uploaded files
    * @param {Object} existingData - Existing submission data (for updates)
+   * @param {Array} visibleFieldIds - IDs of visible fields (skip validation for hidden fields)
    * @returns {Object} Validation result
    */
-  validateFormData(form, formData, files = [], existingData = null) {
+  validateFormData(form, formData, files = [], existingData = null, visibleFieldIds = null) {
     const errors = [];
 
     // ⚠️ CRITICAL FIX: Filter out sub-form fields (sub_form_id !== null)
     // Only validate main form fields during main form submission
     const mainFormFields = form.fields.filter(field => !field.sub_form_id && !field.subFormId);
 
+    console.log('🔍 Frontend Validation: Total main form fields:', mainFormFields.length);
+    console.log('🔍 Frontend Validation: Visible field IDs:', visibleFieldIds);
+
     mainFormFields.forEach(field => {
+      // ✅ CRITICAL FIX: Skip validation for hidden fields
+      // If visibleFieldIds is provided and field is not in the list, it's hidden
+      if (visibleFieldIds && !visibleFieldIds.includes(field.id)) {
+        console.log(`⏭️ Frontend Validation: Skipping hidden field: ${field.title} (${field.id})`);
+        return;
+      }
+
       const value = formData[field.id];
       const fieldErrors = this.validateField(field, value, files, existingData);
+      if (fieldErrors.length > 0) {
+        console.log(`❌ Frontend Validation Error: ${field.title} - ${fieldErrors.join(', ')}`);
+      }
       errors.push(...fieldErrors);
     });
+
+    console.log('🔍 Frontend Validation Result:', { isValid: errors.length === 0, errorCount: errors.length });
 
     return {
       isValid: errors.length === 0,
@@ -689,9 +711,39 @@ class SubmissionService {
    * @returns {Object} Formatted data
    */
   formatSubmissionForDisplay(submission, form) {
+    // ✅ DEBUG: Log inputs
+    console.log('🔍 formatSubmissionForDisplay called:', {
+      submissionId: submission?.id,
+      hasData: !!submission?.data,
+      dataKeys: submission?.data ? Object.keys(submission.data).length : 0,
+      hasForm: !!form,
+      hasFields: !!form?.fields,
+      fieldsCount: form?.fields?.length || 0
+    });
+
     // If submission doesn't have data field (e.g., from listSubmissions API),
     // return basic info only
-    if (!submission.data) {
+    if (!submission.data || (typeof submission.data === 'object' && Object.keys(submission.data).length === 0)) {
+      console.warn('⚠️ formatSubmissionForDisplay: No data or empty data', submission.id);
+      return {
+        id: submission.id,
+        formId: submission.formId,
+        submittedAt: submission.submittedAt,
+        submittedBy: submission.submittedBy,
+        status: submission.status,
+        fields: {},
+        documentNumber: null
+      };
+    }
+
+    // ✅ FIX: Check if form.fields exists
+    if (!form || !form.fields || !Array.isArray(form.fields)) {
+      console.error('❌ formatSubmissionForDisplay: Invalid form or missing fields!', {
+        hasForm: !!form,
+        hasFields: !!form?.fields,
+        isArray: Array.isArray(form?.fields),
+        form: form
+      });
       return {
         id: submission.id,
         formId: submission.formId,
@@ -705,18 +757,41 @@ class SubmissionService {
 
     const formatted = {};
 
-    form.fields.forEach(field => {
+    // ✅ FIX: Only format fields that exist in submission.data
+    // Don't format all form fields - only format fields with actual data
+    const submissionFieldIds = Object.keys(submission.data);
+
+    console.log('🔧 Filtering fields:', {
+      totalFormFields: form.fields.length,
+      submissionDataFields: submissionFieldIds.length,
+      willFormat: submissionFieldIds.length
+    });
+
+    submissionFieldIds.forEach(fieldId => {
+      // Find the field definition from form.fields
+      const field = form.fields.find(f => f.id === fieldId);
+
+      if (!field) {
+        console.warn(`⚠️ Field ${fieldId} not found in form definition`);
+        return; // Skip this field if not found in form
+      }
+
       // Extract value from API response structure: {fieldId, fieldTitle, fieldType, value}
       // Or use direct value from LocalStorage format
-      const fieldData = submission.data[field.id];
+      const fieldData = submission.data[fieldId];
       const value = fieldData?.value !== undefined ? fieldData.value : fieldData;
 
-      formatted[field.id] = {
+      formatted[fieldId] = {
         title: field.title,
         value: this.formatValueForDisplay(value, field.type),
         rawValue: value,
         type: field.type
       };
+    });
+
+    console.log('✅ formatSubmissionForDisplay result:', {
+      submissionId: submission.id,
+      formattedCount: Object.keys(formatted).length
     });
 
     return {

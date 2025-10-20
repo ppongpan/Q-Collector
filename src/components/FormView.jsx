@@ -132,6 +132,80 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
       }
       setForm(loadedForm);
 
+      // ✅ Apply initial values for new form (no submissionId)
+      if (!submissionId) {
+        console.log('🎯 Applying initial values for new form');
+        const initialFormData = {};
+
+        // Process all fields (including sub-form fields)
+        const allFields = [
+          ...(loadedForm.fields || []),
+          ...(loadedForm.subForms || []).flatMap(sf => sf.fields || [])
+        ];
+
+        allFields.forEach(field => {
+          const initialValue = field.options?.initialValue;
+
+          if (!initialValue) return; // Skip if no initial value
+
+          let value = null;
+
+          // Handle different field types
+          if (field.type === 'date') {
+            if (initialValue.type === 'dynamic' && initialValue.formula === 'Today()') {
+              // Today's date in YYYY-MM-DD format
+              const today = new Date();
+              value = today.toISOString().split('T')[0];
+              console.log(`  ✅ ${field.title}: Today() = ${value}`);
+            } else if (initialValue.type === 'static') {
+              value = initialValue.value;
+              console.log(`  ✅ ${field.title}: Static date = ${value}`);
+            }
+          } else if (field.type === 'time') {
+            if (initialValue.type === 'dynamic' && initialValue.formula === 'Now()') {
+              // Current time in HH:MM format
+              const now = new Date();
+              value = now.toTimeString().slice(0, 5);
+              console.log(`  ✅ ${field.title}: Now() = ${value}`);
+            } else if (initialValue.type === 'static') {
+              value = initialValue.value;
+              console.log(`  ✅ ${field.title}: Static time = ${value}`);
+            }
+          } else if (field.type === 'datetime') {
+            if (initialValue.type === 'dynamic' && initialValue.formula === 'Now()') {
+              // Current datetime in YYYY-MM-DDTHH:MM format
+              const now = new Date();
+              value = now.toISOString().slice(0, 16);
+              console.log(`  ✅ ${field.title}: Now() = ${value}`);
+            } else if (initialValue.type === 'static') {
+              value = initialValue.value;
+              console.log(`  ✅ ${field.title}: Static datetime = ${value}`);
+            }
+          } else if (field.type === 'multiple_choice') {
+            // For multiple choice, initialValue can be string or array
+            value = initialValue;
+            console.log(`  ✅ ${field.title}: Multiple choice = ${JSON.stringify(value)}`);
+          } else if (field.type === 'lat_long') {
+            // For lat_long, initialValue is { lat, lng }
+            if (initialValue.lat && initialValue.lng) {
+              value = initialValue;
+              console.log(`  ✅ ${field.title}: Coordinates = ${initialValue.lat}, ${initialValue.lng}`);
+            }
+          } else {
+            // For other types (text, number, rating, slider, etc.)
+            value = initialValue;
+            console.log(`  ✅ ${field.title}: ${value}`);
+          }
+
+          if (value !== null && value !== undefined && value !== '') {
+            initialFormData[field.id] = value;
+          }
+        });
+
+        console.log('📋 Initial Form Data:', initialFormData);
+        setFormData(initialFormData);
+      }
+
       // Load existing submission for editing
       if (submissionId) {
         try {
@@ -347,27 +421,35 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     });
 
     form.fields.forEach(field => {
-      // Default visibility is true
+      // Default visibility is true (always show if no condition)
       let isVisible = true;
 
-      // Check if field has conditional visibility
-      // showCondition.enabled === false means formula is active (unchecked checkbox)
-      // showCondition.enabled === true or undefined means always show (checked checkbox)
-      if (field.showCondition?.enabled === false && field.showCondition?.formula) {
-        try {
-          // Evaluate the formula with current form data
-          isVisible = formulaEngine.evaluate(
-            field.showCondition.formula,
-            currentFormData,
-            fieldMap
-          );
-        } catch (error) {
-          console.warn(`Error evaluating show condition for field ${field.title}:`, error);
-          // Default to visible on error
-          isVisible = true;
+      // ✅ v0.7.40: Field Visibility Logic
+      // enabled === false → Has condition, evaluate formula
+      // enabled === true or undefined → Always show (default)
+
+      if (field.showCondition?.enabled === false) {
+        // Has condition → Evaluate formula
+        if (field.showCondition?.formula && field.showCondition.formula.trim() !== '') {
+          try {
+            isVisible = formulaEngine.evaluate(
+              field.showCondition.formula,
+              currentFormData,
+              fieldMap
+            );
+            console.log(`Field "${field.title}" visibility from formula: ${isVisible}`);
+          } catch (error) {
+            console.warn(`Error evaluating show condition for field ${field.title}:`, error);
+            // Default to hidden on error when has condition
+            isVisible = false;
+          }
+        } else {
+          // Condition enabled but no formula → Hide by default
+          isVisible = false;
+          console.log(`Field "${field.title}" hidden: condition enabled but no formula`);
         }
       }
-      // If showCondition.enabled is true or undefined, field is always visible
+      // If enabled === true or undefined → Always visible (default isVisible = true)
 
       newVisibility[field.id] = isVisible;
     });
@@ -736,10 +818,16 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
 
     mainFormFields.forEach(field => {
       // Skip validation for hidden fields
-      if (fieldVisibility[field.id] === false) {
-        console.log(`Skipping validation for hidden field: ${field.title}`);
+      // Check if field is explicitly hidden (fieldVisibility[field.id] === false)
+      // Fields without visibility config (undefined) are treated as visible
+      const isFieldVisible = fieldVisibility[field.id] !== false;
+
+      if (!isFieldVisible) {
+        console.log(`⏭️ Skipping validation for hidden field: ${field.title} (visibility: ${fieldVisibility[field.id]})`);
         return;
       }
+
+      console.log(`✅ Validating visible field: ${field.title} (visibility: ${fieldVisibility[field.id]})`);
       let error = '';
 
       // Special handling for file upload fields
@@ -851,7 +939,16 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
             size: file.size
           }))
         );
-        result = await submissionService.updateSubmission(formId, submissionId, formData, flatFiles);
+
+        // ✅ CRITICAL FIX: Collect visible field IDs for backend validation (same as create)
+        const mainFormFields = form.fields.filter(field => !field.sub_form_id && !field.subFormId);
+        const visibleFieldIds = mainFormFields
+          .filter(field => fieldVisibility[field.id] !== false)
+          .map(field => field.id);
+
+        console.log('🔍 DEBUG (UPDATE): Visible Field IDs being sent to backend:', visibleFieldIds);
+
+        result = await submissionService.updateSubmission(formId, submissionId, formData, flatFiles, visibleFieldIds);
       } else {
         // Create new submission
         const flatFiles = uploadedFiles.flatMap(uf =>
@@ -863,7 +960,24 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
             size: file.size
           }))
         );
-        result = await submissionService.submitForm(formId, formData, flatFiles);
+
+        // ✅ CRITICAL FIX: Collect visible field IDs for backend validation
+        // Include ALL fields that are visible (visibility !== false)
+        // This includes:
+        // 1. Fields with no conditional visibility (always visible)
+        // 2. Fields with conditional visibility that evaluated to true
+        const mainFormFields = form.fields.filter(field => !field.sub_form_id && !field.subFormId);
+        const visibleFieldIds = mainFormFields
+          .filter(field => fieldVisibility[field.id] !== false)  // Include if visibility is true or undefined (always visible)
+          .map(field => field.id);
+
+        console.log('🔍 DEBUG: Total main form fields:', mainFormFields.length);
+        console.log('🔍 DEBUG: Field visibility state:', fieldVisibility);
+        console.log('🔍 DEBUG: Visible Field IDs being sent to backend:', visibleFieldIds);
+        console.log('🔍 DEBUG: Total visible fields:', visibleFieldIds.length);
+        console.log('🔍 DEBUG: Hidden fields:', mainFormFields.filter(f => fieldVisibility[f.id] === false).map(f => f.title));
+
+        result = await submissionService.submitForm(formId, formData, flatFiles, visibleFieldIds);
       }
 
       if (result.success) {
@@ -977,7 +1091,8 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     })();
 
     // Check if field has validation error and user has attempted to submit
-    const hasError = hasSubmissionAttempt && field.required && validateField(field, rawFieldValue);
+    // ⚠️ IMPORTANT: Only show error if field is visible (use isFieldVisible from line 1038)
+    const hasError = hasSubmissionAttempt && field.required && isFieldVisible && validateField(field, rawFieldValue);
     const fieldError = fieldErrors[field.id];
     const isFieldTouched = fieldTouched[field.id];
 
