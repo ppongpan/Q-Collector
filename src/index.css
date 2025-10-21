@@ -1049,11 +1049,16 @@
 
   /* ✅ FIX: Multiple choice buttons maintain rounded corners on all states */
   /* Target buttons in multiple choice fields specifically */
-  button[type="button"].rounded-md,
-  button[type="button"].rounded-md:hover,
-  button[type="button"].rounded-md:focus,
-  button[type="button"].rounded-md:focus-visible,
-  button[type="button"].rounded-md:active {
+  /* High specificity to override all other CSS */
+  button[type="button"].border-2,
+  button[type="button"].border-2:hover,
+  button[type="button"].border-2:focus,
+  button[type="button"].border-2:focus-visible,
+  button[type="button"].border-2:active,
+  button[type="button"].border-2.border-primary,
+  button[type="button"].border-2.border-primary:hover,
+  button[type="button"].border-2.border-primary:focus,
+  button[type="button"].border-2.border-primary:active {
     border-radius: 0.375rem !important;
     -webkit-border-radius: 0.375rem !important;
     -moz-border-radius: 0.375rem !important;

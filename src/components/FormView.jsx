@@ -1316,13 +1316,19 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
                         }
                       }}
                       className={`
-                        px-2 py-1.5 rounded-md border-2 transition-all duration-300 text-center focus:outline-none text-xs w-full
+                        px-2 py-1.5 border-2 text-center focus:outline-none text-xs w-full
+                        transition-colors duration-300
                         ${isSelected
                           ? 'border-primary bg-primary/10 text-primary'
                           : 'border-border/40 bg-muted/20 text-foreground/80 hover:border-primary/50 hover:bg-primary/5'
                         }
                       `}
-                      style={{ minHeight: '32px' }}
+                      style={{
+                        minHeight: '32px',
+                        borderRadius: '0.375rem', // 6px - consistent rounded corners
+                        WebkitBorderRadius: '0.375rem',
+                        MozBorderRadius: '0.375rem'
+                      }}
                     >
                       <span className="truncate block">{optionText}</span>
                     </button>
