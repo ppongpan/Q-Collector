@@ -717,11 +717,19 @@ class ApiClient {
    * @returns {Promise} Created submission
    */
   async createSubmission(formId, fieldData, metadata = {}) {
-    return this.post(`/forms/${formId}/submissions`, {
+    console.log('🔍 DEBUG ApiClient: metadata received:', metadata);
+    console.log('🔍 DEBUG ApiClient: visibleFieldIds:', metadata.visibleFieldIds);
+
+    const requestBody = {
       fieldData,
       status: 'submitted',
-      metadata
-    });
+      visibleFieldIds: metadata.visibleFieldIds,  // ✅ CRITICAL FIX: Send visible field IDs for backend validation
+      ...metadata
+    };
+
+    console.log('🔍 DEBUG ApiClient: Request body:', requestBody);
+
+    return this.post(`/forms/${formId}/submissions`, requestBody);
   }
 
   /**

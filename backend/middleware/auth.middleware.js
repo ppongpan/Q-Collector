@@ -85,8 +85,8 @@ function authorize(...allowedRoles) {
         throw new ApiError(401, 'Authentication required', 'AUTH_REQUIRED');
       }
 
-      // Admin has access to everything
-      if (req.userRole === 'admin') {
+      // Admin and Super Admin have access to everything
+      if (req.userRole === 'admin' || req.userRole === 'super_admin') {
         return next();
       }
 

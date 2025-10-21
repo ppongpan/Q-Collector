@@ -324,6 +324,27 @@ module.exports = (sequelize, DataTypes) => {
       as: 'submissions',
       onDelete: 'CASCADE',
     });
+
+    // Form has many SheetImportConfigs
+    Form.hasMany(models.SheetImportConfig, {
+      foreignKey: 'form_id',
+      as: 'sheetImportConfigs',
+      onDelete: 'CASCADE',
+    });
+
+    // Form has many SheetImportHistory
+    Form.hasMany(models.SheetImportHistory, {
+      foreignKey: 'form_id',
+      as: 'sheetImportHistory',
+      onDelete: 'CASCADE',
+    });
+
+    // Form has many NotificationRules
+    Form.hasMany(models.NotificationRule, {
+      foreignKey: 'form_id',
+      as: 'notificationRules',
+      onDelete: 'CASCADE',
+    });
   };
 
   /**

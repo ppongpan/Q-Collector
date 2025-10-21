@@ -23,9 +23,11 @@ import { getConditionalStyle } from '../utils/conditionalFormattingEngine'; // �
 
 // Auth context
 import { useAuth } from '../contexts/AuthContext'; // ✅ v0.7.38: Get user ID for preferences
+import { useNavigation } from '../contexts/NavigationContext'; // ✅ v0.7.45: Navigation context
 
 export default function FormSubmissionList({ formId, onNewSubmission, onViewSubmission, onEditSubmission, onBack }) {
   const { user } = useAuth(); // ✅ v0.7.38: Get current user for preferences
+  const { setNavigationFilters, setFilteredSubmissions, setTotalFilteredCount } = useNavigation(); // ✅ v0.7.45: Provide filter/sort state for navigation
   const [submissions, setSubmissions] = useState([]);
   const [form, setForm] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -222,6 +224,46 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // ✅ v0.7.45: Update navigation context when filters change
+  useEffect(() => {
+    if (formId) {
+      setNavigationFilters({
+        formId,
+        month: selectedMonth,
+        year: selectedYear,
+        sortBy,
+        sortOrder,
+        selectedDateField,
+        searchTerm
+      });
+      console.log('🔄 [FormSubmissionList] Updated navigation filters:', {
+        formId,
+        month: selectedMonth,
+        year: selectedYear,
+        sortBy,
+        sortOrder,
+        selectedDateField
+      });
+    }
+  }, [formId, selectedMonth, selectedYear, sortBy, sortOrder, selectedDateField, searchTerm, setNavigationFilters]);
+
+  // ✅ v0.7.45: Update navigation context when submissions change
+  useEffect(() => {
+    if (submissions && submissions.length > 0) {
+      setFilteredSubmissions(submissions);
+      setTotalFilteredCount(totalItems);
+      console.log('📋 [FormSubmissionList] Updated filtered submissions:', {
+        count: submissions.length,
+        total: totalItems
+      });
+    } else if (submissions && submissions.length === 0) {
+      // Empty results - still update context
+      setFilteredSubmissions([]);
+      setTotalFilteredCount(0);
+      console.log('📋 [FormSubmissionList] Cleared filtered submissions (empty results)');
+    }
+  }, [submissions, totalItems, setFilteredSubmissions, setTotalFilteredCount]);
 
   // Auto-select date field if only one exists
   useEffect(() => {

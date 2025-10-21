@@ -15,39 +15,53 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     console.log('🚀 [Migration] Adding image variant columns to files table...');
 
-    // Add blur_preview column (base64 data URL, ~10KB)
-    await queryInterface.addColumn('files', 'blur_preview', {
-      type: Sequelize.TEXT,
-      allowNull: true,
-      comment: 'Base64 data URL for blur preview (20x20px, inline, no HTTP request)'
-    });
-    console.log('✅ Added column: blur_preview');
+    // Check if columns exist and add them only if they don't
+    try {
+      await queryInterface.addColumn('files', 'blur_preview', {
+        type: Sequelize.TEXT,
+        allowNull: true,
+        comment: 'Base64 data URL for blur preview (20x20px, inline, no HTTP request)'
+      });
+      console.log('✅ Added column: blur_preview');
+    } catch (err) {
+      console.log('⚠️  Column blur_preview already exists, skipping...');
+    }
 
-    // Add thumbnail_path column (MinIO path to 400px thumbnail)
-    await queryInterface.addColumn('files', 'thumbnail_path', {
-      type: Sequelize.STRING(500),
-      allowNull: true,
-      comment: 'MinIO path to thumbnail image (400px width, 50-100KB)'
-    });
-    console.log('✅ Added column: thumbnail_path');
+    try {
+      await queryInterface.addColumn('files', 'thumbnail_path', {
+        type: Sequelize.STRING(500),
+        allowNull: true,
+        comment: 'MinIO path to thumbnail image (400px width, 50-100KB)'
+      });
+      console.log('✅ Added column: thumbnail_path');
+    } catch (err) {
+      console.log('⚠️  Column thumbnail_path already exists, skipping...');
+    }
 
-    // Add full_path column (MinIO path to original file)
-    await queryInterface.addColumn('files', 'full_path', {
-      type: Sequelize.STRING(500),
-      allowNull: true,
-      comment: 'MinIO path to full resolution image'
-    });
-    console.log('✅ Added column: full_path');
+    try {
+      await queryInterface.addColumn('files', 'full_path', {
+        type: Sequelize.STRING(500),
+        allowNull: true,
+        comment: 'MinIO path to full resolution image'
+      });
+      console.log('✅ Added column: full_path');
+    } catch (err) {
+      console.log('⚠️  Column full_path already exists, skipping...');
+    }
 
-    // Migrate existing files: populate full_path from existing file_path
-    console.log('📦 [Migration] Migrating existing file paths...');
-    await queryInterface.sequelize.query(`
-      UPDATE files
-      SET full_path = file_path
-      WHERE file_path IS NOT NULL
-      AND full_path IS NULL
-    `);
-    console.log('✅ Migrated existing file paths to full_path column');
+    // Migrate existing files: populate full_path from existing file_path (if column exists)
+    console.log('📦 [Migration] Checking for existing file paths to migrate...');
+    try {
+      await queryInterface.sequelize.query(`
+        UPDATE files
+        SET full_path = file_path
+        WHERE file_path IS NOT NULL
+        AND full_path IS NULL
+      `);
+      console.log('✅ Migrated existing file paths to full_path column');
+    } catch (err) {
+      console.log('⚠️  No file_path column found, skipping migration...');
+    }
 
     console.log('🎉 [Migration] Image variants columns added successfully!');
     console.log('');

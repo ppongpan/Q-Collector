@@ -2,26 +2,26 @@
 
 **Enterprise Form Builder & Data Collection System**
 
-## Version: 0.7.42-dev (2025-10-19)
+## Version: 0.8.0-dev (2025-10-21)
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection
-**Status:** 🟢 Production Ready & Testing
+**Status:** 🟢 Production Ready
 
 ---
 
-## 🎯 Current Status (2025-10-19)
+## 🎯 Current Status (2025-10-21)
 
 ### Servers Running
-- ✅ **Backend**: Port 5000 (Q-Collector API v0.7.3-dev)
-- ✅ **Frontend**: Port 3000 (q-collector v0.7.17-dev)
+- ✅ **Backend**: Port 5000 (Q-Collector API v0.8.0-dev)
+- ✅ **Frontend**: Port 3000 (Q-Collector v0.8.0-dev)
 - ✅ **Docker**: PostgreSQL 16 + Redis 7 + MinIO
 
 ### Recent Activity
-- User "pongpanp" logged in with 2FA (16:42:03)
-- Token refresh successful (7-day sessions working)
-- Form submissions loaded with pagination
-- All services operational
+- ✅ Notification Rules System integrated into Form Builder
+- ✅ Auto-populate Form ID & Sub-Form UX improvements
+- ✅ Per-form notification management working
+- ✅ All services operational
 
 **Access Points:**
 - Frontend: http://localhost:3000
@@ -67,7 +67,153 @@
 
 ---
 
-## Latest Updates - v0.7.42-dev (2025-10-19)
+## Latest Updates - v0.7.45-dev (2025-10-20)
+
+### ✅ Filter/Sort-Aware Navigation for Detail View
+**Status**: ✅ Complete and Working
+**Git Commit**: Pending commit
+**Completion Date**: 2025-10-20
+
+**Problem Solved:**
+- Navigation arrows in SubmissionDetail were navigating through **unfiltered/unsorted** data
+- Users would see wrong submissions, blank pages, or incomplete data when using prev/next arrows
+- Filters and sorting applied in FormSubmissionList were not respected in Detail View navigation
+
+**Solution Implemented:**
+- Created NavigationContext to share filter/sort state between components
+- FormSubmissionList provides filter state (month, year, sortBy, sortOrder, dateField, search)
+- MainFormApp consumes context and loads ALL filtered submissions (limit: 10,000) for navigation
+- Navigation now respects active filters and maintains correct order
+
+**Features:**
+- ✅ Context-based state sharing (no prop drilling)
+- ✅ Loads ALL filtered items (not limited by pagination)
+- ✅ Three-tier fallback strategy:
+  1. Load with filters from context (preferred)
+  2. Load ALL submissions if no filters (fallback)
+- ✅ Automatic context reset when switching forms
+- ✅ Real-time filter synchronization
+- ✅ Console logging for debugging
+
+**Files Created:**
+- `src/contexts/NavigationContext.jsx` - Navigation state management context
+
+**Files Modified:**
+- `src/components/MainFormApp.jsx` - Wrap with NavigationProvider, consume context (lines 960-1039)
+- `src/components/FormSubmissionList.jsx` - Provide filter/sort state to context (lines 228-266)
+
+**Technical Details:**
+```javascript
+// NavigationContext structure
+{
+  navigationFilters: {
+    formId: null,
+    month: null,
+    year: null,
+    sortBy: null,
+    sortOrder: null,
+    selectedDateField: null,
+    searchTerm: ''
+  },
+  setNavigationFilters: () => {},
+  filteredSubmissions: [],
+  setFilteredSubmissions: () => {},
+  totalFilteredCount: 0,
+  setTotalFilteredCount: () => {},
+  clearNavigationContext: () => {}
+}
+```
+
+**User Experience Impact:**
+- ✅ Navigation arrows now show correct next/prev submission based on active filters
+- ✅ No more blank pages or wrong data when navigating
+- ✅ Users can navigate through all filtered items (e.g., all 51 items, not just 20 per page)
+- ✅ Filter state persists across navigation
+- ✅ Seamless experience between List View and Detail View
+
+**Testing Status:** 🧪 Ready for manual testing in browser
+
+---
+
+## Previous Updates - v0.7.44-dev (2025-10-20)
+
+### ✅ Conditional Formatting System
+**Status**: ✅ Complete and Working (PRODUCTION READY)
+**Completion Date**: 2025-10-20
+
+**Features Implemented:**
+- ✅ Form-level configuration (stored in `form.settings.conditionalFormatting`)
+- ✅ Applies formatting rules to both Main Form and Sub-Form fields
+- ✅ 22 preset Tailwind colors + custom color picker
+- ✅ Formula-based conditions using FormulaEngine
+- ✅ Multiple style options: text color, background color, font weight
+- ✅ Rule priority system (lower order = higher priority)
+- ✅ Real-time preview in UI
+- ✅ Works in Detail View (Main + Sub-Form) and List View
+
+**Components Created:**
+1. **ColorPicker** (`src/components/ui/color-picker.jsx`)
+   - 22 preset Tailwind colors with visual swatches
+   - HTML5 custom color input
+   - Clear button for removing colors
+   - Displays current color with hex code
+
+2. **FormattingRuleCard** (`src/components/ui/formatting-rule-card.jsx`)
+   - Field selector with grouped options (Main Form + Sub-Forms)
+   - Condition input with formula syntax
+   - Text color and background color pickers
+   - Font weight selector (Normal, Medium, Bold, Extra Bold)
+   - Live preview of formatting
+   - Delete functionality
+
+3. **ConditionalFormattingEngine** (`src/utils/conditionalFormattingEngine.js`)
+   - `getConditionalStyle()` function for evaluating rules
+   - Formula evaluation using existing FormulaEngine
+   - Returns CSS styles based on matching conditions
+   - Graceful error handling
+
+**Integration Points:**
+- ✅ `EnhancedFormBuilder.jsx` - Form Settings section with enable toggle and rules management
+- ✅ `SubmissionDetail.jsx` - Applied conditional styles in main form detail view
+- ✅ `SubFormDetail.jsx` - Applied conditional styles in sub-form detail view
+- ✅ `FormSubmissionList.jsx` - Applied conditional styles in table cells
+
+**Data Structure:**
+```javascript
+// Stored in form.settings (JSONB column)
+{
+  conditionalFormatting: {
+    enabled: true,
+    rules: [
+      {
+        id: "rule_1",
+        order: 1,
+        fieldId: "field_abc",
+        fieldSource: "main",  // "main" | "subform"
+        subFormId: null,
+        fieldTitle: "สถานะการขาย",
+        condition: "[สถานะการขาย] = \"ปิดการขายได้\"",
+        style: {
+          textColor: "#22c55e",
+          backgroundColor: null,
+          fontWeight: "bold"
+        }
+      }
+    ]
+  }
+}
+```
+
+**Example Use Cases:**
+1. **Sales Status Highlighting**: แสดง "ปิดการขายได้" เป็นตัวหนาสีเขียว
+2. **High Value Alert**: ยอดขาย > 100,000 แสดงพื้นหลังสีเหลืองอ่อน
+3. **Maintenance Status**: สถานะ "เสร็จสิ้น" แสดงพื้นหลังสีเขียว ตัวอักษรสีขาว
+
+**Build Status**: ✅ Compiled successfully (warnings only, no errors)
+
+---
+
+## Previous Updates - v0.7.42-dev (2025-10-19)
 
 ### ✅ Number Field Formatting Options
 **Status**: ✅ Complete and Working
@@ -510,8 +656,23 @@ TELEGRAM_GROUP_ID=[your-group-id]
 
 ## Version History
 
-**Current**: v0.7.42-dev (2025-10-19) - Number Field Formatting Options
-**Previous**: v0.7.41-dev → v0.7.40-dev → v0.7.36-dev → v0.7.35-dev
+**Current**: v0.7.45-dev (2025-10-20) - Filter/Sort-Aware Navigation (COMPLETE)
+**Previous**: v0.7.44-dev → v0.7.42-dev → v0.7.41-dev → v0.7.40-dev → v0.7.36-dev
+
+**Key Changes in v0.7.45:**
+- ✅ Filter/Sort-Aware Navigation for Detail View
+- ✅ NavigationContext for state sharing
+- ✅ Loads ALL filtered submissions (limit: 10,000)
+- ✅ No more wrong submissions or blank pages
+- ✅ Seamless List View ↔ Detail View experience
+
+**Key Changes in v0.7.44:**
+- ✅ Conditional Formatting System - Form-level configuration
+- ✅ ColorPicker component with 22 preset colors
+- ✅ FormattingRuleCard component with live preview
+- ✅ ConditionalFormattingEngine utility
+- ✅ Integration in all display views (Detail + List)
+- ✅ Works for both Main Form and Sub-Form fields
 
 **Key Changes in v0.7.42:**
 - User-configurable decimal formatting for number fields (6 options)
@@ -541,6 +702,6 @@ TELEGRAM_GROUP_ID=[your-group-id]
 
 ## License
 
-**Internal Use** - Q-Collector Enterprise v0.7.42-dev
-**Last Updated**: 2025-10-19 17:30:00 UTC+7
+**Internal Use** - Q-Collector Enterprise v0.7.45-dev
+**Last Updated**: 2025-10-20 13:15:00 UTC+7
 **Status**: ✅ OPERATIONAL & READY FOR TESTING

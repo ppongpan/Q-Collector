@@ -3,7 +3,14 @@ import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 
-const AnimatedAddButton = ({ onClick, tooltip = "เพิ่มฟิลด์ใหม่", className = "", size = "default", testId = "add-field-btn" }) => {
+const AnimatedAddButton = ({
+  onClick,
+  tooltip = "เพิ่มฟิลด์ใหม่",
+  className = "",
+  size = "default",
+  testId = "add-field-btn",
+  colorScheme = "orange" // ✅ NEW: Support multiple color schemes (orange, green)
+}) => {
   // Size configurations
   const sizes = {
     small: { container: "w-12 h-12", icon: "w-4 h-4", text: "text-base" },
@@ -11,7 +18,38 @@ const AnimatedAddButton = ({ onClick, tooltip = "เพิ่มฟิลด์�
     large: { container: "w-20 h-20", icon: "w-8 h-8", text: "text-2xl" }
   };
 
+  // ✅ NEW: Color scheme configurations
+  const colorSchemes = {
+    orange: {
+      outerGlow: "from-orange-400 via-orange-500 to-orange-600",
+      middleRing: "from-orange-300 to-orange-400",
+      mainButton: "from-orange-400 via-orange-500 to-orange-600",
+      shadow: "shadow-orange-500/40",
+      hoverShadow: "group-hover:shadow-orange-500/60",
+      ripple: "border-orange-400/50",
+      boxShadow: [
+        "0 10px 20px rgba(249, 115, 22, 0.4)",
+        "0 15px 30px rgba(249, 115, 22, 0.6)",
+        "0 10px 20px rgba(249, 115, 22, 0.4)"
+      ]
+    },
+    green: {
+      outerGlow: "from-green-400 via-green-500 to-green-600",
+      middleRing: "from-green-300 to-green-400",
+      mainButton: "from-green-400 via-green-500 to-green-600",
+      shadow: "shadow-green-500/40",
+      hoverShadow: "group-hover:shadow-green-500/60",
+      ripple: "border-green-400/50",
+      boxShadow: [
+        "0 10px 20px rgba(34, 197, 94, 0.4)",
+        "0 15px 30px rgba(34, 197, 94, 0.6)",
+        "0 10px 20px rgba(34, 197, 94, 0.4)"
+      ]
+    }
+  };
+
   const sizeConfig = sizes[size] || sizes.default;
+  const colors = colorSchemes[colorScheme] || colorSchemes.orange;
   return (
     <motion.div
       data-testid={testId}
@@ -32,7 +70,7 @@ const AnimatedAddButton = ({ onClick, tooltip = "เพิ่มฟิลด์�
     >
       {/* Outer glow ring - pulsing */}
       <motion.div
-        className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 opacity-60"
+        className={`absolute inset-0 rounded-full bg-gradient-to-r ${colors.outerGlow} opacity-60`}
         animate={{
           scale: [1, 1.2, 1],
           opacity: [0.6, 0.8, 0.6]
@@ -47,7 +85,7 @@ const AnimatedAddButton = ({ onClick, tooltip = "เพิ่มฟิลด์�
 
       {/* Middle ring - rotating */}
       <motion.div
-        className="absolute inset-1 rounded-full bg-gradient-to-r from-orange-300 to-orange-400 opacity-40"
+        className={`absolute inset-1 rounded-full bg-gradient-to-r ${colors.middleRing} opacity-40`}
         animate={{
           rotate: [0, 360],
           scale: [0.95, 1.05, 0.95]
@@ -62,19 +100,15 @@ const AnimatedAddButton = ({ onClick, tooltip = "เพิ่มฟิลด์�
 
       {/* Main button */}
       <motion.div
-        className={`relative ${sizeConfig.container} rounded-full bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600
-                   shadow-lg shadow-orange-500/40 flex items-center justify-center
+        className={`relative ${sizeConfig.container} rounded-full bg-gradient-to-br ${colors.mainButton}
+                   shadow-lg ${colors.shadow} flex items-center justify-center
                    border-2 border-white/20 backdrop-blur-sm
-                   group-hover:shadow-xl group-hover:shadow-orange-500/60
+                   ${colors.hoverShadow}
                    transition-all duration-300 ease-out`}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         animate={{
-          boxShadow: [
-            "0 10px 20px rgba(249, 115, 22, 0.4)",
-            "0 15px 30px rgba(249, 115, 22, 0.6)",
-            "0 10px 20px rgba(249, 115, 22, 0.4)"
-          ]
+          boxShadow: colors.boxShadow
         }}
         transition={{
           duration: 2,
@@ -142,7 +176,7 @@ const AnimatedAddButton = ({ onClick, tooltip = "เพิ่มฟิลด์�
 
       {/* Ripple effect on hover */}
       <motion.div
-        className="absolute inset-0 rounded-full border-2 border-orange-400/50"
+        className={`absolute inset-0 rounded-full border-2 ${colors.ripple}`}
         initial={{ scale: 1, opacity: 0 }}
         whileHover={{
           scale: [1, 1.4, 1.8],

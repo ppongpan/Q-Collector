@@ -20,6 +20,8 @@ const emailRoutes = require('./email.routes');
 const telegramRoutes = require('./telegram.routes');
 const telegramSettingsRoutes = require('./telegram-settings.routes');
 const migrationRoutes = require('./migration.routes');
+const sheetsRoutes = require('./sheets.routes');
+const notificationRoutes = require('./notification.routes');
 const { requireCompletedSetup } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
@@ -74,6 +76,8 @@ router.use('/email', emailRoutes);
 router.use('/telegram', telegramRoutes);
 router.use('/telegram-settings', telegramSettingsRoutes);
 router.use('/migrations', migrationRoutes);
+router.use('/sheets', sheetsRoutes);
+router.use('/notifications', notificationRoutes);
 
 /**
  * 404 handler for API routes

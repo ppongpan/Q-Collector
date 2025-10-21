@@ -90,8 +90,8 @@ router.get(
       .withMessage('Page must be a positive integer'),
     query('limit')
       .optional()
-      .isInt({ min: 1, max: 100 })
-      .withMessage('Limit must be between 1 and 100'),
+      .isInt({ min: 1, max: 10000 }) // ✅ v0.7.45: Allow up to 10,000 for navigation (loads all filtered submissions)
+      .withMessage('Limit must be between 1 and 10000'),
     query('status')
       .optional()
       .isIn(['draft', 'submitted', 'approved', 'rejected', 'archived'])
@@ -105,6 +105,12 @@ router.get(
       limit: req.query.limit,
       status: req.query.status,
       onlyMainForm: true, // ✅ FIX: Only show main form submissions (parent_id IS NULL)
+      month: req.query.month ? parseInt(req.query.month) : undefined,
+      year: req.query.year ? parseInt(req.query.year) : undefined,
+      dateField: req.query.dateField,
+      search: req.query.search,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
     };
 
     const result = await SubmissionService.listSubmissions(formId, req.userId, filters);

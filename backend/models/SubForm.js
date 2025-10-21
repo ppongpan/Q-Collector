@@ -93,6 +93,20 @@ module.exports = (sequelize, DataTypes) => {
       // IMPORTANT: Use 'order' column, NOT 'order_index'
       order: [['order', 'ASC']]
     });
+
+    // SubForm has many SheetImportConfigs
+    SubForm.hasMany(models.SheetImportConfig, {
+      foreignKey: 'sub_form_id',
+      as: 'sheetImportConfigs',
+      onDelete: 'SET NULL',
+    });
+
+    // SubForm has many NotificationRules
+    SubForm.hasMany(models.NotificationRule, {
+      foreignKey: 'sub_form_id',
+      as: 'notificationRules',
+      onDelete: 'CASCADE',
+    });
   };
 
   /**

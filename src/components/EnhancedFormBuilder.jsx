@@ -44,6 +44,10 @@ import TelegramNotificationSettings from './ui/telegram-notification-settings';
 import MigrationPreviewModal from './ui/MigrationPreviewModal';
 // ✅ v0.7.40: Conditional Formatting components
 import { FormattingRuleCard } from './ui/formatting-rule-card';
+// ✅ v0.8.0: Notification Rules Management
+import NotificationRulesTab from './notifications/NotificationRulesTab';
+// ✅ Thai Date Picker components for dd/mm/yyyy format
+import { ThaiDatePicker, ThaiDateTimePicker } from './ui/date-picker-thai';
 // import EnhancedSlider from "./ui/enhanced-slider"; // Commented out - not used
 
 // ShadCN UI components
@@ -61,7 +65,7 @@ import {
   faEllipsisV, faArrowUp, faArrowDown, faCopy,
   faQuestionCircle, faLayerGroup, faComments, faFileUpload, faCog, faHashtag as faNumbers,
   faClipboardList, faSave, faUsers, faTrash,
-  faDatabase, faCheck, faTimes, faPalette
+  faDatabase, faCheck, faTimes, faPalette, faBell
 } from '@fortawesome/free-solid-svg-icons';
 
 // User Role definitions with colors for access control
@@ -466,6 +470,20 @@ function FieldEditor({
             </div>
           )}
 
+          {/* ✅ Initial Value Settings - For all field types except file uploads */}
+          {!['file_upload', 'image_upload'].includes(field.type) && (
+            <div className="space-y-4 p-4 bg-gradient-to-r from-green-500/5 to-teal-500/5 border border-green-200/20 rounded-lg">
+              <div className="flex items-center gap-2">
+                <FontAwesomeIcon icon={faCog} className="w-4 h-4 text-green-600" />
+                <label className="text-sm font-medium text-green-800 dark:text-green-200">
+                  ค่าเริ่มต้น (Initial Value)
+                </label>
+              </div>
+
+              {renderInitialValueInput()}
+            </div>
+          )}
+
           {/* Field Visibility Settings */}
           <div className="space-y-4 p-4 bg-gradient-to-r from-purple-500/5 to-blue-500/5 border border-purple-200/20 rounded-lg">
             <div className="flex items-center gap-2">
@@ -559,6 +577,382 @@ function FieldEditor({
       )}
     </GlassCard>
   );
+
+  function renderInitialValueInput() {
+    const initialValue = field.options?.initialValue;
+
+    switch (field.type) {
+      case 'short_answer':
+      case 'paragraph':
+      case 'email':
+      case 'phone':
+      case 'url':
+        return (
+          <GlassInput
+            label="ค่าเริ่มต้น"
+            value={initialValue || ''}
+            onChange={(e) => updateField({
+              options: { ...field.options, initialValue: e.target.value }
+            })}
+            placeholder="ค่าที่จะแสดงเมื่อเปิดฟอร์มครั้งแรก"
+            minimal
+          />
+        );
+
+      case 'number':
+        return (
+          <GlassInput
+            label="ค่าเริ่มต้น"
+            type="number"
+            value={initialValue || ''}
+            onChange={(e) => updateField({
+              options: { ...field.options, initialValue: e.target.value }
+            })}
+            placeholder="ตัวเลขเริ่มต้น"
+            minimal
+          />
+        );
+
+      case 'date': {
+        // Determine dropdown value from initialValue
+        let dateDropdownValue = 'none';
+        if (initialValue?.type === 'dynamic' && initialValue?.formula === 'Today()') {
+          dateDropdownValue = 'today';
+        } else if (initialValue?.type === 'static' && initialValue?.value) {
+          dateDropdownValue = 'specific';
+        }
+
+        return (
+          <div className="space-y-3">
+            <GlassSelect
+              label="ค่าเริ่มต้น"
+              value={dateDropdownValue}
+              onChange={(e) => {
+                const type = e.target.value;
+                if (type === 'none') {
+                  updateField({
+                    options: { ...field.options, initialValue: null }
+                  });
+                } else if (type === 'today') {
+                  updateField({
+                    options: { ...field.options, initialValue: { type: 'dynamic', formula: 'Today()' } }
+                  });
+                } else {
+                  updateField({
+                    options: { ...field.options, initialValue: { type: 'static', value: '' } }
+                  });
+                }
+              }}
+              minimal
+            >
+              <option value="none">ไม่มีค่าเริ่มต้น</option>
+              <option value="today">วันที่ปัจจุบัน (Today)</option>
+              <option value="specific">วันที่ที่กำหนด</option>
+            </GlassSelect>
+
+            {initialValue?.type === 'static' && (
+              <ThaiDatePicker
+                label="เลือกวันที่"
+                value={initialValue?.value || ''}
+                onChange={(e) => updateField({
+                  options: { ...field.options, initialValue: { type: 'static', value: e.target.value } }
+                })}
+                minimal
+              />
+            )}
+          </div>
+        );
+      }
+
+      case 'time': {
+        // Determine dropdown value from initialValue
+        let timeDropdownValue = 'none';
+        if (initialValue?.type === 'dynamic' && initialValue?.formula === 'Now()') {
+          timeDropdownValue = 'now';
+        } else if (initialValue?.type === 'static' && initialValue?.value) {
+          timeDropdownValue = 'specific';
+        }
+
+        return (
+          <div className="space-y-3">
+            <GlassSelect
+              label="ค่าเริ่มต้น"
+              value={timeDropdownValue}
+              onChange={(e) => {
+                const type = e.target.value;
+                if (type === 'none') {
+                  updateField({
+                    options: { ...field.options, initialValue: null }
+                  });
+                } else if (type === 'now') {
+                  updateField({
+                    options: { ...field.options, initialValue: { type: 'dynamic', formula: 'Now()' } }
+                  });
+                } else {
+                  updateField({
+                    options: { ...field.options, initialValue: { type: 'static', value: '' } }
+                  });
+                }
+              }}
+              minimal
+            >
+              <option value="none">ไม่มีค่าเริ่มต้น</option>
+              <option value="now">เวลาปัจจุบัน (Now)</option>
+              <option value="specific">เวลาที่กำหนด</option>
+            </GlassSelect>
+
+            {initialValue?.type === 'static' && (
+              <GlassInput
+                label="เลือกเวลา"
+                type="time"
+                value={initialValue?.value || ''}
+                onChange={(e) => updateField({
+                  options: { ...field.options, initialValue: { type: 'static', value: e.target.value } }
+                })}
+                minimal
+              />
+            )}
+          </div>
+        );
+      }
+
+      case 'datetime': {
+        // Determine dropdown value from initialValue
+        let datetimeDropdownValue = 'none';
+        if (initialValue?.type === 'dynamic' && initialValue?.formula === 'Now()') {
+          datetimeDropdownValue = 'now';
+        } else if (initialValue?.type === 'static' && initialValue?.value) {
+          datetimeDropdownValue = 'specific';
+        }
+
+        return (
+          <div className="space-y-3">
+            <GlassSelect
+              label="ค่าเริ่มต้น"
+              value={datetimeDropdownValue}
+              onChange={(e) => {
+                const type = e.target.value;
+                if (type === 'none') {
+                  updateField({
+                    options: { ...field.options, initialValue: null }
+                  });
+                } else if (type === 'now') {
+                  updateField({
+                    options: { ...field.options, initialValue: { type: 'dynamic', formula: 'Now()' } }
+                  });
+                } else {
+                  updateField({
+                    options: { ...field.options, initialValue: { type: 'static', value: '' } }
+                  });
+                }
+              }}
+              minimal
+            >
+              <option value="none">ไม่มีค่าเริ่มต้น</option>
+              <option value="now">วันที่และเวลาปัจจุบัน (Now)</option>
+              <option value="specific">วันที่และเวลาที่กำหนด</option>
+            </GlassSelect>
+
+            {initialValue?.type === 'static' && (
+              <ThaiDateTimePicker
+                label="เลือกวันที่และเวลา"
+                value={initialValue?.value || ''}
+                onChange={(e) => updateField({
+                  options: { ...field.options, initialValue: { type: 'static', value: e.target.value } }
+                })}
+                minimal
+              />
+            )}
+          </div>
+        );
+      }
+
+      case 'multiple_choice':
+        const options = field.options?.options || [];
+        const allowMultiple = field.options?.allowMultiple || false;
+
+        if (options.length === 0) {
+          return (
+            <p className="text-sm text-muted-foreground">
+              เพิ่มตัวเลือกก่อนเพื่อกำหนดค่าเริ่มต้น
+            </p>
+          );
+        }
+
+        if (allowMultiple) {
+          // Multiple selection - checkboxes
+          return (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground/80">เลือกตัวเลือกเริ่มต้น</label>
+              <div className="space-y-2">
+                {options.map((option, index) => (
+                  <label key={index} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(initialValue || []).includes(option)}
+                      onChange={(e) => {
+                        const currentValues = initialValue || [];
+                        const newValues = e.target.checked
+                          ? [...currentValues, option]
+                          : currentValues.filter(v => v !== option);
+                        updateField({
+                          options: { ...field.options, initialValue: newValues.length > 0 ? newValues : null }
+                        });
+                      }}
+                      className="w-4 h-4 text-primary focus:ring-primary/20 focus:ring-2 rounded"
+                    />
+                    <span className="text-sm">{option}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          );
+        } else {
+          // Single selection - radio
+          return (
+            <GlassSelect
+              label="ตัวเลือกเริ่มต้น"
+              value={initialValue || ''}
+              onChange={(e) => updateField({
+                options: { ...field.options, initialValue: e.target.value || null }
+              })}
+              minimal
+            >
+              <option value="">ไม่มีค่าเริ่มต้น</option>
+              {options.map((option, index) => (
+                <option key={index} value={option}>{option}</option>
+              ))}
+            </GlassSelect>
+          );
+        }
+
+      case 'rating':
+        const maxRating = field.options?.maxRating || 5;
+        return (
+          <GlassSelect
+            label="คะแนนเริ่มต้น"
+            value={initialValue || ''}
+            onChange={(e) => updateField({
+              options: { ...field.options, initialValue: e.target.value ? parseInt(e.target.value) : null }
+            })}
+            minimal
+          >
+            <option value="">ไม่มีค่าเริ่มต้น</option>
+            {Array.from({ length: maxRating }, (_, i) => i + 1).map(rating => (
+              <option key={rating} value={rating}>{rating} ดาว</option>
+            ))}
+          </GlassSelect>
+        );
+
+      case 'slider':
+        const min = field.options?.min || 0;
+        const max = field.options?.max || 100;
+        const step = field.options?.step || 1;
+
+        return (
+          <div className="space-y-2">
+            <GlassInput
+              label="ค่าเริ่มต้น"
+              type="number"
+              value={initialValue !== null && initialValue !== undefined ? initialValue : ''}
+              onChange={(e) => {
+                const value = e.target.value === '' ? null : parseFloat(e.target.value);
+                updateField({
+                  options: { ...field.options, initialValue: value }
+                });
+              }}
+              min={min}
+              max={max}
+              step={step}
+              placeholder={`ค่าระหว่าง ${min} - ${max}`}
+              minimal
+            />
+            {initialValue !== null && initialValue !== undefined && (
+              <p className="text-xs text-success">
+                ✅ ค่าเริ่มต้น: {initialValue} {field.options?.unit || ''}
+              </p>
+            )}
+          </div>
+        );
+
+      case 'province':
+        // สามารถเพิ่มรายการจังหวัดได้ แต่ตอนนี้ให้ user พิมพ์ชื่อจังหวัดเอง
+        return (
+          <GlassInput
+            label="จังหวัดเริ่มต้น"
+            value={initialValue || ''}
+            onChange={(e) => updateField({
+              options: { ...field.options, initialValue: e.target.value }
+            })}
+            placeholder="เช่น กรุงเทพมหานคร"
+            minimal
+          />
+        );
+
+      case 'factory':
+        return (
+          <GlassInput
+            label="โรงงานเริ่มต้น"
+            value={initialValue || ''}
+            onChange={(e) => updateField({
+              options: { ...field.options, initialValue: e.target.value }
+            })}
+            placeholder="ชื่อโรงงาน"
+            minimal
+          />
+        );
+
+      case 'lat_long':
+        return (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <GlassInput
+                label="Latitude เริ่มต้น"
+                type="number"
+                value={initialValue?.lat || ''}
+                onChange={(e) => updateField({
+                  options: {
+                    ...field.options,
+                    initialValue: {
+                      lat: e.target.value ? parseFloat(e.target.value) : null,
+                      lng: initialValue?.lng || null
+                    }
+                  }
+                })}
+                placeholder="เช่น 13.7563"
+                step="0.0001"
+                minimal
+              />
+              <GlassInput
+                label="Longitude เริ่มต้น"
+                type="number"
+                value={initialValue?.lng || ''}
+                onChange={(e) => updateField({
+                  options: {
+                    ...field.options,
+                    initialValue: {
+                      lat: initialValue?.lat || null,
+                      lng: e.target.value ? parseFloat(e.target.value) : null
+                    }
+                  }
+                })}
+                placeholder="เช่น 100.5018"
+                step="0.0001"
+                minimal
+              />
+            </div>
+            {initialValue?.lat && initialValue?.lng && (
+              <p className="text-xs text-success">
+                ✅ พิกัดเริ่มต้น: {initialValue.lat}, {initialValue.lng}
+              </p>
+            )}
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  }
 
   function renderFieldSpecificOptions() {
     switch (field.type) {
@@ -853,6 +1247,7 @@ function SubFormBuilder({ subForm, onChange, onFieldUpdate, onRemove, canMoveUp,
       sendTelegram: false,
       telegramPrefix: '',
       telegramOrder: 0,
+      showCondition: undefined, // Field visibility - always visible by default
       options: {}
     };
     updateSubForm({
@@ -897,7 +1292,8 @@ function SubFormBuilder({ subForm, onChange, onFieldUpdate, onRemove, canMoveUp,
         fieldId,
         fieldData: mergedFieldData,
         showInTable: mergedFieldData.showInTable,  // ✅ Explicitly log showInTable
-        required: mergedFieldData.required
+        required: mergedFieldData.required,
+        showCondition: mergedFieldData.showCondition  // ✅ Explicitly log showCondition
       });
     }
 
@@ -1234,6 +1630,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
           sendTelegram: field.sendTelegram !== undefined ? field.sendTelegram : (field.send_telegram ?? false),
           telegramOrder: field.telegramOrder !== undefined ? field.telegramOrder : (field.telegram_order ?? 0),
           telegramPrefix: field.telegramPrefix !== undefined ? field.telegramPrefix : (field.telegram_prefix ?? ''),
+          showCondition: field.showCondition !== undefined ? field.showCondition : (field.show_condition ?? undefined),
         };
       }) : []
     })) : [],
@@ -1445,6 +1842,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       sendTelegram: false,
       telegramPrefix: '',
       telegramOrder: 0,
+      showCondition: undefined, // Field visibility - always visible by default
       options: {}
     };
     updateForm({ fields: [...form.fields, newField] });
@@ -2288,6 +2686,22 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                 </button>
 
                 <button
+                  data-testid="notifications-tab"
+                  onClick={() => setActiveSection('notifications')}
+                  title="การแจ้งเตือน"
+                  className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-xl border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
+                    activeSection === 'notifications'
+                      ? 'text-primary bg-primary/5 border-primary shadow-sm backdrop-blur-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/10 border-transparent'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={faBell} className="w-4 h-4" />
+                  {activeSection === 'notifications' && (
+                    <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary to-orange-500 rounded-full" />
+                  )}
+                </button>
+
+                <button
                   onClick={() => setActiveSection('settings')}
                   title="ตั้งค่า"
                   className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-xl border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
@@ -2502,6 +2916,11 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
               </div>
               );
             })()}
+
+            {/* Notifications Tab */}
+            {activeSection === 'notifications' && initialForm && (
+              <NotificationRulesTab form={form} />
+            )}
 
             {/* Settings - 8px Grid */}
             {activeSection === 'settings' && (

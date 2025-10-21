@@ -96,10 +96,10 @@ class FormService {
               required: fields[i].required || false,
               order: fields[i].order !== undefined ? fields[i].order : i,
               options: fields[i].options || {},
-              show_condition: fields[i].show_condition || null,
+              show_condition: fields[i].show_condition ?? null,
               telegram_config: fields[i].telegram_config || null,
               validation_rules: fields[i].validation_rules || {},
-              show_in_table: fields[i].showInTable || false,
+              show_in_table: fields[i].showInTable ?? false,
               send_telegram: fields[i].sendTelegram || false,
               telegram_order: fields[i].telegramOrder || 0,
               telegram_prefix: fields[i].telegramPrefix || null,
@@ -139,10 +139,10 @@ class FormService {
                   required: subFormData.fields[j].required || false,
                   order: subFormData.fields[j].order !== undefined ? subFormData.fields[j].order : j,
                   options: subFormData.fields[j].options || {},
-                  show_condition: subFormData.fields[j].show_condition || null,
+                  show_condition: subFormData.fields[j].show_condition ?? null,
                   telegram_config: subFormData.fields[j].telegram_config || null,
                   validation_rules: subFormData.fields[j].validation_rules || {},
-                  show_in_table: subFormData.fields[j].showInTable || false,
+                  show_in_table: subFormData.fields[j].showInTable ?? false,
                   send_telegram: subFormData.fields[j].sendTelegram || false,
                   telegram_order: subFormData.fields[j].telegramOrder || 0,
                   telegram_prefix: subFormData.fields[j].telegramPrefix || null,
@@ -537,10 +537,10 @@ class FormService {
             field.required = fieldData.required || false;
             field.order = fieldData.order !== undefined ? fieldData.order : i;
             field.options = fieldData.options || {};
-            field.show_condition = fieldData.show_condition || null;
+            field.show_condition = fieldData.show_condition ?? null;
             field.telegram_config = fieldData.telegram_config || null;
             field.validation_rules = fieldData.validation_rules || {};
-            field.show_in_table = fieldData.showInTable || false;
+            field.show_in_table = fieldData.showInTable ?? false;
             field.send_telegram = fieldData.sendTelegram || false;
             field.telegram_order = fieldData.telegramOrder || 0;
             field.telegram_prefix = fieldData.telegramPrefix || null;
@@ -560,10 +560,10 @@ class FormService {
                 required: fieldData.required || false,
                 order: fieldData.order !== undefined ? fieldData.order : i,
                 options: fieldData.options || {},
-                show_condition: fieldData.show_condition || null,
+                show_condition: fieldData.show_condition ?? null,
                 telegram_config: fieldData.telegram_config || null,
                 validation_rules: fieldData.validation_rules || {},
-                show_in_table: fieldData.showInTable || false,
+                show_in_table: fieldData.showInTable ?? false,
                 send_telegram: fieldData.sendTelegram || false,
                 telegram_order: fieldData.telegramOrder || 0,
                 telegram_prefix: fieldData.telegramPrefix || null,
@@ -655,10 +655,10 @@ class FormService {
                 field.required = fieldData.required || false;
                 field.order = fieldData.order !== undefined ? fieldData.order : j;
                 field.options = fieldData.options || {};
-                field.show_condition = fieldData.show_condition || null;
+                field.show_condition = fieldData.show_condition ?? null;
                 field.telegram_config = fieldData.telegram_config || null;
                 field.validation_rules = fieldData.validation_rules || {};
-                field.show_in_table = fieldData.showInTable || false;
+                field.show_in_table = fieldData.showInTable ?? false;
                 field.send_telegram = fieldData.sendTelegram || false;
                 field.telegram_order = fieldData.telegramOrder || 0;
                 field.telegram_prefix = fieldData.telegramPrefix || null;
@@ -679,10 +679,10 @@ class FormService {
                     required: fieldData.required || false,
                     order: fieldData.order !== undefined ? fieldData.order : j,
                     options: fieldData.options || {},
-                    show_condition: fieldData.show_condition || null,
+                    show_condition: fieldData.show_condition ?? null,
                     telegram_config: fieldData.telegram_config || null,
                     validation_rules: fieldData.validation_rules || {},
-                    show_in_table: fieldData.showInTable || false,
+                    show_in_table: fieldData.showInTable ?? false,
                     send_telegram: fieldData.sendTelegram || false,
                     telegram_order: fieldData.telegramOrder || 0,
                     telegram_prefix: fieldData.telegramPrefix || null,

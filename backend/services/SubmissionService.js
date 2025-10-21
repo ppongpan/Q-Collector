@@ -26,8 +26,18 @@ class SubmissionService {
     const transaction = await sequelize.transaction();
 
     try {
-      // ✅ CRITICAL FIX: Extract subFormId from data
-      const { fieldData, status = 'submitted', parentId = null, subFormId = null } = data;
+      // ✅ CRITICAL FIX: Extract subFormId, skipValidation, and visibleFieldIds from data
+      const { fieldData, status = 'submitted', parentId = null, subFormId = null, skipValidation = false, visibleFieldIds = null } = data;
+
+      logger.info('🔍 DEBUG Backend: Received data:', {
+        hasFieldData: !!fieldData,
+        status,
+        parentId,
+        subFormId,
+        skipValidation,
+        visibleFieldIds,
+        visibleFieldIdsCount: visibleFieldIds ? visibleFieldIds.length : 0
+      });
 
       // ✅ FIX: Try to find as Form first, then as SubForm
       let form = await Form.scope('full').findByPk(formId);
@@ -78,33 +88,45 @@ class SubmissionService {
         fieldMap.set(field.id, field);
       });
 
-      // Validate submission data
-      const validationErrors = [];
-      for (const [fieldId, value] of Object.entries(fieldData)) {
-        const field = fieldMap.get(fieldId);
+      // ✅ CRITICAL FIX: Skip validation if skipValidation flag is true (for Google Sheets imports)
+      if (!skipValidation) {
+        // Validate submission data
+        const validationErrors = [];
+        for (const [fieldId, value] of Object.entries(fieldData)) {
+          const field = fieldMap.get(fieldId);
 
-        if (!field) {
-          continue; // Skip unknown fields
+          if (!field) {
+            continue; // Skip unknown fields
+          }
+
+          // ✅ CRITICAL FIX: Skip validation for hidden fields
+          // If visibleFieldIds is provided and field is not in the list, it's hidden
+          if (visibleFieldIds && !visibleFieldIds.includes(fieldId)) {
+            logger.info(`⏭️ Skipping validation for hidden field: ${field.title} (${fieldId})`);
+            continue;
+          }
+
+          // Validate field value
+          const validation = field.validateValue(value);
+          if (!validation.valid) {
+            validationErrors.push({
+              field: field.title,
+              fieldId,
+              error: validation.error,
+            });
+          }
         }
 
-        // Validate field value
-        const validation = field.validateValue(value);
-        if (!validation.valid) {
-          validationErrors.push({
-            field: field.title,
-            fieldId,
-            error: validation.error,
-          });
+        if (validationErrors.length > 0) {
+          throw new ApiError(
+            400,
+            'Validation failed',
+            'VALIDATION_ERROR',
+            validationErrors
+          );
         }
-      }
-
-      if (validationErrors.length > 0) {
-        throw new ApiError(
-          400,
-          'Validation failed',
-          'VALIDATION_ERROR',
-          validationErrors
-        );
+      } else {
+        logger.info('⚠️  Validation skipped for Google Sheets import');
       }
 
       // ✅ CRITICAL FIX: Always use parent form.id (satisfies FK constraint)
@@ -331,6 +353,18 @@ class SubmissionService {
 
       logger.info(`Submission created: ${submission.id} for form ${formId} by user ${userId}`);
 
+      // ✅ Q-Collector v0.8.0: Trigger notification rules (async, non-blocking)
+      try {
+        const NotificationTriggerService = require('./NotificationTriggerService');
+        // Fire and forget - don't wait for notifications
+        NotificationTriggerService.onSubmissionCreated(submission).catch((err) => {
+          logger.error('Notification trigger error (non-blocking):', err);
+        });
+      } catch (notifError) {
+        // Never block submission creation due to notification errors
+        logger.error('Failed to trigger notifications (non-blocking):', notifError);
+      }
+
       // Return submission with decrypted data
       return await this.getSubmission(submission.id, userId);
     } catch (error) {
@@ -430,6 +464,18 @@ class SubmissionService {
       });
 
       logger.info(`Submission updated: ${submissionId} by user ${userId}`);
+
+      // ✅ Q-Collector v0.8.0: Trigger notification rules (async, non-blocking)
+      try {
+        const NotificationTriggerService = require('./NotificationTriggerService');
+        // Fire and forget - don't wait for notifications
+        NotificationTriggerService.onSubmissionUpdated(submission).catch((err) => {
+          logger.error('Notification trigger error (non-blocking):', err);
+        });
+      } catch (notifError) {
+        // Never block submission update due to notification errors
+        logger.error('Failed to trigger notifications (non-blocking):', notifError);
+      }
 
       return await this.getSubmission(submissionId, userId);
     } catch (error) {
@@ -595,34 +641,188 @@ class SubmissionService {
         where.parent_id = null;
       }
 
+      // ✅ NEW v0.7.36: Server-side month/year filtering for performance optimization
+      // Reduces client-side data loading from 750+ items to current page only
+      // ✅ ENHANCED v0.7.36: Support custom date field selection (not just submitted_at)
+      logger.info(`🔍 DEBUG: Checking date filter - month=${filters.month}, year=${filters.year}, dateField=${filters.dateField}`);
+
+      if (filters.month !== undefined || filters.year !== undefined) {
+        const dateConditions = [];
+
+        // Determine which date field to filter on
+        // Options: '_auto_date' (submittedAt), or custom field ID
+        const dateField = filters.dateField || '_auto_date';
+
+        if (dateField === '_auto_date') {
+          // Default: Filter by submission date (submitted_at column)
+          if (filters.month !== null && filters.month !== undefined) {
+            dateConditions.push(
+              sequelize.where(
+                sequelize.fn('EXTRACT', sequelize.literal(`MONTH FROM "Submission"."submitted_at"`)),
+                parseInt(filters.month)
+              )
+            );
+          }
+
+          if (filters.year !== null && filters.year !== undefined) {
+            dateConditions.push(
+              sequelize.where(
+                sequelize.fn('EXTRACT', sequelize.literal(`YEAR FROM "Submission"."submitted_at"`)),
+                parseInt(filters.year)
+              )
+            );
+          }
+        } else {
+          // Custom field: Filter using subquery on submission_data table
+          // Since EAV model stores data in submission_data, not in submissions.data column
+          if (filters.month !== null && filters.month !== undefined) {
+            dateConditions.push(
+              sequelize.literal(`
+                EXISTS (
+                  SELECT 1 FROM submission_data sd
+                  WHERE sd.submission_id = "Submission".id
+                    AND sd.field_id = '${dateField}'
+                    AND EXTRACT(MONTH FROM CAST(sd.value_text AS DATE)) = ${parseInt(filters.month)}
+                )
+              `)
+            );
+          }
+
+          if (filters.year !== null && filters.year !== undefined) {
+            dateConditions.push(
+              sequelize.literal(`
+                EXISTS (
+                  SELECT 1 FROM submission_data sd
+                  WHERE sd.submission_id = "Submission".id
+                    AND sd.field_id = '${dateField}'
+                    AND EXTRACT(YEAR FROM CAST(sd.value_text AS DATE)) = ${parseInt(filters.year)}
+                )
+              `)
+            );
+          }
+        }
+
+        if (dateConditions.length > 0) {
+          where[Op.and] = where[Op.and] ? [...where[Op.and], ...dateConditions] : dateConditions;
+        }
+
+        logger.info(`📅 Date filter applied: field=${dateField}, month=${filters.month}, year=${filters.year}`);
+      }
+
+      // ✅ NEW v0.7.36: Server-side search filtering
+      // Search in submission data (JSON field) using ILIKE for case-insensitive search
+      if (filters.search && filters.search.trim()) {
+        const searchTerm = filters.search.trim();
+
+        // Search across multiple fields using Op.or
+        const searchConditions = [
+          // Search in JSON data field (cast to text for ILIKE)
+          sequelize.where(
+            sequelize.cast(sequelize.col('Submission.data'), 'text'),
+            {
+              [Op.iLike]: `%${searchTerm}%`
+            }
+          )
+        ];
+
+        // Also search in submitter username if available
+        if (!where[Op.or]) {
+          where[Op.or] = searchConditions;
+        } else {
+          where[Op.or] = [...where[Op.or], ...searchConditions];
+        }
+
+        logger.info(`🔍 Search filter applied: "${searchTerm}"`);
+      }
+
       // Pagination
       const page = parseInt(filters.page) || 1;
       const limit = parseInt(filters.limit) || 20;
       const offset = (page - 1) * limit;
 
-      const { count, rows } = await Submission.findAndCountAll({
+      // ✅ NEW v0.7.36: Server-side dynamic sorting
+      // Sort by submittedAt or custom field from submission_data (EAV model)
+      const sortBy = filters.sortBy || 'submittedAt';
+      const sortOrder = (filters.sortOrder || 'desc').toUpperCase();
+
+      let orderClause = [];
+      let sortInclude = null;
+
+      if (sortBy === 'submittedAt') {
+        // Sort by submitted_at column
+        orderClause.push(['submitted_at', sortOrder]);
+        logger.info(`📊 Sorting by submittedAt ${sortOrder}`);
+      } else {
+        // ✅ FIX v0.7.36: Sort by custom field using LEFT JOIN instead of subquery
+        // This approach provides more reliable DISTINCT counting with Sequelize
+        sortInclude = {
+          model: SubmissionData,
+          as: 'sortFieldData',
+          attributes: [], // Don't fetch any data, only use for sorting
+          where: { field_id: sortBy },
+          required: false, // LEFT JOIN (not INNER JOIN)
+          duplicating: false, // Don't duplicate parent rows
+        };
+
+        // Sort using the joined table's value_text column
+        orderClause.push([
+          { model: SubmissionData, as: 'sortFieldData' },
+          'value_text',
+          sortOrder
+        ]);
+
+        logger.info(`📊 Sorting by custom field ${sortBy} ${sortOrder} using LEFT JOIN`);
+      }
+
+      // ✅ CRITICAL FIX v0.7.36: Add subQuery: false to work with sequelize.literal()
+      // distinct: true doesn't work well with EXISTS subqueries, causing "Submission->Submission" error
+      // subQuery: false ensures COUNT is calculated correctly without breaking EXISTS clauses
+
+      // Build include array for loading submission data
+      const includeArray = [
+        {
+          model: User,
+          as: 'submitter',
+          attributes: ['id', 'username', 'email'],
+        },
+        {
+          model: SubmissionData,
+          as: 'submissionData',
+          include: [
+            {
+              model: Field,
+              as: 'field',
+            },
+          ],
+        },
+      ];
+
+      // Add sortInclude if sorting by custom field
+      if (sortInclude) {
+        includeArray.push(sortInclude);
+      }
+
+      // ✅ FIX v0.7.36: Use separate count and findAll to avoid "Submission->Submission" error
+      // The `col` parameter causes Sequelize to generate incorrect SQL with nested table names
+      // So we do count and findAll separately
+
+      // Count total submissions (without pagination)
+      const count = await Submission.count({
         where,
-        include: [
-          {
-            model: User,
-            as: 'submitter',
-            attributes: ['id', 'username', 'email'],
-          },
-          {
-            model: SubmissionData,
-            as: 'submissionData',
-            include: [
-              {
-                model: Field,
-                as: 'field',
-              },
-            ],
-          },
-        ],
-        order: [['submitted_at', 'DESC']],
+        distinct: true,
+        // Don't include joins for counting - just count submissions
+      });
+
+      // Fetch paginated rows with all includes
+      const rows = await Submission.findAll({
+        where,
+        include: includeArray,
+        order: orderClause,
         limit,
         offset,
       });
+
+      logger.info(`✅ Query complete: ${rows.length} submissions returned (total: ${count}, page: ${page}/${Math.ceil(count / limit)})`);
 
       // Decrypt submission data for each submission
       const submissions = await Promise.all(

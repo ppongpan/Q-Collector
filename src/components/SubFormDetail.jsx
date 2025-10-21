@@ -22,6 +22,7 @@ import API_CONFIG from '../config/api.config.js';
 import { formatNumberByContext } from '../utils/numberFormatter.js';
 import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../utils/phoneFormatter.js';
 import { getConditionalStyle } from '../utils/conditionalFormattingEngine'; // ✅ v0.7.40: Conditional Formatting
+import { formulaEngine } from '../utils/formulaEngine'; // ✅ v0.7.43: Field visibility evaluation
 
 // Hooks
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
@@ -717,6 +718,42 @@ export default function SubFormDetail({
     return map;
   }, [form?.fields, subForm?.fields]);
 
+  // ✅ v0.7.43: Check if field should be visible based on showCondition
+  const isFieldVisible = (field) => {
+    // ✅ FIX: Handle both camelCase (showCondition) and snake_case (show_condition)
+    const condition = field.showCondition || field.show_condition;
+
+    // Always show if no show_condition set (or enabled is not explicitly false)
+    if (!condition || condition.enabled !== false) {
+      return true;
+    }
+
+    // If no formula, hide the field (enabled: false means always hidden)
+    if (!condition.formula) {
+      console.log(`🔍 [SubFormDetail] Field "${field.title}" hidden (no formula, enabled=false)`);
+      return false;
+    }
+
+    // Evaluate formula
+    try {
+      const result = formulaEngine.evaluate(
+        condition.formula,
+        subSubmission?.data || {},
+        fieldMap
+      );
+      console.log(`🔍 [SubFormDetail] Field visibility evaluation:`, {
+        fieldTitle: field.title,
+        formula: condition.formula,
+        result,
+        submissionData: subSubmission?.data
+      });
+      return result === true;
+    } catch (error) {
+      console.error(`❌ Error evaluating visibility formula for field "${field.title}":`, error);
+      return true; // Show field on error to avoid hiding data
+    }
+  };
+
   const renderFieldValue = (field, value) => {
     const isEmpty = !value && value !== 0;
 
@@ -1141,6 +1178,7 @@ export default function SubFormDetail({
                   {/* 🎯 Section 1: Basic Information (Non-file, non-location fields) */}
                   {(subForm.fields || [])
                     .filter(field => !['file_upload', 'image_upload', 'lat_long'].includes(field.type))
+                    .filter(field => isFieldVisible(field)) // ✅ v0.7.43: Apply visibility filter
                     .length > 0 && (
                     <div className="mb-8">
                       <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
@@ -1149,6 +1187,7 @@ export default function SubFormDetail({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                         {(subForm.fields || [])
                           .filter(field => !['file_upload', 'image_upload', 'lat_long'].includes(field.type))
+                          .filter(field => isFieldVisible(field)) // ✅ v0.7.43: Apply visibility filter
                           .sort((a, b) => (a.order || 0) - (b.order || 0))
                           .map(field => {
                             let value = subSubmission.data[field.id];
@@ -1167,6 +1206,7 @@ export default function SubFormDetail({
                   {/* 🎯 Section 2: Location (lat_long fields only) */}
                   {(subForm.fields || [])
                     .filter(field => field.type === 'lat_long')
+                    .filter(field => isFieldVisible(field)) // ✅ v0.7.43: Apply visibility filter
                     .length > 0 && (
                     <div className="mb-8">
                       <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
@@ -1175,6 +1215,7 @@ export default function SubFormDetail({
                       <div className="space-y-6">
                         {(subForm.fields || [])
                           .filter(field => field.type === 'lat_long')
+                          .filter(field => isFieldVisible(field)) // ✅ v0.7.43: Apply visibility filter
                           .sort((a, b) => (a.order || 0) - (b.order || 0))
                           .map(field => {
                             let value = subSubmission.data[field.id];
@@ -1193,6 +1234,7 @@ export default function SubFormDetail({
                   {/* 🎯 Section 3: Files & Images (file_upload and image_upload fields) */}
                   {(subForm.fields || [])
                     .filter(field => ['file_upload', 'image_upload'].includes(field.type))
+                    .filter(field => isFieldVisible(field)) // ✅ v0.7.43: Apply visibility filter
                     .length > 0 && (
                     <div className="mb-0">
                       <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
@@ -1201,6 +1243,7 @@ export default function SubFormDetail({
                       <div className="space-y-6">
                         {(subForm.fields || [])
                           .filter(field => ['file_upload', 'image_upload'].includes(field.type))
+                          .filter(field => isFieldVisible(field)) // ✅ v0.7.43: Apply visibility filter
                           .sort((a, b) => (a.order || 0) - (b.order || 0))
                           .map(field => {
                             let value = subSubmission.data[field.id];

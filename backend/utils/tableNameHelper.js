@@ -202,18 +202,31 @@ const generateTableName = async (formTitle, formId = null) => {
  * - "อีเมล" -> "email"
  * - "เบอร์โทร" -> "phone_number"
  * - "ที่อยู่" -> "address"
+ * - "ID" -> "id_field" (auto-renamed to avoid system column conflict)
  *
- * NEW BEHAVIOR (v0.7.5):
- * - Returns clean English translation without hash suffix
- * - Duplicate column names will be caught by DynamicTableService
- * - User will be notified to rename duplicate fields
+ * NEW BEHAVIOR (v0.8.0):
+ * - Auto-renames fields that conflict with system columns
+ * - Adds '_field' suffix to conflicting names
+ * - Ensures data completeness by never skipping fields
  */
 const generateColumnName = async (fieldLabel, fieldId = null) => {
-  const columnName = await sanitizeIdentifier(fieldLabel, 'field', '', 50);
+  let columnName = await sanitizeIdentifier(fieldLabel, 'field', '', 50);
 
-  // Return clean column name without hash suffix
-  // Duplicates will be detected during ALTER TABLE ADD COLUMN
-  return columnName || 'unnamed_field';
+  if (!columnName) {
+    columnName = 'unnamed_field';
+  }
+
+  // ✅ SYSTEM COLUMNS: Reserved column names that need suffix
+  const SYSTEM_COLUMNS = ['id', 'form_id', 'username', 'submitted_at', 'parent_id', 'sub_form_id', 'order', 'main_form_subid'];
+
+  // ✅ AUTO-RENAME: Add suffix if column name conflicts with system columns
+  if (SYSTEM_COLUMNS.includes(columnName.toLowerCase())) {
+    const originalName = columnName;
+    columnName = `${columnName}_field`;
+    logger.info(`🔄 Auto-renamed column "${originalName}" → "${columnName}" (system column conflict)`);
+  }
+
+  return columnName;
 };
 
 /**
@@ -227,7 +240,7 @@ const getPostgreSQLType = (fieldType) => {
     'short_answer': 'VARCHAR(255)',
     'paragraph': 'TEXT',
     'email': 'VARCHAR(255)',
-    'phone': 'VARCHAR(20)',
+    'phone': 'VARCHAR(50)', // ✅ INCREASED: Accommodate formatted numbers (e.g., "081-234-5678 (office)")
     'url': 'VARCHAR(500)',
 
     // Number types

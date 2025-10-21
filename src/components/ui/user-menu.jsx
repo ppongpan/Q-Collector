@@ -13,12 +13,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRoleLabel } from '../../config/roles.config';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faSignOutAlt, faCog, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faSignOutAlt, faCog, faChevronDown, faTable } from '@fortawesome/free-solid-svg-icons';
 
-export function UserMenu({ onSettingsClick }) {
+export function UserMenu({ onSettingsClick, onSheetsImportClick }) {
   const { user, logout, userName, userRole, userEmail } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
+
+  // Check if user is Super Admin
+  const isSuperAdmin = userRole === 'super_admin';
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -139,6 +142,22 @@ export function UserMenu({ onSettingsClick }) {
 
             {/* Menu Items */}
             <div className="p-1.5 sm:p-2">
+              {/* Google Sheets Import - Super Admin ONLY + Desktop ONLY (hidden md:block) */}
+              {isSuperAdmin && onSheetsImportClick && (
+                <button
+                  onClick={() => {
+                    onSheetsImportClick();
+                    setIsOpen(false);
+                  }}
+                  className="hidden md:flex w-full items-center gap-2.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl hover:bg-green-500/10 transition-all duration-200 text-left group"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-green-500/10 to-green-500/5 group-hover:from-green-500/20 group-hover:to-green-500/10 transition-all duration-200">
+                    <FontAwesomeIcon icon={faTable} className="text-green-600 group-hover:text-green-500 transition-colors text-xs sm:text-sm" />
+                  </div>
+                  <span className="text-xs sm:text-sm font-medium text-foreground group-hover:text-green-600 transition-colors">นำเข้าจาก Google Sheets</span>
+                </button>
+              )}
+
               {/* Settings */}
               {onSettingsClick && (
                 <button
@@ -146,7 +165,7 @@ export function UserMenu({ onSettingsClick }) {
                     onSettingsClick();
                     setIsOpen(false);
                   }}
-                  className="w-full flex items-center gap-2.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl hover:bg-primary/10 transition-all duration-200 text-left group"
+                  className="w-full flex items-center gap-2.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl hover:bg-primary/10 transition-all duration-200 text-left group mt-1"
                 >
                   <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-muted/80 to-muted/40 group-hover:from-primary/20 group-hover:to-primary/10 transition-all duration-200">
                     <FontAwesomeIcon icon={faCog} className="text-muted-foreground group-hover:text-primary transition-colors text-xs sm:text-sm" />

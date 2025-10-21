@@ -21,6 +21,11 @@ const APIUsage = require('./APIUsage');
 const TelegramSettings = require('./TelegramSettings');
 const FieldMigration = require('./FieldMigration');
 const FieldDataBackup = require('./FieldDataBackup');
+const SheetImportConfig = require('./SheetImportConfig');
+const SheetImportHistory = require('./SheetImportHistory');
+const GoogleAuthToken = require('./GoogleAuthToken');
+const NotificationRule = require('./NotificationRule');
+const NotificationHistory = require('./NotificationHistory');
 
 // Initialize models with sequelize instance
 const models = {
@@ -38,6 +43,11 @@ const models = {
   TelegramSettings: TelegramSettings(sequelize, Sequelize.DataTypes),
   FieldMigration: FieldMigration(sequelize, Sequelize.DataTypes),
   FieldDataBackup: FieldDataBackup(sequelize, Sequelize.DataTypes),
+  SheetImportConfig: SheetImportConfig(sequelize, Sequelize.DataTypes),
+  SheetImportHistory: SheetImportHistory(sequelize, Sequelize.DataTypes),
+  GoogleAuthToken: GoogleAuthToken(sequelize, Sequelize.DataTypes),
+  NotificationRule: NotificationRule(sequelize, Sequelize.DataTypes),
+  NotificationHistory: NotificationHistory(sequelize, Sequelize.DataTypes),
 };
 
 // Set up associations between models
@@ -56,16 +66,22 @@ Object.keys(models).forEach((modelName) => {
  * - hasMany Files (uploaded_by)
  * - hasMany AuditLogs
  * - hasMany Sessions
+ * - hasMany SheetImportConfigs (user_id)
+ * - hasMany SheetImportHistory (user_id)
+ * - hasOne GoogleAuthToken (user_id)
  *
  * Form:
  * - belongsTo User (created_by)
  * - hasMany Fields
  * - hasMany SubForms
  * - hasMany Submissions
+ * - hasMany SheetImportConfigs (form_id)
+ * - hasMany SheetImportHistory (form_id)
  *
  * SubForm:
  * - belongsTo Form
  * - hasMany Fields
+ * - hasMany SheetImportConfigs (sub_form_id)
  *
  * Field:
  * - belongsTo Form
@@ -93,6 +109,31 @@ Object.keys(models).forEach((modelName) => {
  *
  * Session:
  * - belongsTo User
+ *
+ * SheetImportConfig:
+ * - belongsTo User (user_id)
+ * - belongsTo Form (form_id)
+ * - belongsTo SubForm (sub_form_id, nullable)
+ * - hasMany SheetImportHistory (config_id)
+ *
+ * SheetImportHistory:
+ * - belongsTo SheetImportConfig (config_id)
+ * - belongsTo User (user_id)
+ * - belongsTo Form (form_id)
+ *
+ * GoogleAuthToken:
+ * - belongsTo User (user_id, one-to-one)
+ *
+ * NotificationRule:
+ * - belongsTo Form (form_id, nullable)
+ * - belongsTo SubForm (sub_form_id, nullable)
+ * - belongsTo User (created_by)
+ * - belongsTo User (updated_by)
+ * - hasMany NotificationHistory (notification_rule_id)
+ *
+ * NotificationHistory:
+ * - belongsTo NotificationRule (notification_rule_id)
+ * - belongsTo Submission (submission_id, nullable)
  */
 
 // Add sequelize instance and Sequelize constructor to models

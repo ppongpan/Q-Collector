@@ -1,8 +1,32 @@
-# Q-Collector Application Framework
+# Q-Collector Application Framework - Version History
 
-**Enterprise Form Builder & Data Collection System**
+**Archive of versions v0.7.20-dev and older**
+**Last Updated**: 2025-10-17
 
-## Version: 0.7.20-dev (2025-10-12)
+---
+
+# Version: 0.7.30-dev (2025-10-16) - ARCHIVED
+
+## Features Added in v0.7.30-dev
+- ✅ Form List Icon Hover Effects (individual colors per action)
+- ✅ Progressive Image Loading System (planning phase)
+- ✅ Database Analysis Tools (verification scripts)
+- ✅ Navigation Arrows Optimized (md: breakpoint)
+- ✅ Portrait Images Optimized (50% size reduction)
+
+## Code Changes
+```javascript
+// Form List Icon Hover - Named Groups (FormListApp.jsx lines 476-544)
+{/* Copy Link - Blue */}
+<div className="group/copy ...">
+  <FontAwesomeIcon className="group-hover/copy:text-blue-500 group-hover/copy:scale-125 ..." />
+</div>
+// ... (Edit Orange, Delete Red, View Green)
+```
+
+---
+
+# Version: 0.7.20-dev (2025-10-12) - ARCHIVED
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection

@@ -287,9 +287,21 @@ class DynamicTableService {
       const placeholders = ['$1', '$2', '$3'];
       let paramIndex = 4;
 
+      // ✅ SYSTEM COLUMNS: Reserved column names that need suffix
+      const SYSTEM_COLUMNS = ['id', 'form_id', 'username', 'submitted_at', 'parent_id', 'sub_form_id', 'order', 'main_form_subid'];
+
       // Add data fields
       for (const [key, value] of Object.entries(submissionData)) {
-        columns.push(`"${key}"`); // Quote column names for PostgreSQL
+        // ✅ AUTO-RENAME: Add suffix if field name conflicts with system columns
+        let columnName = key;
+        const lowerKey = key.toLowerCase();
+
+        if (SYSTEM_COLUMNS.includes(lowerKey)) {
+          columnName = `${key}_field`; // Add '_field' suffix
+          console.log(`🔄 Auto-renamed "${key}" → "${columnName}" (system column conflict)`);
+        }
+
+        columns.push(`"${columnName}"`); // Quote column names for PostgreSQL
 
         // ✅ CRITICAL FIX: Convert coordinate objects to PostgreSQL POINT format
         // PostgreSQL POINT format: POINT(longitude, latitude)
@@ -406,9 +418,21 @@ class DynamicTableService {
       const placeholders = ['$1', '$2', '$3', '$4'];
       let paramIndex = 5;
 
+      // ✅ SYSTEM COLUMNS: Reserved column names that need suffix
+      const SYSTEM_COLUMNS = ['id', 'form_id', 'username', 'submitted_at', 'parent_id', 'sub_form_id', 'order', 'main_form_subid'];
+
       // Add data fields with quoted column names
       for (const [key, value] of Object.entries(submissionData)) {
-        columns.push(`"${key}"`); // Quote column names for PostgreSQL
+        // ✅ AUTO-RENAME: Add suffix if field name conflicts with system columns
+        let columnName = key;
+        const lowerKey = key.toLowerCase();
+
+        if (SYSTEM_COLUMNS.includes(lowerKey)) {
+          columnName = `${key}_field`; // Add '_field' suffix
+          console.log(`🔄 [SUBFORM] Auto-renamed "${key}" → "${columnName}" (system column conflict)`);
+        }
+
+        columns.push(`"${columnName}"`); // Quote column names for PostgreSQL
 
         // ✅ CRITICAL FIX: Convert coordinate objects to PostgreSQL POINT format
         // PostgreSQL POINT format: POINT(longitude, latitude)

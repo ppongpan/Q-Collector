@@ -7,6 +7,7 @@ import { useEnhancedToast } from './ui/enhanced-toast';
 import { UserMenu } from './ui/user-menu';
 import { ResponsiveBreadcrumb } from './ui/breadcrumb';
 import { BreadcrumbProvider, useBreadcrumb } from '../contexts/BreadcrumbContext';
+import { NavigationProvider } from '../contexts/NavigationContext'; // ✅ v0.7.45: Navigation context
 import { ThemeToggle } from './ThemeToggle';
 import EnhancedFormBuilder from './EnhancedFormBuilder';
 import SettingsPage from './SettingsPage';
@@ -21,6 +22,8 @@ import SubFormDetail from './SubFormDetail';
 import MainFormEditPage from './pages/MainFormEditPage';
 import SubFormEditPage from './pages/SubFormEditPage';
 import UserEditPage from './pages/UserEditPage';
+import GoogleSheetsImportPage from './sheets/GoogleSheetsImportPage';
+import NotificationRulesPage from './NotificationRulesPage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCog, faArrowLeft, faFileAlt, faPlus, faSave, faEdit, faTrashAlt, faUsers
@@ -29,11 +32,12 @@ import {
 // Data services
 import apiClient from '../services/ApiClient';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigation } from '../contexts/NavigationContext'; // ✅ v0.7.45: Navigation context
 
 
 // Main App Component with Toast Integration
 function MainFormAppContent() {
-  const [currentPage, setCurrentPage] = useState('form-list'); // 'form-list', 'form-builder', 'settings', 'user-management', 'user-edit', 'theme-test', 'submission-list', 'submission-detail', 'form-view', 'subform-view', 'subform-detail', 'main-form-edit', 'subform-edit'
+  const [currentPage, setCurrentPage] = useState('form-list'); // 'form-list', 'form-builder', 'settings', 'user-management', 'user-edit', 'theme-test', 'submission-list', 'submission-detail', 'form-view', 'subform-view', 'subform-detail', 'main-form-edit', 'subform-edit', 'sheets-import', 'notification-rules'
   const [currentFormId, setCurrentFormId] = useState(null);
   const [currentSubmissionId, setCurrentSubmissionId] = useState(null);
   const [currentSubFormId, setCurrentSubFormId] = useState(null);
@@ -48,9 +52,12 @@ function MainFormAppContent() {
   const [loadingEditForm, setLoadingEditForm] = useState(false);
   const formBuilderSaveHandlerRef = useRef(null);
   const formViewSaveHandlerRef = useRef(null);
+  // ✅ v0.7.43-fix: Form cache to prevent duplicate API calls
+  const formCacheRef = useRef({});
   const toast = useEnhancedToast();
   const { user } = useAuth();
   const { generateBreadcrumbs, breadcrumbs } = useBreadcrumb();
+  const { navigationFilters } = useNavigation(); // ✅ v0.7.45: Get filter state for navigation (no longer using filteredSubmissions from context)
 
   // Navigation state for submission detail
   const [allSubmissions, setAllSubmissions] = useState([]);
@@ -67,7 +74,7 @@ function MainFormAppContent() {
         try {
           const response = await apiClient.getForm(currentFormId);
           const formData = response.data?.form || response.data;
-          console.log('📝 Form loaded for editing:', { formId: currentFormId, title: formData?.title });
+          console.log('[Editing] Form loaded for editing:', { formId: currentFormId, title: formData?.title });
           setEditFormData(formData);
         } catch (error) {
           console.error('Failed to load form from API:', error);
@@ -150,7 +157,7 @@ function MainFormAppContent() {
 
   // ✅ NEW: Smart back navigation - goes back one step in breadcrumb
   const handleSmartBack = () => {
-    console.log('🔙 Smart Back - Current state:', {
+    console.log('[Back] Smart Back - Current state:', {
       currentPage,
       breadcrumbsLength: breadcrumbs?.length,
       breadcrumbs: breadcrumbs?.map(b => b.label)
@@ -159,7 +166,7 @@ function MainFormAppContent() {
     // If breadcrumbs exist and has more than 1 item, go to previous breadcrumb
     if (breadcrumbs && breadcrumbs.length > 1) {
       const previousBreadcrumb = breadcrumbs[breadcrumbs.length - 2]; // Second to last
-      console.log('🎯 Going back to:', previousBreadcrumb);
+      console.log('[Navigation] Going back to:', previousBreadcrumb);
 
       handleNavigate(
         previousBreadcrumb.path,
@@ -171,7 +178,7 @@ function MainFormAppContent() {
       );
     } else {
       // Fallback: Go to form-list
-      console.log('⚠️ No breadcrumbs, fallback to form-list');
+      console.log('[Warning] No breadcrumbs, fallback to form-list');
       handleNavigate('form-list');
     }
   };
@@ -181,7 +188,7 @@ function MainFormAppContent() {
 
 
   const handleNavigate = async (page, formId = null, editing = false, submissionId = null, subFormId = null, subSubmissionId = null) => {
-    console.log('🚀 handleNavigate called:', { page, formId, editing, submissionId, subFormId, subSubmissionId });
+    console.log('[Navigate] handleNavigate called:', { page, formId, editing, submissionId, subFormId, subSubmissionId });
     setCurrentPage(page);
     setCurrentFormId(formId);
     setCurrentSubmissionId(submissionId);
@@ -192,13 +199,27 @@ function MainFormAppContent() {
     // Update form titles when navigating
     if (formId) {
       try {
-        // Try API first
-        const response = await apiClient.getForm(formId);
-        const form = response.data?.form || response.data;
-        console.log('📝 Form loaded for breadcrumb:', { formId, title: form?.title, name: form?.name });
+        // ✅ v0.7.43-fix: Check cache first to prevent duplicate API calls
+        let form = formCacheRef.current[formId];
+        
+        if (!form) {
+          console.log('[Cache MISS] Loading form from API:', formId);
+          const response = await apiClient.getForm(formId);
+          form = response.data?.form || response.data;
+          
+          // Store in cache
+          if (form) {
+            formCacheRef.current[formId] = form;
+            console.log('[Cached] Form stored:', { formId, title: form?.title });
+          }
+        } else {
+          console.log('[Cache HIT] Form loaded from cache:', { formId, title: form?.title });
+        }
+        
+        console.log('[Breadcrumb] Form loaded:', { formId, title: form?.title, name: form?.name });
         if (form) {
           const title = form.title || form.name || '';
-          console.log('✅ Setting currentFormTitle:', title);
+          console.log('[Setting] currentFormTitle:', title);
           setCurrentFormTitle(title);
           if (subFormId && form.subForms) {
             const subForm = form.subForms.find(sf => sf.id === subFormId);
@@ -221,7 +242,7 @@ function MainFormAppContent() {
 
   // Load sub-form submissions for navigation
   useEffect(() => {
-    console.log('🔍 useEffect [sub-form navigation] triggered:', {
+    console.log('[Debug] useEffect [sub-form navigation] triggered:', {
       currentPage,
       currentSubFormId,
       currentSubmissionId,
@@ -232,14 +253,14 @@ function MainFormAppContent() {
     async function loadSubFormSubmissions() {
       if (currentPage === 'subform-detail' && currentSubFormId && currentSubmissionId) {
         try {
-          console.log('🔍 Loading sub-form submissions for navigation:', {
+          console.log('[Debug] Loading sub-form submissions for navigation:', {
             currentSubFormId,
             currentSubmissionId,
             apiEndpoint: `/submissions/${currentSubmissionId}/sub-forms/${currentSubFormId}`
           });
           // ✅ FIX: Use correct API endpoint that matches SubmissionDetail.jsx
           const response = await apiClient.get(`/submissions/${currentSubmissionId}/sub-forms/${currentSubFormId}`);
-          console.log('🔍 Raw API response:', {
+          console.log('[Debug] Raw API response:', {
             response,
             responseData: response.data,
             responseDataSubFormSubmissions: response.data?.subFormSubmissions,
@@ -249,7 +270,7 @@ function MainFormAppContent() {
           });
           // ✅ FIX: Support multiple response formats (match SubmissionDetail.jsx line 348)
           const subs = response.data?.subFormSubmissions || response.data?.submissions || response.data || [];
-          console.log('✅ Sub-form submissions loaded:', {
+          console.log('[Success] Sub-form submissions loaded:', {
             count: subs.length,
             submissions: subs.map(s => ({ id: s.id, submittedAt: s.submittedAt }))
           });
@@ -264,7 +285,7 @@ function MainFormAppContent() {
           setAllSubSubmissions([]);
         }
       } else {
-        console.log('⏭️ Skipping sub-form load (condition not met) - Setting empty array', {
+        console.log('[Skip] Skipping sub-form load (condition not met) - Setting empty array', {
           why: {
             wrongPage: currentPage !== 'subform-detail',
             noSubFormId: !currentSubFormId,
@@ -341,6 +362,7 @@ function MainFormAppContent() {
         case 'main-form-edit': return 'แก้ไขข้อมูลฟอร์ม';
         case 'subform-edit': return 'แก้ไขข้อมูลฟอร์มย่อย';
         case 'theme-test': return 'ทดสอบธีม';
+        case 'sheets-import': return 'นำเข้าจาก Google Sheets';
         default: return 'จัดการฟอร์ม';
       }
     };
@@ -397,6 +419,27 @@ function MainFormAppContent() {
                 )}
               </div>
             </div>
+
+            {/* ✅ v0.7.45: Position Indicator - Shows "X of Y" in navigation bar */}
+            {currentPage === 'submission-detail' && navCurrentIndex >= 0 && allSubmissions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center flex-shrink-0 mx-2 sm:mx-3"
+              >
+                <div className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-br from-orange-500/10 to-orange-600/5 dark:from-orange-500/20 dark:to-orange-600/10 backdrop-blur-xl border border-orange-500/30 dark:border-orange-400/40 shadow-lg">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-500 dark:text-orange-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">
+                      {navCurrentIndex + 1} <span className="text-gray-500 dark:text-gray-400 font-normal">of</span> {allSubmissions.length}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               {/* New Form button - only for Super Admin, Admin, Moderator */}
@@ -568,9 +611,9 @@ function MainFormAppContent() {
               {currentPage === 'main-form-edit' && (
                 <motion.div
                   onClick={() => {
-                    console.log('💾 Save button clicked for main-form-edit');
+                    console.log('[Save] Save button clicked for main-form-edit');
                     if (formViewSaveHandlerRef.current) {
-                      console.log('💾 Calling handleSubmit...');
+                      console.log('[Save] Calling handleSubmit...');
                       formViewSaveHandlerRef.current.handleSubmit();
                     }
                   }}
@@ -800,7 +843,10 @@ function MainFormAppContent() {
               )}
 
               {/* User Menu */}
-              <UserMenu onSettingsClick={() => handleNavigate('settings')} />
+              <UserMenu
+                onSettingsClick={() => handleNavigate('settings')}
+                onSheetsImportClick={() => handleNavigate('sheets-import')}
+              />
 
               <div
                 onClick={() => handleNavigate('form-list')}
@@ -932,13 +978,59 @@ function MainFormAppContent() {
     </main>
   );
 
-  // Load submissions for navigation
+  // ✅ v0.7.45: Load ALL filtered submissions for navigation (not limited by pagination)
   useEffect(() => {
+    console.log('🔍 [v0.7.45] useEffect triggered:', { currentPage, currentFormId, navigationFilters });
+
     const loadSubmissions = async () => {
       if (currentPage === 'submission-detail' && currentFormId) {
+        console.log('✅ [v0.7.45] Condition passed - loading submissions');
         try {
-          const response = await apiClient.listSubmissions(currentFormId);
-          const submissions = response.data?.submissions || response.data || [];
+          let submissions = [];
+
+          // ✅ STRATEGY: Check if we have any filters from context (formId match is enough)
+          // Load with filters if available, otherwise load all
+          const hasFilters = navigationFilters.formId === currentFormId;
+          console.log('🔍 [v0.7.45] hasFilters check:', { hasFilters, contextFormId: navigationFilters.formId, currentFormId });
+
+          if (hasFilters) {
+            console.log('🔄 [v0.7.45 Navigation] Loading ALL filtered submissions (no pagination limit):', navigationFilters);
+
+            const filters = {
+              limit: 10000, // ✅ Load ALL filtered items (very high limit)
+              page: 1
+            };
+
+            // Apply filters from context (if present)
+            if (navigationFilters.month) filters.month = navigationFilters.month;
+            if (navigationFilters.year) filters.year = navigationFilters.year;
+            if (navigationFilters.sortBy) filters.sortBy = navigationFilters.sortBy;
+            if (navigationFilters.sortOrder) filters.sortOrder = navigationFilters.sortOrder;
+            if (navigationFilters.selectedDateField) filters.dateField = navigationFilters.selectedDateField;
+            if (navigationFilters.searchTerm) filters.search = navigationFilters.searchTerm;
+
+            const response = await apiClient.listSubmissions(currentFormId, filters);
+            submissions = response.data?.submissions || response.data || [];
+            const totalCount = response.data?.pagination?.total || submissions.length;
+
+            console.log(`✅ [v0.7.45 Navigation] Loaded ${submissions.length} of ${totalCount} total filtered submissions`);
+            console.log('📊 [v0.7.45 Navigation] Filter details:', {
+              month: navigationFilters.month,
+              year: navigationFilters.year,
+              sortBy: navigationFilters.sortBy,
+              sortOrder: navigationFilters.sortOrder,
+              dateField: navigationFilters.selectedDateField,
+              search: navigationFilters.searchTerm
+            });
+          }
+          // ✅ FALLBACK: Load all submissions (no filter context available)
+          else {
+            console.log('⚠️  [v0.7.45 Navigation] No filter context, loading ALL submissions');
+            const response = await apiClient.listSubmissions(currentFormId);
+            submissions = response.data?.submissions || response.data || [];
+            console.log(`✅ [v0.7.45 Navigation] Loaded ${submissions.length} total submissions (no filters)`);
+          }
+
           setAllSubmissions(submissions);
 
           const index = submissions.findIndex(sub => sub.id === currentSubmissionId);
@@ -946,16 +1038,22 @@ function MainFormAppContent() {
           setNavHasPrevious(index > 0);
           setNavHasNext(index < submissions.length - 1);
 
-          // ✅ v0.7.26 DEBUG: Navigation state logging
-          console.log('🔍 [v0.7.26] Navigation Debug - MainFormApp:', {
+          // ✅ v0.7.45 DEBUG: Navigation state logging
+          console.log('[Debug] [v0.7.45] Navigation Debug - MainFormApp:', {
             currentPage,
             currentFormId,
             currentSubmissionId,
             submissionsLoaded: submissions.length,
-            submissionIds: submissions.map(s => s.id),
             currentIndex: index,
             navHasPrevious: index > 0,
-            navHasNext: index < submissions.length - 1
+            navHasNext: index < submissions.length - 1,
+            usingFilters: hasFilters,
+            filterSummary: hasFilters ? {
+              month: navigationFilters.month,
+              year: navigationFilters.year,
+              sortBy: navigationFilters.sortBy,
+              sortOrder: navigationFilters.sortOrder
+            } : null
           });
         } catch (error) {
           console.error('Failed to load submissions for navigation:', error);
@@ -964,7 +1062,7 @@ function MainFormAppContent() {
     };
 
     loadSubmissions();
-  }, [currentPage, currentFormId, currentSubmissionId]);
+  }, [currentPage, currentFormId, currentSubmissionId, navigationFilters]); // ✅ Removed filteredSubmissions - we load ALL items ourselves
 
   const renderSubmissionDetail = () => {
     const handleNavigatePrevious = () => {
@@ -1005,6 +1103,8 @@ function MainFormAppContent() {
         onNavigateNext={handleNavigateNext}
         hasPrevious={navHasPrevious}
         hasNext={navHasNext}
+        currentIndex={navCurrentIndex}
+        totalCount={allSubmissions.length}
       />
     );
   };
@@ -1025,7 +1125,7 @@ function MainFormAppContent() {
 
   const renderSubFormDetail = () => {
     // ✅ FIX: Use state-loaded sub-form submissions for navigation
-    console.log('🔍 renderSubFormDetail - Raw data check:', {
+    console.log('[Debug] renderSubFormDetail - Raw data check:', {
       allSubSubmissionsArray: allSubSubmissions,
       allSubSubmissionsCount: allSubSubmissions.length,
       currentSubSubmissionId,
@@ -1039,7 +1139,7 @@ function MainFormAppContent() {
     const hasPrevious = currentIndex > 0;
     const hasNext = currentIndex < allSubSubmissions.length - 1;
 
-    console.log('🎯 renderSubFormDetail navigation state:', {
+    console.log('[Navigation] renderSubFormDetail navigation state:', {
       allSubSubmissionsCount: allSubSubmissions.length,
       currentSubSubmissionId,
       currentIndex,
@@ -1179,6 +1279,29 @@ function MainFormAppContent() {
         return renderMainFormEdit();
       case 'subform-edit':
         return renderSubFormEdit();
+      case 'sheets-import':
+        return (
+          <main className="container-responsive py-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <GoogleSheetsImportPage
+                onNavigate={(page, params) => {
+                  // Handle navigation from Google Sheets Import Page
+                  if (page === 'form-builder') {
+                    handleNavigate('form-builder', params?.formId, true);
+                  } else if (page === 'form-list') {
+                    handleNavigate('form-list');
+                  }
+                }}
+              />
+            </motion.div>
+          </main>
+        );
+      case 'notification-rules':
+        return <NotificationRulesPage onNavigate={handleNavigate} />;
       default:
         return renderFormList();
     }
@@ -1228,8 +1351,10 @@ function MainFormAppContent() {
 // Note: EnhancedToastProvider is already provided at App.js level
 export default function MainFormApp() {
   return (
-    <BreadcrumbProvider>
-      <MainFormAppContent />
-    </BreadcrumbProvider>
+    <NavigationProvider>
+      <BreadcrumbProvider>
+        <MainFormAppContent />
+      </BreadcrumbProvider>
+    </NavigationProvider>
   );
 }

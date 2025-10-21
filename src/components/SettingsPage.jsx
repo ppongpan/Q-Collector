@@ -44,8 +44,9 @@ function SettingsPage({ onNavigate }) {
   const [showFeedback, setShowFeedback] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
-  // Check if user is Super Admin
+  // Check if user is Super Admin or Admin
   const isSuperAdmin = user?.role === USER_ROLES.SUPER_ADMIN;
+  const isAdmin = user?.role === USER_ROLES.ADMIN || isSuperAdmin;
 
   const sections = [
     {
@@ -200,6 +201,38 @@ function SettingsPage({ onNavigate }) {
           transition={{ delay: 0.5 }}
         >
           <TelegramSettings />
+        </motion.div>
+      )}
+
+      {/* Notification Rules - Admin & Super Admin */}
+      {isAdmin && (
+        <motion.div
+          className="p-4 rounded-lg bg-card/50 border border-border"
+          variants={componentVariants.glassCard}
+          initial="initial"
+          animate="animate"
+          transition={{ delay: 0.6 }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
+                <FontAwesomeIcon icon={faBell} className="text-orange-500" />
+                การแจ้งเตือน Telegram
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                จัดการกฎการแจ้งเตือนอัตโนมัติและดูประวัติการส่ง
+              </p>
+            </div>
+            <motion.button
+              onClick={() => onNavigate && onNavigate('notification-rules')}
+              className="px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+              variants={microInteractions.buttonPress}
+              whileHover={shouldReduceMotion ? {} : "hover"}
+              whileTap={shouldReduceMotion ? {} : "tap"}
+            >
+              จัดการกฎ
+            </motion.button>
+          </div>
         </motion.div>
       )}
     </motion.div>

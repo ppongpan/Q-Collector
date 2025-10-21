@@ -325,6 +325,14 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: 'CASCADE',
     });
 
+    // ✅ NEW v0.7.36: Additional association for sorting by custom fields
+    // This allows us to LEFT JOIN submission_data with a specific field_id for sorting
+    Submission.hasMany(models.SubmissionData, {
+      foreignKey: 'submission_id',
+      as: 'sortFieldData',
+      onDelete: 'CASCADE',
+    });
+
     // Submission has many Files
     Submission.hasMany(models.File, {
       foreignKey: 'submission_id',
@@ -345,6 +353,13 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'parent_id',
       as: 'parentSubmission',
       onDelete: 'SET NULL', // ✅ FIX: Deleting child does NOT delete parent
+    });
+
+    // Submission has many NotificationHistory
+    Submission.hasMany(models.NotificationHistory, {
+      foreignKey: 'submission_id',
+      as: 'notificationHistory',
+      onDelete: 'CASCADE',
     });
   };
 

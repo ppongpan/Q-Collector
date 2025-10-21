@@ -42,8 +42,9 @@ const API_CONFIG = {
   // Base URL for all API requests
   baseURL: getBaseURL(),
 
-  // Request timeout in milliseconds (30 seconds)
-  timeout: 30000,
+  // Request timeout in milliseconds (10 minutes for large imports)
+  // ✅ FIX: Increased from 30s to 10 minutes to support Google Sheets import with large datasets
+  timeout: 600000,
 
   // Default headers for all requests
   headers: {

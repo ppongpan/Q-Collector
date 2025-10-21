@@ -3138,3 +3138,17 @@
   .animate-pulse-scale {
     animation: pulse-scale 1.5s ease-in-out infinite;
   }
+
+
+/* Table hover effect for FormSubmissionList */
+.submission-table-override tbody tr {
+  cursor: pointer;
+}
+
+.submission-table-override tbody tr:hover {
+  background-color: rgb(229 231 235) !important;
+}
+
+.dark .submission-table-override tbody tr:hover {
+  background-color: rgb(55 65 81) !important;
+}

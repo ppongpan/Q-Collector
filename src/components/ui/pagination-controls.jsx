@@ -129,14 +129,17 @@ export const PaginationControls = ({
               );
             }
 
+            const isActive = currentPage === page;
             return (
               <GlassButton
                 key={page}
-                variant={currentPage === page ? 'primary' : 'ghost'}
+                variant={isActive ? 'primary' : 'ghost'}
                 size="sm"
                 onClick={() => onPageChange(page)}
-                className={`min-w-[36px] sm:min-w-[40px] px-2 sm:px-3 ${
-                  currentPage === page ? 'font-bold' : ''
+                className={`min-w-[36px] sm:min-w-[40px] px-2 sm:px-3 transition-all ${
+                  isActive
+                    ? 'font-bold !bg-primary !text-primary-foreground shadow-lg shadow-primary/30 scale-105'
+                    : 'hover:bg-muted'
                 }`}
               >
                 {page}

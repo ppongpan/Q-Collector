@@ -35,7 +35,7 @@ import { getConditionalStyle } from '../utils/conditionalFormattingEngine'; // �
 
 // ✅ FIX v0.7.26: Fixed Navigation Buttons Component using Portal
 // Buttons stay on screen edges even when scrolling (fixed position)
-const FixedNavigationButtons = ({ hasPrevious, hasNext, onNavigatePrevious, onNavigateNext }) => {
+const FixedNavigationButtons = ({ hasPrevious, hasNext, onNavigatePrevious, onNavigateNext, currentIndex, totalCount }) => {
   const [portalElement, setPortalElement] = useState(null);
 
   useEffect(() => {
@@ -61,17 +61,17 @@ const FixedNavigationButtons = ({ hasPrevious, hasNext, onNavigatePrevious, onNa
     };
   }, []);
 
-  // ✅ v0.7.26 DEBUG: Button visibility logging
+  // ✅ v0.7.45 DEBUG: Button visibility and position logging
   useEffect(() => {
-    console.log('🎯 [v0.7.26] Button Visibility - FixedNavigationButtons:', {
+    console.log('🎯 [v0.7.45] Navigation State:', {
       hasPrevious,
       hasNext,
-      onNavigatePrevious: !!onNavigatePrevious,
-      onNavigateNext: !!onNavigateNext,
-      portalCreated: !!portalElement,
-      rendering: true
+      currentIndex,
+      totalCount,
+      position: currentIndex >= 0 && totalCount > 0 ? `${currentIndex + 1} of ${totalCount}` : 'unknown',
+      portalCreated: !!portalElement
     });
-  }, [hasPrevious, hasNext, onNavigatePrevious, onNavigateNext, portalElement]);
+  }, [hasPrevious, hasNext, currentIndex, totalCount, portalElement]);
 
   if (!portalElement) return null;
 
@@ -156,6 +156,7 @@ const FixedNavigationButtons = ({ hasPrevious, hasNext, onNavigatePrevious, onNa
           </motion.div>
         </motion.div>
       )}
+
     </>,
     portalElement
   );
@@ -381,7 +382,9 @@ const SubmissionDetailComponent = function SubmissionDetail({
   onNavigatePrevious,
   onNavigateNext,
   hasPrevious,
-  hasNext
+  hasNext,
+  currentIndex,  // ✅ v0.7.45: Current position in filtered list
+  totalCount     // ✅ v0.7.45: Total count of filtered items
 }) {
   const { userRole } = useAuth();
   const toast = useEnhancedToast(); // ✅ FIX v0.7.10: Initialize toast for mobile downloads
@@ -429,10 +432,12 @@ const SubmissionDetailComponent = function SubmissionDetail({
     }
   };
 
-  // Load submission and related data
+  // Load submission and related data whenever formId or submissionId changes
+  // ✅ v0.7.43-fix: Removed loadSubmissionData from deps to prevent duplicate calls
+  // loadSubmissionData is already stable via useCallback with [formId, submissionId]
   useEffect(() => {
     loadSubmissionData();
-  }, [formId, submissionId]);
+  }, [formId, submissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ✅ v0.7.30: Progressive Loading - Cancel pending requests on navigation
   useEffect(() => {
@@ -476,7 +481,7 @@ const SubmissionDetailComponent = function SubmissionDetail({
     const timer = setTimeout(() => {
       setImagesTransitioning(false);
       console.log('✅ [v0.7.29-v16] Transition complete, images can render');
-    }, 100);  // ✅ Increased to 100ms for more reliable clearing
+    }, 50);  // ✅ v0.7.43-fix: Reduced to 50ms to prevent data display lag
 
     return () => clearTimeout(timer);
   }, [submissionId]);
@@ -485,7 +490,10 @@ const SubmissionDetailComponent = function SubmissionDetail({
   // Users complained about excessive logs and API requests on every click
   // Files are already loaded correctly via useEffect, no need to reload on window focus
 
-  const loadSubmissionData = async () => {
+  // ✅ v0.7.43-fix: Wrap with useCallback to prevent stale closures during navigation
+  const loadSubmissionData = useCallback(async () => {
+    console.log('🔄 [v0.7.43-fix] Loading submission data:', { formId, submissionId });
+    const abortController = new AbortController();
     setLoading(true);
     try {
       // Load form from API
@@ -493,7 +501,7 @@ const SubmissionDetailComponent = function SubmissionDetail({
       const formData = response.data?.form || response.data;
 
       if (!formData) {
-        console.error('Form not found:', formId);
+        console.error('❌ Form not found:', formId);
         return;
       }
       setForm(formData);
@@ -553,11 +561,16 @@ const SubmissionDetailComponent = function SubmissionDetail({
       setSubSubmissions(subSubmissionsData);
 
     } catch (error) {
-      console.error('Error loading submission data:', error);
+      if (error.name === 'AbortError') {
+        console.log('🛑 [v0.7.43-fix] Request aborted:', { formId, submissionId });
+        return;
+      }
+      console.error('❌ Error loading submission data:', error);
     } finally {
       setLoading(false);
+      console.log('✅ [v0.7.43-fix] Loading complete:', { formId, submissionId });
     }
-  };
+  }, [formId, submissionId]); // ✅ v0.7.43-fix: Add dependencies to useCallback
 
 
   const handleAddSubForm = (subFormId) => {
@@ -1857,7 +1870,6 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
                 </div>
               )}
             </div>
-
           </div>
         </motion.div>
 
@@ -2007,6 +2019,8 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
         hasNext={hasNext}
         onNavigatePrevious={onNavigatePrevious}
         onNavigateNext={onNavigateNext}
+        currentIndex={currentIndex}
+        totalCount={totalCount}
       />
 
       {/* Floating Add Button using Portal */}

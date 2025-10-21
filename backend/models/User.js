@@ -329,6 +329,41 @@ module.exports = (sequelize, DataTypes) => {
       as: 'sessions',
       onDelete: 'CASCADE',
     });
+
+    // User has many SheetImportConfigs
+    User.hasMany(models.SheetImportConfig, {
+      foreignKey: 'user_id',
+      as: 'sheetImportConfigs',
+      onDelete: 'CASCADE',
+    });
+
+    // User has many SheetImportHistory
+    User.hasMany(models.SheetImportHistory, {
+      foreignKey: 'user_id',
+      as: 'sheetImportHistory',
+      onDelete: 'CASCADE',
+    });
+
+    // User has one GoogleAuthToken
+    User.hasOne(models.GoogleAuthToken, {
+      foreignKey: 'user_id',
+      as: 'googleAuthToken',
+      onDelete: 'CASCADE',
+    });
+
+    // User has many NotificationRules (created)
+    User.hasMany(models.NotificationRule, {
+      foreignKey: 'created_by',
+      as: 'createdNotificationRules',
+      onDelete: 'SET NULL',
+    });
+
+    // User has many NotificationRules (updated)
+    User.hasMany(models.NotificationRule, {
+      foreignKey: 'updated_by',
+      as: 'updatedNotificationRules',
+      onDelete: 'SET NULL',
+    });
   };
 
   /**

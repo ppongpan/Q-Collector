@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription, GlassCardContent } from './ui/glass-card';
 import { GlassButton } from './ui/glass-button';
@@ -14,6 +14,9 @@ import { useEnhancedToast } from './ui/enhanced-toast';
 import submissionService from '../services/SubmissionService.js';
 import fileServiceAPI from '../services/FileService.api.js';
 import apiClient from '../services/ApiClient';
+
+// Utilities
+import { formulaEngine } from '../utils/formulaEngine'; // ✅ v0.7.43: Field visibility evaluation
 
 export default function SubFormView({
   formId,
@@ -83,6 +86,15 @@ export default function SubFormView({
         console.error('SubForm not found:', subFormId);
         return;
       }
+
+      // 🔍 DEBUG: Log field visibility data
+      console.log('🔍 [SubFormView] SubForm fields loaded:', subFormData.fields?.map(f => ({
+        id: f.id,
+        title: f.title,
+        showCondition: f.showCondition,
+        show_condition: f.show_condition
+      })));
+
       setSubForm(subFormData);
 
       // Load existing sub submission for editing
@@ -263,6 +275,64 @@ export default function SubFormView({
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // ✅ v0.7.43: Field map for visibility formula evaluation
+  const fieldMap = useMemo(() => {
+    const map = {};
+    // Include both main form and sub-form fields for formula evaluation
+    (form?.fields || []).forEach(field => {
+      map[field.id] = field;
+    });
+    (subForm?.fields || []).forEach(field => {
+      map[field.id] = field;
+    });
+    return map;
+  }, [form?.fields, subForm?.fields]);
+
+  // ✅ v0.7.43: Check if field should be visible based on showCondition
+  const isFieldVisible = (field) => {
+    // ✅ FIX: Handle both camelCase (showCondition) and snake_case (show_condition)
+    const condition = field.showCondition || field.show_condition;
+
+    // 🔍 DEBUG: Log every field check
+    console.log(`🔍 [SubFormView] Checking visibility for field "${field.title}":`, {
+      hasShowCondition: !!field.showCondition,
+      hasShow_condition: !!field.show_condition,
+      condition,
+      enabled: condition?.enabled
+    });
+
+    // Always show if no show_condition set (or enabled is not explicitly false)
+    if (!condition || condition.enabled !== false) {
+      console.log(`  → VISIBLE (no condition or enabled !== false)`);
+      return true;
+    }
+
+    // If no formula, hide the field (enabled: false means always hidden)
+    if (!condition.formula) {
+      console.log(`  → HIDDEN (no formula, enabled=false)`);
+      return false;
+    }
+
+    // Evaluate formula
+    try {
+      const result = formulaEngine.evaluate(
+        condition.formula,
+        formData, // Use current form data for evaluation
+        fieldMap
+      );
+      console.log(`🔍 [SubFormView] Field visibility evaluation:`, {
+        fieldTitle: field.title,
+        formula: condition.formula,
+        result,
+        formData
+      });
+      return result === true;
+    } catch (error) {
+      console.error(`❌ Error evaluating visibility formula for field "${field.title}":`, error);
+      return true; // Show field on error to avoid hiding data
     }
   };
 
@@ -759,13 +829,67 @@ export default function SubFormView({
             </GlassCardHeader>
 
             <GlassCardContent>
-              <div className="space-y-4 sm:space-y-5">
-                {/* SubForm Fields */}
-                {subForm.fields?.map(field => renderField(field))}
-              </div>
+              {/* ✅ v0.7.37: Responsive Grid Layout - Desktop 2-column → Mobile stacked */}
+
+              {/* 🎯 Section 1: Basic Information */}
+              {subForm.fields?.filter(field =>
+                !['file_upload', 'image_upload', 'lat_long'].includes(field.type)
+              ).filter(field => isFieldVisible(field)).length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
+                    ข้อมูลพื้นฐาน
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    {/* SubForm Fields with responsive grid */}
+                    {/* ✅ FIX v0.7.33: Sort fields by order before rendering */}
+                    {/* ✅ v0.7.43: Apply visibility filter */}
+                    {subForm.fields
+                      ?.filter(field => !['file_upload', 'image_upload', 'lat_long'].includes(field.type))
+                      .filter(field => isFieldVisible(field))
+                      .sort((a, b) => (a.order || 0) - (b.order || 0))
+                      .map(field => renderField(field))}
+                  </div>
+                </div>
+              )}
+
+              {/* 🎯 Section 2: Location (if exists) */}
+              {subForm.fields?.filter(field => field.type === 'lat_long').filter(field => isFieldVisible(field)).length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
+                    ตำแหน่งที่ตั้ง
+                  </h3>
+                  <div className="space-y-6">
+                    {/* ✅ v0.7.43: Apply visibility filter */}
+                    {subForm.fields
+                      ?.filter(field => field.type === 'lat_long')
+                      .filter(field => isFieldVisible(field))
+                      .sort((a, b) => (a.order || 0) - (b.order || 0))
+                      .map(field => renderField(field))}
+                  </div>
+                </div>
+              )}
+
+              {/* 🎯 Section 3: Files & Images (if exists) */}
+              {subForm.fields?.filter(field =>
+                ['file_upload', 'image_upload'].includes(field.type)
+              ).filter(field => isFieldVisible(field)).length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
+                    ไฟล์และรูปภาพ
+                  </h3>
+                  <div className="space-y-6">
+                    {/* ✅ v0.7.43: Apply visibility filter */}
+                    {subForm.fields
+                      ?.filter(field => ['file_upload', 'image_upload'].includes(field.type))
+                      .filter(field => isFieldVisible(field))
+                      .sort((a, b) => (a.order || 0) - (b.order || 0))
+                      .map(field => renderField(field))}
+                  </div>
+                </div>
+              )}
 
               {/* Submit Button */}
-              <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-6 mt-6 border-t border-border/30">
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-6 mt-6 border-t border-orange-400/30">
                 {onCancel && (
                   <GlassButton
                     onClick={onCancel}
