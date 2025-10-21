@@ -414,9 +414,10 @@ function MainFormAppContent() {
                   {getPageTitle()}
                 </h1>
                 {/* Dark mode toggle - only on form list page */}
-                {currentPage === 'form-list' && (
+                {/* HIDDEN: Theme toggle disabled per user request (2025-10-21) */}
+                {/* {currentPage === 'form-list' && (
                   <ThemeToggle />
-                )}
+                )} */}
               </div>
             </div>
 

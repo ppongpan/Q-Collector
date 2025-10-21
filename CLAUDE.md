@@ -67,7 +67,61 @@
 
 ---
 
-## Latest Updates - v0.7.45-dev (2025-10-20)
+## Latest Updates - v0.8.0-dev (2025-10-21)
+
+### ✅ CSS Button Fix & UI Cleanup
+**Status**: ✅ Complete and Working
+**Git Commit**: Pending commit
+**Completion Date**: 2025-10-21
+
+**Problem Solved:**
+- Multiple choice buttons lost rounded corners (became square) when clicked/active
+- Theme selector and dark mode toggle were visible but should be hidden
+- Inconsistent button styling across different states
+
+**Solution Implemented:**
+1. **Button Border-Radius Fix** (`src/index.css` lines 1050-1061)
+   - Added highly specific CSS rule for `button[type="button"].rounded-md` covering all states
+   - Includes `:hover`, `:focus`, `:focus-visible`, and `:active` states
+   - Uses vendor prefixes for cross-browser compatibility
+   - Border-radius: 0.375rem maintained consistently
+
+2. **Theme Toggle Hidden** (2 locations)
+   - `src/components/SettingsPage.jsx` lines 351-396: Commented out ThemeSelector and ThemeToggle
+   - `src/components/MainFormApp.jsx` lines 416-420: Commented out ThemeToggle in header
+   - Clear comments indicating user request date (2025-10-21)
+
+**Files Modified:**
+- `src/index.css` - Added button border-radius fix
+- `src/components/SettingsPage.jsx` - Hidden theme selector and toggle
+- `src/components/MainFormApp.jsx` - Hidden theme toggle in form list header
+
+**CSS Rule Added:**
+```css
+/* ✅ FIX: Multiple choice buttons maintain rounded corners on all states */
+button[type="button"].rounded-md,
+button[type="button"].rounded-md:hover,
+button[type="button"].rounded-md:focus,
+button[type="button"].rounded-md:focus-visible,
+button[type="button"].rounded-md:active {
+  border-radius: 0.375rem !important;
+  -webkit-border-radius: 0.375rem !important;
+  -moz-border-radius: 0.375rem !important;
+  -ms-border-radius: 0.375rem !important;
+}
+```
+
+**User Experience Impact:**
+- ✅ Buttons maintain consistent rounded appearance when clicked
+- ✅ No more square corners on active state
+- ✅ Theme selector no longer visible in settings
+- ✅ Cleaner UI without unnecessary theme options
+
+**Testing Status:** ✅ Build successful (warnings only, no errors)
+
+---
+
+## Previous Updates - v0.7.45-dev (2025-10-20)
 
 ### ✅ Filter/Sort-Aware Navigation for Detail View
 **Status**: ✅ Complete and Working

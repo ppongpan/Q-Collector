@@ -349,7 +349,8 @@ function SettingsPage({ onNavigate }) {
       animate="animate"
     >
       {/* Theme Selector - Super Admin Only */}
-      {isSuperAdmin && (
+      {/* HIDDEN: Theme selector disabled per user request (2025-10-21) */}
+      {/* {isSuperAdmin && (
         <motion.div
           variants={componentVariants.glassCard}
           initial="initial"
@@ -357,10 +358,11 @@ function SettingsPage({ onNavigate }) {
         >
           <ThemeSelector />
         </motion.div>
-      )}
+      )} */}
 
       {/* Dark Mode Toggle */}
-      <motion.div
+      {/* HIDDEN: Theme toggle disabled per user request (2025-10-21) */}
+      {/* <motion.div
         className="flex items-center justify-between"
         variants={componentVariants.glassCard}
         initial="initial"
@@ -391,7 +393,7 @@ function SettingsPage({ onNavigate }) {
         >
           <ThemeToggle />
         </motion.div>
-      </motion.div>
+      </motion.div> */}
 
       {/* Test Theme Button */}
       <motion.div
