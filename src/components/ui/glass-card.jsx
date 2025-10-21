@@ -14,11 +14,15 @@ const GlassCard = React.forwardRef(({
     primary: 'glass-primary glass-container blur-edge-intense'
   };
 
+  // ✅ CRITICAL FIX: Check if this is a subform card that needs selective rounded corners
+  const isSubformCard = className && className.includes('subform-card-no-radius');
+
   return (
     <div
       ref={ref}
       className={cn(
-        'rounded-2xl overflow-visible relative',
+        !isSubformCard && 'rounded-2xl',
+        'overflow-visible relative',
         'transition-all duration-300 ease-out',
         'will-change-transform',
         variants[variant],
@@ -26,7 +30,19 @@ const GlassCard = React.forwardRef(({
         className
       )}
       style={{
-        borderRadius: '24px',
+        borderRadius: isSubformCard ? undefined : '24px',
+        borderTopLeftRadius: '24px',  // Always rounded (top-left corner)
+        borderTopRightRadius: isSubformCard ? '0px' : undefined,
+        borderBottomLeftRadius: isSubformCard ? '0px' : undefined,
+        borderBottomRightRadius: isSubformCard ? '0px' : undefined,
+        WebkitBorderTopLeftRadius: '24px',
+        WebkitBorderTopRightRadius: isSubformCard ? '0px' : undefined,
+        WebkitBorderBottomLeftRadius: isSubformCard ? '0px' : undefined,
+        WebkitBorderBottomRightRadius: isSubformCard ? '0px' : undefined,
+        MozBorderRadiusTopleft: '24px',
+        MozBorderRadiusTopright: isSubformCard ? '0px' : undefined,
+        MozBorderRadiusBottomleft: isSubformCard ? '0px' : undefined,
+        MozBorderRadiusBottomright: isSubformCard ? '0px' : undefined,
         ...props.style
       }}
       {...props}

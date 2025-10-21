@@ -1130,14 +1130,25 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
 
     // Special handling for LatLong fields
     if (field.type === 'lat_long') {
-      // ✅ v0.7.37: Enhanced coordinate validation and Google Maps link
-      const hasCoordinateData = value && typeof value === 'object' && (
-        (value.lat !== undefined && value.lng !== undefined) ||
-        (value.x !== undefined && value.y !== undefined)
-      );
+      // ✅ v0.8.0: Enhanced coordinate validation supporting both object and string formats
+      let lat = null;
+      let lng = null;
 
-      const lat = hasCoordinateData ? parseFloat(value.lat || value.x) : null;
-      const lng = hasCoordinateData ? parseFloat(value.lng || value.y) : null;
+      // Parse coordinate data from different formats
+      if (value) {
+        if (typeof value === 'object') {
+          // Object format: {lat: x, lng: y} or {x: lat, y: lng}
+          lat = parseFloat(value.lat || value.x);
+          lng = parseFloat(value.lng || value.y);
+        } else if (typeof value === 'string') {
+          // String format: "lat, lng" (from Google Sheets import)
+          const parts = value.split(',').map(s => s.trim());
+          if (parts.length === 2) {
+            lat = parseFloat(parts[0]);
+            lng = parseFloat(parts[1]);
+          }
+        }
+      }
 
       // Validate coordinate ranges: lat [-90, 90], lng [-180, 180]
       const isValidLat = lat !== null && !isNaN(lat) && lat >= -90 && lat <= 90;
@@ -1453,6 +1464,81 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
           .dark .subform-table-override tbody tr:hover {
             background-color: rgb(55 65 81) !important;
           }
+
+          /* ✅ ULTIMATE FIX v3: Square corners except first/last column headers */
+          .subform-content-no-radius,
+          .subform-table-container,
+          .subform-table-container *:not(th:first-child):not(th:last-child),
+          .subform-table-override,
+          .subform-table-override thead,
+          .subform-table-override thead tr,
+          .subform-table-override tbody,
+          .subform-table-override tbody tr,
+          .subform-table-override tbody td,
+          .subform-table-override tbody td:first-child,
+          .subform-table-override tbody td:last-child {
+            border-radius: 0 !important;
+            -webkit-border-radius: 0 !important;
+            -moz-border-radius: 0 !important;
+            -ms-border-radius: 0 !important;
+            border-top-left-radius: 0 !important;
+            border-top-right-radius: 0 !important;
+            border-bottom-left-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+            border-start-start-radius: 0 !important;
+            border-start-end-radius: 0 !important;
+            border-end-start-radius: 0 !important;
+            border-end-end-radius: 0 !important;
+          }
+
+          /* ✅ Middle column headers - all corners square */
+          .subform-table-override thead th:not(:first-child):not(:last-child) {
+            border-radius: 0 !important;
+            border-top-left-radius: 0 !important;
+            border-top-right-radius: 0 !important;
+            border-bottom-left-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+          }
+
+          /* ✅ FIRST column header - rounded top-left corner - HIGHEST PRIORITY */
+          table.subform-table-override thead tr th:first-child,
+          .subform-table-override thead tr th:first-child,
+          .subform-table-override thead th:first-child {
+            border-radius: 0 !important;
+            border-top-left-radius: 16px !important;
+            -webkit-border-top-left-radius: 16px !important;
+            -moz-border-radius-topleft: 16px !important;
+            border-top-right-radius: 0 !important;
+            border-bottom-left-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+            border-start-start-radius: 16px !important;
+          }
+
+          /* ✅ LAST column header - rounded top-right corner - HIGHEST PRIORITY */
+          table.subform-table-override thead tr th:last-child,
+          .subform-table-override thead tr th:last-child,
+          .subform-table-override thead th:last-child {
+            border-radius: 0 !important;
+            border-top-left-radius: 0 !important;
+            border-top-right-radius: 16px !important;
+            -webkit-border-top-right-radius: 16px !important;
+            -moz-border-radius-topright: 16px !important;
+            border-bottom-left-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+            border-start-end-radius: 16px !important;
+          }
+
+          /* ✅ CRITICAL: Remove overflow hidden from parent that clips content */
+          .glass-container.subform-card-no-radius {
+            overflow: visible !important;
+          }
+
+          .subform-table-container {
+            overflow-x: auto !important;
+            overflow-y: visible !important;
+            border-radius: 0 !important;
+          }
+
         `}</style>
         <div className="flex items-center justify-center mb-3">
           <button
@@ -1468,20 +1554,80 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
         </div>
 
         {/* Table display similar to Submission List */}
-        <div className="overflow-x-auto">
-          <table className="w-full subform-table-override">
+        <div className="overflow-x-auto subform-table-container" style={{
+          borderRadius: 0,
+          WebkitBorderRadius: 0,
+          MozBorderRadius: 0,
+          overflow: 'auto'
+        }}>
+          <table className="w-full subform-table-override" style={{
+            borderRadius: 0,
+            borderCollapse: 'separate',
+            borderSpacing: 0
+          }}>
             <thead>
-              <tr className="border-b border-border/30">
-                {displayFields.map((field) => (
-                  <th key={field.id} className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] font-medium text-foreground/70 text-center">
-                    {field.title}
-                  </th>
-                ))}
+              <tr className="border-b-2 border-primary/20 bg-muted/40 sticky top-0 z-10" style={{
+                borderRadius: 0,
+                borderTopLeftRadius: 0,
+                borderTopRightRadius: 0,
+                borderBottomLeftRadius: 0,
+                borderBottomRightRadius: 0
+              }}>
+                {displayFields.map((field, idx) => {
+                  const isFirst = idx === 0;
+                  const isLast = idx === displayFields.length - 1 && !hasMoreFields && displayFields.length >= 5;
+
+                  return (
+                    <th
+                      key={field.id}
+                      className="text-center py-5 px-4 text-[16px] sm:text-[17px] md:text-[18px] font-bold text-foreground uppercase tracking-wide bg-gradient-to-b from-muted/50 to-muted/30 shadow-sm"
+                      style={{
+                        borderRadius: '0px',
+                        borderTopLeftRadius: isFirst ? '16px' : '0px',
+                        WebkitBorderTopLeftRadius: isFirst ? '16px' : '0px',
+                        MozBorderRadiusTopleft: isFirst ? '16px' : '0px',
+                        borderTopRightRadius: isLast ? '16px' : '0px',
+                        WebkitBorderTopRightRadius: isLast ? '16px' : '0px',
+                        MozBorderRadiusTopright: isLast ? '16px' : '0px',
+                        borderBottomLeftRadius: '0px',
+                        borderBottomRightRadius: '0px'
+                      }}
+                    >
+                      {field.title}
+                    </th>
+                  );
+                })}
                 {hasMoreFields && (
-                  <th className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] font-medium text-foreground/70 text-center">อื่นๆ</th>
+                  <th
+                    className="text-center py-5 px-4 text-[16px] sm:text-[17px] md:text-[18px] font-bold text-foreground uppercase tracking-wide bg-gradient-to-b from-muted/50 to-muted/30 shadow-sm"
+                    style={{
+                      borderRadius: '0px',
+                      borderTopLeftRadius: '0px',
+                      borderTopRightRadius: '16px',
+                      WebkitBorderTopRightRadius: '16px',
+                      MozBorderRadiusTopright: '16px',
+                      borderBottomLeftRadius: '0px',
+                      borderBottomRightRadius: '0px'
+                    }}
+                  >
+                    อื่นๆ
+                  </th>
                 )}
                 {displayFields.length < 5 && (
-                  <th className="py-4 px-3 sm:py-5 sm:px-4 text-[14px] sm:text-[15px] font-medium text-foreground/70 text-center">วันที่บันทึก</th>
+                  <th
+                    className="text-center py-5 px-4 text-[16px] sm:text-[17px] md:text-[18px] font-bold text-foreground uppercase tracking-wide bg-gradient-to-b from-muted/50 to-muted/30 shadow-sm"
+                    style={{
+                      borderRadius: '0px',
+                      borderTopLeftRadius: '0px',
+                      borderTopRightRadius: hasMoreFields ? '0px' : '16px',
+                      WebkitBorderTopRightRadius: hasMoreFields ? '0px' : '16px',
+                      MozBorderRadiusTopright: hasMoreFields ? '0px' : '16px',
+                      borderBottomLeftRadius: '0px',
+                      borderBottomRightRadius: '0px'
+                    }}
+                  >
+                    วันที่บันทึก
+                  </th>
                 )}
               </tr>
             </thead>
@@ -1489,7 +1635,7 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
               {subSubs.map((subSub, index) => (
                 <tr
                   key={subSub.id}
-                  className="border-b border-border/20 cursor-pointer"
+                  className="border-b border-border/20 cursor-pointer transition-all duration-300 hover:bg-primary/5 hover:shadow-md hover:border-primary/30"
                   onClick={() => handleViewSubFormDetail(subForm.id, subSub.id)}
                 >
                   {displayFields.map((field) => {
@@ -1996,14 +2142,29 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
             className="max-w-3xl mx-auto space-y-3"
           >
             {form.subForms.map((subForm) => (
-              <GlassCard key={subForm.id} className="glass-container">
-                <GlassCardHeader>
+              <GlassCard
+                key={subForm.id}
+                className="glass-container subform-card-no-radius"
+                style={{
+                  overflow: 'visible'
+                }}
+              >
+                <GlassCardHeader style={{
+                  padding: '1.5rem',
+                  paddingBottom: '0.75rem'
+                }}>
                   <GlassCardTitle>{subForm.title}</GlassCardTitle>
                   {subForm.description && (
                     <GlassCardDescription>{subForm.description}</GlassCardDescription>
                   )}
                 </GlassCardHeader>
-                <GlassCardContent>
+                <GlassCardContent
+                  className="subform-content-no-radius"
+                  style={{
+                    padding: 0,
+                    overflow: 'visible'
+                  }}
+                >
                   {renderSubFormSubmissionList(subForm)}
                 </GlassCardContent>
               </GlassCard>

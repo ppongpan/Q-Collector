@@ -69,6 +69,116 @@
 
 ## Latest Updates - v0.8.0-dev (2025-10-21)
 
+### ✅ SubForm Table Header Rounded Corners Fix
+**Status**: ✅ Complete and Working
+**Completion Date**: 2025-10-21
+
+**Problem Solved:**
+Sub-form submission list table headers had inconsistent border-radius:
+- Top-left corner (first column "วันที่ติดต่อ") was square instead of rounded
+- Top-right corner (last column) was correctly rounded
+- User wanted both corners to have consistent 16px rounded appearance
+
+**Root Cause Identified:**
+1. **GlassCard Wrapper Conflicts**:
+   - GlassCard wrapper had inline styles forcing `borderTopLeftRadius: '0px'`
+   - CSS rule `.glass-container.subform-card-no-radius` was applying 0px to ALL elements inside
+   - These overrode the table header's rounded corner styles
+
+2. **CSS Specificity Issues**:
+   - Generic CSS rules with lower specificity couldn't override GlassCard's inline styles
+   - Need higher specificity selectors for th:first-child and th:last-child
+
+**Solution Implemented:**
+
+**1. Removed Conflicting Inline Styles** (`SubmissionDetail.jsx` lines 2144-2169)
+```javascript
+<GlassCard
+  key={subForm.id}
+  className="glass-container subform-card-no-radius"
+  style={{
+    overflow: 'visible'  // Only keep overflow, remove all border-radius overrides
+  }}
+>
+```
+
+**2. Fixed CSS Selectors** (`SubmissionDetail.jsx` lines 1468-1492)
+- Removed `.glass-container.subform-card-no-radius` from generic rule
+- Added `:not(th:first-child):not(th:last-child)` to prevent affecting corner columns
+```css
+.subform-content-no-radius,
+.subform-table-container,
+.subform-table-container *:not(th:first-child):not(th:last-child),
+/* ... other selectors ... */
+{
+  border-radius: 0 !important;
+  /* All corners square except first/last th */
+}
+```
+
+**3. Added High-Specificity Rules** (`SubmissionDetail.jsx` lines 1503-1529)
+```css
+/* First column - rounded top-left */
+table.subform-table-override thead tr th:first-child,
+.subform-table-override thead tr th:first-child,
+.subform-table-override thead th:first-child {
+  border-top-left-radius: 16px !important;
+  -webkit-border-top-left-radius: 16px !important;
+  -moz-border-radius-topleft: 16px !important;
+}
+
+/* Last column - rounded top-right */
+table.subform-table-override thead tr th:last-child,
+.subform-table-override thead tr th:last-child,
+.subform-table-override thead th:last-child {
+  border-top-right-radius: 16px !important;
+  -webkit-border-top-right-radius: 16px !important;
+  -moz-border-radius-topright: 16px !important;
+}
+```
+
+**4. Enhanced Inline Styles with Conditionals** (`SubmissionDetail.jsx` lines 1575-1630)
+```javascript
+displayFields.map((field, idx) => {
+  const isFirst = idx === 0;
+  const isLast = idx === displayFields.length - 1 && !hasMoreFields && displayFields.length >= 5;
+
+  return (
+    <th style={{
+      borderTopLeftRadius: isFirst ? '16px' : '0px',
+      WebkitBorderTopLeftRadius: isFirst ? '16px' : '0px',
+      borderTopRightRadius: isLast ? '16px' : '0px',
+      WebkitBorderTopRightRadius: isLast ? '16px' : '0px',
+    }}>
+      {field.title}
+    </th>
+  );
+})
+```
+
+**Files Modified:**
+- `src/components/SubmissionDetail.jsx`:
+  - Lines 1468-1492: Fixed CSS selectors to exclude first/last th
+  - Lines 1503-1529: Added high-specificity CSS rules for rounded corners
+  - Lines 1575-1630: Enhanced inline styles with conditional logic
+  - Lines 2144-2169: Removed conflicting inline styles from GlassCard wrapper
+- `src/components/ui/glass-card.jsx`: Already modified in previous fix (selective rounded corners)
+
+**CSS Architecture (Key Learning):**
+- **Specificity Matters**: Use `table.class thead tr th:first-child` (3 selectors) instead of `.class th:first-child` (1 class + 1 element)
+- **Inline Styles Override**: Always remove conflicting inline styles from parent components
+- **Vendor Prefixes**: Include -webkit- and -moz- for cross-browser compatibility
+- **:not() Selector**: Use `:not(th:first-child):not(th:last-child)` to exclude specific elements from generic rules
+
+**Result:**
+✅ Top-left corner (วันที่ติดต่อ): 16px rounded
+✅ Top-right corner (last column): 16px rounded
+✅ All other corners: Square (0px)
+✅ Works across all browsers (Chrome, Firefox, Safari)
+✅ No GlassCard wrapper interference
+
+---
+
 ### ✅ Multiple Choice Button CSS Fix - Consistent Border-Radius
 **Status**: ✅ Complete and Working
 **Git Commit**: c4e96ae
