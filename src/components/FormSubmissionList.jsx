@@ -60,32 +60,55 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
   // Enhanced toast notifications
   const toast = useEnhancedToast();
 
-  // ✅ v0.7.38: Load saved preferences on component mount
+  // ✅ v0.8.0: Load saved preferences on component mount (database-backed with smart defaults)
   useEffect(() => {
     if (user?.id && formId) {
-      const savedPrefs = userPreferencesService.loadFormListPreferences(user.id, formId);
+      const loadPreferences = async () => {
+        try {
+          // Try to load saved preferences from database
+          const savedPrefs = await userPreferencesService.loadFormListPreferences(user.id, formId);
 
-      if (savedPrefs) {
-        console.log('📥 [Preferences] Loading saved preferences:', savedPrefs);
+          if (savedPrefs) {
+            console.log('📥 [Preferences] Loading saved preferences from database:', savedPrefs);
 
-        // Restore saved preferences
-        if (savedPrefs.sortBy) setSortBy(savedPrefs.sortBy);
-        if (savedPrefs.sortOrder) setSortOrder(savedPrefs.sortOrder);
-        if (savedPrefs.selectedDateField) setSelectedDateField(savedPrefs.selectedDateField);
-        if (savedPrefs.month) setSelectedMonth(savedPrefs.month === 'all' ? 'all' : parseInt(savedPrefs.month));
-        if (savedPrefs.year) setSelectedYear(savedPrefs.year === 'all' ? 'all' : parseInt(savedPrefs.year));
-        if (savedPrefs.itemsPerPage) setItemsPerPage(savedPrefs.itemsPerPage);
-      } else {
-        console.log('ℹ️ [Preferences] No saved preferences, using defaults');
-      }
+            // Restore saved preferences
+            if (savedPrefs.sortBy) setSortBy(savedPrefs.sortBy);
+            if (savedPrefs.sortOrder) setSortOrder(savedPrefs.sortOrder);
+            if (savedPrefs.selectedDateField) setSelectedDateField(savedPrefs.selectedDateField);
+            if (savedPrefs.month) setSelectedMonth(savedPrefs.month === 'all' ? 'all' : parseInt(savedPrefs.month));
+            if (savedPrefs.year) setSelectedYear(savedPrefs.year === 'all' ? 'all' : parseInt(savedPrefs.year));
+            if (savedPrefs.itemsPerPage) setItemsPerPage(savedPrefs.itemsPerPage);
+          } else {
+            // No saved preferences, fetch smart defaults
+            console.log('ℹ️ [Preferences] No saved preferences, fetching smart defaults...');
+            const smartDefaults = await userPreferencesService.getFormListSmartDefaults(user.id, formId);
+
+            console.log('✅ [Preferences] Using smart defaults:', smartDefaults);
+            setSortBy(smartDefaults.sortBy || '_auto_date');
+            setSortOrder(smartDefaults.sortOrder || 'desc');
+            setSelectedDateField(smartDefaults.selectedDateField || 'submittedAt');
+            setSelectedMonth(smartDefaults.month ? (smartDefaults.month === 'all' ? 'all' : parseInt(smartDefaults.month)) : new Date().getMonth() + 1);
+            setSelectedYear(smartDefaults.year ? (smartDefaults.year === 'all' ? 'all' : parseInt(smartDefaults.year)) : new Date().getFullYear());
+            setItemsPerPage(smartDefaults.itemsPerPage || 20);
+          }
+        } catch (error) {
+          console.error('❌ [Preferences] Error loading preferences:', error);
+          // Fallback to current date defaults
+          const now = new Date();
+          setSelectedMonth(now.getMonth() + 1);
+          setSelectedYear(now.getFullYear());
+        }
+      };
+
+      loadPreferences();
     }
   }, [user?.id, formId]); // Only run once when user/form changes
 
-  // ✅ v0.7.38: Auto-save preferences when they change
+  // ✅ v0.8.0: Auto-save preferences when they change (database-backed with debounce)
   useEffect(() => {
     if (user?.id && formId && form) {
       // Don't save on initial render (wait for user interaction)
-      const timer = setTimeout(() => {
+      const timer = setTimeout(async () => {
         const prefs = {
           sortBy,
           sortOrder,
@@ -95,7 +118,12 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           itemsPerPage
         };
 
-        userPreferencesService.saveFormListPreferences(user.id, formId, prefs);
+        try {
+          await userPreferencesService.saveFormListPreferences(user.id, formId, prefs);
+          console.log('💾 [Preferences] Auto-saved to database:', prefs);
+        } catch (error) {
+          console.error('❌ [Preferences] Auto-save failed:', error);
+        }
       }, 500); // Debounce: save 500ms after last change
 
       return () => clearTimeout(timer);
@@ -1484,13 +1512,22 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         {/* ✅ FIX v0.7.11: Don't hide content during loading - show when ready */}
         {!loading && totalItems > 0 ? (
           <div>
-            <GlassCard className="glass-container">
+            <div className="glass-container blur-edge transition-all duration-300 ease-out will-change-transform animate-glass-in form-card-glow form-card-animate form-card-borderless motion-container animation-optimized" style={{
+              borderTopLeftRadius: 0,
+              borderTopRightRadius: 0,
+              borderBottomLeftRadius: '24px',
+              borderBottomRightRadius: '24px',
+              overflow: 'visible'
+            }}>
               <div className="overflow-x-auto">
                 <table data-testid="submission-list" className="w-full submission-table-override">
                   <thead>
-                    <tr className="border-b border-border/30 bg-muted/20">
-                      {tableFields.map(field => (
-                        <th key={field.id} className="text-center p-3 text-[14px] sm:text-[15px] font-medium text-foreground/80 uppercase tracking-wide bg-gradient-to-r from-muted/30 to-muted/20">
+                    <tr className="border-b-2 border-primary/20 bg-muted/40 sticky top-0 z-10" style={{ borderRadius: 0 }}>
+                      {tableFields.map((field, idx) => (
+                        <th
+                          key={field.id}
+                          className="text-center py-5 px-4 text-[16px] sm:text-[17px] md:text-[18px] font-bold text-foreground uppercase tracking-wide bg-gradient-to-b from-muted/50 to-muted/30 shadow-sm"
+                        >
                           {field.title}
                         </th>
                       ))}
@@ -1515,9 +1552,9 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                         <tr
                           key={submission.id}
                           data-testid="submission-row"
-                          className={'border-b border-border/20 cursor-pointer group relative ' + (
+                          className={'border-b border-border/20 cursor-pointer group relative transition-all duration-300 hover:bg-primary/5 hover:shadow-md hover:border-primary/30 ' + (
                             selectedSubmissionId === submission.id && isOpen
-                              ? 'bg-muted/30'
+                              ? 'bg-primary/10 border-primary/40 shadow-lg'
                               : ''
                           )}
                           onClick={() => onViewSubmission && onViewSubmission(submission.id)}
@@ -1569,7 +1606,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                   </tbody>
                 </table>
               </div>
-            </GlassCard>
+            </div>
 
             {/* Pagination Controls (Bottom) */}
             <motion.div

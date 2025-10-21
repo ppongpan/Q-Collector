@@ -2468,6 +2468,65 @@
     overflow: visible !important;
   }
 
+  /* Green Neon Glow Effect - For Sub-Forms */
+  .form-card-glow-green {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+
+    /* Force rounded-3xl corners (1.5rem) with webkit prefix */
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+
+    /* Ensure proper stacking and space for animations */
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+
+    /* Provide margin for glow effect */
+    margin: 8px;
+  }
+
+  .form-card-glow-green:hover {
+    /* Critical: Raise z-index for proper layering */
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+
+    /* Pure green glow - no borders, only blur */
+    box-shadow:
+      /* Soft inner green glow */
+      0 0 20px rgba(34, 197, 94, 0.6),
+      /* Medium green glow */
+      0 0 40px rgba(34, 197, 94, 0.4),
+      /* Extended soft glow */
+      0 0 60px rgba(34, 197, 94, 0.3),
+      /* Far reaching glow */
+      0 0 100px rgba(34, 197, 94, 0.2),
+      /* Depth shadow */
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+
+    /* Subtle background tint without borders */
+    background: linear-gradient(
+      135deg,
+      rgba(34, 197, 94, 0.03) 0%,
+      rgba(34, 197, 94, 0.02) 50%,
+      rgba(34, 197, 94, 0.03) 100%
+    );
+    backdrop-filter: blur(8px) saturate(120%) brightness(102%);
+
+    /* Smooth transform with lift */
+    transform: scale(1.02) translateY(-4px);
+
+    /* Preserve border radius - force 24px explicitly */
+    border-radius: 24px !important;
+
+    /* Force visibility */
+    overflow: visible !important;
+  }
+
   /* Container padding fixes to provide animation space */
   .form-cards-container {
     /* Provide sufficient padding for scale animations */
@@ -2945,6 +3004,33 @@
     contain: none !important;
   }
 
+  /* ✅ CRITICAL FIX v0.8.0: Force NO rounded corners for sub-form table GlassCard */
+  /* Override inline style (borderRadius: 24px) from GlassCard component */
+  .subform-card-no-radius,
+  .subform-card-no-radius[style*="border-radius"] {
+    border-radius: 0 !important;
+    -webkit-border-radius: 0 !important;
+    -moz-border-radius: 0 !important;
+    -ms-border-radius: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Override GlassCardContent padding and border-radius */
+  .subform-content-no-radius {
+    border-radius: 0 !important;
+    -webkit-border-radius: 0 !important;
+    -moz-border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Force all children to have no border-radius */
+  .subform-card-no-radius *,
+  .subform-content-no-radius * {
+    border-radius: 0 !important;
+    -webkit-border-radius: 0 !important;
+    -moz-border-radius: 0 !important;
+  }
+
   /* Text clamp utilities */
   .line-clamp-2 {
     display: -webkit-box;
@@ -3184,4 +3270,104 @@
 
 .dark .submission-table-override tbody tr:hover {
   background-color: rgb(55 65 81) !important;
+}
+
+/* ✅ FIX: Remove rounded corners from table element itself */
+.submission-table-override,
+.subform-table-override {
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+  -moz-border-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-start-start-radius: 0 !important;
+  border-start-end-radius: 0 !important;
+  border-end-start-radius: 0 !important;
+  border-end-end-radius: 0 !important;
+}
+
+/* ✅ FIX: Remove rounded corners from table headers - but allow inline styles to override */
+.submission-table-override thead th,
+.subform-table-override thead th {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* ✅ FIX: Remove rounded corners from table header row */
+.submission-table-override thead tr,
+.subform-table-override thead tr {
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+  -moz-border-radius: 0 !important;
+}
+
+/* ✅ FIX: Override glass-container overflow for submission table */
+.glass-container:has(.submission-table-override),
+.glass-container:has(.subform-table-override) {
+  overflow: visible !important;
+}
+
+/* ✅ FIX: Override glass-card border-radius for submission table */
+.glass-card:has(.submission-table-override),
+.glass-card:has(.subform-table-override) {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+/* ✅ FIX: Allow inline styles to control top corners, only force bottom corners */
+.submission-table-override thead th[class*="bg-gradient"],
+.subform-table-override thead th[class*="bg-gradient"] {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* ✅ FIX: First column - force ALL corners to be square */
+table.submission-table-override thead th:first-child,
+table.subform-table-override thead th:first-child,
+table.submission-table-override thead th:first-child *,
+table.subform-table-override thead th:first-child *,
+table.submission-table-override thead th:first-child::before,
+table.subform-table-override thead th:first-child::before,
+table.submission-table-override thead th:first-child::after,
+table.subform-table-override thead th:first-child::after {
+  border-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+  -webkit-border-top-left-radius: 0 !important;
+  -webkit-border-top-right-radius: 0 !important;
+  -webkit-border-bottom-left-radius: 0 !important;
+  -webkit-border-bottom-right-radius: 0 !important;
+  -moz-border-radius: 0 !important;
+  -moz-border-top-left-radius: 0 !important;
+  -moz-border-top-right-radius: 0 !important;
+  -moz-border-bottom-left-radius: 0 !important;
+  -moz-border-bottom-right-radius: 0 !important;
+  overflow: visible !important;
+}
+
+/* ✅ FIX: Middle columns - force top corners to be square */
+table.submission-table-override thead th:not(:first-child):not(:last-child),
+table.subform-table-override thead th:not(:first-child):not(:last-child) {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  -webkit-border-top-left-radius: 0 !important;
+  -webkit-border-top-right-radius: 0 !important;
+  -moz-border-top-left-radius: 0 !important;
+  -moz-border-top-right-radius: 0 !important;
+}
+
+/* ✅ FIX: Last column - force top-right to be rounded */
+table.submission-table-override thead th:last-child,
+table.subform-table-override thead th:last-child {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 24px !important;
+  -webkit-border-top-left-radius: 0 !important;
+  -webkit-border-top-right-radius: 24px !important;
+  -moz-border-top-left-radius: 0 !important;
+  -moz-border-top-right-radius: 24px !important;
 }

@@ -2059,7 +2059,7 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
           )}
 
           <GlassCard
-            className="glass-container"
+            className="glass-container form-card-glow form-card-animate form-card-borderless motion-container animation-optimized"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
@@ -2144,7 +2144,7 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
             {form.subForms.map((subForm) => (
               <GlassCard
                 key={subForm.id}
-                className="glass-container subform-card-no-radius"
+                className="glass-container subform-card-no-radius form-card-glow-green form-card-animate form-card-borderless motion-container animation-optimized"
                 style={{
                   overflow: 'visible'
                 }}

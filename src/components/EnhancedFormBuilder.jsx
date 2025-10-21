@@ -336,7 +336,7 @@ function FieldEditor({
   };
 
   return (
-    <GlassCard ref={fieldCardRef} className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out shadow-lg hover:shadow-xl hover:border-primary/30 hover:scale-[1.01]">
+    <GlassCard ref={fieldCardRef} className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out shadow-lg hover:shadow-xl hover:border-primary/30 hover:scale-[1.01] orange-neon-permanent">
       {/* Field Header - Compact and Minimal */}
       <GlassCardHeader
         className="py-1 cursor-pointer border-b-0"
@@ -1338,7 +1338,7 @@ function SubFormBuilder({ subForm, onChange, onFieldUpdate, onRemove, canMoveUp,
   };
 
   return (
-    <GlassCard ref={subFormCardRef} variant="elevated" className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out border-2 border-dashed border-accent/30 shadow-lg hover:shadow-xl hover:border-accent/50">
+    <GlassCard ref={subFormCardRef} variant="elevated" className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out border-2 border-dashed border-accent/30 shadow-lg hover:shadow-xl hover:border-accent/50 orange-neon-permanent">
       <GlassCardHeader>
         <div className="flex items-center gap-4">
           <div
@@ -1432,7 +1432,7 @@ function SubFormBuilder({ subForm, onChange, onFieldUpdate, onRemove, canMoveUp,
           <Separator />
 
           {/* Form Info Section - Using InlineEdit like Main Form - 8px Grid */}
-          <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out animate-fade-in border-2 border-primary/20">
+          <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out animate-fade-in border-2 border-primary/20 orange-neon-permanent">
             <GlassCardContent className="space-y-6 p-6 sm:p-8">
               <div className="space-y-4">
                 <InlineEdit
@@ -1543,7 +1543,7 @@ function SubFormBuilder({ subForm, onChange, onFieldUpdate, onRemove, canMoveUp,
             {/* Settings Tab Content - 8px Grid */}
             {currentTab === 'settings' && (
               <div className="space-y-6">
-                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
+                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out orange-neon-permanent">
                   <GlassCardContent className="space-y-6 p-6 sm:p-8">
                     <div className="flex items-center gap-4">
                       <FontAwesomeIcon icon={faCog} className="text-primary" />
@@ -2933,7 +2933,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                 </div>
 
                 {/* User Role Access Control Settings - 8px Grid - MOVED TO TOP */}
-                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
+                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out orange-neon-permanent">
                   <GlassCardHeader>
                     <div className="flex items-center gap-4">
                       <div

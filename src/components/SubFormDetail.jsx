@@ -1161,7 +1161,7 @@ export default function SubFormDetail({
           )}
 
           <GlassCard
-            className="glass-container"
+            className="glass-container form-card-glow-green form-card-animate form-card-borderless motion-container animation-optimized"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}

@@ -55,28 +55,43 @@ export const buildQueryString = (params) => {
 
 /**
  * Parse API error to user-friendly message
- * @param {Error} error - Axios error object
+ * @param {Error} error - Axios error object or transformed ApiClient error
  * @returns {string} User-friendly error message
  */
 export const parseApiError = (error) => {
+  // ✅ FIX v0.8.0-dev: Handle both original axios errors and transformed ApiClient errors
+  // ApiClient transforms errors to { message, status, data, originalError }
+  // So we need to check for both error.response (axios) and error.originalError.response (transformed)
+  const response = error.response || error.originalError?.response;
+  const statusCode = error.status || response?.status;
+  const responseData = error.data || response?.data;
+
   // Network error
-  if (!error.response) {
-    if (error.code === 'ECONNABORTED') {
+  if (!response && !statusCode) {
+    if (error.code === 'ECONNABORTED' || error.isTimeout) {
       return 'การเชื่อมต่อหมดเวลา กรุณาลองใหม่อีกครั้ง';
+    }
+    if (error.isNetworkError) {
+      return 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
+    }
+    // If no response but we have error.message, it might be a custom error
+    if (error.message && typeof error.message === 'string') {
+      // Don't return network error message if we have a specific error message
+      if (!error.message.includes('Network Error') && !error.message.includes('fetch')) {
+        return error.message;
+      }
     }
     return 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
   }
 
-  const { status, data } = error.response;
-
   // Server provided error message
-  if (data?.message) {
-    return data.message;
+  if (responseData?.message) {
+    return responseData.message;
   }
 
   // Server provided error array
-  if (data?.errors && Array.isArray(data.errors)) {
-    return data.errors.map((err) => err.message || err).join(', ');
+  if (responseData?.errors && Array.isArray(responseData.errors)) {
+    return responseData.errors.map((err) => err.message || err).join(', ');
   }
 
   // Status code based messages (Thai language)
@@ -85,7 +100,7 @@ export const parseApiError = (error) => {
     401: 'กรุณาเข้าสู่ระบบใหม่',
     403: 'คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้',
     404: 'ไม่พบข้อมูลที่ต้องการ',
-    409: 'ข้อมูลซ้ำกับที่มีอยู่แล้ว',
+    409: 'ข้อมูลซ้ำกับที่มีอยู่แล้ว (อีเมลหรือชื่อผู้ใช้นี้ถูกใช้งานแล้ว)',
     422: 'ข้อมูลไม่ถูกต้องตามรูปแบบที่กำหนด',
     429: 'มีการร้องขอมากเกินไป กรุณารอสักครู่',
     500: 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์',
@@ -94,7 +109,7 @@ export const parseApiError = (error) => {
     504: 'เซิร์ฟเวอร์ตอบสนองช้าเกินไป',
   };
 
-  return statusMessages[status] || 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+  return statusMessages[statusCode] || 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
 };
 
 /**

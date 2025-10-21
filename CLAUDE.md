@@ -69,8 +69,59 @@
 
 ## Latest Updates - v0.8.0-dev (2025-10-21)
 
-### ✅ SubForm Table Header Rounded Corners Fix
+### ✅ Orange & Green Neon Glow Effects System
 **Status**: ✅ Complete and Working
+**Completion Date**: 2025-10-21
+
+**Features Implemented:**
+- ✅ Orange Neon Glow for Main Form components (hover effect)
+- ✅ Green Neon Glow for Sub-Form components (hover effect)
+- ✅ Registration page error message fix (HTTP 409 clarity)
+- ✅ Applied to Form Builder, Detail Views, and Submission Lists
+
+**Implementation Details:**
+
+1. **Orange Glow (.form-card-glow)** - Main Form Components
+   - Color: `rgba(249, 115, 22, x)` (Tailwind Orange-500)
+   - Applied to:
+     - Form List cards
+     - Form Builder field cards and settings
+     - Main Form Detail View
+     - Main Form Submission List table
+
+2. **Green Glow (.form-card-glow-green)** - Sub-Form Components
+   - Color: `rgba(34, 197, 94, x)` (Tailwind Green-500)
+   - Applied to:
+     - Sub-Form Detail View
+     - Sub-Form Submission List (in Detail View)
+
+3. **Hover Effect Specifications:**
+   - 4-layer glow: 20px → 40px → 60px → 100px
+   - Scale: 1.02
+   - Lift: translateY(-4px)
+   - Backdrop filter: blur(8px) + saturate(120%) + brightness(102%)
+   - Transition: 400ms cubic-bezier(0.4, 0, 0.2, 1)
+
+**Files Modified:**
+- `src/index.css` (lines 2471-2528): Added `.form-card-glow-green` class
+- `src/utils/apiHelpers.js`: Fixed HTTP 409 error message parsing
+- `src/components/EnhancedFormBuilder.jsx`: Added orange glow to field cards (5 locations)
+- `src/components/SubmissionDetail.jsx`:
+  - Main form detail: orange glow (line 2062)
+  - Sub-form list: green glow (line 2147)
+- `src/components/SubFormDetail.jsx`: Sub-form detail green glow (line 1164)
+- `src/components/FormSubmissionList.jsx`: Main submission list orange glow (line 1515)
+
+**User Experience Impact:**
+- Clear visual distinction between Main Forms (orange) and Sub-Forms (green)
+- Consistent hover effects across all data display components
+- Professional, modern UI with smooth animations
+- Same interaction pattern as Form List cards
+
+---
+
+### ✅ SubForm Table Header Rounded Corners Fix
+**Status**: ✅ Complete and Working (Previous Update)
 **Completion Date**: 2025-10-21
 
 **Problem Solved:**
