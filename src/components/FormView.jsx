@@ -1318,6 +1318,7 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
                       className={`
                         px-2 py-1.5 border-2 text-center focus:outline-none text-xs w-full
                         transition-colors duration-300
+                        multiple-choice-btn-fixed-radius
                         ${isSelected
                           ? 'border-primary bg-primary/10 text-primary'
                           : 'border-border/40 bg-muted/20 text-foreground/80 hover:border-primary/50 hover:bg-primary/5'
@@ -1325,9 +1326,11 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
                       `}
                       style={{
                         minHeight: '32px',
-                        borderRadius: '0.375rem', // 6px - consistent rounded corners
-                        WebkitBorderRadius: '0.375rem',
-                        MozBorderRadius: '0.375rem'
+                        borderRadius: '12px', // Force 12px rounded corners (more rounded like selected state)
+                        WebkitBorderRadius: '12px',
+                        MozBorderRadius: '12px',
+                        borderWidth: '2px', // Force 2px border
+                        borderStyle: 'solid' // Force solid border
                       }}
                     >
                       <span className="truncate block">{optionText}</span>

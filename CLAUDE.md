@@ -69,85 +69,84 @@
 
 ## Latest Updates - v0.8.0-dev (2025-10-21)
 
-### ✅ CSS Button Fix & UI Cleanup (Multiple Commits)
+### ✅ Multiple Choice Button CSS Fix - Consistent Border-Radius
 **Status**: ✅ Complete and Working
-**Git Commits**: 671f9c8, 2ca6453
+**Git Commits**: TBD
 **Completion Date**: 2025-10-21
 
 **Problem Solved:**
-1. **Initial Issue**: Multiple choice buttons lost rounded corners when clicked/active
-2. **Additional Issue** (from fixcss.png): Inconsistent border-radius between selected/normal buttons
-   - Selected buttons (orange border) appeared more rounded than normal buttons
-   - Example: "Customer Service Team" (selected) vs "Facebook" (normal)
-   - Example: "ลูกค้าใช้เอง" (selected) vs "ผู้รับเหมา" (normal)
-   - Hover state changed border-radius inconsistently
-3. **UI Cleanup**: Theme selector and dark mode toggle should be hidden
+Inconsistent border-radius across multiple choice buttons in all states (normal, selected, hover, active).
+- Selected buttons (e.g., "Customer Service Team") appeared more rounded (12px) than normal buttons (6px)
+- User requested all buttons to have consistent, prominent rounded corners like the selected state
+- Borders disappeared on hover due to conflicting CSS rules
 
-**Root Cause:**
-- `transition-all` was animating border-radius during hover/active states
-- Different CSS specificity for selected vs normal button states
-- Border-width (border-2 = 2px) made visual radius appear different
+**Root Cause Identified:**
+1. **CSS Specificity Conflict**:
+   - `button[type="button"].border-2.border-primary` **(specificity: 0,2,1)** at line 1067-1080 was overriding
+   - `.multiple-choice-btn-fixed-radius` **(specificity: 0,1,0)** at line 1050-1064
+   - Result: Selected buttons forced to 0.375rem (6px) instead of 12px
+
+2. **Orange-neon Border Removal**:
+   - `.orange-neon-focus`, `.orange-neon-hover`, `.orange-neon-active` classes applied `border: none !important`
+   - Already fixed with `:not(.multiple-choice-btn-fixed-radius)` exclusion
 
 **Solution Implemented:**
 
-**Commit 1 (671f9c8): Theme Toggle Hidden**
-- `src/components/SettingsPage.jsx` lines 351-396: Commented out ThemeSelector and ThemeToggle
-- `src/components/MainFormApp.jsx` lines 416-420: Commented out ThemeToggle in header
-- `src/index.css` lines 1050-1061: Added initial border-radius CSS rules
+**1. Updated Border-Radius to 12px** (user preference for more rounded appearance)
+- **FormView.jsx** (lines 1327-1334):
+  ```javascript
+  style={{
+    borderRadius: '12px',
+    WebkitBorderRadius: '12px',
+    MozBorderRadius: '12px',
+    borderWidth: '2px',
+    borderStyle: 'solid'
+  }}
+  ```
 
-**Commit 2 (2ca6453): Enforce Consistent Border-Radius**
-- **FormView.jsx** (lines 1318-1331):
-  - Removed `rounded-md` class (replaced with inline style)
-  - Changed `transition-all` to `transition-colors` (only animate colors, not geometry)
-  - Added inline borderRadius: '0.375rem' with vendor prefixes
+- **index.css** (lines 1050-1064):
+  ```css
+  .multiple-choice-btn-fixed-radius {
+    border-radius: 12px !important;
+    border-width: 2px !important;
+    border-style: solid !important;
+  }
+  ```
 
-- **index.css** (lines 1050-1066):
-  - Enhanced CSS with higher specificity targeting `button[type="button"].border-2`
-  - Covered all states: normal, hover, focus, focus-visible, active
-  - Covered both normal and selected states (.border-primary)
+**2. Prevented CSS Override with :not() Selector**
+- **index.css** (lines 1067-1081):
+  - Added `:not(.multiple-choice-btn-fixed-radius)` to all legacy button rules
+  - Prevents `border-radius: 0.375rem` from overriding custom class
+  ```css
+  button[type="button"].border-2:not(.multiple-choice-btn-fixed-radius),
+  button[type="button"].border-2.border-primary:not(.multiple-choice-btn-fixed-radius) {
+    border-radius: 0.375rem !important;
+  }
+  ```
 
 **Files Modified:**
-- `src/components/FormView.jsx` - Inline style + transition fix
-- `src/index.css` - High-specificity CSS rules
-- `src/components/SettingsPage.jsx` - Hidden theme UI
-- `src/components/MainFormApp.jsx` - Hidden theme toggle
+- `src/components/FormView.jsx` - Updated inline style to 12px
+- `src/index.css` - Updated CSS class to 12px, added :not() exclusions
 
-**CSS Rule Added:**
-```css
-/* High specificity to override all other CSS */
-button[type="button"].border-2,
-button[type="button"].border-2:hover,
-button[type="button"].border-2:focus,
-button[type="button"].border-2:focus-visible,
-button[type="button"].border-2:active,
-button[type="button"].border-2.border-primary,
-button[type="button"].border-2.border-primary:hover,
-button[type="button"].border-2.border-primary:focus,
-button[type="button"].border-2.border-primary:active {
-  border-radius: 0.375rem !important;
-  /* vendor prefixes */
-}
-```
+**CSS Architecture (To Remember):**
+- **Custom Class**: `.multiple-choice-btn-fixed-radius` - Apply to all multiple choice buttons
+- **Border-Radius**: 12px (more rounded, as requested)
+- **Exclude Pattern**: Use `:not(.multiple-choice-btn-fixed-radius)` in conflicting rules
+- **Global Application**: CSS rules apply to ALL components (FormView, SubFormView, etc.)
 
-**Inline Style Added (FormView.jsx):**
-```javascript
-style={{
-  minHeight: '32px',
-  borderRadius: '0.375rem', // 6px - consistent
-  WebkitBorderRadius: '0.375rem',
-  MozBorderRadius: '0.375rem'
-}}
-```
+**Testing Result:**
+✅ All buttons now have identical 12px rounded corners in all states
+✅ No border disappearance on hover
+✅ Consistent appearance across selected and normal states
 
 **User Experience Impact:**
-- ✅ All multiple choice buttons have identical rounded corners (0.375rem)
-- ✅ No visual difference between selected/normal button curvature
-- ✅ Hover/active states no longer change border-radius
-- ✅ Buttons maintain consistent appearance across all states
-- ✅ Theme selector no longer visible in settings
-- ✅ Cleaner UI without unnecessary theme options
+- ✅ All multiple choice buttons have identical rounded corners (12px)
+- ✅ More prominent rounded appearance as requested
+- ✅ Consistent curvature across selected/normal states
+- ✅ No border disappearance on hover
+- ✅ Global CSS rules apply to all components automatically
 
-**Testing Status:** ✅ Build successful (CSS +130B, warnings only, no errors)
+**Testing Status:** ✅ Build successful, verified working in browser
 
 ---
 
