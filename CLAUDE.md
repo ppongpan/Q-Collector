@@ -69,55 +69,85 @@
 
 ## Latest Updates - v0.8.0-dev (2025-10-21)
 
-### ✅ CSS Button Fix & UI Cleanup
+### ✅ CSS Button Fix & UI Cleanup (Multiple Commits)
 **Status**: ✅ Complete and Working
-**Git Commit**: Pending commit
+**Git Commits**: 671f9c8, 2ca6453
 **Completion Date**: 2025-10-21
 
 **Problem Solved:**
-- Multiple choice buttons lost rounded corners (became square) when clicked/active
-- Theme selector and dark mode toggle were visible but should be hidden
-- Inconsistent button styling across different states
+1. **Initial Issue**: Multiple choice buttons lost rounded corners when clicked/active
+2. **Additional Issue** (from fixcss.png): Inconsistent border-radius between selected/normal buttons
+   - Selected buttons (orange border) appeared more rounded than normal buttons
+   - Example: "Customer Service Team" (selected) vs "Facebook" (normal)
+   - Example: "ลูกค้าใช้เอง" (selected) vs "ผู้รับเหมา" (normal)
+   - Hover state changed border-radius inconsistently
+3. **UI Cleanup**: Theme selector and dark mode toggle should be hidden
+
+**Root Cause:**
+- `transition-all` was animating border-radius during hover/active states
+- Different CSS specificity for selected vs normal button states
+- Border-width (border-2 = 2px) made visual radius appear different
 
 **Solution Implemented:**
-1. **Button Border-Radius Fix** (`src/index.css` lines 1050-1061)
-   - Added highly specific CSS rule for `button[type="button"].rounded-md` covering all states
-   - Includes `:hover`, `:focus`, `:focus-visible`, and `:active` states
-   - Uses vendor prefixes for cross-browser compatibility
-   - Border-radius: 0.375rem maintained consistently
 
-2. **Theme Toggle Hidden** (2 locations)
-   - `src/components/SettingsPage.jsx` lines 351-396: Commented out ThemeSelector and ThemeToggle
-   - `src/components/MainFormApp.jsx` lines 416-420: Commented out ThemeToggle in header
-   - Clear comments indicating user request date (2025-10-21)
+**Commit 1 (671f9c8): Theme Toggle Hidden**
+- `src/components/SettingsPage.jsx` lines 351-396: Commented out ThemeSelector and ThemeToggle
+- `src/components/MainFormApp.jsx` lines 416-420: Commented out ThemeToggle in header
+- `src/index.css` lines 1050-1061: Added initial border-radius CSS rules
+
+**Commit 2 (2ca6453): Enforce Consistent Border-Radius**
+- **FormView.jsx** (lines 1318-1331):
+  - Removed `rounded-md` class (replaced with inline style)
+  - Changed `transition-all` to `transition-colors` (only animate colors, not geometry)
+  - Added inline borderRadius: '0.375rem' with vendor prefixes
+
+- **index.css** (lines 1050-1066):
+  - Enhanced CSS with higher specificity targeting `button[type="button"].border-2`
+  - Covered all states: normal, hover, focus, focus-visible, active
+  - Covered both normal and selected states (.border-primary)
 
 **Files Modified:**
-- `src/index.css` - Added button border-radius fix
-- `src/components/SettingsPage.jsx` - Hidden theme selector and toggle
-- `src/components/MainFormApp.jsx` - Hidden theme toggle in form list header
+- `src/components/FormView.jsx` - Inline style + transition fix
+- `src/index.css` - High-specificity CSS rules
+- `src/components/SettingsPage.jsx` - Hidden theme UI
+- `src/components/MainFormApp.jsx` - Hidden theme toggle
 
 **CSS Rule Added:**
 ```css
-/* ✅ FIX: Multiple choice buttons maintain rounded corners on all states */
-button[type="button"].rounded-md,
-button[type="button"].rounded-md:hover,
-button[type="button"].rounded-md:focus,
-button[type="button"].rounded-md:focus-visible,
-button[type="button"].rounded-md:active {
+/* High specificity to override all other CSS */
+button[type="button"].border-2,
+button[type="button"].border-2:hover,
+button[type="button"].border-2:focus,
+button[type="button"].border-2:focus-visible,
+button[type="button"].border-2:active,
+button[type="button"].border-2.border-primary,
+button[type="button"].border-2.border-primary:hover,
+button[type="button"].border-2.border-primary:focus,
+button[type="button"].border-2.border-primary:active {
   border-radius: 0.375rem !important;
-  -webkit-border-radius: 0.375rem !important;
-  -moz-border-radius: 0.375rem !important;
-  -ms-border-radius: 0.375rem !important;
+  /* vendor prefixes */
 }
 ```
 
+**Inline Style Added (FormView.jsx):**
+```javascript
+style={{
+  minHeight: '32px',
+  borderRadius: '0.375rem', // 6px - consistent
+  WebkitBorderRadius: '0.375rem',
+  MozBorderRadius: '0.375rem'
+}}
+```
+
 **User Experience Impact:**
-- ✅ Buttons maintain consistent rounded appearance when clicked
-- ✅ No more square corners on active state
+- ✅ All multiple choice buttons have identical rounded corners (0.375rem)
+- ✅ No visual difference between selected/normal button curvature
+- ✅ Hover/active states no longer change border-radius
+- ✅ Buttons maintain consistent appearance across all states
 - ✅ Theme selector no longer visible in settings
 - ✅ Cleaner UI without unnecessary theme options
 
-**Testing Status:** ✅ Build successful (warnings only, no errors)
+**Testing Status:** ✅ Build successful (CSS +130B, warnings only, no errors)
 
 ---
 
