@@ -11,6 +11,7 @@ import { FileDisplay } from './ui/file-display';
 import { ImageThumbnail, FileGallery } from './ui/image-thumbnail';
 import { PhoneIcon } from './ui/phone-icon';
 import { LocationMap } from './ui/location-map';
+import { MaskedValue } from './ui/masked-value'; // ✅ v0.8.1: Data masking for sensitive fields
 import { useEnhancedToast } from './ui/enhanced-toast'; // ✅ FIX v0.7.29: Add toast for mobile downloads
 
 // Data services
@@ -23,6 +24,7 @@ import { formatNumberByContext } from '../utils/numberFormatter.js';
 import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../utils/phoneFormatter.js';
 import { getConditionalStyle } from '../utils/conditionalFormattingEngine'; // ✅ v0.7.40: Conditional Formatting
 import { formulaEngine } from '../utils/formulaEngine'; // ✅ v0.7.43: Field visibility evaluation
+import { shouldMaskField } from '../utils/dataMasking'; // ✅ v0.8.1: Data masking utilities
 
 // Hooks
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
@@ -845,14 +847,12 @@ export default function SubFormDetail({
             isEmpty ? 'text-muted-foreground/60 italic' : 'text-foreground/90'
           }`}>
             {isValidEmail ? (
-              <a
-                href={`mailto:${value}`}
-                className="text-primary hover:underline break-all"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {value}
-              </a>
+              <MaskedValue
+                value={value}
+                fieldTitle={field.title}
+                fieldType={field.type}
+                className="text-primary break-all"
+              />
             ) : (
               value || 'ไม่มีข้อมูล'
             )}
@@ -889,17 +889,12 @@ export default function SubFormDetail({
             isEmpty ? 'text-muted-foreground/60 italic' : 'text-foreground/90'
           }`}>
             {phoneProps.isClickable ? (
-              <div className="flex items-center gap-2">
-                <PhoneIcon />
-                <a
-                  href={phoneProps.telLink}
-                  className="text-primary hover:underline break-all"
-                  title={phoneProps.title}
-                  aria-label={phoneProps.ariaLabel}
-                >
-                  {phoneProps.display}
-                </a>
-              </div>
+              <MaskedValue
+                value={value}
+                fieldTitle={field.title}
+                fieldType={field.type}
+                className="text-primary break-all"
+              />
             ) : (
               <span>{formattedPhone || value || 'ไม่มีข้อมูล'}</span>
             )}

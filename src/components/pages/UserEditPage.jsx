@@ -8,7 +8,6 @@ import apiClient from '../../services/ApiClient';
 const USER_ROLES = [
   { id: 'super_admin', name: 'Super Admin', color: 'text-red-500' },
   { id: 'admin', name: 'Admin', color: 'text-pink-500' },
-  { id: 'moderator', name: 'Moderator', color: 'text-purple-500' },
   { id: 'customer_service', name: 'Customer Service', color: 'text-blue-500' },
   { id: 'technic', name: 'Technic', color: 'text-cyan-500' },
   { id: 'sale', name: 'Sale', color: 'text-green-500' },

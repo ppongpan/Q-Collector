@@ -12,6 +12,7 @@ import { FileDisplay, FileDisplayCompact } from './ui/file-display';
 import { FileGallery, ImageThumbnail } from './ui/image-thumbnail';
 import { PhoneIcon } from './ui/phone-icon';
 import { LocationMap } from './ui/location-map';
+import { MaskedValue } from './ui/masked-value'; // ✅ v0.8.1: Data masking for sensitive fields
 
 // Data services
 import fileServiceAPI from '../services/FileService.api.js';
@@ -32,6 +33,7 @@ import { formatNumberByContext } from '../utils/numberFormatter.js';
 import { createPhoneLink, formatPhoneDisplay, shouldFormatAsPhone } from '../utils/phoneFormatter.js';
 import { cn } from '../lib/utils'; // ✅ FIX v0.7.10: For className composition
 import { getConditionalStyle } from '../utils/conditionalFormattingEngine'; // ✅ v0.7.40: Conditional Formatting
+import { shouldMaskField } from '../utils/dataMasking'; // ✅ v0.8.1: Data masking utilities
 
 // ✅ FIX v0.7.26: Fixed Navigation Buttons Component using Portal
 // Buttons stay on screen edges even when scrolling (fixed position)
@@ -1235,17 +1237,12 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
             isEmpty ? 'text-muted-foreground/60 italic' : ''
           }`}>
             {isValidEmail ? (
-              <a
-                href={`mailto:${value}`}
-                className="text-primary font-medium break-all hover:text-orange-400 transition-colors inline-flex items-center gap-2"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span>{value}</span>
-              </a>
+              <MaskedValue
+                value={value}
+                fieldTitle={field.title}
+                fieldType={field.type}
+                className="text-primary font-medium break-all"
+              />
             ) : (
               <span className="text-foreground/90 font-medium">{value || 'ไม่มีข้อมูล'}</span>
             )}
@@ -1282,15 +1279,12 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
             isEmpty ? 'text-muted-foreground/60 italic' : ''
           }`}>
             {phoneProps.isClickable ? (
-              <a
-                href={phoneProps.telLink}
-                className="text-primary font-medium break-all hover:text-orange-400 transition-colors inline-flex items-center gap-2"
-                title={phoneProps.title}
-                aria-label={phoneProps.ariaLabel}
-              >
-                <PhoneIcon />
-                <span>{phoneProps.display}</span>
-              </a>
+              <MaskedValue
+                value={value}
+                fieldTitle={field.title}
+                fieldType={field.type}
+                className="text-primary font-medium break-all"
+              />
             ) : (
               <span className="text-foreground/90 font-medium">{formattedPhone || value || 'ไม่มีข้อมูล'}</span>
             )}

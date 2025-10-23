@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -91,7 +92,9 @@ export const AlertModal = ({
     }
   };
 
-  return (
+  if (!isOpen) return null;
+
+  return ReactDOM.createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -99,11 +102,12 @@ export const AlertModal = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto"
           onClick={handleBackdropClick}
+          style={{ position: 'fixed' }}
         >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-lg" />
 
           {/* Modal */}
           <motion.div
@@ -113,8 +117,8 @@ export const AlertModal = ({
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className={`
               relative w-full ${sizeClasses[size]}
-              bg-background/95 backdrop-blur-md
-              border border-border/50
+              bg-background/50 backdrop-blur-2xl
+              border border-border/70
               rounded-2xl shadow-2xl
               overflow-hidden
             `}
@@ -188,7 +192,8 @@ export const AlertModal = ({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 

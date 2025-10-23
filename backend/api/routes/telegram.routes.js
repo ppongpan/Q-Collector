@@ -141,7 +141,7 @@ router.get('/status',
  */
 router.post('/send',
   authenticate,
-  authorize('admin', 'super_admin', 'moderator'),
+  authorize('admin', 'super_admin'),
   [
     body('chatId').notEmpty().withMessage('Chat ID is required'),
     body('message').notEmpty().withMessage('Message is required'),
@@ -641,7 +641,7 @@ router.post('/users/unlink',
  */
 router.post('/notifications/send',
   authenticate,
-  authorize('admin', 'super_admin', 'moderator'),
+  authorize('admin', 'super_admin'),
   [
     body('recipients').isArray({ min: 1 }).withMessage('At least one recipient is required'),
     body('templateKey').notEmpty().withMessage('Template key is required'),

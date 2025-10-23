@@ -186,7 +186,7 @@ async function verifyUserRole(page, expectedRole) {
   const rolePermissions = {
     super_admin: { canCreateForms: true, canManageUsers: true },
     admin: { canCreateForms: true, canManageUsers: true },
-    moderator: { canCreateForms: true, canManageUsers: false },
+    
     customer_service: { canCreateForms: false, canManageUsers: false },
     sales: { canCreateForms: false, canManageUsers: false },
     marketing: { canCreateForms: false, canManageUsers: false },

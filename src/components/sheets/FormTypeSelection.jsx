@@ -23,7 +23,6 @@ import {
 const USER_ROLES = [
   { id: 'super_admin', label: 'Super Admin', color: 'red', isDefault: true },
   { id: 'admin', label: 'Admin', color: 'pink', isDefault: true },
-  { id: 'moderator', label: 'Moderator', color: 'purple', isDefault: false },
   { id: 'customer_service', label: 'Customer Service', color: 'blue', isDefault: false },
   { id: 'technic', label: 'Technic', color: 'cyan', isDefault: false },
   { id: 'sale', label: 'Sale', color: 'green', isDefault: false },

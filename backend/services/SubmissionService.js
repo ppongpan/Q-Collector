@@ -391,9 +391,9 @@ class SubmissionService {
         throw new ApiError(404, 'Submission not found', 'SUBMISSION_NOT_FOUND');
       }
 
-      // Check ownership or admin permission - Allow owner, super_admin, admin, or moderator
+      // Check ownership or admin permission - Allow owner, super_admin, or admin
       const user = await User.findByPk(userId);
-      const allowedRoles = ['super_admin', 'admin', 'moderator'];
+      const allowedRoles = ['super_admin', 'admin'];
       if (submission.submitted_by !== userId && !allowedRoles.includes(user.role)) {
         throw new ApiError(403, 'Not authorized to update this submission', 'FORBIDDEN');
       }
@@ -539,11 +539,11 @@ class SubmissionService {
         formTitle = form.title;
       }
 
-      // Check access permission - Allow owner, super_admin, admin, moderator, or manager
+      // Check access permission - Allow owner, super_admin, admin, or manager
       const user = await User.findByPk(userId);
 
       const isOwner = submission.submitted_by === userId;
-      const allowedRoles = ['super_admin', 'admin', 'moderator'];
+      const allowedRoles = ['super_admin', 'admin'];
       const isPrivilegedUser = allowedRoles.includes(user.role);
       const isManager = form && user.role === 'manager' && form.canAccessByRole(user.role);
 
@@ -611,7 +611,7 @@ class SubmissionService {
       }
 
       const isCreator = form.created_by === userId;
-      const allowedRoles = ['super_admin', 'admin', 'moderator'];
+      const allowedRoles = ['super_admin', 'admin'];
       const isPrivilegedUser = allowedRoles.includes(user.role);
       const isManager = user.role === 'manager' && form.canAccessByRole(user.role);
 
@@ -880,9 +880,9 @@ class SubmissionService {
         throw new ApiError(404, 'Submission not found', 'SUBMISSION_NOT_FOUND');
       }
 
-      // Check permission - Allow owner, super_admin, admin, or moderator
+      // Check permission - Allow owner, super_admin, or admin
       const user = await User.findByPk(userId);
-      const allowedRoles = ['super_admin', 'admin', 'moderator'];
+      const allowedRoles = ['super_admin', 'admin'];
       if (submission.submitted_by !== userId && !allowedRoles.includes(user.role)) {
         throw new ApiError(403, 'Not authorized to delete this submission', 'FORBIDDEN');
       }
@@ -1502,7 +1502,7 @@ class SubmissionService {
 
       // Check permission
       const user = await User.findByPk(userId);
-      const allowedRoles = ['super_admin', 'admin', 'moderator'];
+      const allowedRoles = ['super_admin', 'admin'];
 
       // Query dynamic table to check ownership
       const { Pool } = require('pg');
@@ -1525,7 +1525,7 @@ class SubmissionService {
 
         const submissionUsername = checkResult.rows[0].username;
 
-        // Check permission (allow owner or admin/moderator)
+        // Check permission (allow owner or admin)
         if (submissionUsername !== user.username && !allowedRoles.includes(user.role)) {
           throw new ApiError(403, 'Not authorized to update this submission', 'FORBIDDEN');
         }

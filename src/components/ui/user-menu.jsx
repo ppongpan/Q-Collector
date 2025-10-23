@@ -13,15 +13,43 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRoleLabel } from '../../config/roles.config';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faSignOutAlt, faCog, faChevronDown, faTable } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faSignOutAlt, faCog, faChevronDown, faTable, faUsers } from '@fortawesome/free-solid-svg-icons';
+import apiClient from '../../services/ApiClient';
 
-export function UserMenu({ onSettingsClick, onSheetsImportClick }) {
+export function UserMenu({ onSettingsClick, onSheetsImportClick, onUserManagementClick }) {
   const { user, logout, userName, userRole, userEmail } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const menuRef = useRef(null);
 
-  // Check if user is Super Admin
+  // Check if user is Super Admin or Admin
   const isSuperAdmin = userRole === 'super_admin';
+  const isAdmin = userRole === 'super_admin' || userRole === 'admin';
+
+  // Fetch pending users count (Admin/Super Admin only)
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const fetchPendingCount = async () => {
+      try {
+        const response = await apiClient.get('/admin/pending-users/count');
+        if (response.success) {
+          setPendingCount(response.count);
+        }
+      } catch (error) {
+        // Silently fail - don't show error to user for background polling
+        // Only log in development mode
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching pending users:', error.message || error);
+        }
+      }
+    };
+
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 30000); // Poll every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isAdmin]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -53,9 +81,6 @@ export function UserMenu({ onSettingsClick, onSheetsImportClick }) {
         return 'bg-red-500/20 text-red-500 border-red-500/30'; // RED: Form Settings
       case 'admin':
         return 'bg-pink-500/20 text-pink-500 border-pink-500/30'; // PINK: Form Settings
-      case 'moderator':
-        return 'bg-purple-500/20 text-purple-500 border-purple-500/30'; // PURPLE: Form Settings
-      case 'customer_service':
         return 'bg-blue-500/20 text-blue-500 border-blue-500/30'; // BLUE: Form Settings
       case 'sales':
         return 'bg-green-500/20 text-green-500 border-green-500/30'; // GREEN: Form Settings
@@ -74,9 +99,6 @@ export function UserMenu({ onSettingsClick, onSheetsImportClick }) {
         return 'text-red-500'; // RED: Form Settings
       case 'admin':
         return 'text-pink-500'; // PINK: Form Settings
-      case 'moderator':
-        return 'text-purple-500'; // PURPLE: Form Settings
-      case 'customer_service':
         return 'text-blue-500'; // BLUE: Form Settings
       case 'sales':
         return 'text-green-500'; // GREEN: Form Settings
@@ -98,9 +120,16 @@ export function UserMenu({ onSettingsClick, onSheetsImportClick }) {
         className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-all duration-200 group"
       >
         {/* User Avatar */}
-        <div className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/20 group-hover:border-primary/40 transition-all duration-200">
-          <FontAwesomeIcon icon={faUser} className="text-sm text-primary" />
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-background"></div>
+        <div className="relative flex items-center justify-center w-8 h-8">
+          <FontAwesomeIcon icon={faUser} className="text-lg text-primary relative z-[1]" />
+          <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-green-500 border-2 border-background z-[2]"></div>
+
+          {/* Pending Users Badge (Admin/Super Admin only) */}
+          {isAdmin && pendingCount > 0 && (
+            <div className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 border-2 border-background z-[10]">
+              <span className="text-[10px] font-bold text-white">{pendingCount > 99 ? '99+' : pendingCount}</span>
+            </div>
+          )}
         </div>
 
         {/* User Info (hidden on mobile) */}
@@ -155,6 +184,27 @@ export function UserMenu({ onSettingsClick, onSheetsImportClick }) {
                     <FontAwesomeIcon icon={faTable} className="text-green-600 group-hover:text-green-500 transition-colors text-xs sm:text-sm" />
                   </div>
                   <span className="text-xs sm:text-sm font-medium text-foreground group-hover:text-green-600 transition-colors">นำเข้าจาก Google Sheets</span>
+                </button>
+              )}
+
+              {/* User Management - Admin/Super Admin ONLY */}
+              {isAdmin && onUserManagementClick && (
+                <button
+                  onClick={() => {
+                    onUserManagementClick();
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl hover:bg-blue-500/10 transition-all duration-200 text-left group mt-1 relative"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-500/5 group-hover:from-blue-500/20 group-hover:to-blue-500/10 transition-all duration-200">
+                    <FontAwesomeIcon icon={faUsers} className="text-blue-600 group-hover:text-blue-500 transition-colors text-xs sm:text-sm" />
+                  </div>
+                  <span className="text-xs sm:text-sm font-medium text-foreground group-hover:text-blue-600 transition-colors flex-1">จัดการผู้ใช้งาน</span>
+                  {pendingCount > 0 && (
+                    <div className="flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full bg-red-500">
+                      <span className="text-[10px] font-bold text-white">{pendingCount > 99 ? '99+' : pendingCount}</span>
+                    </div>
+                  )}
                 </button>
               )}
 

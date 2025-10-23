@@ -8,7 +8,6 @@
  * Permissions:
  * - super_admin: Full access to all operations
  * - admin: Can create, update, delete, test rules, view history
- * - moderator: Read-only access (list, get, history, statistics)
  *
  * Created: 2025-10-20
  * Phase: 7 (API Layer - Advanced Telegram Notification System)
@@ -100,12 +99,12 @@ router.post(
  * GET /api/v1/notifications/rules
  * List notification rules with filtering and pagination
  *
- * Permission: moderator, admin, super_admin
+ * Permission: admin, super_admin
  * Query: { formId, subFormId, triggerType, isEnabled, priority, search, page, limit }
  */
 router.get(
   '/rules',
-  authorize(['moderator', 'admin', 'super_admin']),
+  authorize(['admin', 'super_admin']),
   [
     query('page').optional().isInt({ min: 1 }).withMessage('Page must be positive integer'),
     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be 1-100'),
@@ -146,11 +145,11 @@ router.get(
  * GET /api/v1/notifications/rules/:ruleId
  * Get a specific notification rule by ID
  *
- * Permission: moderator, admin, super_admin
+ * Permission: admin, super_admin
  */
 router.get(
   '/rules/:ruleId',
-  authorize(['moderator', 'admin', 'super_admin']),
+  authorize(['admin', 'super_admin']),
   [param('ruleId').custom(isValidUUID).withMessage('Invalid rule ID')],
   asyncHandler(async (req, res) => {
     // Validate request
@@ -281,12 +280,12 @@ router.post(
  * GET /api/v1/notifications/history
  * Get notification history with filtering
  *
- * Permission: moderator, admin, super_admin
+ * Permission: admin, super_admin
  * Query: { ruleId, submissionId, status, startDate, endDate, page, limit }
  */
 router.get(
   '/history',
-  authorize(['moderator', 'admin', 'super_admin']),
+  authorize(['admin', 'super_admin']),
   [
     query('page').optional().isInt({ min: 1 }).withMessage('Page must be positive integer'),
     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be 1-100'),
@@ -345,11 +344,11 @@ router.get(
  * GET /api/v1/notifications/rules/:ruleId/stats
  * Get statistics for a specific notification rule
  *
- * Permission: moderator, admin, super_admin
+ * Permission: admin, super_admin
  */
 router.get(
   '/rules/:ruleId/stats',
-  authorize(['moderator', 'admin', 'super_admin']),
+  authorize(['admin', 'super_admin']),
   [param('ruleId').custom(isValidUUID).withMessage('Invalid rule ID')],
   asyncHandler(async (req, res) => {
     // Validate request

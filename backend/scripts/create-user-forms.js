@@ -137,7 +137,7 @@ async function createUserForms() {
         )
         VALUES (
           :id, :title, :description, :tableName, :userId,
-          '["super_admin","admin","moderator"]'::jsonb, '{}'::jsonb, true, 1,
+          '["super_admin","admin"]'::jsonb, '{}'::jsonb, true, 1,
           CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         )
       `, {

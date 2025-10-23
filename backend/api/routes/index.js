@@ -22,6 +22,7 @@ const telegramSettingsRoutes = require('./telegram-settings.routes');
 const migrationRoutes = require('./migration.routes');
 const sheetsRoutes = require('./sheets.routes');
 const notificationRoutes = require('./notification.routes');
+const userPreferenceRoutes = require('./userPreference.routes');
 const { requireCompletedSetup } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
@@ -78,6 +79,7 @@ router.use('/telegram-settings', telegramSettingsRoutes);
 router.use('/migrations', migrationRoutes);
 router.use('/sheets', sheetsRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/preferences', userPreferenceRoutes);
 
 /**
  * 404 handler for API routes

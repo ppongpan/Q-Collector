@@ -10,18 +10,7 @@ import {
 import apiClient from '../services/ApiClient';
 import { useEnhancedToast } from './ui/enhanced-toast';
 import { useAuth } from '../contexts/AuthContext';
-
-// USER_ROLES - Matches Form Settings (EnhancedFormBuilder.jsx)
-const USER_ROLES = {
-  SUPER_ADMIN: { id: 'super_admin', color: 'text-red-500', bgColor: 'bg-red-500/10', name: 'Super Admin', isDefault: true },
-  ADMIN: { id: 'admin', color: 'text-pink-500', bgColor: 'bg-pink-500/10', name: 'Admin', isDefault: true },
-  MODERATOR: { id: 'moderator', color: 'text-purple-500', bgColor: 'bg-purple-500/10', name: 'Moderator', isDefault: false },
-  CUSTOMER_SERVICE: { id: 'customer_service', color: 'text-blue-500', bgColor: 'bg-blue-500/10', name: 'Customer Service', isDefault: false },
-  TECHNIC: { id: 'technic', color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', name: 'Technic', isDefault: false },
-  SALE: { id: 'sale', color: 'text-green-500', bgColor: 'bg-green-500/10', name: 'Sale', isDefault: false },
-  MARKETING: { id: 'marketing', color: 'text-orange-500', bgColor: 'bg-orange-500/10', name: 'Marketing', isDefault: false },
-  GENERAL_USER: { id: 'general_user', color: 'text-gray-500', bgColor: 'bg-gray-500/10', name: 'General User', isDefault: false }
-};
+import { ALL_ROLES, getRoleLabel, getRoleBadgeColor } from '../config/roles.config';
 
 export default function FormListApp({ onCreateForm, onEditForm, onViewSubmissions, onFormView }) {
   const [forms, setForms] = useState([]);
@@ -35,62 +24,37 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
   // Helper function to check if user can create/edit forms
   const canCreateOrEditForms = () => {
     if (!user || !user.role) return false;
-    return ['super_admin', 'admin', 'moderator'].includes(user.role);
+    return ['super_admin', 'admin'].includes(user.role);
   };
 
-  // Role helper functions from version 0.1.5
-  const getRoleByName = (roleName) => {
-    return Object.values(USER_ROLES).find(role => role.name === roleName);
-  };
-
-  const getRoleById = (roleId) => {
-    return Object.values(USER_ROLES).find(role => role.id === roleId);
-  };
-
+  // Role helper functions (v0.8.1 - Uses centralized roles.config.js)
   const getRoleColor = (role) => {
     // Special handling for "ALL" tag
     if (role === 'ALL') {
       return 'bg-black text-white';
     }
 
-    // Handle both role names and role IDs
-    let roleObj;
-    if (typeof role === 'string') {
-      roleObj = getRoleByName(role) || getRoleById(role);
-    }
+    // Use centralized getRoleBadgeColor from roles.config.js
+    // Convert role name to role ID format (lowercase with underscores)
+    const roleId = typeof role === 'string'
+      ? role.toLowerCase().replace(/\s+/g, '_')
+      : role;
 
-    if (roleObj) {
-      return `${roleObj.bgColor} ${roleObj.color}`;
-    }
-
-    // Fallback for old role names
-    const colors = {
-      'Admin': 'bg-red-500/20 text-red-200',
-      'Manager': 'bg-blue-500/20 text-blue-200',
-      'HR Manager': 'bg-purple-500/20 text-purple-200',
-      'Supervisor': 'bg-green-500/20 text-green-200',
-      'Employee': 'bg-yellow-500/20 text-yellow-200',
-      'Technician': 'bg-cyan-500/20 text-cyan-200', // FIXED v0.6.6: Changed from orange to cyan
-      'All': 'bg-gray-500/20 text-gray-200'
-    };
-    return colors[role] || 'bg-gray-500/20 text-gray-200';
+    return getRoleBadgeColor(roleId);
   };
 
   const convertRoleIdsToNames = (roleIds) => {
     if (!Array.isArray(roleIds)) return ['All'];
 
     // Check if all user roles are selected
-    const allRoleIds = Object.values(USER_ROLES).map(role => role.id);
+    const allRoleIds = ALL_ROLES.map(role => role.value);
     const hasAllRoles = allRoleIds.length > 0 && allRoleIds.every(roleId => roleIds.includes(roleId));
 
     if (hasAllRoles) {
       return ['ALL'];
     }
 
-    return roleIds.map(roleId => {
-      const role = getRoleById(roleId);
-      return role ? role.name : roleId;
-    });
+    return roleIds.map(roleId => getRoleLabel(roleId));
   };
 
   // Load forms from API - only when authenticated
@@ -258,6 +222,58 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
       'Request': 'from-cyan-500/20 to-cyan-600/20' // FIXED v0.6.6: Changed from orange to cyan for liquid theme
     };
     return colors[category] || 'from-gray-500/20 to-gray-600/20';
+  };
+
+  // Get appropriate glow class based on form's role tags
+  const getFormGlowClass = (selectedRoles) => {
+    if (!selectedRoles || !Array.isArray(selectedRoles)) {
+      return 'form-card-glow'; // Default orange
+    }
+
+    // Convert role IDs to display names
+    const roleNames = convertRoleIdsToNames(selectedRoles);
+
+    // Check if ALL roles - use white glow
+    if (roleNames.includes('ALL')) {
+      return 'form-card-glow-white';
+    }
+
+    // Filter out Super Admin, Admin, Moderator
+    const filteredRoles = roleNames.filter(roleName =>
+      roleName !== 'Super Admin' &&
+      roleName !== 'Admin' &&
+      roleName !== 'Moderator'
+    );
+
+    // Single role (excluding admin roles) - use role-specific color
+    if (filteredRoles.length === 1) {
+      const role = filteredRoles[0];
+
+      // Map role names to CSS glow class names
+      const roleGlowMap = {
+        'Customer Service': 'form-card-glow-blue',
+        'Sales': 'form-card-glow-green',
+        'Marketing': 'form-card-glow', // Default orange
+        'Technic': 'form-card-glow-cyan',
+        'Accounting': 'form-card-glow-indigo',
+        'BD': 'form-card-glow-teal',
+        'HR': 'form-card-glow-rose',
+        'IT': 'form-card-glow-violet',
+        'Maintenance': 'form-card-glow-amber',
+        'Operation': 'form-card-glow-lime',
+        'Production': 'form-card-glow-emerald',
+        'Purchasing': 'form-card-glow-sky',
+        'QC': 'form-card-glow-fuchsia',
+        'R&D': 'form-card-glow-yellow',
+        'Warehouse': 'form-card-glow-slate',
+        'General User': 'form-card-glow' // Default orange
+      };
+
+      return roleGlowMap[role] || 'form-card-glow';
+    }
+
+    // Multiple roles or no valid roles - default orange
+    return 'form-card-glow';
   };
 
   const handleNewForm = () => {
@@ -435,7 +451,7 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
               >
                 <GlassCard
                   data-testid="form-card"
-                  className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out h-full flex flex-col cursor-pointer"
+                  className={`${getFormGlowClass(form.selectedRoles)} form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out h-full flex flex-col cursor-pointer`}
                   onClick={() => handleFormClick(form.id)}
                 >
                   {/* Content Area - Expandable */}
@@ -459,15 +475,20 @@ export default function FormListApp({ onCreateForm, onEditForm, onViewSubmission
 
                     {/* Role Tags Section */}
                     <div className="flex flex-wrap gap-1 justify-start mb-3">
-                      {/* Role Tags */}
-                      {convertRoleIdsToNames(form.selectedRoles)?.map((roleName, index) => (
-                        <span
-                          key={index}
-                          className={`form-card-tag inline-flex items-center ${getRoleColor(roleName)}`}
-                        >
-                          {roleName}
-                        </span>
-                      ))}
+                      {/* Role Tags - Hide Super Admin, Admin, and Moderator (they can see all forms anyway) */}
+                      {convertRoleIdsToNames(form.selectedRoles)
+                        ?.filter(roleName => {
+                          const lowerRoleName = roleName.toLowerCase();
+                          return lowerRoleName !== 'super admin' && lowerRoleName !== 'admin' && lowerRoleName !== 'moderator';
+                        })
+                        .map((roleName, index) => (
+                          <span
+                            key={index}
+                            className={`form-card-tag inline-flex items-center ${getRoleColor(roleName)}`}
+                          >
+                            {roleName}
+                          </span>
+                        ))}
                     </div>
                   </div>
 

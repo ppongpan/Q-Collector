@@ -217,8 +217,8 @@ export default function SubFormEditPage({
   const canEdit = async () => {
     if (!user || !existingSubSubmission) return false;
 
-    // Admin and moderator can edit all submissions
-    if (['super_admin', 'admin', 'moderator'].includes(user.role)) return true;
+    // Admin can edit all submissions
+    if (['super_admin', 'admin'].includes(user.role)) return true;
 
     // User can edit their own submission
     try {

@@ -148,7 +148,7 @@ router.get('/health',
  */
 router.post('/send',
   authenticate,
-  authorize('admin', 'super_admin', 'moderator'),
+  authorize('admin', 'super_admin'),
   [
     body('to').isEmail().withMessage('Valid email address required'),
     body('subject').notEmpty().withMessage('Subject is required'),
@@ -438,7 +438,7 @@ router.post('/test',
  */
 router.get('/templates',
   authenticate,
-  authorize('admin', 'super_admin', 'moderator'),
+  authorize('admin', 'super_admin'),
   async (req, res) => {
     try {
       const templates = Array.from(emailService.templates.keys());
@@ -491,7 +491,7 @@ router.get('/templates',
  */
 router.post('/templates/preview',
   authenticate,
-  authorize('admin', 'super_admin', 'moderator'),
+  authorize('admin', 'super_admin'),
   [
     body('template').notEmpty().withMessage('Template name is required'),
     body('data').optional().isObject()
@@ -586,7 +586,7 @@ router.post('/templates/preview',
  */
 router.post('/notifications/form-submission',
   authenticate,
-  authorize('admin', 'super_admin', 'moderator'),
+  authorize('admin', 'super_admin'),
   [
     body('formId').notEmpty().withMessage('Form ID is required'),
     body('submissionId').notEmpty().withMessage('Submission ID is required'),

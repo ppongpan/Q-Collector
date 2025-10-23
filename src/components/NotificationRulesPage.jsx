@@ -37,7 +37,6 @@ function NotificationRulesPage({ onNavigate }) {
 
   // Check if user has permission to manage rules
   const canManageRules = [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(user?.role);
-  const canViewOnly = user?.role === USER_ROLES.MODERATOR;
 
   // Tabs configuration
   const tabs = [

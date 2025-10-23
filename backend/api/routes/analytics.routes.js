@@ -128,7 +128,7 @@ router.get('/dashboard',
  */
 router.get('/forms',
   authenticate,
-  authorize('admin', 'super_admin', 'moderator'),
+  authorize('admin', 'super_admin'),
   [
     query('timeRange').optional().isIn(['24h', '7d', '30d', '90d', '1y']),
     query('formId').optional().isUUID(),

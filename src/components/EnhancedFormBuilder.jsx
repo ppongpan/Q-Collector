@@ -69,15 +69,33 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 // User Role definitions with colors for access control
+// User Role definitions with colors for access control (17 roles sorted alphabetically)
 const USER_ROLES = {
-  SUPER_ADMIN: { id: 'super_admin', color: 'text-red-500', bgColor: 'bg-red-500/10', name: 'Super Admin', isDefault: true },
-  ADMIN: { id: 'admin', color: 'text-pink-500', bgColor: 'bg-pink-500/10', name: 'Admin', isDefault: true },
-  MODERATOR: { id: 'moderator', color: 'text-purple-500', bgColor: 'bg-purple-500/10', name: 'Moderator', isDefault: false },
-  CUSTOMER_SERVICE: { id: 'customer_service', color: 'text-blue-500', bgColor: 'bg-blue-500/10', name: 'Customer Service', isDefault: false },
-  TECHNIC: { id: 'technic', color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', name: 'Technic', isDefault: false },
-  SALE: { id: 'sale', color: 'text-green-500', bgColor: 'bg-green-500/10', name: 'Sale', isDefault: false },
-  MARKETING: { id: 'marketing', color: 'text-orange-500', bgColor: 'bg-orange-500/10', name: 'Marketing', isDefault: false },
-  GENERAL_USER: { id: 'general_user', color: 'text-gray-500', bgColor: 'bg-gray-500/10', name: 'General User', isDefault: false }
+  // Admin Tier (2 roles - hidden from Form Settings as they can view all forms)
+  SUPER_ADMIN: { id: 'super_admin', color: 'text-red-500', bgColor: 'bg-red-500/10', name: 'Super Admin', showInSettings: false },
+  ADMIN: { id: 'admin', color: 'text-pink-500', bgColor: 'bg-pink-500/10', name: 'Admin', showInSettings: false },
+
+  // Tag-based Roles (Existing - 4 roles)
+  CUSTOMER_SERVICE: { id: 'customer_service', color: 'text-blue-500', bgColor: 'bg-blue-500/10', name: 'Customer Service', showInSettings: true },
+  MARKETING: { id: 'marketing', color: 'text-orange-500', bgColor: 'bg-orange-500/10', name: 'Marketing', showInSettings: true },
+  SALES: { id: 'sales', color: 'text-green-500', bgColor: 'bg-green-500/10', name: 'Sales', showInSettings: true },
+  TECHNIC: { id: 'technic', color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', name: 'Technic', showInSettings: true },
+
+  // Tag-based Roles (NEW v0.8.1 - 11 roles)
+  ACCOUNTING: { id: 'accounting', color: 'text-indigo-500', bgColor: 'bg-indigo-500/10', name: 'Accounting', showInSettings: true },
+  BD: { id: 'bd', color: 'text-teal-500', bgColor: 'bg-teal-500/10', name: 'BD', showInSettings: true },
+  HR: { id: 'hr', color: 'text-rose-500', bgColor: 'bg-rose-500/10', name: 'HR', showInSettings: true },
+  IT: { id: 'it', color: 'text-violet-500', bgColor: 'bg-violet-500/10', name: 'IT', showInSettings: true },
+  MAINTENANCE: { id: 'maintenance', color: 'text-amber-500', bgColor: 'bg-amber-500/10', name: 'Maintenance', showInSettings: true },
+  OPERATION: { id: 'operation', color: 'text-lime-500', bgColor: 'bg-lime-500/10', name: 'Operation', showInSettings: true },
+  PRODUCTION: { id: 'production', color: 'text-emerald-500', bgColor: 'bg-emerald-500/10', name: 'Production', showInSettings: true },
+  PURCHASING: { id: 'purchasing', color: 'text-sky-500', bgColor: 'bg-sky-500/10', name: 'Purchasing', showInSettings: true },
+  QC: { id: 'qc', color: 'text-fuchsia-500', bgColor: 'bg-fuchsia-500/10', name: 'QC', showInSettings: true },
+  RND: { id: 'rnd', color: 'text-yellow-500', bgColor: 'bg-yellow-500/10', name: 'R&D', showInSettings: true },
+  WAREHOUSE: { id: 'warehouse', color: 'text-slate-500', bgColor: 'bg-slate-500/10', name: 'Warehouse', showInSettings: true },
+
+  // Limited Access (1 role)
+  GENERAL_USER: { id: 'general_user', color: 'text-gray-500', bgColor: 'bg-gray-500/10', name: 'General User', showInSettings: true }
 };
 
 // Default roles that can see forms
@@ -1572,10 +1590,10 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   const [showCopied, setShowCopied] = useState(false);
 
   // Check if user has permission to see PowerBI info
-  const canSeePowerBIInfo = ['super_admin', 'admin', 'moderator'].includes(userRole);
+  const canSeePowerBIInfo = ['super_admin', 'admin'].includes(userRole);
 
   // Check if user has permission to delete forms
-  const canDeleteForms = ['super_admin', 'admin', 'moderator'].includes(userRole);
+  const canDeleteForms = ['super_admin', 'admin'].includes(userRole);
 
   const [form, setForm] = useState({
     id: initialForm?.id || generateFormId(),
@@ -2950,40 +2968,36 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                   <GlassCardContent className="space-y-4">
 
                     <div className="flex flex-wrap gap-2">
-                      {Object.values(USER_ROLES).map((role) => {
-                        const isVisible = form.visibleRoles.includes(role.id);
-                        const isDisabled = role.isDefault; // Super Admin and Admin are always selected
+                      {Object.values(USER_ROLES)
+                        .filter(role => role.showInSettings !== false) // Hide Super Admin and Admin (they can view all forms)
+                        .map((role) => {
+                          const isVisible = form.visibleRoles.includes(role.id);
 
-                        return (
-                          <button
-                            key={role.id}
-                            type="button"
-                            disabled={isDisabled}
-                            onClick={() => {
-                              if (isDisabled) return;
-                              const newVisibleRoles = isVisible
-                                ? form.visibleRoles.filter(id => id !== role.id)
-                                : [...form.visibleRoles, role.id];
-                              updateForm({
-                                visibleRoles: newVisibleRoles
-                              });
-                            }}
-                            title={isDisabled ? `${role.name} • Always selected (cannot be changed)` : `Toggle ${role.name} access`}
-                            className={`
-                              px-3 py-2 rounded-xl font-medium text-[12px] transition-all duration-200
-                              ${isVisible
-                                ? `${role.bgColor} ${role.color} shadow-sm hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]`
-                                : 'bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:shadow-[0_0_10px_rgba(249,115,22,0.2)]'
-                              }
-                              ${isDisabled
-                                ? 'cursor-not-allowed opacity-90'
-                                : 'cursor-pointer hover:scale-105'
-                              }
-                            `}
-                            style={{ border: 'none' }}
-                          >
-                            {role.name}
-                            {isDisabled && (
+                          return (
+                            <button
+                              key={role.id}
+                              type="button"
+                              onClick={() => {
+                                const newVisibleRoles = isVisible
+                                  ? form.visibleRoles.filter(id => id !== role.id)
+                                  : [...form.visibleRoles, role.id];
+                                updateForm({
+                                  visibleRoles: newVisibleRoles
+                                });
+                              }}
+                              title={`Toggle ${role.name} access`}
+                              className={`
+                                px-3 py-2 rounded-xl font-medium text-[12px] transition-all duration-200
+                                cursor-pointer hover:scale-105
+                                ${isVisible
+                                  ? `${role.bgColor} ${role.color} shadow-sm hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]`
+                                  : 'bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:shadow-[0_0_10px_rgba(249,115,22,0.2)]'
+                                }
+                              `}
+                              style={{ border: 'none' }}
+                            >
+                              {role.name}
+                              {false && (
                               <span className="ml-1 text-xs opacity-70">•</span>
                             )}
                           </button>

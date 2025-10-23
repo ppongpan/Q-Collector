@@ -42,7 +42,7 @@ class FormService {
       logger.info(`Creating form: ${title}, subForms: ${subFormsArray.length}`);
 
       // Validate roles
-      const validRoles = ['super_admin', 'admin', 'moderator', 'customer_service', 'technic', 'sale', 'marketing', 'general_user'];
+      const validRoles = ['super_admin', 'admin', 'customer_service', 'technic', 'sale', 'marketing', 'general_user'];
       if (!Array.isArray(roles_allowed) || roles_allowed.some(r => !validRoles.includes(r))) {
         throw new ApiError(400, 'Invalid roles specified', 'INVALID_ROLES');
       }

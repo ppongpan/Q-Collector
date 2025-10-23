@@ -5,6 +5,7 @@ import { GlassButton } from './ui/glass-button';
 // import { GlassInput } from './ui/glass-input'; // Unused
 import { useEnhancedToast } from './ui/enhanced-toast';
 import { UserMenu } from './ui/user-menu';
+import { GeneralUserWelcomeModal } from './ui/general-user-welcome-modal';
 import { ResponsiveBreadcrumb } from './ui/breadcrumb';
 import { BreadcrumbProvider, useBreadcrumb } from '../contexts/BreadcrumbContext';
 import { NavigationProvider } from '../contexts/NavigationContext'; // ✅ v0.7.45: Navigation context
@@ -152,7 +153,7 @@ function MainFormAppContent() {
   // Helper function to check if user can create/edit forms
   const canCreateOrEditForms = () => {
     if (!user || !user.role) return false;
-    return ['super_admin', 'admin', 'moderator'].includes(user.role);
+    return ['super_admin', 'admin'].includes(user.role);
   };
 
   // ✅ NEW: Smart back navigation - goes back one step in breadcrumb
@@ -396,7 +397,7 @@ function MainFormAppContent() {
                 <div
                   onClick={handleSmartBack}
                   title="ย้อนกลับ"
-                  className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 cursor-pointer touch-target-comfortable group flex-shrink-0"
+                  className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 cursor-pointer touch-target-comfortable group flex-shrink-0"
                   style={{
                     background: 'transparent',
                     border: 'none'
@@ -404,7 +405,7 @@ function MainFormAppContent() {
                 >
                   <FontAwesomeIcon
                     icon={faArrowLeft}
-                    className="text-sm sm:text-base text-muted-foreground group-hover:text-primary group-hover:scale-110 group-hover:-translate-x-1 transition-all duration-300"
+                    className="text-2xl sm:text-3xl lg:text-4xl text-[#ff6400] group-hover:text-[#ff8533] group-hover:scale-110 group-hover:-translate-x-1 transition-all duration-300"
                   />
                 </div>
               )}
@@ -443,13 +444,13 @@ function MainFormAppContent() {
             )}
 
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-              {/* New Form button - only for Super Admin, Admin, Moderator */}
+              {/* New Form button - only for Super Admin, Admin,  */}
               {currentPage === 'form-list' && canCreateOrEditForms() && (
                 <div
                   data-testid="create-form-btn"
                   onClick={handleNewForm}
                   title="สร้างฟอร์มใหม่"
-                  className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 cursor-pointer touch-target-comfortable group"
+                  className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
                     border: 'none'
@@ -457,7 +458,7 @@ function MainFormAppContent() {
                 >
                   <FontAwesomeIcon
                     icon={faPlus}
-                    className="text-lg sm:text-xl text-muted-foreground group-hover:text-[#ff6400] group-hover:scale-110 group-hover:rotate-90 transition-all duration-300"
+                    className="text-2xl sm:text-3xl lg:text-4xl text-[#ff6400] group-hover:text-[#ff8533] group-hover:scale-110 group-hover:rotate-90 transition-all duration-300"
                   />
                 </div>
               )}
@@ -688,7 +689,7 @@ function MainFormAppContent() {
                 <div
                   onClick={() => handleNavigate('form-view', currentFormId)}
                   title="เพิ่มข้อมูลใหม่"
-                  className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 cursor-pointer touch-target-comfortable group"
+                  className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 cursor-pointer touch-target-comfortable group"
                   style={{
                     background: 'transparent',
                     border: 'none'
@@ -696,7 +697,7 @@ function MainFormAppContent() {
                 >
                   <FontAwesomeIcon
                     icon={faPlus}
-                    className="text-lg sm:text-xl text-muted-foreground group-hover:text-[#ff6400] group-hover:scale-110 group-hover:rotate-90 transition-all duration-300"
+                    className="text-2xl sm:text-3xl lg:text-4xl text-[#ff6400] group-hover:text-[#ff8533] group-hover:scale-110 group-hover:rotate-90 transition-all duration-300"
                   />
                 </div>
               )}
@@ -825,7 +826,7 @@ function MainFormAppContent() {
                 </>
               )}
 
-              {/* User Management Icon - only for Super Admin, Admin, Moderator */}
+              {/* User Management Icon - only for Super Admin, Admin,  */}
               {currentPage === 'form-list' && canCreateOrEditForms() && (
                 <div
                   onClick={() => handleNavigate('user-management')}
@@ -847,6 +848,7 @@ function MainFormAppContent() {
               <UserMenu
                 onSettingsClick={() => handleNavigate('settings')}
                 onSheetsImportClick={() => handleNavigate('sheets-import')}
+                onUserManagementClick={() => handleNavigate('user-management')}
               />
 
               <div
@@ -1005,7 +1007,10 @@ function MainFormAppContent() {
             // Apply filters from context (if present)
             if (navigationFilters.month) filters.month = navigationFilters.month;
             if (navigationFilters.year) filters.year = navigationFilters.year;
-            if (navigationFilters.sortBy) filters.sortBy = navigationFilters.sortBy;
+            // ✅ FIX: Skip _auto_date (it's not a real field, just UI indicator)
+            if (navigationFilters.sortBy && navigationFilters.sortBy !== '_auto_date') {
+              filters.sortBy = navigationFilters.sortBy;
+            }
             if (navigationFilters.sortOrder) filters.sortOrder = navigationFilters.sortOrder;
             if (navigationFilters.selectedDateField) filters.dateField = navigationFilters.selectedDateField;
             if (navigationFilters.searchTerm) filters.search = navigationFilters.searchTerm;
@@ -1344,6 +1349,9 @@ function MainFormAppContent() {
           {renderCurrentPage()}
         </motion.div>
       </AnimatePresence>
+
+      {/* General User Welcome Modal - Shows once per session for general_user role */}
+      <GeneralUserWelcomeModal />
     </div>
   );
 }

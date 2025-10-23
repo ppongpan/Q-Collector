@@ -238,14 +238,15 @@ class TrustedDeviceService {
   }
 
   /**
-   * Cleanup expired trusted devices
+   * Cleanup expired trusted devices (devices that have been expired for 30+ days)
    * @returns {Promise<number>} Number of devices cleaned up
    */
   async cleanupExpiredDevices() {
     try {
+      // Delete devices that have been expired for 30+ days
       const query = `
         DELETE FROM trusted_devices
-        WHERE expires_at < NOW()
+        WHERE expires_at < NOW() - INTERVAL '30 days'
       `;
 
       const result = await sequelize.query(query, {
@@ -255,12 +256,12 @@ class TrustedDeviceService {
       const count = result[1] || 0;
 
       if (count > 0) {
-        logger.info(`Cleaned up ${count} expired trusted devices`);
+        logger.info(`Cleaned up ${count} trusted devices that expired 30+ days ago`);
       }
 
       return count;
     } catch (error) {
-      logger.error('Error cleaning up expired devices:', error);
+      logger.error('Error cleaning up old expired devices:', error);
       throw error;
     }
   }

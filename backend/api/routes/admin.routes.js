@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
-const { authenticate, requireSuperAdmin } = require('../../middleware/auth.middleware');
+const { authenticate, requireSuperAdmin, authorize } = require('../../middleware/auth.middleware');
 const { asyncHandler, ApiError } = require('../../middleware/error.middleware');
 const { sequelize } = require('../../config/database.config');
 const { QueryTypes } = require('sequelize');
@@ -43,7 +43,7 @@ router.post(
       .isLength({ max: 255 })
       .withMessage('Full name must be less than 255 characters'),
     body('role')
-      .isIn(['super_admin', 'admin', 'moderator', 'customer_service', 'sales', 'marketing', 'technic', 'general_user'])
+      .isIn(['super_admin', 'admin', 'customer_service', 'sales', 'marketing', 'technic', 'general_user'])
       .withMessage('Invalid role')
   ],
   asyncHandler(async (req, res) => {
@@ -284,6 +284,35 @@ router.post(
         userId,
         username: user.username
       }
+    });
+  })
+);
+
+/**
+ * GET /api/v1/admin/pending-users/count
+ * Get count of pending users (General Users waiting for approval)
+ * Accessible by Super Admin and Admin only
+ */
+router.get(
+  '/pending-users/count',
+  authenticate,
+  authorize('super_admin', 'admin'),
+  asyncHandler(async (req, res) => {
+    const { User } = require('../../models');
+
+    // Count users with role = 'general_user' and is_active = true
+    const count = await User.count({
+      where: {
+        role: 'general_user',
+        is_active: true
+      }
+    });
+
+    logger.info(`Pending users count requested by ${req.user.username}: ${count}`);
+
+    res.status(200).json({
+      success: true,
+      count
     });
   })
 );

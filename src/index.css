@@ -2527,6 +2527,514 @@
     overflow: visible !important;
   }
 
+  /* ===== ROLE-BASED NEON GLOW EFFECTS (v0.8.1) ===== */
+
+  /* White Neon Glow - For forms with ALL roles */
+  .form-card-glow-white {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-white:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(255, 255, 255, 0.6),
+      0 0 40px rgba(255, 255, 255, 0.4),
+      0 0 60px rgba(255, 255, 255, 0.3),
+      0 0 100px rgba(255, 255, 255, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.02)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.2) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Blue Glow - Customer Service */
+  .form-card-glow-blue {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-blue:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(59, 130, 246, 0.6),
+      0 0 40px rgba(59, 130, 246, 0.4),
+      0 0 60px rgba(59, 130, 246, 0.3),
+      0 0 100px rgba(59, 130, 246, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(59, 130, 246, 0.08),
+      rgba(59, 130, 246, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Cyan Glow - Technic */
+  .form-card-glow-cyan {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-cyan:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(6, 182, 212, 0.6),
+      0 0 40px rgba(6, 182, 212, 0.4),
+      0 0 60px rgba(6, 182, 212, 0.3),
+      0 0 100px rgba(6, 182, 212, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(6, 182, 212, 0.08),
+      rgba(6, 182, 212, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Indigo Glow - Accounting */
+  .form-card-glow-indigo {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-indigo:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(99, 102, 241, 0.6),
+      0 0 40px rgba(99, 102, 241, 0.4),
+      0 0 60px rgba(99, 102, 241, 0.3),
+      0 0 100px rgba(99, 102, 241, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(99, 102, 241, 0.08),
+      rgba(99, 102, 241, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Teal Glow - BD */
+  .form-card-glow-teal {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-teal:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(20, 184, 166, 0.6),
+      0 0 40px rgba(20, 184, 166, 0.4),
+      0 0 60px rgba(20, 184, 166, 0.3),
+      0 0 100px rgba(20, 184, 166, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(20, 184, 166, 0.08),
+      rgba(20, 184, 166, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Rose Glow - HR */
+  .form-card-glow-rose {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-rose:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(244, 63, 94, 0.6),
+      0 0 40px rgba(244, 63, 94, 0.4),
+      0 0 60px rgba(244, 63, 94, 0.3),
+      0 0 100px rgba(244, 63, 94, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(244, 63, 94, 0.08),
+      rgba(244, 63, 94, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Violet Glow - IT */
+  .form-card-glow-violet {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-violet:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(139, 92, 246, 0.6),
+      0 0 40px rgba(139, 92, 246, 0.4),
+      0 0 60px rgba(139, 92, 246, 0.3),
+      0 0 100px rgba(139, 92, 246, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(139, 92, 246, 0.08),
+      rgba(139, 92, 246, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Amber Glow - Maintenance */
+  .form-card-glow-amber {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-amber:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(245, 158, 11, 0.6),
+      0 0 40px rgba(245, 158, 11, 0.4),
+      0 0 60px rgba(245, 158, 11, 0.3),
+      0 0 100px rgba(245, 158, 11, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(245, 158, 11, 0.08),
+      rgba(245, 158, 11, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Lime Glow - Operation */
+  .form-card-glow-lime {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-lime:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(132, 204, 22, 0.6),
+      0 0 40px rgba(132, 204, 22, 0.4),
+      0 0 60px rgba(132, 204, 22, 0.3),
+      0 0 100px rgba(132, 204, 22, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(132, 204, 22, 0.08),
+      rgba(132, 204, 22, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Emerald Glow - Production */
+  .form-card-glow-emerald {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-emerald:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(16, 185, 129, 0.6),
+      0 0 40px rgba(16, 185, 129, 0.4),
+      0 0 60px rgba(16, 185, 129, 0.3),
+      0 0 100px rgba(16, 185, 129, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(16, 185, 129, 0.08),
+      rgba(16, 185, 129, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Sky Glow - Purchasing */
+  .form-card-glow-sky {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-sky:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(14, 165, 233, 0.6),
+      0 0 40px rgba(14, 165, 233, 0.4),
+      0 0 60px rgba(14, 165, 233, 0.3),
+      0 0 100px rgba(14, 165, 233, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(14, 165, 233, 0.08),
+      rgba(14, 165, 233, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Fuchsia Glow - QC */
+  .form-card-glow-fuchsia {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-fuchsia:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(217, 70, 239, 0.6),
+      0 0 40px rgba(217, 70, 239, 0.4),
+      0 0 60px rgba(217, 70, 239, 0.3),
+      0 0 100px rgba(217, 70, 239, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(217, 70, 239, 0.08),
+      rgba(217, 70, 239, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Yellow Glow - R&D */
+  .form-card-glow-yellow {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-yellow:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(234, 179, 8, 0.6),
+      0 0 40px rgba(234, 179, 8, 0.4),
+      0 0 60px rgba(234, 179, 8, 0.3),
+      0 0 100px rgba(234, 179, 8, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(234, 179, 8, 0.08),
+      rgba(234, 179, 8, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* Slate Glow - Warehouse */
+  .form-card-glow-slate {
+    position: relative;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px !important;
+    overflow: visible !important;
+    border: none !important;
+    -webkit-border-radius: 24px !important;
+    -moz-border-radius: 24px !important;
+    z-index: 1;
+    isolation: isolate;
+    contain: none;
+    margin: 8px;
+  }
+
+  .form-card-glow-slate:hover {
+    z-index: 20 !important;
+    position: relative;
+    isolation: isolate;
+    box-shadow:
+      0 0 20px rgba(100, 116, 139, 0.6),
+      0 0 40px rgba(100, 116, 139, 0.4),
+      0 0 60px rgba(100, 116, 139, 0.3),
+      0 0 100px rgba(100, 116, 139, 0.2),
+      0 12px 40px -8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(
+      135deg,
+      rgba(100, 116, 139, 0.08),
+      rgba(100, 116, 139, 0.03)
+    );
+    backdrop-filter: brightness(1.1) saturate(1.3) blur(8px);
+    transform: scale(1.02) translateY(-4px);
+    border-radius: 24px !important;
+    overflow: visible !important;
+  }
+
+  /* ===== END ROLE-BASED NEON GLOW EFFECTS ===== */
+
   /* Container padding fixes to provide animation space */
   .form-cards-container {
     /* Provide sufficient padding for scale animations */

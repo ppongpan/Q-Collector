@@ -321,10 +321,29 @@ function requireCompletedSetup(req, res, next) {
 
 /**
  * Attach request metadata (IP, user agent) to req
+ * Properly extracts real client IP even when behind proxies
  */
 function attachMetadata(req, res, next) {
+  // Extract real IP address (handle proxy scenarios)
+  let ipAddress = req.ip;
+
+  // Check x-forwarded-for header (used by proxies, load balancers, React dev proxy)
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    // x-forwarded-for can contain multiple IPs, take the first one (original client)
+    ipAddress = forwardedFor.split(',')[0].trim();
+  } else if (!ipAddress || ipAddress === '::1' || ipAddress === '127.0.0.1') {
+    // Fallback to connection remote address if req.ip is localhost
+    ipAddress = req.connection?.remoteAddress || req.socket?.remoteAddress || 'unknown';
+  }
+
+  // Convert IPv6 localhost to IPv4 for consistency
+  if (ipAddress === '::1') {
+    ipAddress = '127.0.0.1';
+  }
+
   req.metadata = {
-    ipAddress: req.ip || req.connection.remoteAddress,
+    ipAddress,
     userAgent: req.get('user-agent'),
   };
   next();

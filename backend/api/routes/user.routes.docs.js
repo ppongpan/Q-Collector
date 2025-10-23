@@ -37,7 +37,7 @@
  *         name: role
  *         schema:
  *           type: string
- *           enum: [super_admin, admin, moderator, customer_service, sales, marketing, technic, general_user]
+ *           enum: [super_admin, admin, customer_service, sales, marketing, technic, general_user]
  *         description: Filter users by role
  *     responses:
  *       200:
@@ -157,7 +157,7 @@
  *                 example: "New Full Name"
  *               role:
  *                 type: string
- *                 enum: [super_admin, admin, moderator, customer_service, sales, marketing, technic, general_user]
+ *                 enum: [super_admin, admin, customer_service, sales, marketing, technic, general_user]
  *                 description: User role (optional)
  *                 example: "admin"
  *               is_active:

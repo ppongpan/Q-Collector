@@ -120,7 +120,6 @@ router.put(
       .isIn([
         'super_admin',
         'admin',
-        'moderator',
         'customer_service',
         'sales',
         'marketing',

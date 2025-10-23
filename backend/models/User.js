@@ -44,7 +44,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM(
         'super_admin',
         'admin',
-        'moderator',
         'customer_service',
         'sales',
         'marketing',
@@ -379,10 +378,6 @@ module.exports = (sequelize, DataTypes) => {
 
   User.addScope('admins', {
     where: { role: 'admin', is_active: true },
-  });
-
-  User.addScope('moderators', {
-    where: { role: 'moderator', is_active: true },
   });
 
   User.addScope('staff', {

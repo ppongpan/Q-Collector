@@ -384,42 +384,24 @@ export default function UserManagement({ onEditUser }) {
               </motion.button>
             </motion.div>
 
-            {/* Filter Icon Button (Mobile/Tablet) - Circular */}
-            <div className="sm:hidden flex-shrink-0">
+            {/* Role Filter Button (All Screens) */}
+            <div className="relative flex-shrink-0">
               <button
-                onClick={() => setShowFilterPopup(true)}
-                className="flex items-center justify-center border border-border/40 hover:bg-muted/20 transition-all backdrop-blur-sm bg-background/80"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  minWidth: '40px',
-                  minHeight: '40px',
-                  padding: 0
-                }}
+                onClick={() => setShowFilterPopup(!showFilterPopup)}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg border transition-all min-w-[100px] sm:min-w-[140px] ${
+                  roleFilter !== 'all'
+                    ? 'border-primary/40 bg-primary/10 text-primary'
+                    : 'border-border/40 bg-background/80 hover:bg-muted/20'
+                }`}
               >
-                <FontAwesomeIcon icon={faFilter} className="w-4 h-4 text-muted-foreground" />
-              </button>
-            </div>
-
-            {/* Role Filter (Desktop) */}
-            <div className="hidden sm:block relative w-auto">
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60 pointer-events-none z-10">
                 <FontAwesomeIcon icon={faFilter} className="w-4 h-4" />
-              </div>
-              <CustomSelect
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                options={[
-                  { value: 'all', label: 'ทุกบทบาท' },
-                  ...ALL_ROLES.map(role => ({
-                    value: role.value,
-                    label: role.label
-                  }))
-                ]}
-                placeholder="ทุกบทบาท"
-                className="w-auto pl-10"
-              />
+                <span className={`hidden sm:inline text-sm font-medium truncate ${
+                  roleFilter !== 'all' ? getRoleTextColor(roleFilter) : 'text-foreground'
+                }`}>
+                  {roleFilter === 'all' ? 'ทุกบทบาท' : getRoleLabel(roleFilter)}
+                </span>
+                <FontAwesomeIcon icon={faChevronDown} className={`w-3 h-3 transition-transform ${showFilterPopup ? 'rotate-180' : ''}`} />
+              </button>
             </div>
           </div>
         </motion.div>
@@ -521,10 +503,10 @@ export default function UserManagement({ onEditUser }) {
         </motion.div>
       </div>
 
-      {/* Filter Popup (Mobile) */}
+      {/* Filter Popup (Mobile & Desktop) */}
       {showFilterPopup && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-24 p-4"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-start justify-center sm:justify-end pt-4 sm:pt-16 px-4 sm:pr-8"
           onClick={() => setShowFilterPopup(false)}
         >
           <motion.div
@@ -533,50 +515,61 @@ export default function UserManagement({ onEditUser }) {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm"
+            className="w-full max-w-[280px] sm:max-w-xs"
           >
             <GlassCard>
-              <GlassCardContent className="p-6">
-                <h3 className="text-lg font-semibold text-foreground mb-4">กรองตามบทบาท</h3>
+              <GlassCardContent className="p-4">
+                <h3 className="text-base font-semibold text-foreground mb-3 px-2">กรองตามบทบาท</h3>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
                   <button
                     onClick={() => {
                       setRoleFilter('all');
                       setShowFilterPopup(false);
                     }}
-                    className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                    className={`w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center gap-2 ${
                       roleFilter === 'all'
-                        ? 'bg-primary/20 border-2 border-primary'
-                        : 'bg-muted/20 border-2 border-transparent hover:bg-muted/30'
+                        ? 'bg-primary/20 border border-primary shadow-sm'
+                        : 'bg-muted/10 border border-transparent hover:bg-muted/20 hover:border-border/30'
                     }`}
                   >
-                    <span className="text-base font-medium">ทุกบทบาท</span>
+                    <div className={`w-2 h-2 rounded-full ${roleFilter === 'all' ? 'bg-primary' : 'bg-transparent'}`} />
+                    <span className="text-sm font-medium flex-1">ทุกบทบาท</span>
                   </button>
 
-                  {ALL_ROLES.map(role => (
-                    <button
-                      key={role.value}
-                      onClick={() => {
-                        setRoleFilter(role.value);
-                        setShowFilterPopup(false);
-                      }}
-                      className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
-                        roleFilter === role.value
-                          ? 'bg-primary/20 border-2 border-primary'
-                          : 'bg-muted/20 border-2 border-transparent hover:bg-muted/30'
-                      }`}
-                    >
-                      <span className={`text-base font-semibold ${getRoleTextColor(role.value)}`}>
-                        {role.label}
-                      </span>
-                    </button>
-                  ))}
+                  {ALL_ROLES.map(role => {
+                    const isSelected = roleFilter === role.value;
+                    const roleBgColor = getRoleBadgeColor(role.value).split(' ')[0]; // Get bg color class
+
+                    return (
+                      <button
+                        key={role.value}
+                        onClick={() => {
+                          setRoleFilter(role.value);
+                          setShowFilterPopup(false);
+                        }}
+                        className={`w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center gap-2 ${
+                          isSelected
+                            ? `${roleBgColor} border ${roleBgColor.replace('/20', '/30').replace('bg-', 'border-')} shadow-sm`
+                            : 'bg-muted/10 border border-transparent hover:bg-muted/20 hover:border-border/30'
+                        }`}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${
+                          isSelected
+                            ? getRoleTextColor(role.value).replace('text-', 'bg-')
+                            : 'bg-transparent'
+                        }`} />
+                        <span className={`text-sm font-semibold flex-1 ${getRoleTextColor(role.value)}`}>
+                          {role.label}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <button
                   onClick={() => setShowFilterPopup(false)}
-                  className="w-full mt-4 px-4 py-2 rounded-lg bg-muted/30 hover:bg-muted/40 transition-colors text-sm font-medium"
+                  className="w-full mt-3 px-3 py-2 rounded-lg bg-muted/20 hover:bg-muted/30 transition-colors text-sm font-medium border border-border/30"
                 >
                   ปิด
                 </button>

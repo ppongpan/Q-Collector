@@ -1,85 +1,317 @@
 /**
  * UserPreferencesService
  * Manages user preferences for the Q-Collector application
- * Stores settings in localStorage per user and per form
+ * Version: v0.8.0-dev - Database-backed with localStorage fallback
  *
- * v0.7.38 - User Preferences System
+ * Features:
+ * - Database-first storage (PostgreSQL via API)
+ * - localStorage fallback for offline/error scenarios
+ * - Automatic migration from localStorage to database
+ * - Smart defaults (uses latest submission date)
+ * - Cross-device synchronization
  */
 
-import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
 
 class UserPreferencesService {
   constructor() {
     this.storagePrefix = 'qcollector_prefs_';
+    this.apiBaseUrl = '/api/v1/preferences';
+    this.migrationKey = 'qcollector_prefs_migrated_';
   }
 
   /**
-   * Get storage key for a specific user and form
+   * Get storage key for localStorage fallback
    * @param {string} userId - User ID
-   * @param {string} formId - Form ID (optional, for form-specific preferences)
+   * @param {string} contextType - Context type (form_list, global, etc.)
+   * @param {string|null} contextId - Context ID (formId for form_list)
    * @returns {string} Storage key
    */
-  getStorageKey(userId, formId = null) {
-    if (formId) {
-      return `${this.storagePrefix}${userId}_form_${formId}`;
+  getStorageKey(userId, contextType, contextId = null) {
+    if (contextId) {
+      return `${this.storagePrefix}${userId}_${contextType}_${contextId}`;
     }
-    return `${this.storagePrefix}${userId}_global`;
+    return `${this.storagePrefix}${userId}_${contextType}`;
+  }
+
+  /**
+   * Get migration tracking key
+   * @param {string} userId - User ID
+   * @param {string} contextType - Context type
+   * @param {string|null} contextId - Context ID
+   * @returns {string} Migration key
+   */
+  getMigrationKey(userId, contextType, contextId = null) {
+    if (contextId) {
+      return `${this.migrationKey}${userId}_${contextType}_${contextId}`;
+    }
+    return `${this.migrationKey}${userId}_${contextType}`;
+  }
+
+  /**
+   * Check if localStorage data has been migrated to database
+   * @param {string} userId - User ID
+   * @param {string} contextType - Context type
+   * @param {string|null} contextId - Context ID
+   * @returns {boolean} True if migrated
+   */
+  isMigrated(userId, contextType, contextId = null) {
+    const key = this.getMigrationKey(userId, contextType, contextId);
+    return localStorage.getItem(key) === 'true';
+  }
+
+  /**
+   * Mark localStorage data as migrated
+   * @param {string} userId - User ID
+   * @param {string} contextType - Context type
+   * @param {string|null} contextId - Context ID
+   */
+  markAsMigrated(userId, contextType, contextId = null) {
+    const key = this.getMigrationKey(userId, contextType, contextId);
+    localStorage.setItem(key, 'true');
+  }
+
+  /**
+   * Migrate localStorage data to database
+   * @param {string} userId - User ID
+   * @param {string} contextType - Context type
+   * @param {string|null} contextId - Context ID
+   * @returns {Promise<boolean>} True if migration successful
+   */
+  async migrateToDatabase(userId, contextType, contextId = null) {
+    try {
+      // Check if already migrated
+      if (this.isMigrated(userId, contextType, contextId)) {
+        console.log('ℹ️ [UserPreferences] Already migrated, skipping');
+        return false;
+      }
+
+      // Load from localStorage
+      const key = this.getStorageKey(userId, contextType, contextId);
+      const data = localStorage.getItem(key);
+
+      if (!data) {
+        console.log('ℹ️ [UserPreferences] No localStorage data to migrate');
+        this.markAsMigrated(userId, contextType, contextId);
+        return false;
+      }
+
+      const preferences = JSON.parse(data);
+      console.log('📦 [UserPreferences] Migrating localStorage data to database:', preferences);
+
+      // Save to database
+      await this.saveToDatabase(userId, contextType, contextId, preferences);
+
+      // Mark as migrated
+      this.markAsMigrated(userId, contextType, contextId);
+
+      console.log('✅ [UserPreferences] Migration successful');
+      return true;
+    } catch (error) {
+      console.error('❌ [UserPreferences] Migration failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Save preferences to database via API
+   * @param {string} userId - User ID
+   * @param {string} contextType - Context type
+   * @param {string|null} contextId - Context ID
+   * @param {Object} preferences - Preferences object
+   * @returns {Promise<Object>} Saved preferences
+   */
+  async saveToDatabase(userId, contextType, contextId = null, preferences) {
+    try {
+      const url = contextId
+        ? `${this.apiBaseUrl}/${contextType}/${contextId}`
+        : `${this.apiBaseUrl}/${contextType}`;
+
+      const response = await axios.put(url, { preferences });
+
+      if (response.data && response.data.success) {
+        console.log('✅ [UserPreferences] Saved to database:', response.data.data);
+        return response.data.data;
+      }
+
+      throw new Error('Invalid response from server');
+    } catch (error) {
+      console.error('❌ [UserPreferences] Database save failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load preferences from database via API
+   * @param {string} userId - User ID
+   * @param {string} contextType - Context type
+   * @param {string|null} contextId - Context ID
+   * @returns {Promise<Object|null>} Preferences object or null
+   */
+  async loadFromDatabase(userId, contextType, contextId = null) {
+    try {
+      const url = contextId
+        ? `${this.apiBaseUrl}/${contextType}/${contextId}`
+        : `${this.apiBaseUrl}/${contextType}`;
+
+      const response = await axios.get(url);
+
+      if (response.data && response.data.success && response.data.data) {
+        console.log('✅ [UserPreferences] Loaded from database:', response.data.data);
+        return response.data.data;
+      }
+
+      console.log('ℹ️ [UserPreferences] No database preferences found');
+      return null;
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        console.log('ℹ️ [UserPreferences] No database preferences found (404)');
+        return null;
+      }
+      console.error('❌ [UserPreferences] Database load failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get smart defaults for form list
+   * Uses latest submission date instead of current date
+   * @param {string} userId - User ID
+   * @param {string} formId - Form ID
+   * @returns {Promise<Object>} Default preferences with metadata
+   */
+  async getFormListSmartDefaults(userId, formId) {
+    try {
+      const url = `${this.apiBaseUrl}/defaults/form-list/${formId}`;
+      const response = await axios.get(url);
+
+      if (response.data && response.data.success) {
+        console.log('✅ [UserPreferences] Smart defaults received:', response.data.data);
+        console.log('📊 [UserPreferences] Defaults source:', response.data.metadata.source);
+        return response.data.data;
+      }
+
+      throw new Error('Invalid response from server');
+    } catch (error) {
+      console.error('❌ [UserPreferences] Smart defaults fetch failed, using current date:', error);
+      // Fallback to current date
+      const now = new Date();
+      return {
+        sortBy: '_auto_date',
+        sortOrder: 'desc',
+        selectedDateField: 'submittedAt',
+        month: String(now.getMonth() + 1),
+        year: String(now.getFullYear()),
+        itemsPerPage: 20,
+        hideEmptyRows: true
+      };
+    }
+  }
+
+  /**
+   * Save to localStorage fallback
+   * @param {string} userId - User ID
+   * @param {string} contextType - Context type
+   * @param {string|null} contextId - Context ID
+   * @param {Object} preferences - Preferences object
+   */
+  saveToLocalStorage(userId, contextType, contextId = null, preferences) {
+    try {
+      const key = this.getStorageKey(userId, contextType, contextId);
+      const data = {
+        ...preferences,
+        lastUpdated: new Date().toISOString()
+      };
+      localStorage.setItem(key, JSON.stringify(data));
+      console.log('✅ [UserPreferences] Saved to localStorage fallback:', data);
+    } catch (error) {
+      console.error('❌ [UserPreferences] localStorage save failed:', error);
+    }
+  }
+
+  /**
+   * Load from localStorage fallback
+   * @param {string} userId - User ID
+   * @param {string} contextType - Context type
+   * @param {string|null} contextId - Context ID
+   * @returns {Object|null} Preferences or null
+   */
+  loadFromLocalStorage(userId, contextType, contextId = null) {
+    try {
+      const key = this.getStorageKey(userId, contextType, contextId);
+      const data = localStorage.getItem(key);
+
+      if (data) {
+        const preferences = JSON.parse(data);
+        console.log('✅ [UserPreferences] Loaded from localStorage fallback:', preferences);
+        return preferences;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('❌ [UserPreferences] localStorage load failed:', error);
+      return null;
+    }
   }
 
   /**
    * Save form submission list preferences
+   * Database-first with localStorage fallback and automatic migration
    * @param {string} userId - User ID
    * @param {string} formId - Form ID
    * @param {Object} preferences - Preferences object
-   * @param {string} preferences.sortBy - Sort field
-   * @param {string} preferences.sortOrder - Sort order (ASC/DESC)
-   * @param {string} preferences.selectedDateField - Selected date field for filtering
-   * @param {string} preferences.month - Selected month filter
-   * @param {string} preferences.year - Selected year filter
-   * @param {number} preferences.itemsPerPage - Items per page
+   * @returns {Promise<boolean>} True if successful
    */
-  saveFormListPreferences(userId, formId, preferences) {
+  async saveFormListPreferences(userId, formId, preferences) {
     try {
-      const key = this.getStorageKey(userId, formId);
-      const data = {
-        sortBy: preferences.sortBy || 'submittedAt',
-        sortOrder: preferences.sortOrder || 'DESC',
-        selectedDateField: preferences.selectedDateField || 'submittedAt',
-        month: preferences.month || 'all',
-        year: preferences.year || 'all',
-        itemsPerPage: preferences.itemsPerPage || 20,
-        lastUpdated: new Date().toISOString()
-      };
-      localStorage.setItem(key, JSON.stringify(data));
-      console.log('✅ [UserPreferences] Saved preferences for form:', formId, data);
-      return true;
+      // Attempt database save first
+      try {
+        await this.saveToDatabase(userId, 'form_list', formId, preferences);
+        // Also save to localStorage for offline access
+        this.saveToLocalStorage(userId, 'form_list', formId, preferences);
+        return true;
+      } catch (dbError) {
+        // Database failed, use localStorage fallback
+        console.warn('⚠️ [UserPreferences] Database save failed, using localStorage fallback');
+        this.saveToLocalStorage(userId, 'form_list', formId, preferences);
+        return true;
+      }
     } catch (error) {
-      console.error('❌ [UserPreferences] Error saving preferences:', error);
+      console.error('❌ [UserPreferences] Save failed completely:', error);
       return false;
     }
   }
 
   /**
    * Load form submission list preferences
+   * Database-first with localStorage fallback and automatic migration
    * @param {string} userId - User ID
    * @param {string} formId - Form ID
-   * @returns {Object|null} Preferences object or null if not found
+   * @returns {Promise<Object|null>} Preferences object or null
    */
-  loadFormListPreferences(userId, formId) {
+  async loadFormListPreferences(userId, formId) {
     try {
-      const key = this.getStorageKey(userId, formId);
-      const data = localStorage.getItem(key);
+      // Try to migrate localStorage data first
+      await this.migrateToDatabase(userId, 'form_list', formId);
 
-      if (data) {
-        const preferences = JSON.parse(data);
-        console.log('✅ [UserPreferences] Loaded preferences for form:', formId, preferences);
-        return preferences;
+      // Attempt database load first
+      try {
+        const dbPrefs = await this.loadFromDatabase(userId, 'form_list', formId);
+        if (dbPrefs) {
+          // Also sync to localStorage for offline access
+          this.saveToLocalStorage(userId, 'form_list', formId, dbPrefs);
+          return dbPrefs;
+        }
+
+        // No database preferences, return null (will trigger smart defaults)
+        return null;
+      } catch (dbError) {
+        // Database failed, try localStorage fallback
+        console.warn('⚠️ [UserPreferences] Database load failed, using localStorage fallback');
+        return this.loadFromLocalStorage(userId, 'form_list', formId);
       }
-
-      console.log('ℹ️ [UserPreferences] No saved preferences for form:', formId);
-      return null;
     } catch (error) {
-      console.error('❌ [UserPreferences] Error loading preferences:', error);
+      console.error('❌ [UserPreferences] Load failed completely:', error);
       return null;
     }
   }
@@ -88,11 +320,26 @@ class UserPreferencesService {
    * Clear preferences for a specific form
    * @param {string} userId - User ID
    * @param {string} formId - Form ID
+   * @returns {Promise<boolean>} True if successful
    */
-  clearFormListPreferences(userId, formId) {
+  async clearFormListPreferences(userId, formId) {
     try {
-      const key = this.getStorageKey(userId, formId);
+      // Clear from database
+      try {
+        const url = `${this.apiBaseUrl}/form_list/${formId}`;
+        await axios.delete(url);
+      } catch (dbError) {
+        console.warn('⚠️ [UserPreferences] Database clear failed');
+      }
+
+      // Clear from localStorage
+      const key = this.getStorageKey(userId, 'form_list', formId);
       localStorage.removeItem(key);
+
+      // Clear migration flag
+      const migrationKey = this.getMigrationKey(userId, 'form_list', formId);
+      localStorage.removeItem(migrationKey);
+
       console.log('✅ [UserPreferences] Cleared preferences for form:', formId);
       return true;
     } catch (error) {
@@ -105,19 +352,22 @@ class UserPreferencesService {
    * Save global user preferences
    * @param {string} userId - User ID
    * @param {Object} preferences - Global preferences object
+   * @returns {Promise<boolean>} True if successful
    */
-  saveGlobalPreferences(userId, preferences) {
+  async saveGlobalPreferences(userId, preferences) {
     try {
-      const key = this.getStorageKey(userId);
-      const data = {
-        ...preferences,
-        lastUpdated: new Date().toISOString()
-      };
-      localStorage.setItem(key, JSON.stringify(data));
-      console.log('✅ [UserPreferences] Saved global preferences:', data);
-      return true;
+      // Attempt database save first
+      try {
+        await this.saveToDatabase(userId, 'global', null, preferences);
+        this.saveToLocalStorage(userId, 'global', null, preferences);
+        return true;
+      } catch (dbError) {
+        console.warn('⚠️ [UserPreferences] Database save failed, using localStorage fallback');
+        this.saveToLocalStorage(userId, 'global', null, preferences);
+        return true;
+      }
     } catch (error) {
-      console.error('❌ [UserPreferences] Error saving global preferences:', error);
+      console.error('❌ [UserPreferences] Save failed completely:', error);
       return false;
     }
   }
@@ -125,22 +375,27 @@ class UserPreferencesService {
   /**
    * Load global user preferences
    * @param {string} userId - User ID
-   * @returns {Object|null} Global preferences or null
+   * @returns {Promise<Object|null>} Global preferences or null
    */
-  loadGlobalPreferences(userId) {
+  async loadGlobalPreferences(userId) {
     try {
-      const key = this.getStorageKey(userId);
-      const data = localStorage.getItem(key);
+      // Try to migrate localStorage data first
+      await this.migrateToDatabase(userId, 'global', null);
 
-      if (data) {
-        const preferences = JSON.parse(data);
-        console.log('✅ [UserPreferences] Loaded global preferences:', preferences);
-        return preferences;
+      // Attempt database load first
+      try {
+        const dbPrefs = await this.loadFromDatabase(userId, 'global', null);
+        if (dbPrefs) {
+          this.saveToLocalStorage(userId, 'global', null, dbPrefs);
+          return dbPrefs;
+        }
+        return null;
+      } catch (dbError) {
+        console.warn('⚠️ [UserPreferences] Database load failed, using localStorage fallback');
+        return this.loadFromLocalStorage(userId, 'global', null);
       }
-
-      return null;
     } catch (error) {
-      console.error('❌ [UserPreferences] Error loading global preferences:', error);
+      console.error('❌ [UserPreferences] Load failed completely:', error);
       return null;
     }
   }
@@ -148,20 +403,26 @@ class UserPreferencesService {
   /**
    * Clear all preferences for a user
    * @param {string} userId - User ID
+   * @returns {Promise<boolean>} True if successful
    */
-  clearAllPreferences(userId) {
+  async clearAllPreferences(userId) {
     try {
-      const keysToRemove = [];
+      // Clear from database
+      try {
+        const url = `${this.apiBaseUrl}/user/all`;
+        await axios.delete(url);
+      } catch (dbError) {
+        console.warn('⚠️ [UserPreferences] Database clear failed');
+      }
 
-      // Find all keys for this user
+      // Clear from localStorage
+      const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.startsWith(`${this.storagePrefix}${userId}`)) {
+        if (key && (key.startsWith(`${this.storagePrefix}${userId}`) || key.startsWith(`${this.migrationKey}${userId}`))) {
           keysToRemove.push(key);
         }
       }
-
-      // Remove all found keys
       keysToRemove.forEach(key => localStorage.removeItem(key));
 
       console.log(`✅ [UserPreferences] Cleared ${keysToRemove.length} preference entries for user:`, userId);
@@ -174,17 +435,19 @@ class UserPreferencesService {
 
   /**
    * Get default preferences for form submission list
+   * Uses current date as fallback (smart defaults should be fetched separately)
    * @returns {Object} Default preferences
    */
   getDefaultFormListPreferences() {
     const now = new Date();
     return {
-      sortBy: 'submittedAt',
-      sortOrder: 'DESC',
+      sortBy: '_auto_date',
+      sortOrder: 'desc',
       selectedDateField: 'submittedAt',
-      month: String(now.getMonth() + 1), // Current month (1-12)
-      year: String(now.getFullYear()),   // Current year
-      itemsPerPage: 20
+      month: String(now.getMonth() + 1),
+      year: String(now.getFullYear()),
+      itemsPerPage: 20,
+      hideEmptyRows: true
     };
   }
 }

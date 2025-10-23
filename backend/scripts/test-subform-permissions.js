@@ -13,15 +13,15 @@ async function testPermissions() {
   console.log('🧪 Testing Sub-form Permission Fixes...\n');
 
   try {
-    // Test 1: Verify role enum includes super_admin, admin, moderator
+    // Test 1: Verify role enum includes super_admin, admin
     console.log('Test 1: Verify User roles');
     const userWithSuperAdmin = await User.findOne({ where: { role: 'super_admin' } });
     const userWithAdmin = await User.findOne({ where: { role: 'admin' } });
-    const userWithModerator = await User.findOne({ where: { role: 'moderator' } });
+    const userWithAdmin = await User.findOne({ where: { role: } });
 
     console.log('✅ Super Admin exists:', !!userWithSuperAdmin);
     console.log('✅ Admin exists:', !!userWithAdmin);
-    console.log('✅ Moderator exists:', !!userWithModerator);
+    console.log('✅ Admin exists:', !!userWithAdmin);
 
     // Test 2: Verify SubmissionService has updated permission checks
     console.log('\nTest 2: Verify permission logic in SubmissionService');
@@ -41,7 +41,7 @@ async function testPermissions() {
     console.log('✅ Found test submission:', testSubmission.id);
 
     // Test with different roles
-    const allowedRoles = ['super_admin', 'admin', 'moderator'];
+    const allowedRoles = ['super_admin', 'admin', ];
     console.log('\nTest 3: Check allowed roles array');
     console.log('✅ Allowed roles:', allowedRoles.join(', '));
 
@@ -51,7 +51,7 @@ async function testPermissions() {
     console.log('Submission owner:', testUserId);
 
     // Simulate permission checks
-    for (const role of ['super_admin', 'admin', 'moderator', 'general_user']) {
+    for (const role of ['super_admin', 'admin', 'general_user']) {
       const hasPermission = (testUserId === testUserId) || allowedRoles.includes(role);
       console.log(`  ${role}: ${hasPermission ? '✅ ALLOWED' : '❌ DENIED (unless owner)'}`);
     }
@@ -78,7 +78,7 @@ async function testPermissions() {
     console.log('\n📋 Next Steps:');
     console.log('1. Restart backend server: npm run dev');
     console.log('2. Test delete functionality in UI');
-    console.log('3. Verify with super_admin, admin, and moderator roles');
+    console.log('3. Verify with super_admin and admin roles');
 
   } catch (error) {
     console.error('❌ Test failed:', error.message);

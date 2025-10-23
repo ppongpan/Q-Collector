@@ -8,7 +8,6 @@
  * Permissions:
  * - super_admin: Full access to all operations
  * - admin: Can preview, execute, view history, view backups, check status
- * - moderator: Read-only access (preview, history, backups, status)
  *
  * Created: 2025-10-07
  * Sprint: 4 (API Layer - Field Migration System v0.8.0)
@@ -133,11 +132,11 @@ const validateMigrationChanges = (changes) => {
  *   }
  * }
  *
- * Permission: super_admin, admin, moderator
+ * Permission: super_admin, admin
  */
 router.post(
   '/preview',
-  authorize('super_admin', 'admin', 'moderator'),
+  authorize('super_admin', 'admin'),
   [
     body('formId')
       .trim()
@@ -407,11 +406,11 @@ router.post(
  *   }
  * }
  *
- * Permission: super_admin, admin, moderator
+ * Permission: super_admin, admin
  */
 router.get(
   '/history/:formId',
-  authorize('super_admin', 'admin', 'moderator'),
+  authorize('super_admin', 'admin'),
   [
     param('formId')
       .trim()
@@ -671,11 +670,11 @@ router.post(
  *   }
  * }
  *
- * Permission: super_admin, admin, moderator
+ * Permission: super_admin, admin
  */
 router.get(
   '/backups/:formId',
-  authorize('super_admin', 'admin', 'moderator'),
+  authorize('super_admin', 'admin'),
   [
     param('formId')
       .trim()
@@ -874,11 +873,11 @@ router.post(
  *   }
  * }
  *
- * Permission: super_admin, admin, moderator
+ * Permission: super_admin, admin
  */
 router.get(
   '/queue/status',
-  authorize('super_admin', 'admin', 'moderator'),
+  authorize('super_admin', 'admin'),
   [
     query('formId')
       .optional()

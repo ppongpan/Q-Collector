@@ -37,11 +37,11 @@
     "tailwind-merge": "^3.3.1"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "cross-env NODE_NO_WARNINGS=1 craco start",
+    "build": "cross-env NODE_NO_WARNINGS=1 craco build",
+    "test": "craco test",
     "eject": "react-scripts eject",
-    "dev": "react-scripts start",
+    "dev": "cross-env NODE_NO_WARNINGS=1 craco start",
     "setup:ngrok": "node scripts/setup-ngrok.js",
     "setup:local": "node scripts/setup-local-network.js",
     "env:ngrok": "copy .env.ngrok .env && copy backend\\.env.ngrok backend\\.env && echo Switched to ngrok configuration",
@@ -69,6 +69,7 @@
     "@craco/craco": "^7.1.0",
     "@playwright/test": "^1.55.1",
     "autoprefixer": "^10.4.14",
+    "cross-env": "^10.1.0",
     "pg": "^8.16.3",
     "postcss": "^8.4.24",
     "shadcn": "^3.3.1",

@@ -33,8 +33,6 @@ jest.mock('../../services/FieldMigrationService');
 jest.mock('../../services/MigrationQueue');
 
 describe('Migration Routes API', () => {
-  let superAdminToken, adminToken, moderatorToken, userToken;
-  let superAdminUser, adminUser, moderatorUser, regularUser;
   let testForm, testField;
 
   beforeAll(async () => {
@@ -58,11 +56,9 @@ describe('Migration Routes API', () => {
       is_active: true
     });
 
-    moderatorUser = await User.create({
-      username: 'moderator',
-      email: 'moderator@test.com',
+      username: 
       password_hash: 'hashed_password',
-      role: 'moderator',
+      role: 
       is_active: true
     });
 
@@ -78,7 +74,6 @@ describe('Migration Routes API', () => {
     const AuthService = require('../../services/AuthService');
     superAdminToken = AuthService.generateToken(superAdminUser);
     adminToken = AuthService.generateToken(adminUser);
-    moderatorToken = AuthService.generateToken(moderatorUser);
     userToken = AuthService.generateToken(regularUser);
 
     // Create test form
@@ -163,7 +158,6 @@ describe('Migration Routes API', () => {
       expect(response.body.success).toBe(true);
     });
 
-    it('should allow moderator to preview migration', async () => {
       FieldMigrationService.previewMigration.mockResolvedValue({
         valid: true,
         warnings: []
@@ -171,7 +165,6 @@ describe('Migration Routes API', () => {
 
       const response = await request(app)
         .post('/api/v1/migrations/preview')
-        .set('Authorization', `Bearer ${moderatorToken}`)
         .send(validRequest);
 
       expect(response.status).toBe(200);
@@ -301,10 +294,8 @@ describe('Migration Routes API', () => {
       expect(response.body.success).toBe(true);
     });
 
-    it('should deny moderator access', async () => {
       const response = await request(app)
         .post('/api/v1/migrations/execute')
-        .set('Authorization', `Bearer ${moderatorToken}`)
         .send(validRequest);
 
       expect(response.status).toBe(403);
@@ -384,10 +375,8 @@ describe('Migration Routes API', () => {
       expect(response.status).toBe(200);
     });
 
-    it('should allow moderator to view history', async () => {
       const response = await request(app)
         .get(`/api/v1/migrations/history/${testForm.id}`)
-        .set('Authorization', `Bearer ${moderatorToken}`);
 
       expect(response.status).toBe(200);
     });
@@ -485,10 +474,8 @@ describe('Migration Routes API', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should deny moderator access to rollback', async () => {
       const response = await request(app)
         .post(`/api/v1/migrations/rollback/${rollbackableMigration.id}`)
-        .set('Authorization', `Bearer ${moderatorToken}`);
 
       expect(response.status).toBe(403);
     });
@@ -543,10 +530,8 @@ describe('Migration Routes API', () => {
       expect(response.status).toBe(200);
     });
 
-    it('should allow moderator to view backups', async () => {
       const response = await request(app)
         .get(`/api/v1/migrations/backups/${testForm.id}`)
-        .set('Authorization', `Bearer ${moderatorToken}`);
 
       expect(response.status).toBe(200);
     });
@@ -638,10 +623,8 @@ describe('Migration Routes API', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should deny moderator access to restore', async () => {
       const response = await request(app)
         .post(`/api/v1/migrations/restore/${restoreableBackup.id}`)
-        .set('Authorization', `Bearer ${moderatorToken}`);
 
       expect(response.status).toBe(403);
     });
@@ -732,14 +715,12 @@ describe('Migration Routes API', () => {
       expect(response.status).toBe(200);
     });
 
-    it('should allow moderator to view queue status', async () => {
       MigrationQueue.getMetrics.mockResolvedValue({
         waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0, total: 0
       });
 
       const response = await request(app)
         .get('/api/v1/migrations/queue/status')
-        .set('Authorization', `Bearer ${moderatorToken}`);
 
       expect(response.status).toBe(200);
     });

@@ -12,7 +12,7 @@
 const ROLES = {
   SUPER_ADMIN: 'super_admin',
   ADMIN: 'admin',
-  MODERATOR: 'moderator',
+  
   CUSTOMER_SERVICE: 'customer_service',
   SALES: 'sales',
   MARKETING: 'marketing',

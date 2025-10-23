@@ -3,8 +3,8 @@
  *
  * Features:
  * - User registration form
- * - Department selection (Customer Service, Technic, Sales, Marketing, Others)
- * - Automatic role mapping based on department
+ * - Organization/Unit selection (16 options: Accounting, BD, Customer Service, HR, IT, Maintenance, Marketing, Operation, Production, Purchasing, QC, R&D, Sales, Technic, Warehouse, Others)
+ * - All registrations create General User role (Admin manually approves and assigns proper role)
  * - Form validation
  * - Password strength indicator
  * - Loading states
@@ -110,7 +110,7 @@ export function RegisterPage() {
     }
 
     if (!formData.department) {
-      newErrors.department = 'กรุณาเลือกแผนก';
+      newErrors.department = 'กรุณาเลือกหน่วยงาน';
     }
 
     setErrors(newErrors);
@@ -318,11 +318,11 @@ export function RegisterPage() {
                 )}
               </div>
 
-              {/* Department Selection */}
+              {/* Organization/Unit Selection */}
               <div>
                 <label htmlFor="department" className="block text-sm font-medium mb-2">
                   <FontAwesomeIcon icon={faBriefcase} className="mr-2" />
-                  แผนก
+                  หน่วยงาน
                 </label>
                 <select
                   id="department"
@@ -344,7 +344,7 @@ export function RegisterPage() {
                   <p className="mt-1 text-sm text-red-500">{errors.department}</p>
                 )}
                 <p className="mt-1 text-xs text-muted-foreground">
-                  เลือกแผนกที่คุณสังกัด
+                  เลือกหน่วยงานที่คุณสังกัด
                 </p>
               </div>
 

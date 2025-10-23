@@ -32,7 +32,26 @@ module.exports = (sequelize, DataTypes) => {
           if (!Array.isArray(value)) {
             throw new Error('roles_allowed must be an array');
           }
-          const validRoles = ['super_admin', 'admin', 'moderator', 'customer_service', 'technic', 'sale', 'marketing', 'general_user'];
+          const validRoles = [
+            'super_admin',
+            'admin',
+            'customer_service',
+            'marketing',
+            'sales',
+            'technic',
+            'accounting',
+            'bd',
+            'hr',
+            'it',
+            'maintenance',
+            'operation',
+            'production',
+            'purchasing',
+            'qc',
+            'rnd',
+            'warehouse',
+            'general_user'
+          ];
           const invalidRoles = value.filter(role => !validRoles.includes(role));
           if (invalidRoles.length > 0) {
             throw new Error(`Invalid roles: ${invalidRoles.join(', ')}`);
@@ -106,8 +125,8 @@ module.exports = (sequelize, DataTypes) => {
     if (!this.roles_allowed || !Array.isArray(this.roles_allowed)) {
       return false;
     }
-    // super_admin, admin, and moderator have access to all forms
-    if (userRole === 'super_admin' || userRole === 'admin' || userRole === 'moderator') {
+    // super_admin and admin have access to all forms
+    if (userRole === 'super_admin' || userRole === 'admin') {
       return true;
     }
     return this.roles_allowed.includes(userRole);

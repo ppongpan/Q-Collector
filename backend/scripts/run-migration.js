@@ -41,7 +41,7 @@ async function runMigration() {
     // Define new roles to add
     const newRoles = [
       'super_admin',
-      'moderator',
+      
       'customer_service',
       'sales',
       'marketing',

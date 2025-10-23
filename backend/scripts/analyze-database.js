@@ -194,7 +194,7 @@ async function analyzeDatabaseStructure() {
         COUNT(*) as total_users,
         COUNT(*) FILTER (WHERE role = 'super_admin') as super_admins,
         COUNT(*) FILTER (WHERE role = 'admin') as admins,
-        COUNT(*) FILTER (WHERE role = 'moderator') as moderators,
+        COUNT(*) FILTER (WHERE role = 'admin') as admins,
         COUNT(*) FILTER (WHERE two_factor_enabled = true) as with_2fa
       FROM users
     `);
@@ -203,7 +203,7 @@ async function analyzeDatabaseStructure() {
     console.log(`Total Users: ${usersStats[0].total_users}`);
     console.log(`  Super Admins: ${usersStats[0].super_admins}`);
     console.log(`  Admins: ${usersStats[0].admins}`);
-    console.log(`  Moderators: ${usersStats[0].moderators}`);
+    console.log(`  Admins: ${usersStats[0].admins}`);
     console.log(`  With 2FA: ${usersStats[0].with_2fa}\n`);
 
     // 10. Check Foreign Key Constraints

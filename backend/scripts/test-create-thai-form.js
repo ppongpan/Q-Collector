@@ -98,7 +98,7 @@ async function testFormCreation() {
         true,
         NOW(),
         NOW(),
-        '["super_admin", "admin", "moderator"]'::jsonb,
+        '["super_admin", "admin", ]'::jsonb,
         1
       )
       ON CONFLICT (id) DO NOTHING;
