@@ -125,20 +125,20 @@ class UserPreferenceService {
 
       // Try to find most recent submission for this form
       const latestSubmission = await Submission.findOne({
-        where: { formId },
-        order: [['submittedAt', 'DESC']],
-        attributes: ['submittedAt']
+        where: { form_id: formId },
+        order: [['submitted_at', 'DESC']],
+        attributes: ['submitted_at']
       });
 
       let month, year, source;
 
       if (latestSubmission) {
         // Use month/year from latest submission
-        const date = new Date(latestSubmission.submittedAt);
+        const date = new Date(latestSubmission.submitted_at);
         month = String(date.getMonth() + 1);
         year = String(date.getFullYear());
         source = 'latest_submission';
-        console.log(`✅ [UserPreferenceService] Using latest submission date: ${latestSubmission.submittedAt} (${month}/${year})`);
+        console.log(`✅ [UserPreferenceService] Using latest submission date: ${latestSubmission.submitted_at} (${month}/${year})`);
       } else {
         // No submissions exist, use current month/year
         const now = new Date();
@@ -160,7 +160,7 @@ class UserPreferenceService {
         },
         metadata: {
           source,
-          latestSubmissionDate: latestSubmission?.submittedAt || null,
+          latestSubmissionDate: latestSubmission?.submitted_at || null,
           formId,
           generatedAt: new Date().toISOString()
         }
@@ -180,12 +180,12 @@ class UserPreferenceService {
   async getMostRecentSubmissionDate(formId) {
     try {
       const submission = await Submission.findOne({
-        where: { formId },
-        order: [['submittedAt', 'DESC']],
-        attributes: ['submittedAt']
+        where: { form_id: formId },
+        order: [['submitted_at', 'DESC']],
+        attributes: ['submitted_at']
       });
 
-      return submission ? submission.submittedAt : null;
+      return submission ? submission.submitted_at : null;
     } catch (error) {
       console.error('❌ [UserPreferenceService] Error getting most recent submission:', error);
       throw error;

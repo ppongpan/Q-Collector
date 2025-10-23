@@ -26,6 +26,13 @@ const SheetImportHistory = require('./SheetImportHistory');
 const GoogleAuthToken = require('./GoogleAuthToken');
 const NotificationRule = require('./NotificationRule');
 const NotificationHistory = require('./NotificationHistory');
+const UserPreference = require('./UserPreference');
+// PDPA Compliance Models
+const ConsentItem = require('./ConsentItem');
+const UserConsent = require('./UserConsent');
+const PersonalDataField = require('./PersonalDataField');
+const UnifiedUserProfile = require('./UnifiedUserProfile');
+const DSRRequest = require('./DSRRequest');
 
 // Initialize models with sequelize instance
 const models = {
@@ -48,6 +55,13 @@ const models = {
   GoogleAuthToken: GoogleAuthToken(sequelize, Sequelize.DataTypes),
   NotificationRule: NotificationRule(sequelize, Sequelize.DataTypes),
   NotificationHistory: NotificationHistory(sequelize, Sequelize.DataTypes),
+  UserPreference: UserPreference(sequelize, Sequelize.DataTypes),
+  // PDPA Compliance Models
+  ConsentItem: ConsentItem(sequelize, Sequelize.DataTypes),
+  UserConsent: UserConsent(sequelize, Sequelize.DataTypes),
+  PersonalDataField: PersonalDataField(sequelize, Sequelize.DataTypes),
+  UnifiedUserProfile: UnifiedUserProfile(sequelize, Sequelize.DataTypes),
+  DSRRequest: DSRRequest(sequelize, Sequelize.DataTypes),
 };
 
 // Set up associations between models
@@ -69,6 +83,9 @@ Object.keys(models).forEach((modelName) => {
  * - hasMany SheetImportConfigs (user_id)
  * - hasMany SheetImportHistory (user_id)
  * - hasOne GoogleAuthToken (user_id)
+ * - hasMany PersonalDataFields (confirmed_by)
+ * - hasMany UserConsents (withdrawn_by)
+ * - hasMany DSRRequests (processed_by)
  *
  * Form:
  * - belongsTo User (created_by)
@@ -77,6 +94,9 @@ Object.keys(models).forEach((modelName) => {
  * - hasMany Submissions
  * - hasMany SheetImportConfigs (form_id)
  * - hasMany SheetImportHistory (form_id)
+ * - hasMany ConsentItems
+ * - hasMany UserConsents
+ * - hasMany PersonalDataFields
  *
  * SubForm:
  * - belongsTo Form
@@ -88,12 +108,14 @@ Object.keys(models).forEach((modelName) => {
  * - belongsTo SubForm (nullable)
  * - hasMany SubmissionData
  * - hasMany Files
+ * - hasMany PersonalDataFields
  *
  * Submission:
  * - belongsTo Form
  * - belongsTo User (submitted_by)
  * - hasMany SubmissionData
  * - hasMany Files
+ * - hasMany UserConsents
  *
  * SubmissionData:
  * - belongsTo Submission
@@ -134,6 +156,29 @@ Object.keys(models).forEach((modelName) => {
  * NotificationHistory:
  * - belongsTo NotificationRule (notification_rule_id)
  * - belongsTo Submission (submission_id, nullable)
+ *
+ * PDPA Compliance Models:
+ *
+ * ConsentItem:
+ * - belongsTo Form
+ * - hasMany UserConsents
+ *
+ * UserConsent:
+ * - belongsTo Submission
+ * - belongsTo ConsentItem
+ * - belongsTo Form
+ * - belongsTo User (withdrawn_by)
+ *
+ * PersonalDataField:
+ * - belongsTo Form
+ * - belongsTo Field
+ * - belongsTo User (confirmed_by)
+ *
+ * UnifiedUserProfile:
+ * - No direct associations (uses JSONB arrays)
+ *
+ * DSRRequest:
+ * - belongsTo User (processed_by)
  */
 
 // Add sequelize instance and Sequelize constructor to models
