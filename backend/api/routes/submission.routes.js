@@ -8,6 +8,7 @@ const { body, query, param, validationResult } = require('express-validator');
 const SubmissionService = require('../../services/SubmissionService');
 const { authenticate, authorize, attachMetadata } = require('../../middleware/auth.middleware');
 const { asyncHandler, ApiError } = require('../../middleware/error.middleware');
+const { sanitizeBody } = require('../../middleware/sanitization.middleware');
 const logger = require('../../utils/logger.util');
 
 const router = express.Router();
@@ -39,6 +40,7 @@ router.post(
   '/:formId/submissions',
   authenticate,
   attachMetadata,
+  sanitizeBody(), // XSS Protection - sanitize all user input
   [
     param('formId')
       .isUUID()
@@ -50,6 +52,39 @@ router.post(
       .optional()
       .isIn(['draft', 'submitted'])
       .withMessage('Status must be draft or submitted'),
+    // PDPA Consent Validation (v0.8.2)
+    body('consents')
+      .optional()
+      .isArray()
+      .withMessage('consents must be an array'),
+    body('consents.*.consentItemId')
+      .optional()
+      .isUUID()
+      .withMessage('Each consent must have a valid consentItemId (UUID)'),
+    body('consents.*.consentGiven')
+      .optional()
+      .isBoolean()
+      .withMessage('consentGiven must be a boolean'),
+    body('signatureData')
+      .optional()
+      .isString()
+      .withMessage('signatureData must be a string (base64)'),
+    body('fullName')
+      .optional()
+      .isString()
+      .trim()
+      .isLength({ min: 1, max: 255 })
+      .withMessage('fullName must be between 1 and 255 characters'),
+    body('privacyNoticeAccepted')
+      .optional()
+      .isBoolean()
+      .withMessage('privacyNoticeAccepted must be a boolean'),
+    body('privacyNoticeVersion')
+      .optional()
+      .isString()
+      .trim()
+      .isLength({ max: 50 })
+      .withMessage('privacyNoticeVersion must be max 50 characters'),
   ],
   validate,
   asyncHandler(async (req, res) => {
@@ -118,6 +153,96 @@ router.get(
     res.status(200).json({
       success: true,
       data: result,
+    });
+  })
+);
+
+/**
+ * GET /api/v1/submissions/expired
+ * Get all expired submissions (for PDPA compliance)
+ * Admin only
+ * IMPORTANT: Must be BEFORE /:id route to prevent route conflict
+ */
+router.get(
+  '/expired',
+  authenticate,
+  authorize(['super_admin', 'admin']),
+  [
+    query('formId')
+      .optional()
+      .isUUID()
+      .withMessage('formId must be a valid UUID'),
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 1000 })
+      .withMessage('limit must be between 1 and 1000'),
+    query('offset')
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage('offset must be a non-negative integer'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { formId, limit, offset } = req.query;
+
+    const expiredSubmissions = await SubmissionService.getExpiredSubmissions({
+      formId,
+      limit: limit ? parseInt(limit) : undefined,
+      offset: offset ? parseInt(offset) : undefined,
+    });
+
+    logger.info(`Retrieved ${expiredSubmissions.length} expired submissions`);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        expiredSubmissions,
+        count: expiredSubmissions.length,
+      },
+    });
+  })
+);
+
+/**
+ * GET /api/v1/submissions/expired/count
+ * Get count of expired submissions grouped by form (for PDPA compliance)
+ * Admin only
+ */
+router.get(
+  '/expired/count',
+  authenticate,
+  authorize(['super_admin', 'admin']),
+  asyncHandler(async (req, res) => {
+    const result = await SubmissionService.countExpiredSubmissions();
+
+    logger.info(`Found ${result.byForm.length} forms with ${result.total} total expired submissions`);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  })
+);
+
+/**
+ * GET /api/v1/submissions/expired/total
+ * Get total count of expired submissions (for PDPA compliance)
+ * Admin only
+ */
+router.get(
+  '/expired/total',
+  authenticate,
+  authorize(['super_admin', 'admin']),
+  asyncHandler(async (req, res) => {
+    const total = await SubmissionService.getTotalExpiredCount();
+
+    logger.info(`Total expired submissions: ${total}`);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        total,
+      },
     });
   })
 );

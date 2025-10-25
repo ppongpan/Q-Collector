@@ -99,6 +99,22 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'PostgreSQL dynamic table name (generated from form title with Thai→English translation)',
     },
+    data_retention_years: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 2,
+      comment: 'Data retention period in years (1-20) for PDPA compliance',
+      validate: {
+        min: {
+          args: [1],
+          msg: 'Data retention period must be at least 1 year',
+        },
+        max: {
+          args: [20],
+          msg: 'Data retention period cannot exceed 20 years',
+        },
+      },
+    },
   }, {
     tableName: 'forms',
     timestamps: true,
@@ -362,6 +378,28 @@ module.exports = (sequelize, DataTypes) => {
     Form.hasMany(models.NotificationRule, {
       foreignKey: 'form_id',
       as: 'notificationRules',
+      onDelete: 'CASCADE',
+    });
+
+    // PDPA Compliance Associations
+    // Form has many ConsentItems
+    Form.hasMany(models.ConsentItem, {
+      foreignKey: 'form_id',
+      as: 'consentItems',
+      onDelete: 'CASCADE',
+    });
+
+    // Form has many UserConsents
+    Form.hasMany(models.UserConsent, {
+      foreignKey: 'form_id',
+      as: 'userConsents',
+      onDelete: 'CASCADE',
+    });
+
+    // Form has many PersonalDataFields
+    Form.hasMany(models.PersonalDataField, {
+      foreignKey: 'form_id',
+      as: 'personalDataFields',
       onDelete: 'CASCADE',
     });
   };

@@ -46,6 +46,9 @@ import MigrationPreviewModal from './ui/MigrationPreviewModal';
 import { FormattingRuleCard } from './ui/formatting-rule-card';
 // ✅ v0.8.0: Notification Rules Management
 import NotificationRulesTab from './notifications/NotificationRulesTab';
+// ✅ v0.9.0: PDPA Compliance Components
+import PrivacyNoticeSettings from './pdpa/PrivacyNoticeSettings';
+import ConsentManagementTab from './pdpa/ConsentManagementTab';
 // ✅ Thai Date Picker components for dd/mm/yyyy format
 import { ThaiDatePicker, ThaiDateTimePicker } from './ui/date-picker-thai';
 // import EnhancedSlider from "./ui/enhanced-slider"; // Commented out - not used
@@ -65,7 +68,7 @@ import {
   faEllipsisV, faArrowUp, faArrowDown, faCopy,
   faQuestionCircle, faLayerGroup, faComments, faFileUpload, faCog, faHashtag as faNumbers,
   faClipboardList, faSave, faUsers, faTrash,
-  faDatabase, faCheck, faTimes, faPalette, faBell
+  faDatabase, faCheck, faTimes, faPalette, faBell, faShieldAlt, faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
 
 // User Role definitions with colors for access control
@@ -1589,6 +1592,13 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   const { userRole } = useAuth();
   const [showCopied, setShowCopied] = useState(false);
 
+  // ✅ v0.8.4: Form Title Uniqueness validation state
+  const [titleValidation, setTitleValidation] = useState({
+    isChecking: false,
+    exists: false,
+    message: '',
+  });
+
   // Check if user has permission to see PowerBI info
   const canSeePowerBIInfo = ['super_admin', 'admin'].includes(userRole);
 
@@ -1600,6 +1610,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
     title: initialForm?.title || '',
     description: initialForm?.description || '',
     table_name: initialForm?.table_name || null,
+    data_retention_years: initialForm?.data_retention_years || initialForm?.dataRetentionYears || 2,
     // ⚠️ CRITICAL FIX: Filter out sub-form fields (sub_form_id !== null)
     // Only include main form fields in the form builder
     fields: initialForm?.fields ? initialForm.fields
@@ -1675,6 +1686,19 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       conditionalFormatting: {
         enabled: initialForm?.settings?.conditionalFormatting?.enabled || false,
         rules: initialForm?.settings?.conditionalFormatting?.rules || []
+      },
+      // ✅ v0.9.0: PDPA Privacy Notice
+      privacyNotice: {
+        enabled: initialForm?.settings?.privacyNotice?.enabled || false,
+        mode: initialForm?.settings?.privacyNotice?.mode || 'disabled',
+        customText: initialForm?.settings?.privacyNotice?.customText || { th: '', en: '' },
+        linkUrl: initialForm?.settings?.privacyNotice?.linkUrl || '',
+        linkText: initialForm?.settings?.privacyNotice?.linkText || { th: 'นโยบายความเป็นส่วนตัว', en: 'Privacy Policy' },
+        requireAcknowledgment: initialForm?.settings?.privacyNotice?.requireAcknowledgment !== false
+      },
+      // ✅ v0.9.0: PDPA Consent Management
+      consentManagement: {
+        enabled: initialForm?.settings?.consentManagement?.enabled || false
       }
     },
     // New telegram settings structure for enhanced component
@@ -1750,6 +1774,63 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   const updateForm = (updates) => {
     setForm(prev => ({ ...prev, ...updates }));
   };
+
+  // ✅ v0.8.4: Debounced function to check title uniqueness
+  const checkTitleDebounced = useRef(null);
+
+  const checkTitleUniqueness = useCallback(async (title) => {
+    if (!title || title.trim().length === 0) {
+      setTitleValidation({ isChecking: false, exists: false, message: '' });
+      return;
+    }
+
+    setTitleValidation({ isChecking: true, exists: false, message: '' });
+
+    try {
+      // ✅ v0.8.4: Build params conditionally - don't send excludeFormId if creating new form
+      const params = { title: title.trim() };
+      if (initialForm?.id) {
+        params.excludeFormId = initialForm.id;
+      }
+
+      const response = await apiClient.get('/forms/check-title', { params });
+
+      if (response.data.success) {
+        setTitleValidation({
+          isChecking: false,
+          exists: response.data.data.exists,
+          message: response.data.data.message,
+        });
+      }
+    } catch (error) {
+      // Silently fail - don't show error to user for validation endpoint
+      setTitleValidation({ isChecking: false, exists: false, message: '' });
+    }
+  }, [initialForm?.id]);
+
+  // ✅ v0.8.4: Watch for title changes and validate
+  useEffect(() => {
+    // Clear existing timeout
+    if (checkTitleDebounced.current) {
+      clearTimeout(checkTitleDebounced.current);
+    }
+
+    // Only check if title has actually changed from initial
+    if (form.title && form.title.trim() !== initialForm?.title) {
+      checkTitleDebounced.current = setTimeout(() => {
+        checkTitleUniqueness(form.title);
+      }, 800); // 800ms debounce
+    } else {
+      setTitleValidation({ isChecking: false, exists: false, message: '' });
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (checkTitleDebounced.current) {
+        clearTimeout(checkTitleDebounced.current);
+      }
+    };
+  }, [form.title, initialForm?.title, checkTitleUniqueness]);
 
   // ✅ NEW: Poll migration queue status every 5 seconds if there are pending migrations
   useEffect(() => {
@@ -2396,6 +2477,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
         const payload = {
           title: form.title,
           description: form.description,
+          data_retention_years: form.data_retention_years || 2, // PDPA compliance
           fields: form.fields.map(cleanFieldData),
           sub_forms: cleanedSubForms, // Use snake_case for backend
           settings: form.settings,
@@ -2473,7 +2555,44 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
 
       // Dismiss loading toast and show error
       toast.dismiss(loadingToastId);
-      toast.error(`เกิดข้อผิดพลาดในการบันทึกฟอร์ม: ${error.message}`, {
+
+      // ✅ v0.8.4: Extract error message from backend response
+      let errorMessage = error.message;
+
+      // Try different error structures
+      if (error.data) {
+        if (typeof error.data === 'string') {
+          errorMessage = error.data;
+        } else if (error.data.error) {
+          // error.data.error can be string or object
+          if (typeof error.data.error === 'string') {
+            errorMessage = error.data.error;
+          } else if (error.data.error.details && error.data.error.details[0]) {
+            errorMessage = error.data.error.details[0].message || error.data.error.details[0].msg;
+          } else if (error.data.error.message) {
+            errorMessage = error.data.error.message;
+          }
+        } else if (error.data.message) {
+          errorMessage = error.data.message;
+        }
+      }
+
+      if (error.response && error.response.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        }
+      }
+
+      // Special handling for duplicate title error (409 Conflict)
+      if (error.status === 409 || error.response?.status === 409) {
+        errorMessage = errorMessage || `ชื่อฟอร์ม "${form.title}" มีอยู่แล้วในระบบ กรุณาใช้ชื่ออื่น`;
+      }
+
+      toast.error(`เกิดข้อผิดพลาดในการบันทึกฟอร์ม: ${errorMessage}`, {
         title: "บันทึกไม่สำเร็จ",
         duration: 8000,
         action: {
@@ -2534,6 +2653,7 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       const payload = {
         title: form.title,
         description: form.description,
+        data_retention_years: form.data_retention_years || 2, // PDPA compliance
         fields: form.fields.map(cleanFieldData),
         sub_forms: cleanedSubForms,
         settings: form.settings,
@@ -2618,7 +2738,47 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
       // Dismiss loading toast
       toast.dismiss(loadingToastId);
 
-      toast.error(`เกิดข้อผิดพลาดในการบันทึกฟอร์ม: ${error.message}`, {
+      // ✅ v0.8.4: Extract error message from backend response
+      let errorMessage = error.message;
+
+      // Try different error structures
+      if (error.data) {
+        if (typeof error.data === 'string') {
+          errorMessage = error.data;
+        } else if (error.data.error) {
+          // error.data.error can be string or object
+          if (typeof error.data.error === 'string') {
+            errorMessage = error.data.error;
+          } else if (error.data.error.details && error.data.error.details[0]) {
+            errorMessage = error.data.error.details[0].message || error.data.error.details[0].msg;
+          } else if (error.data.error.message) {
+            errorMessage = error.data.error.message;
+          }
+        } else if (error.data.message) {
+          errorMessage = error.data.message;
+        }
+      }
+
+      if (error.response && error.response.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          if (typeof error.response.data.error === 'string') {
+            errorMessage = error.response.data.error;
+          } else if (error.response.data.error.message) {
+            errorMessage = error.response.data.error.message;
+          }
+        }
+      }
+
+      // Special handling for duplicate title error (409 Conflict)
+      if (error.status === 409 || error.response?.status === 409) {
+        errorMessage = errorMessage || `ชื่อฟอร์ม "${form.title}" มีอยู่แล้วในระบบ กรุณาใช้ชื่ออื่น`;
+      }
+
+      toast.error(`เกิดข้อผิดพลาดในการบันทึกฟอร์ม: ${errorMessage}`, {
         title: "บันทึกไม่สำเร็จ",
         duration: 8000,
         action: {
@@ -2630,7 +2790,10 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
   }, [form, initialForm, onSave, pendingMigrationChanges, toast]);
 
   const isFormValid = () => {
-    return form.title.trim() !== '' && form.fields.some(field => field.title.trim() !== '');
+    // ✅ v0.8.4: Check title is not empty and not duplicate
+    const hasValidTitle = form.title.trim() !== '' && !titleValidation.exists;
+    const hasValidFields = form.fields.some(field => field.title.trim() !== '');
+    return hasValidTitle && hasValidFields;
   };
 
   // Send save handler to parent component
@@ -2828,13 +2991,35 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                 <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out animate-fade-in border-2 border-primary/20 shadow-lg hover:shadow-xl hover:border-primary/40">
                   <GlassCardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
                     <div className="space-y-3 sm:space-y-4">
-                      <InlineEdit
-                        value={form.title}
-                        onChange={(value) => updateForm({ title: value })}
-                        placeholder="คลิกเพื่อระบุชื่อฟอร์ม..."
-                        isTitle={true}
-                        dataTestId="form-title-input"
-                      />
+                      <div>
+                        <InlineEdit
+                          value={form.title}
+                          onChange={(value) => updateForm({ title: value })}
+                          placeholder="คลิกเพื่อระบุชื่อฟอร์ม..."
+                          isTitle={true}
+                          dataTestId="form-title-input"
+                        />
+                        {/* ✅ v0.8.4: Title uniqueness validation message */}
+                        {titleValidation.isChecking && form.title && form.title.trim() !== initialForm?.title && (
+                          <div className="mt-2 px-3 py-2 text-sm text-blue-500 bg-blue-500/10 rounded-lg border border-blue-500/20 animate-pulse">
+                            <FontAwesomeIcon icon={faClock} className="mr-2" />
+                            กำลังตรวจสอบชื่อฟอร์ม...
+                          </div>
+                        )}
+                        {!titleValidation.isChecking && titleValidation.message && (
+                          <div className={`mt-2 px-3 py-2 text-sm rounded-lg border ${
+                            titleValidation.exists
+                              ? 'text-red-500 bg-red-500/10 border-red-500/20'
+                              : 'text-green-500 bg-green-500/10 border-green-500/20'
+                          }`}>
+                            <FontAwesomeIcon
+                              icon={titleValidation.exists ? faTimes : faCheck}
+                              className="mr-2"
+                            />
+                            {titleValidation.message}
+                          </div>
+                        )}
+                      </div>
                       <InlineEdit
                         value={form.description}
                         onChange={(value) => updateForm({ description: value })}
@@ -3007,6 +3192,69 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                   </GlassCardContent>
                 </GlassCard>
 
+                {/* PDPA Data Retention Period - 8px Grid */}
+                <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out orange-neon-permanent">
+                  <GlassCardHeader>
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500/20 to-orange-600/20 flex items-center justify-center"
+                        style={{ clipPath: 'circle(50% at center)' }}
+                      >
+                        <FontAwesomeIcon icon={faShieldAlt} className="text-orange-600 w-4 h-4" />
+                      </div>
+                      <div>
+                        <GlassCardTitle className="form-card-title">PDPA - ระยะเวลาเก็บข้อมูล</GlassCardTitle>
+                        <GlassCardDescription className="form-card-description">
+                          กำหนดระยะเวลาในการจัดเก็บข้อมูลส่วนบุคคลตามกฎหมาย PDPA
+                        </GlassCardDescription>
+                      </div>
+                    </div>
+                  </GlassCardHeader>
+                  <GlassCardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[14px] font-medium text-foreground/80">
+                        ระยะเวลาเก็บข้อมูล (ปี)
+                      </label>
+                      <select
+                        value={form.data_retention_years || 2}
+                        onChange={(e) => updateForm({ data_retention_years: parseInt(e.target.value) })}
+                        className="w-full md:w-auto px-4 py-2.5 bg-background/60 border border-border/30 rounded-lg text-[14px] text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all duration-200"
+                      >
+                        {[...Array(20)].map((_, i) => {
+                          const years = i + 1;
+                          return (
+                            <option key={years} value={years}>
+                              {years} ปี
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <p className="text-[12px] text-muted-foreground mt-2">
+                        • ข้อมูลที่เก็บเกินระยะเวลาที่กำหนดจะแสดงในรายการ "ข้อมูลที่ต้องลบ" ใน PDPA Dashboard
+                      </p>
+                      <p className="text-[12px] text-muted-foreground">
+                        • การตั้งค่านี้ใช้กับทุก Consent Item และการ Submit ทั้งหมดในฟอร์มนี้
+                      </p>
+                      <div className="mt-4 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <FontAwesomeIcon icon={faInfoCircle} className="text-orange-600 mt-0.5" />
+                          <div className="flex-1 text-[12px] text-foreground/80">
+                            <p className="font-medium mb-1">ตัวอย่าง:</p>
+                            <p>หากตั้งค่าเป็น <span className="font-mono font-semibold">{form.data_retention_years || 2} ปี</span> และมีข้อมูลที่ส่งเมื่อวันที่ 25 ต.ค. 2023</p>
+                            <p className="mt-1">ข้อมูลนี้จะหมดอายุในวันที่ <span className="font-mono font-semibold">
+                              {(() => {
+                                const exampleDate = new Date('2023-10-25');
+                                exampleDate.setFullYear(exampleDate.getFullYear() + (form.data_retention_years || 2));
+                                return exampleDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+                              })()}
+                            </span></p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </GlassCardContent>
+                </GlassCard>
+
                 {/* Date Format Settings - 8px Grid */}
                 <GlassCard className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out">
                   <GlassCardHeader>
@@ -3098,6 +3346,18 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                   onUpdate={(updatedForm) => updateForm(updatedForm)}
                   availableFields={getAvailableFields()}
                   className="form-card-glow form-card-animate form-card-borderless motion-container animation-optimized group transition-all duration-400 ease-out"
+                />
+
+                {/* ✅ v0.9.0: PDPA Privacy Notice Settings */}
+                <PrivacyNoticeSettings
+                  form={form}
+                  onUpdate={(updates) => updateForm(updates)}
+                />
+
+                {/* ✅ v0.9.0: PDPA Consent Management */}
+                <ConsentManagementTab
+                  form={form}
+                  onUpdate={(updates) => updateForm(updates)}
                 />
 
                 {/* ✅ v0.7.40: Conditional Formatting Settings */}

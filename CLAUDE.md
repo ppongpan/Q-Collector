@@ -2,7 +2,7 @@
 
 **Enterprise Form Builder & Data Collection System**
 
-## Version: 0.8.1-dev (2025-10-23)
+## Version: 0.8.5-dev (2025-10-25)
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection
@@ -10,14 +10,18 @@
 
 ---
 
-## 🎯 Current Status (2025-10-23)
+## 🎯 Current Status (2025-10-25)
 
 ### Servers Running
-- ✅ **Backend**: Port 5000 (Q-Collector API v0.8.1-dev)
-- ✅ **Frontend**: Port 3000 (Q-Collector v0.8.1-dev)
+- ✅ **Backend**: Port 5000 (Q-Collector API v0.8.5-dev)
+- ✅ **Frontend**: Port 3000 (Q-Collector v0.8.5-dev)
 - ✅ **Docker**: PostgreSQL 16 + Redis 7 + MinIO
 
 ### Recent Completions (Latest First)
+- ✅ **Dynamic Table Sync System** - Mandatory table creation + submission deletion bug fix + backfill script (2025-10-25)
+- ✅ **PDPA Encrypted Data Auto-Sync Fix** - Auto-sync now supports encrypted email/phone/name fields (2025-10-25)
+- ✅ **PDPA Consent & Signature Display System** - Enhanced Profile Detail Modal with consent items + digital signatures (2025-10-25)
+- ✅ **Form Title Uniqueness System** - Database + Backend + Frontend validation (2025-10-24)
 - ✅ **UserPreference Model Registration** - Fixed HTTP 500 errors in submission list (2025-10-24)
 - ✅ **PDPA Consent Edit UX Fix** - Manual save pattern (no auto-save) + Select-all text (2025-10-23)
 - ✅ **PDPA Consent Management** - Consent-first UX + Backend field name fix (2025-10-23)
@@ -48,6 +52,9 @@
 ### ✅ PDPA Compliance
 - **Privacy Notice**: Custom text or external link with acknowledgment checkbox
 - **Consent Management**: Multi-item consent system with purpose and retention period
+- **Digital Signatures**: Base64 PNG signatures with full audit trail (IP, user-agent, timestamp)
+- **Consent Display**: Forms tab shows consent items with statistics (times given/total)
+- **Signature Viewer**: Modal with download capability and legal metadata
 - **Data Masking**: Phone/email masking with interactive reveal (3-second timeout)
 - **Consent-First UX**: Consent items appear BEFORE form fields
 
@@ -74,7 +81,216 @@
 
 ---
 
-## Latest Update - UserPreference Model Registration Fix (v0.8.1-dev)
+## Latest Update - PDPA Consent & Signature Display System (v0.8.5-dev)
+
+### Enhanced Personal Data Dashboard with Consent Items & Digital Signatures
+**Date**: 2025-10-25
+**Impact**: Administrators can now view detailed consent history with digital signatures for each data subject
+
+### Features Added
+
+**1. Consent Items Display in Forms Tab**
+- Shows all consent items associated with each form submitted by a data subject
+- Displays consent statistics: "ยินยอม X ครั้ง จากทั้งหมด Y ครั้ง"
+- Shows consent metadata: purpose, retention period, description
+- Visual indicators: ✅ (consented) / ❌ (declined)
+- Latest consent date with Thai locale formatting
+
+**2. Digital Signature Display**
+- Signature button appears when consent has digital signature
+- Expandable signature section showing:
+  - Base64 PNG signature image (clickable to open in new tab)
+  - Signer's full name
+  - Date/time with seconds precision (Thai locale)
+  - IP Address (monospace font)
+  - User-Agent browser string (code block style)
+
+**3. SignatureDisplayModal Component (NEW)**
+- Reusable modal for viewing signatures in full detail
+- Features:
+  - Large signature image (max 300px height)
+  - Complete metadata display with icons
+  - Download button (saves as `signature_{name}_{timestamp}.png`)
+  - Legal notice: "ลายเซ็นนี้มีผลทางกฎหมายตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล"
+  - Dark mode support
+  - Responsive design
+
+**4. Consent Statistics**
+- Groups consent items across multiple submissions
+- Tracks `timesGiven` / `timesTotal` for each consent item
+- Shows latest consent instance with most recent signature
+- All historical consents available in `allConsents` array
+
+### Files Modified
+
+**Backend (1 file):**
+- `backend/services/UnifiedUserProfileService.js`
+  - Enhanced `getProfileDetail()` to query consent items for each submission
+  - Added `consentItems` array with statistics and signatures
+  - Enhanced `_getConsentsForProfile()` to include signature metadata
+  - Changed from `forEach` to `for...of` for async/await support
+
+**Frontend (2 files):**
+- `src/components/pdpa/ProfileDetailModal.jsx`
+  - Added Consent Items section in Forms tab (after PII fields)
+  - Enhanced Consents tab with signature button and expandable display
+  - State management for expanded signatures
+
+- `src/components/pdpa/SignatureDisplayModal.jsx` (NEW)
+  - Reusable modal component for signature display
+  - Download functionality
+  - Complete metadata with icons
+
+### Technical Details
+
+**Database Field Name:**
+- Uses `signature_data` (not `signature_data_url`) to match database schema
+- Backend converts to `signatureDataUrl` for frontend compatibility
+
+**Response Structure:**
+```javascript
+{
+  uniqueForms: [{
+    formId: "uuid",
+    formTitle: "ฟอร์มทดสอบ",
+    consentItems: [
+      {
+        consentItemId: 1,
+        consentItemTitle: "ยินยอมให้เก็บข้อมูล",
+        purpose: "ติดต่อและให้บริการ",
+        retentionPeriod: "2 ปี",
+        timesGiven: 2,
+        timesTotal: 3,
+        latestConsentDate: "2025-10-24T10:30:00Z",
+        allConsents: [
+          {
+            hasSignature: true,
+            signatureDataUrl: "data:image/png;base64,...",
+            fullName: "John Doe",
+            ipAddress: "192.168.1.100",
+            userAgent: "Mozilla/5.0...",
+            consentedAt: "2025-10-24T10:30:00Z"
+          }
+        ]
+      }
+    ]
+  }]
+}
+```
+
+### Testing Status
+- ✅ Backend service enhanced with consent queries
+- ✅ Frontend components created with signature display
+- ✅ Field name consistency fixed (signature_data)
+- ✅ Existing demo data has 5 consents with signatures
+- ⏩ UI testing pending (requires manual verification)
+
+---
+
+## Previous Update - Form Title Uniqueness System (v0.8.4-dev)
+
+### Problem: Duplicate Form Titles Causing Confusion
+**Date**: 2025-10-24
+**Impact**: Forms with identical titles causing confusion in formulas and PDPA profiles
+
+**Issues Identified**:
+- 4 forms with duplicate title: "แบบฟอร์มทดสอบระบบ PDPA"
+- Formula references to forms by title were ambiguous
+- Data subjects saw confusing duplicate form names in PDPA profiles
+- No validation at database, backend, or frontend levels
+
+### Implementation Summary
+
+**8-Phase Implementation** (6 hours total):
+
+1. **PHASE 1: Data Cleanup** ✅
+   - Created `fix-duplicate-form-titles.js` script
+   - Renamed 3 duplicate forms with (2), (3), (4) suffixes
+   - Generated audit log for compliance
+   - Fixed column naming bug (camelCase vs snake_case)
+
+2. **PHASE 2: Database Migration** ✅
+   - Added UNIQUE constraint: `forms_title_unique`
+   - Added performance index: `forms_title_idx`
+   - Migration executed successfully (0.137s)
+
+3. **PHASE 3: Backend Validation** ✅
+   - Added `checkTitleExists()` method to FormService
+   - Enhanced `createForm()` with duplicate check
+   - Enhanced `updateForm()` with duplicate check (excludes current form)
+   - Case-insensitive comparison using PostgreSQL LOWER()
+
+4. **PHASE 4: API Route Validation** ✅
+   - Verified existing validation sufficient
+   - express-validator already checking title length
+
+5. **PHASE 5: Frontend Real-Time Validation** ✅
+   - Added debounced (800ms) title validation in EnhancedFormBuilder
+   - Real-time visual feedback: blue (checking), red (duplicate), green (available)
+   - Thai error messages from API
+
+6. **PHASE 6: Check-Title API Endpoint** ✅
+   - Added `GET /api/v1/forms/check-title` endpoint
+   - Query params: `title`, `excludeFormId`
+   - Returns availability status with Thai messages
+
+7. **PHASE 7: Enhanced Error Handling** ✅
+   - Import UniqueConstraintError from Sequelize
+   - Catch constraint violations in createForm/updateForm
+   - Convert to user-friendly Thai error messages
+
+8. **PHASE 8: Testing & Documentation** ✅
+   - Created implementation summary (FORM-TITLE-UNIQUENESS-IMPLEMENTATION.md)
+   - All test scenarios passed
+   - Updated CLAUDE.md to v0.8.4-dev
+
+### Files Modified
+
+**Backend (3 files):**
+- `services/FormService.js` - Added validation + error handling
+- `api/routes/form.routes.js` - Added check-title endpoint
+- `migrations/20251024130000-add-unique-constraint-form-title.js` - Database constraint
+
+**Frontend (1 file):**
+- `components/EnhancedFormBuilder.jsx` - Real-time validation UI
+
+**Scripts (2 new files):**
+- `scripts/fix-duplicate-form-titles.js` - Cleanup duplicates
+- `scripts/verify-unique-titles.js` - Verification tool
+
+### Key Features
+
+✅ **Multi-Layer Protection:**
+- Database: UNIQUE constraint at schema level
+- Backend: Service-layer validation with case-insensitive comparison
+- Frontend: Real-time feedback with 800ms debounce
+
+✅ **User Experience:**
+- Visual feedback: Checking state (blue), duplicate (red), available (green)
+- Thai error messages: "ชื่อฟอร์ม \"X\" มีอยู่แล้วในระบบ กรุณาใช้ชื่ออื่น"
+- Update operations exclude current form from check
+
+✅ **Performance:**
+- Database index for fast queries (~5-10ms)
+- Frontend debouncing reduces API calls
+- Minimal impact: ~10-15ms per form operation
+
+### Testing & Verification
+- ✅ Create form with duplicate title: Error displayed
+- ✅ Update form with duplicate title: Error displayed
+- ✅ Update form keeping same title: Success (no false positive)
+- ✅ Frontend real-time validation: Works correctly
+- ✅ Case-insensitive matching: "Test" = "test" = "TEST"
+- ✅ All 4 duplicate forms cleaned up
+
+### Documentation
+- Comprehensive plan: `FORM-TITLE-UNIQUENESS-PLAN.md` (948 lines)
+- Implementation summary: `FORM-TITLE-UNIQUENESS-IMPLEMENTATION.md` (600+ lines)
+- Updated: `CLAUDE.md` to v0.8.4-dev
+
+---
+
+## Previous Update - UserPreference Model Registration Fix (v0.8.1-dev)
 
 ### Problem: HTTP 500 Errors in Submission List
 **Date**: 2025-10-24
@@ -355,3 +571,4 @@ PowerBI Ready (Thai-English column names)
 **Last Updated**: 2025-10-23 18:30:00 UTC+7
 **Status**: ✅ OPERATIONAL & READY FOR TESTING
 **Backup**: Full history preserved in `CLAUDE.md.backup-2025-10-23`
+- ระวังเรื่องการ restart servers kill process ต่าง ๆ อย่า kill Claude process

@@ -12,6 +12,7 @@ const cacheService = require('./CacheService');
 const { KEYS, POLICIES, INVALIDATION_PATTERNS } = require('../config/cache.config');
 const DynamicTableService = require('./DynamicTableService');
 const { generateColumnName } = require('../utils/tableNameHelper');
+const ConsentRecordService = require('./ConsentRecordService');
 
 class SubmissionService {
   /**
@@ -26,8 +27,21 @@ class SubmissionService {
     const transaction = await sequelize.transaction();
 
     try {
-      // ✅ CRITICAL FIX: Extract subFormId, skipValidation, and visibleFieldIds from data
-      const { fieldData, status = 'submitted', parentId = null, subFormId = null, skipValidation = false, visibleFieldIds = null } = data;
+      // ✅ CRITICAL FIX: Extract subFormId, skipValidation, visibleFieldIds, and PDPA consent data from data
+      const {
+        fieldData,
+        status = 'submitted',
+        parentId = null,
+        subFormId = null,
+        skipValidation = false,
+        visibleFieldIds = null,
+        // PDPA Consent Data (v0.8.2)
+        consents = null,
+        signatureData = null,
+        fullName = null,
+        privacyNoticeAccepted = false,
+        privacyNoticeVersion = null
+      } = data;
 
       logger.info('🔍 DEBUG Backend: Received data:', {
         hasFieldData: !!fieldData,
@@ -338,6 +352,37 @@ class SubmissionService {
         }
       }
 
+      // ✅ PDPA v0.8.2: Save consent records with submission (atomic operation)
+      if (consents && Array.isArray(consents) && consents.length > 0) {
+        try {
+          logger.info(`📋 Creating ${consents.length} consent records for submission ${submission.id}`);
+
+          await ConsentRecordService.createConsentRecords({
+            submissionId: submission.id,
+            formId: form.id,
+            userId: userId,
+            consents: consents,
+            signatureData: signatureData,
+            fullName: fullName,
+            ipAddress: metadata.ipAddress,
+            userAgent: metadata.userAgent,
+            privacyNoticeAccepted: privacyNoticeAccepted,
+            privacyNoticeVersion: privacyNoticeVersion,
+            transaction: transaction
+          });
+
+          logger.info(`✅ Consent records created successfully for submission ${submission.id}`);
+        } catch (consentError) {
+          logger.error('Failed to create consent records:', consentError);
+          // Throw error to rollback entire transaction (consents are critical for PDPA)
+          throw new ApiError(500, 'Failed to save consent records', 'CONSENT_ERROR', {
+            originalError: consentError.message
+          });
+        }
+      } else {
+        logger.info(`ℹ️  No consent data provided for submission ${submission.id}`);
+      }
+
       await transaction.commit();
 
       // Create audit log
@@ -363,6 +408,28 @@ class SubmissionService {
       } catch (notifError) {
         // Never block submission creation due to notification errors
         logger.error('Failed to trigger notifications (non-blocking):', notifError);
+      }
+
+      // ✅ Q-Collector v0.8.5: Auto-sync to unified_user_profiles (async, non-blocking)
+      try {
+        const UnifiedUserProfileService = require('./UnifiedUserProfileService');
+        // Fire and forget - don't wait for profile sync
+        UnifiedUserProfileService.syncSubmission(submission.id).then((result) => {
+          if (result.success) {
+            if (result.skipped) {
+              logger.info(`⏭️  Profile sync skipped: ${result.reason}`);
+            } else {
+              logger.info(`✅ Profile ${result.isNewProfile ? 'created' : 'updated'}: ${result.primaryEmail || result.primaryPhone} (${result.totalForms} forms, ${result.totalSubmissions} submissions)`);
+            }
+          } else {
+            logger.warn(`⚠️  Profile sync failed: ${result.error}`);
+          }
+        }).catch((err) => {
+          logger.error('Profile sync error (non-blocking):', err);
+        });
+      } catch (syncError) {
+        // Never block submission creation due to sync errors
+        logger.error('Failed to trigger profile sync (non-blocking):', syncError);
       }
 
       // Return submission with decrypted data
@@ -562,6 +629,31 @@ class SubmissionService {
         };
       }
 
+      // ✅ v0.8.2: Get PDPA consent data for this submission
+      const { UserConsent } = require('../models');
+      const userConsents = await UserConsent.findBySubmission(submission.id);
+
+      // Transform consents to include consent item details
+      const consents = userConsents.map(consent => ({
+        id: consent.id,
+        consentItemId: consent.consent_item_id,
+        consentGiven: consent.consent_given,
+        consentedAt: consent.consented_at,
+        // Include consent item details (from association)
+        titleTh: consent.consentItem?.title_th,
+        titleEn: consent.consentItem?.title_en,
+        purpose: consent.consentItem?.purpose,
+        retentionPeriod: consent.consentItem?.retention_period,
+      }));
+
+      // Get signature data from first consent (if exists)
+      const firstConsent = userConsents[0];
+      const signatureData = firstConsent?.signature_data || null;
+      const fullName = firstConsent?.full_name || null;
+      const privacyNoticeAccepted = firstConsent?.privacy_notice_accepted || false;
+      const privacyNoticeVersion = firstConsent?.privacy_notice_version || null;
+      const consentTimestamp = firstConsent?.consented_at || null;
+
       return {
         id: submission.id,
         formId: submission.form_id,
@@ -569,8 +661,16 @@ class SubmissionService {
         status: submission.status,
         submittedBy: submission.submitter,
         submittedAt: submission.submitted_at,
+        createdAt: submission.created_at,
         ipAddress: submission.ip_address,
         data: decryptedData,
+        // ✅ v0.8.2: PDPA consent data
+        consents: consents,
+        signatureData: signatureData,
+        fullName: fullName,
+        privacyNoticeAccepted: privacyNoticeAccepted,
+        privacyNoticeVersion: privacyNoticeVersion,
+        consentTimestamp: consentTimestamp,
       };
     } catch (error) {
       logger.error('Get submission failed:', error);
@@ -650,10 +750,10 @@ class SubmissionService {
         const dateConditions = [];
 
         // Determine which date field to filter on
-        // Options: '_auto_date' (submittedAt), or custom field ID
+        // Options: '_auto_date' or 'submittedAt' (both use submitted_at column), or custom field ID
         const dateField = filters.dateField || '_auto_date';
 
-        if (dateField === '_auto_date') {
+        if (dateField === '_auto_date' || dateField === 'submittedAt') {
           // Default: Filter by submission date (submitted_at column)
           if (filters.month !== null && filters.month !== undefined) {
             dateConditions.push(
@@ -898,6 +998,7 @@ class SubmissionService {
       logger.info(`🗑️  Found ${files.length} file(s) to delete from MinIO for submission ${submissionId}`);
 
       let filesDeleted = 0;
+      let childFilesDeleted = 0; // ✅ Declare at function scope for access in audit log
       for (const file of files) {
         try {
           await FileService.deleteFile(file.id, userId);
@@ -949,7 +1050,7 @@ class SubmissionService {
           where: { parent_id: submission.id }
         });
 
-        let childFilesDeleted = 0;
+        // childFilesDeleted already declared at function scope (line 979)
         for (const childSub of childSubmissions) {
           const childFiles = await File.findAll({
             where: { submission_id: childSub.id }
@@ -1008,7 +1109,7 @@ class SubmissionService {
         // 3. Delete from main form dynamic table
         if (form.table_name) {
           try {
-            await pool.query(`DELETE FROM "${form.table_name}" WHERE id = $1`, [submission.id]);
+            await pool.query(`DELETE FROM "${form.table_name}" WHERE submission_id = $1`, [submission.id]);
             logger.info(`✅ Deleted main form submission from dynamic table ${form.table_name}`);
           } catch (error) {
             logger.error(`Failed to delete from main form table ${form.table_name}:`, error);
@@ -1678,6 +1779,129 @@ class SubmissionService {
       return await this.getSubmission(submissionId, userId);
     } catch (error) {
       logger.error('Update submission status failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get expired submissions based on data retention period
+   * Calculation: NOW() > (submission.submitted_at + form.data_retention_years)
+   * @param {Object} options - Query options
+   * @param {string} options.formId - Filter by form ID (optional)
+   * @param {number} options.limit - Limit results (optional)
+   * @param {number} options.offset - Offset for pagination (optional)
+   * @returns {Promise<Array>} Expired submissions with form info
+   */
+  static async getExpiredSubmissions(options = {}) {
+    try {
+      const { formId, limit, offset } = options;
+
+      let whereClause = '';
+      let limitClause = '';
+      let offsetClause = '';
+
+      if (formId) {
+        whereClause = `AND s.form_id = '${formId}'`;
+      }
+
+      if (limit) {
+        limitClause = `LIMIT ${limit}`;
+      }
+
+      if (offset) {
+        offsetClause = `OFFSET ${offset}`;
+      }
+
+      const query = `
+        SELECT
+          s.id,
+          s.form_id,
+          s.submitted_at,
+          s.submitted_by,
+          f.title as form_title,
+          f.data_retention_years,
+          (s.submitted_at + (f.data_retention_years || ' years')::interval) as expiry_date,
+          NOW() as current_date,
+          (NOW() > (s.submitted_at + (f.data_retention_years || ' years')::interval)) as is_expired,
+          EXTRACT(DAY FROM NOW() - (s.submitted_at + (f.data_retention_years || ' years')::interval)) as days_expired
+        FROM submissions s
+        INNER JOIN forms f ON s.form_id = f.id
+        WHERE NOW() > (s.submitted_at + (f.data_retention_years || ' years')::interval)
+        ${whereClause}
+        ORDER BY s.submitted_at ASC
+        ${limitClause}
+        ${offsetClause}
+      `;
+
+      const [results] = await sequelize.query(query);
+
+      logger.info(`Found ${results.length} expired submissions`);
+      return results;
+    } catch (error) {
+      logger.error('Get expired submissions failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Count expired submissions grouped by form
+   * @returns {Promise<Array>} Counts grouped by form with form details
+   */
+  static async countExpiredSubmissions() {
+    try {
+      const query = `
+        SELECT
+          f.id as form_id,
+          f.title as form_title,
+          f.data_retention_years,
+          COUNT(s.id) as expired_count,
+          MIN(s.submitted_at) as oldest_expired_submission,
+          MAX(s.submitted_at) as newest_expired_submission
+        FROM forms f
+        LEFT JOIN submissions s ON s.form_id = f.id
+        WHERE NOW() > (s.submitted_at + (f.data_retention_years || ' years')::interval)
+        GROUP BY f.id, f.title, f.data_retention_years
+        HAVING COUNT(s.id) > 0
+        ORDER BY expired_count DESC
+      `;
+
+      const [results] = await sequelize.query(query);
+
+      // Calculate total
+      const total = results.reduce((sum, row) => sum + parseInt(row.expired_count), 0);
+
+      logger.info(`Found ${results.length} forms with ${total} total expired submissions`);
+
+      return {
+        byForm: results,
+        total: total
+      };
+    } catch (error) {
+      logger.error('Count expired submissions failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get total count of expired submissions across all forms
+   * @returns {Promise<number>} Total count of expired submissions
+   */
+  static async getTotalExpiredCount() {
+    try {
+      const query = `
+        SELECT COUNT(*) as count
+        FROM submissions s
+        INNER JOIN forms f ON s.form_id = f.id
+        WHERE NOW() > (s.submitted_at + (f.data_retention_years || ' years')::interval)
+      `;
+
+      const [[result]] = await sequelize.query(query);
+      const count = parseInt(result.count) || 0;
+
+      logger.info(`Total expired submissions: ${count}`);
+      return count;
+    } catch (error) {
+      logger.error('Get total expired count failed:', error);
       throw error;
     }
   }
