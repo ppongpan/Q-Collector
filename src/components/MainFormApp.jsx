@@ -25,6 +25,7 @@ import SubFormEditPage from './pages/SubFormEditPage';
 import UserEditPage from './pages/UserEditPage';
 import GoogleSheetsImportPage from './sheets/GoogleSheetsImportPage';
 import NotificationRulesPage from './NotificationRulesPage';
+import PersonalDataDashboard from './pdpa/PersonalDataDashboard';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCog, faArrowLeft, faFileAlt, faPlus, faSave, faEdit, faTrashAlt, faUsers
@@ -51,6 +52,7 @@ function MainFormAppContent() {
   const [currentSubFormTitle, setCurrentSubFormTitle] = useState('');
   const [editFormData, setEditFormData] = useState(null);
   const [loadingEditForm, setLoadingEditForm] = useState(false);
+  const [isPdpaCompleted, setIsPdpaCompleted] = useState(true); // ✅ v0.8.2: Track PDPA completion status
   const formBuilderSaveHandlerRef = useRef(null);
   const formViewSaveHandlerRef = useRef(null);
   // ✅ v0.7.43-fix: Form cache to prevent duplicate API calls
@@ -364,6 +366,7 @@ function MainFormAppContent() {
         case 'subform-edit': return 'แก้ไขข้อมูลฟอร์มย่อย';
         case 'theme-test': return 'ทดสอบธีม';
         case 'sheets-import': return 'นำเข้าจาก Google Sheets';
+        case 'personal-data': return 'จัดการข้อมูลส่วนบุคคล';
         default: return 'จัดการฟอร์ม';
       }
     };
@@ -385,7 +388,7 @@ function MainFormAppContent() {
 
     return (
       <motion.header
-        className="glass-nav sticky top-0 z-50 border-b border-border/40"
+        className="glass-nav sticky top-0 z-[100000] border-b border-border/40"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
@@ -537,7 +540,8 @@ function MainFormAppContent() {
                 </motion.div>
               )}
 
-              {currentPage === 'form-view' && (
+              {/* ✅ v0.8.2: Hide save button when on PDPA screen */}
+              {currentPage === 'form-view' && isPdpaCompleted && (
                 <motion.div
                   onClick={() => {
                     if (formViewSaveHandlerRef.current) {
@@ -610,7 +614,8 @@ function MainFormAppContent() {
                 </motion.div>
               )}
 
-              {currentPage === 'main-form-edit' && (
+              {/* ✅ v0.8.2: Hide save button when on PDPA screen */}
+              {currentPage === 'main-form-edit' && isPdpaCompleted && (
                 <motion.div
                   onClick={() => {
                     console.log('[Save] Save button clicked for main-form-edit');
@@ -849,6 +854,7 @@ function MainFormAppContent() {
                 onSettingsClick={() => handleNavigate('settings')}
                 onSheetsImportClick={() => handleNavigate('sheets-import')}
                 onUserManagementClick={() => handleNavigate('user-management')}
+                onPersonalDataClick={() => handleNavigate('personal-data')}
               />
 
               <div
@@ -943,6 +949,7 @@ function MainFormAppContent() {
             ref={formViewSaveHandlerRef}
             formId={currentFormId}
             submissionId={currentSubmissionId}
+            onPdpaStatusChange={(completed) => setIsPdpaCompleted(completed)}
             onSave={(submission, isEdit) => {
               console.log('Form submitted successfully:', submission);
               // Toast notification is already handled in FormView.jsx, no need to duplicate
@@ -1206,6 +1213,7 @@ function MainFormAppContent() {
           ref={formViewSaveHandlerRef}
           formId={currentFormId}
           submissionId={currentSubmissionId}
+          onPdpaStatusChange={(completed) => setIsPdpaCompleted(completed)}
           onSave={(submission, isEdit) => {
             console.log('Form updated successfully:', submission);
             // After edit, go back to submission detail
@@ -1308,6 +1316,12 @@ function MainFormAppContent() {
         );
       case 'notification-rules':
         return <NotificationRulesPage onNavigate={handleNavigate} />;
+      case 'personal-data':
+        return (
+          <main className="min-h-screen bg-background py-4">
+            <PersonalDataDashboard />
+          </main>
+        );
       default:
         return renderFormList();
     }

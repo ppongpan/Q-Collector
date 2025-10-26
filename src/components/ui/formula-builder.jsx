@@ -9,6 +9,7 @@ import { Check, X, Lightbulb, Code, Eye, EyeOff, ChevronDown, ChevronRight } fro
 import { cn } from '../../utils/cn';
 import { useFormulaBuilder } from '../../hooks/useConditionalVisibility';
 import { formulaEngine } from '../../utils/formulaEngine';
+import { sanitizeHtml } from '../../utils/sanitize';
 
 const FormulaBuilder = ({
   value = '',
@@ -201,7 +202,7 @@ const FormulaBuilder = ({
             >
               <div
                 className="formula-highlight font-mono text-sm leading-relaxed whitespace-pre-wrap"
-                dangerouslySetInnerHTML={{ __html: formatFormula(formula) }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(formatFormula(formula)) }}
               />
             </div>
           )}

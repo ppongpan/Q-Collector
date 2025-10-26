@@ -408,6 +408,14 @@ module.exports = (sequelize, DataTypes) => {
       as: 'files',
       onDelete: 'CASCADE',
     });
+
+    // PDPA Compliance Associations
+    // Field has many PersonalDataFields
+    Field.hasMany(models.PersonalDataField, {
+      foreignKey: 'field_id',
+      as: 'personalDataFields',
+      onDelete: 'CASCADE',
+    });
   };
 
   /**

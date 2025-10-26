@@ -48,11 +48,51 @@ async function globalSetup() {
       const submitBtn = page.locator('button[type="submit"]');
       await submitBtn.click();
 
-      // Wait for navigation
-      await page.waitForURL(url => !url.toString().includes('login'), { timeout: 10000 });
+      // Wait for navigation away from login page
+      await page.waitForLoadState('networkidle', { timeout: 15000 });
 
-      // Wait for user menu to appear
-      await page.waitForSelector('[data-testid="user-menu"]', { timeout: 10000 });
+      console.log(`  📍 After login URL: ${page.url()}`);
+
+      // Take screenshot for debugging
+      await page.screenshot({ path: 'tests/e2e/.auth/after-login.png' });
+
+      // Try to find user menu with different strategies
+      const userMenuSelectors = [
+        '[data-testid="user-menu"]',
+        '.user-menu',
+        'button:has-text("admin")',
+        'button:has-text("Admin")',
+        '[class*="user-menu"]',
+        '[class*="UserMenu"]'
+      ];
+
+      let userMenuFound = false;
+      for (const selector of userMenuSelectors) {
+        const isVisible = await page.locator(selector).isVisible().catch(() => false);
+        console.log(`  🔍 Selector "${selector}": ${isVisible ? '✅ FOUND' : '❌ not found'}`);
+        if (isVisible) {
+          userMenuFound = true;
+          break;
+        }
+      }
+
+      if (!userMenuFound) {
+        // Print page title and some content for debugging
+        const title = await page.title();
+        console.log(`  📄 Page title: ${title}`);
+
+        // Check if we're still on login page
+        const isLoginPage = page.url().includes('login');
+        console.log(`  🔐 Still on login page: ${isLoginPage}`);
+
+        if (isLoginPage) {
+          // Check for error messages
+          const errorMsg = await page.locator('text=/error|fail|invalid|incorrect/i').textContent().catch(() => 'none');
+          console.log(`  ⚠️  Error message: ${errorMsg}`);
+        }
+
+        throw new Error('User menu not found after login. See screenshot at tests/e2e/.auth/after-login.png');
+      }
 
       console.log('  ✅ Login successful');
     } else {

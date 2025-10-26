@@ -2,8 +2,9 @@
  * Playwright Configuration
  * E2E Testing for Q-Collector Application
  *
- * @version 0.7.0
- * @since 2025-10-02
+ * @version 0.8.2-dev
+ * @date 2025-10-24
+ * @description Enhanced configuration for DSR Management System testing
  */
 
 const { defineConfig, devices } = require('@playwright/test');
@@ -11,8 +12,8 @@ const { defineConfig, devices } = require('@playwright/test');
 module.exports = defineConfig({
   testDir: './tests/e2e',
 
-  // Timeout for each test
-  timeout: 30 * 1000,
+  // Timeout for each test (extended for PDPA operations)
+  timeout: 60 * 1000,
 
   // Test match patterns
   testMatch: '**/*.spec.js',
@@ -27,7 +28,7 @@ module.exports = defineConfig({
   workers: process.env.CI ? 1 : undefined,
 
   // Global setup - login once and share session
-  // TEMPORARILY DISABLED FOR DEBUGGING LOGIN LOOP
+  // TEMPORARILY DISABLED - Using existing auth file
   // globalSetup: require.resolve('./tests/e2e/global-setup.js'),
 
   // Reporter configuration

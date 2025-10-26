@@ -16,6 +16,7 @@ const {
   requireSuperAdmin,
 } = require('../../middleware/auth.middleware');
 const { asyncHandler, ApiError } = require('../../middleware/error.middleware');
+const { sanitizeBody } = require('../../middleware/sanitization.middleware');
 const logger = require('../../utils/logger.util');
 
 const router = express.Router();
@@ -97,6 +98,7 @@ router.put(
   '/:id',
   authenticate,
   requireSuperAdmin,
+  sanitizeBody(), // XSS Protection - sanitize all user input
   [
     param('id').isUUID().withMessage('Invalid user ID'),
     body('username')
@@ -183,6 +185,7 @@ router.post(
   '/:id/reset-password',
   authenticate,
   requireSuperAdmin,
+  sanitizeBody(), // XSS Protection - sanitize all user input
   [
     param('id').isUUID().withMessage('Invalid user ID'),
     body('newPassword')

@@ -18,6 +18,7 @@ const logger = require('../utils/logger.util');
 const errorMiddleware = require('../middleware/error.middleware');
 const { requestLogger } = require('../middleware/logging.middleware');
 const { cacheMiddleware, cacheBypassMiddleware, cacheWarmupMiddleware } = require('../middleware/cache.middleware');
+const { globalRateLimiter } = require('../middleware/rateLimit.middleware');
 
 // Import routes
 const routes = require('./routes');
@@ -280,6 +281,14 @@ if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_DOCS === 'true')
 } else {
   logger.info('API documentation disabled in production');
 }
+
+// ============================================
+// Rate Limiting
+// ============================================
+
+// Apply global rate limiter to all API routes
+app.use(API_PREFIX, globalRateLimiter);
+logger.info('Global rate limiting enabled (100 requests per 15 minutes per IP)');
 
 // Mount API routes
 app.use(API_PREFIX, routes);

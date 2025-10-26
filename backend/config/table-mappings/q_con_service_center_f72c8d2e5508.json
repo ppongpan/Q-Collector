@@ -1,0 +1,157 @@
+{
+  "formId": "8e44d7ad-62ef-4419-b344-f72c8d2e5508",
+  "tableName": "q_con_service_center_f72c8d2e5508",
+  "createdAt": "2025-10-25T04:17:57.338Z",
+  "columnMappings": [
+    {
+      "fieldId": "514dd84c-93c5-490e-9d13-936dae2add1d",
+      "columnName": "id",
+      "fieldTitle": "ID",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "2c752cd2-0a40-4c8d-a363-78eec0582a00",
+      "columnName": "date_2",
+      "fieldTitle": "วันที่บันทึก",
+      "fieldType": "date"
+    },
+    {
+      "fieldId": "ba9ae5a1-c8cc-4898-84de-0a0fe185da9f",
+      "columnName": "multiple_choice_3",
+      "fieldTitle": "ได้รับข้อมูลผ่านทางใด",
+      "fieldType": "multiple_choice"
+    },
+    {
+      "fieldId": "8a316edb-1a2e-4eb0-8a66-e963078fa8ec",
+      "columnName": "multiple_choice_4",
+      "fieldTitle": "กลุ่มลูกค้า",
+      "fieldType": "multiple_choice"
+    },
+    {
+      "fieldId": "d779a550-1f3d-451f-9c8a-2424946fc63d",
+      "columnName": "short_answer_5",
+      "fieldTitle": "ชื่อโครงการ",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "1f03ee83-1dcb-4987-9112-0791bbe906d6",
+      "columnName": "short_answer_6",
+      "fieldTitle": "บริษัท",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "e051a83a-f48c-454d-bc72-9cef4692a38d",
+      "columnName": "short_answer_7",
+      "fieldTitle": "ประเภทงาน",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "5ecad2a3-f278-4022-9b80-e5e647e5bc6d",
+      "columnName": "short_answer_8",
+      "fieldTitle": "ชื่อลูกค้าที่ติดต่อ",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "32f2fbbb-abd2-406c-8058-8fa8e8f69e2b",
+      "columnName": "short_answer_9",
+      "fieldTitle": "ตำแหน่ง",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "2f425b30-1759-4b9f-8352-5b1dc8c67717",
+      "columnName": "lat_long_10",
+      "fieldTitle": "พิกัด",
+      "fieldType": "lat_long"
+    },
+    {
+      "fieldId": "9903aefc-3edb-460c-ba47-b2c756b5ed0e",
+      "columnName": "province_11",
+      "fieldTitle": "จังหวัด",
+      "fieldType": "province"
+    },
+    {
+      "fieldId": "09efed60-283a-4e93-9825-6bd7a33290d6",
+      "columnName": "multiple_choice_12",
+      "fieldTitle": "มีร้านค้าที่ซื้อประจำหรือไม่",
+      "fieldType": "multiple_choice"
+    },
+    {
+      "fieldId": "43300f75-09e3-4995-b9c5-e891551c3038",
+      "columnName": "short_answer_13",
+      "fieldTitle": "ระบุร้านค้าที่ซื้อสินค้า",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "b4385bee-9b8e-4122-92e5-2f2698d5ccb1",
+      "columnName": "multiple_choice_14",
+      "fieldTitle": "สินค้าที่สนใจ",
+      "fieldType": "multiple_choice"
+    },
+    {
+      "fieldId": "80b53fae-879b-44c3-ae1e-a78975920ac6",
+      "columnName": "number_15",
+      "fieldTitle": "ปริมาณพื้นที่สินค้าที่ต้องการใช้ (ตร.ม)",
+      "fieldType": "number"
+    },
+    {
+      "fieldId": "e704f1c6-c506-4475-b584-db65c19d6c12",
+      "columnName": "number_16",
+      "fieldTitle": "โอกาสในการขาย (ตร.ม.)",
+      "fieldType": "number"
+    },
+    {
+      "fieldId": "f636b337-7890-48c5-8bc7-482c79673ad6",
+      "columnName": "multiple_choice_17",
+      "fieldTitle": "ผู้บันทึกข้อมูล",
+      "fieldType": "multiple_choice"
+    },
+    {
+      "fieldId": "2b01b4a2-29cb-4990-9be5-e6749368ac61",
+      "columnName": "paragraph_18",
+      "fieldTitle": "หมายเหตุ",
+      "fieldType": "paragraph"
+    },
+    {
+      "fieldId": "45f8a75e-a9f1-45d5-9a2a-99f507e38af9",
+      "columnName": "phone_19",
+      "fieldTitle": "เบอร์โทรติดต่อลูกค้า",
+      "fieldType": "phone"
+    },
+    {
+      "fieldId": "88daeb2d-e58c-48d8-a3b0-681fc0e5253a",
+      "columnName": "short_answer_20",
+      "fieldTitle": "Q-CON Service Center\nรับเรื่องโดย",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "ec9271eb-45e6-442a-a343-29daf4e81061",
+      "columnName": "multiple_choice_21",
+      "fieldTitle": "สถานะ",
+      "fieldType": "multiple_choice"
+    },
+    {
+      "fieldId": "1c9f835d-fb6f-4431-8663-aa15f0e5922d",
+      "columnName": "short_answer_22",
+      "fieldTitle": "ขายโดยใคร",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "1153c975-3625-4dda-9e54-764124d1f0db",
+      "columnName": "short_answer_23",
+      "fieldTitle": "เหตุผลที่ซื้อ / ไม่ซื้อสินค้า Q-CON",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "1c4fe81b-5442-48f8-8c40-d0db0ce7e1ad",
+      "columnName": "short_answer_24",
+      "fieldTitle": "สินค้าที่ปิดการขายได้",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "73f80599-f2f3-4cbf-8ef0-6f9fff54db2f",
+      "columnName": "number_25",
+      "fieldTitle": "ปริมาณสินค้าที่ขายได้ (sq.m.)",
+      "fieldType": "number"
+    }
+  ]
+}

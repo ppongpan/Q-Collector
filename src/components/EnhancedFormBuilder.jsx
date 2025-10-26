@@ -49,6 +49,8 @@ import NotificationRulesTab from './notifications/NotificationRulesTab';
 // ✅ v0.9.0: PDPA Compliance Components
 import PrivacyNoticeSettings from './pdpa/PrivacyNoticeSettings';
 import ConsentManagementTab from './pdpa/ConsentManagementTab';
+// ✅ v0.9.0: Public Form Link System
+import PublicLinkSettings from './form-builder/PublicLinkSettings';
 // ✅ Thai Date Picker components for dd/mm/yyyy format
 import { ThaiDatePicker, ThaiDateTimePicker } from './ui/date-picker-thai';
 // import EnhancedSlider from "./ui/enhanced-slider"; // Commented out - not used
@@ -68,7 +70,7 @@ import {
   faEllipsisV, faArrowUp, faArrowDown, faCopy,
   faQuestionCircle, faLayerGroup, faComments, faFileUpload, faCog, faHashtag as faNumbers,
   faClipboardList, faSave, faUsers, faTrash,
-  faDatabase, faCheck, faTimes, faPalette, faBell, faShieldAlt, faInfoCircle
+  faDatabase, faCheck, faTimes, faPalette, faBell, faShieldAlt, faInfoCircle, faShare
 } from '@fortawesome/free-solid-svg-icons';
 
 // User Role definitions with colors for access control
@@ -2883,6 +2885,22 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
                 </button>
 
                 <button
+                  data-testid="public-link-tab"
+                  onClick={() => setActiveSection('public-link')}
+                  title="ลิงก์สาธารณะ"
+                  className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-xl border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
+                    activeSection === 'public-link'
+                      ? 'text-primary bg-primary/5 border-primary shadow-sm backdrop-blur-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/10 border-transparent'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={faShare} className="w-4 h-4" />
+                  {activeSection === 'public-link' && (
+                    <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary to-orange-500 rounded-full" />
+                  )}
+                </button>
+
+                <button
                   onClick={() => setActiveSection('settings')}
                   title="ตั้งค่า"
                   className={`relative px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 text-xs sm:text-sm md:text-base lg:text-lg font-medium transition-all duration-300 rounded-t-xl border-b-3 whitespace-nowrap touch-target-comfortable hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] ${
@@ -3123,6 +3141,56 @@ export default function EnhancedFormBuilder({ initialForm, onSave, onCancel, onS
             {/* Notifications Tab */}
             {activeSection === 'notifications' && initialForm && (
               <NotificationRulesTab form={form} />
+            )}
+
+            {/* Public Link Tab */}
+            {activeSection === 'public-link' && initialForm && (
+              <div className="space-y-8">
+                <div>
+                  <h2 className="form-card-title text-[14px] font-semibold">ลิงก์สาธารณะ</h2>
+                  <p className="form-card-description mt-2 text-[12px]">
+                    เปิดใช้งานการส่งฟอร์มสาธารณะสำหรับผู้ใช้ที่ไม่ได้เข้าสู่ระบบ
+                  </p>
+                </div>
+
+                <PublicLinkSettings
+                  key={JSON.stringify(form.settings?.publicLink)}
+                  formId={initialForm.id}
+                  initialSettings={{
+                    enabled: form.settings?.publicLink?.enabled || false,
+                    slug: form.settings?.publicLink?.slug || '',
+                    token: form.settings?.publicLink?.token || '',
+                    banner: form.settings?.publicLink?.banner || null,
+                    expiresAt: form.settings?.publicLink?.expiresAt || '',
+                    maxSubmissions: form.settings?.publicLink?.maxSubmissions || '',
+                    submissionCount: form.settings?.publicLink?.submissionCount || 0,
+                    createdAt: form.settings?.publicLink?.createdAt || new Date().toISOString(),
+                    formTitle: form.title
+                  }}
+                  onSave={async (settings) => {
+                    try {
+                      const response = await apiClient.updatePublicLink(initialForm.id, settings);
+
+                      // Update form state with new public link settings
+                      updateForm({
+                        settings: {
+                          ...form.settings,
+                          publicLink: response.data.form.settings.publicLink
+                        }
+                      });
+
+                      // Toast already shown by PublicLinkSettings component
+                    } catch (error) {
+                      console.error('Error saving public link settings:', error);
+                      throw new Error(error.message || 'Failed to save public link settings');
+                    }
+                  }}
+                  onCancel={() => {
+                    // Optional: Navigate back or close modal
+                    setActiveSection('settings');
+                  }}
+                />
+              </div>
             )}
 
             {/* Settings - 8px Grid */}

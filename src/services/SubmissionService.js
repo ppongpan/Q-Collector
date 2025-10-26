@@ -55,7 +55,7 @@ class SubmissionService {
    * @param {Array} visibleFieldIds - IDs of visible fields for validation
    * @returns {Promise<Object>} Submission result
    */
-  async submitForm(formId, formData, files = [], visibleFieldIds = null) {
+  async submitForm(formId, formData, files = [], visibleFieldIds = null, consentData = null) {
     try {
       // Get form configuration from API for validation
       const formResponse = await apiClient.getForm(formId);
@@ -102,13 +102,22 @@ class SubmissionService {
         }
       });
 
-      // Submit to backend API with filtered data
+      // Submit to backend API with filtered data + PDPA consent data (v0.8.2)
       console.log('🔍 DEBUG: Sending visibleFieldIds to API:', visibleFieldIds);
-      const response = await apiClient.createSubmission(formId, mainFormFieldData, {
+      console.log('📋 DEBUG: Sending consent data to API:', consentData);
+
+      const metadata = {
         ipAddress: await this.getClientIP(),
         userAgent: navigator.userAgent,
         visibleFieldIds  // ✅ CRITICAL FIX: Pass visible field IDs for backend validation
-      });
+      };
+
+      // ✅ PDPA v0.8.2: Include consent data in metadata
+      if (consentData) {
+        Object.assign(metadata, consentData);
+      }
+
+      const response = await apiClient.createSubmission(formId, mainFormFieldData, metadata);
 
       // Extract submission from response
       const submission = response.data?.submission || response.data;

@@ -1,0 +1,31 @@
+{
+  "formId": "9eff4630-25f0-4143-b070-c3c24aeec223",
+  "tableName": "pdpa_demo_form",
+  "createdAt": "2025-10-25T04:15:47.518Z",
+  "columnMappings": [
+    {
+      "fieldId": "973564c6-cfab-41cd-abd8-1ef67c949a31",
+      "columnName": "short_answer_1",
+      "fieldTitle": "ชื่อ-นามสกุล",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "ba64b4f5-1ede-41f4-9e0d-2f90b17c7883",
+      "columnName": "email_2",
+      "fieldTitle": "อีเมล",
+      "fieldType": "email"
+    },
+    {
+      "fieldId": "be2640a8-49a9-42fb-860c-8443f484b71d",
+      "columnName": "phone_3",
+      "fieldTitle": "เบอร์โทรศัพท์",
+      "fieldType": "phone"
+    },
+    {
+      "fieldId": "12f7a3ff-25e4-4c53-b421-07eab7b76875",
+      "columnName": "paragraph_4",
+      "fieldTitle": "ข้อความ",
+      "fieldType": "paragraph"
+    }
+  ]
+}

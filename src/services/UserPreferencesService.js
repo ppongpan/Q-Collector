@@ -1,7 +1,7 @@
 /**
  * UserPreferencesService
  * Manages user preferences for the Q-Collector application
- * Version: v0.8.0-dev - Database-backed with localStorage fallback
+ * Version: v0.8.2-dev - Database-backed with localStorage fallback + ApiClient integration
  *
  * Features:
  * - Database-first storage (PostgreSQL via API)
@@ -9,14 +9,16 @@
  * - Automatic migration from localStorage to database
  * - Smart defaults (uses latest submission date)
  * - Cross-device synchronization
+ * - ✅ FIX v0.8.2-dev: Use ApiClient for authentication header injection
  */
 
-import axios from 'axios';
+import ApiClient from './ApiClient';
 
 class UserPreferencesService {
   constructor() {
     this.storagePrefix = 'qcollector_prefs_';
-    this.apiBaseUrl = '/api/v1/preferences';
+    // ✅ FIX v0.8.2-dev: Remove /api/v1 prefix since ApiClient already has it as baseURL
+    this.apiBaseUrl = '/preferences';
     this.migrationKey = 'qcollector_prefs_migrated_';
   }
 
@@ -127,11 +129,12 @@ class UserPreferencesService {
         ? `${this.apiBaseUrl}/${contextType}/${contextId}`
         : `${this.apiBaseUrl}/${contextType}`;
 
-      const response = await axios.put(url, { preferences });
+      // ✅ FIX v0.8.2-dev: Use ApiClient instead of axios to include Authorization header
+      const response = await ApiClient.put(url, { preferences });
 
-      if (response.data && response.data.success) {
-        console.log('✅ [UserPreferences] Saved to database:', response.data.data);
-        return response.data.data;
+      if (response && response.success) {
+        console.log('✅ [UserPreferences] Saved to database:', response.data);
+        return response.data;
       }
 
       throw new Error('Invalid response from server');
@@ -154,11 +157,12 @@ class UserPreferencesService {
         ? `${this.apiBaseUrl}/${contextType}/${contextId}`
         : `${this.apiBaseUrl}/${contextType}`;
 
-      const response = await axios.get(url);
+      // ✅ FIX v0.8.2-dev: Use ApiClient instead of axios to include Authorization header
+      const response = await ApiClient.get(url);
 
-      if (response.data && response.data.success && response.data.data) {
-        console.log('✅ [UserPreferences] Loaded from database:', response.data.data);
-        return response.data.data;
+      if (response && response.success && response.data) {
+        console.log('✅ [UserPreferences] Loaded from database:', response.data);
+        return response.data;
       }
 
       console.log('ℹ️ [UserPreferences] No database preferences found');
@@ -183,12 +187,13 @@ class UserPreferencesService {
   async getFormListSmartDefaults(userId, formId) {
     try {
       const url = `${this.apiBaseUrl}/defaults/form-list/${formId}`;
-      const response = await axios.get(url);
+      // ✅ FIX v0.8.2-dev: Use ApiClient instead of axios to include Authorization header
+      const response = await ApiClient.get(url);
 
-      if (response.data && response.data.success) {
-        console.log('✅ [UserPreferences] Smart defaults received:', response.data.data);
-        console.log('📊 [UserPreferences] Defaults source:', response.data.metadata.source);
-        return response.data.data;
+      if (response && response.success) {
+        console.log('✅ [UserPreferences] Smart defaults received:', response.data);
+        console.log('📊 [UserPreferences] Defaults source:', response.metadata.source);
+        return response.data;
       }
 
       throw new Error('Invalid response from server');
@@ -327,7 +332,8 @@ class UserPreferencesService {
       // Clear from database
       try {
         const url = `${this.apiBaseUrl}/form_list/${formId}`;
-        await axios.delete(url);
+        // ✅ FIX v0.8.2-dev: Use ApiClient instead of axios to include Authorization header
+        await ApiClient.delete(url);
       } catch (dbError) {
         console.warn('⚠️ [UserPreferences] Database clear failed');
       }
@@ -410,7 +416,8 @@ class UserPreferencesService {
       // Clear from database
       try {
         const url = `${this.apiBaseUrl}/user/all`;
-        await axios.delete(url);
+        // ✅ FIX v0.8.2-dev: Use ApiClient instead of axios to include Authorization header
+        await ApiClient.delete(url);
       } catch (dbError) {
         console.warn('⚠️ [UserPreferences] Database clear failed');
       }

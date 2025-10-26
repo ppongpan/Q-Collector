@@ -11,12 +11,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import { getRoleLabel } from '../../config/roles.config';
+// import { getRoleLabel } from '../../config/roles.config'; // Not currently used
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faSignOutAlt, faCog, faChevronDown, faTable, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faSignOutAlt, faCog, faChevronDown, faTable, faUsers, faShieldAlt } from '@fortawesome/free-solid-svg-icons';
 import apiClient from '../../services/ApiClient';
 
-export function UserMenu({ onSettingsClick, onSheetsImportClick, onUserManagementClick }) {
+export function UserMenu({ onSettingsClick, onSheetsImportClick, onUserManagementClick, onPersonalDataClick }) {
   const { user, logout, userName, userRole, userEmail } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -26,19 +26,41 @@ export function UserMenu({ onSettingsClick, onSheetsImportClick, onUserManagemen
   const isSuperAdmin = userRole === 'super_admin';
   const isAdmin = userRole === 'super_admin' || userRole === 'admin';
 
-  // Fetch pending users count (Admin/Super Admin only)
+  // Fetch pending users count ONCE per session (Admin/Super Admin only)
+  // ✅ v0.8.5: Optimized to prevent excessive API calls
   useEffect(() => {
     if (!isAdmin) return;
+
+    // Check if we've already fetched in this session
+    const sessionKey = `pending_users_count_${user?.id}`;
+    const cachedData = sessionStorage.getItem(sessionKey);
+
+    if (cachedData) {
+      try {
+        const { count, timestamp } = JSON.parse(cachedData);
+        // Use cached data if less than 5 minutes old
+        if (Date.now() - timestamp < 5 * 60 * 1000) {
+          setPendingCount(count);
+          return;
+        }
+      } catch (e) {
+        // Invalid cache, fetch new data
+      }
+    }
 
     const fetchPendingCount = async () => {
       try {
         const response = await apiClient.get('/admin/pending-users/count');
         if (response.success) {
           setPendingCount(response.count);
+          // Cache the result
+          sessionStorage.setItem(sessionKey, JSON.stringify({
+            count: response.count,
+            timestamp: Date.now()
+          }));
         }
       } catch (error) {
-        // Silently fail - don't show error to user for background polling
-        // Only log in development mode
+        // Silently fail - don't show error to user
         if (process.env.NODE_ENV === 'development') {
           console.error('Error fetching pending users:', error.message || error);
         }
@@ -46,10 +68,8 @@ export function UserMenu({ onSettingsClick, onSheetsImportClick, onUserManagemen
     };
 
     fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 30000); // Poll every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [isAdmin]);
+    // ✅ No polling - fetch only once per session or every 5 minutes
+  }, [isAdmin, user?.id]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -75,23 +95,22 @@ export function UserMenu({ onSettingsClick, onSheetsImportClick, onUserManagemen
   };
 
   // Import from central config for consistency
-  const getRoleBadgeColor = (role) => {
-    switch (role) {
-      case 'super_admin':
-        return 'bg-red-500/20 text-red-500 border-red-500/30'; // RED: Form Settings
-      case 'admin':
-        return 'bg-pink-500/20 text-pink-500 border-pink-500/30'; // PINK: Form Settings
-        return 'bg-blue-500/20 text-blue-500 border-blue-500/30'; // BLUE: Form Settings
-      case 'sales':
-        return 'bg-green-500/20 text-green-500 border-green-500/30'; // GREEN: Form Settings
-      case 'marketing':
-        return 'bg-orange-500/20 text-orange-500 border-orange-500/30'; // ORANGE: Form Settings
-      case 'technic':
-        return 'bg-cyan-500/20 text-cyan-500 border-cyan-500/30'; // CYAN: Form Settings
-      default:
-        return 'bg-gray-500/20 text-gray-500 border-gray-500/30'; // GRAY: Form Settings
-    }
-  };
+  // const getRoleBadgeColor = (role) => {
+  //   switch (role) {
+  //     case 'super_admin':
+  //       return 'bg-red-500/20 text-red-500 border-red-500/30'; // RED: Form Settings
+  //     case 'admin':
+  //       return 'bg-pink-500/20 text-pink-500 border-pink-500/30'; // PINK: Form Settings
+  //     case 'sales':
+  //       return 'bg-green-500/20 text-green-500 border-green-500/30'; // GREEN: Form Settings
+  //     case 'marketing':
+  //       return 'bg-orange-500/20 text-orange-500 border-orange-500/30'; // ORANGE: Form Settings
+  //     case 'technic':
+  //       return 'bg-cyan-500/20 text-cyan-500 border-cyan-500/30'; // CYAN: Form Settings
+  //     default:
+  //       return 'bg-gray-500/20 text-gray-500 border-gray-500/30'; // GRAY: Form Settings
+  //   }
+  // };
 
   const getRoleTextColor = (role) => {
     switch (role) {
@@ -99,7 +118,6 @@ export function UserMenu({ onSettingsClick, onSheetsImportClick, onUserManagemen
         return 'text-red-500'; // RED: Form Settings
       case 'admin':
         return 'text-pink-500'; // PINK: Form Settings
-        return 'text-blue-500'; // BLUE: Form Settings
       case 'sales':
         return 'text-green-500'; // GREEN: Form Settings
       case 'marketing':
@@ -154,7 +172,7 @@ export function UserMenu({ onSettingsClick, onSheetsImportClick, onUserManagemen
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-            className="fixed top-[60px] right-2 sm:right-4 w-[200px] sm:w-[220px] rounded-2xl shadow-2xl border border-border/40 overflow-hidden z-[100] bg-card"
+            className="fixed top-[60px] right-2 sm:right-4 w-[200px] sm:w-[220px] rounded-2xl shadow-2xl border border-border/40 overflow-hidden z-[99999] bg-card"
           >
             {/* User Info Section */}
             <div className="p-2.5 border-b border-border/30 bg-gradient-to-br from-primary/5 to-transparent">
@@ -205,6 +223,22 @@ export function UserMenu({ onSettingsClick, onSheetsImportClick, onUserManagemen
                       <span className="text-[10px] font-bold text-white">{pendingCount > 99 ? '99+' : pendingCount}</span>
                     </div>
                   )}
+                </button>
+              )}
+
+              {/* Personal Data Management - Admin/Super Admin ONLY */}
+              {isAdmin && onPersonalDataClick && (
+                <button
+                  onClick={() => {
+                    onPersonalDataClick();
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl hover:bg-purple-500/10 transition-all duration-200 text-left group mt-1"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-500/5 group-hover:from-purple-500/20 group-hover:to-purple-500/10 transition-all duration-200">
+                    <FontAwesomeIcon icon={faShieldAlt} className="text-purple-600 group-hover:text-purple-500 transition-colors text-xs sm:text-sm" />
+                  </div>
+                  <span className="text-xs sm:text-sm font-medium text-foreground group-hover:text-purple-600 transition-colors">จัดการข้อมูลส่วนบุคคล</span>
                 </button>
               )}
 

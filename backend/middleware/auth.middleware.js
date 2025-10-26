@@ -191,49 +191,10 @@ function checkOwnership(userIdParam = 'userId', source = 'params') {
 }
 
 /**
- * Rate limiting middleware for authentication endpoints
- * Prevents brute force attacks
+ * DEPRECATED: Legacy rate limiting removed in v0.8.2
+ * Now using Redis-based rate limiting from rateLimit.middleware.js
+ * See: backend/middleware/rateLimit.middleware.js (authRateLimiter)
  */
-const authRateLimits = new Map();
-
-function authRateLimit(maxAttempts = 5, windowMs = 15 * 60 * 1000) {
-  return (req, res, next) => {
-    const identifier = req.body.email || req.body.username || req.ip;
-    const now = Date.now();
-    const key = `auth:${identifier}`;
-
-    // Get or initialize rate limit data
-    const rateData = authRateLimits.get(key) || { count: 0, resetTime: now + windowMs };
-
-    // Reset if window has passed
-    if (now > rateData.resetTime) {
-      rateData.count = 0;
-      rateData.resetTime = now + windowMs;
-    }
-
-    // Increment attempt counter
-    rateData.count += 1;
-    authRateLimits.set(key, rateData);
-
-    // Check if limit exceeded
-    if (rateData.count > maxAttempts) {
-      const retryAfter = Math.ceil((rateData.resetTime - now) / 1000);
-      logger.warn(`Rate limit exceeded for ${identifier}`);
-
-      res.set('Retry-After', retryAfter);
-      return next(
-        new ApiError(
-          429,
-          `Too many authentication attempts. Please try again in ${retryAfter} seconds.`,
-          'RATE_LIMIT_EXCEEDED',
-          { retryAfter }
-        )
-      );
-    }
-
-    next();
-  };
-}
 
 /**
  * Check if user account is active
@@ -350,23 +311,16 @@ function attachMetadata(req, res, next) {
 }
 
 /**
- * Clean up expired rate limit entries periodically
+ * DEPRECATED: Cleanup removed with legacy rate limiting in v0.8.2
+ * Redis-based rate limiting handles cleanup automatically
  */
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, data] of authRateLimits.entries()) {
-    if (now > data.resetTime) {
-      authRateLimits.delete(key);
-    }
-  }
-}, 60 * 60 * 1000); // Clean every hour
 
 module.exports = {
   authenticate,
   authorize,
   optionalAuth,
   checkOwnership,
-  authRateLimit,
+  // authRateLimit removed in v0.8.2 - use authRateLimiter from rateLimit.middleware.js
   requireActiveAccount,
   requireSuperAdmin,
   requireCompletedSetup,

@@ -3,18 +3,119 @@
  * Handles form CRUD operations with fields and sub-forms with Redis caching
  */
 
-const { Op } = require('sequelize');
-const { Form, Field, SubForm, User, AuditLog, sequelize } = require('../models');
+const crypto = require('crypto');
+const { Op, UniqueConstraintError } = require('sequelize');
+const { Form, Field, SubForm, User, AuditLog, ConsentItem, sequelize } = require('../models');
 const logger = require('../utils/logger.util');
 const { ApiError } = require('../middleware/error.middleware');
 const cacheService = require('./CacheService');
 const { KEYS, POLICIES, INVALIDATION_PATTERNS } = require('../config/cache.config');
 const DynamicTableService = require('./DynamicTableService');
+const { createUniqueSlug } = require('../utils/slug.util');
 
 // Initialize DynamicTableService
 const dynamicTableService = new DynamicTableService();
 
+/**
+ * SQL Reserved Keywords and PostgreSQL Reserved Words
+ * Security Enhancement v0.8.2 - Prevent SQL injection via field names
+ */
+const SQL_RESERVED_KEYWORDS = new Set([
+  'select', 'insert', 'update', 'delete', 'drop', 'create', 'alter', 'table',
+  'from', 'where', 'join', 'union', 'order', 'group', 'having', 'limit',
+  'offset', 'distinct', 'as', 'and', 'or', 'not', 'null', 'true', 'false',
+  'case', 'when', 'then', 'else', 'end', 'between', 'like', 'in', 'exists',
+  'all', 'any', 'some', 'into', 'values', 'set', 'primary', 'foreign', 'key',
+  'references', 'constraint', 'index', 'view', 'trigger', 'procedure', 'function',
+  'database', 'schema', 'grant', 'revoke', 'user', 'role', 'admin', 'super'
+]);
+
+/**
+ * Validate field name for security and SQL compatibility
+ * Security Enhancement v0.8.2
+ * @param {string} fieldName - Field name to validate
+ * @returns {Object} { valid: boolean, error?: string }
+ */
+function validateFieldName(fieldName) {
+  if (!fieldName || typeof fieldName !== 'string') {
+    return { valid: false, error: 'Field name is required and must be a string' };
+  }
+
+  const trimmed = fieldName.trim();
+
+  // Check minimum length
+  if (trimmed.length < 1) {
+    return { valid: false, error: 'Field name cannot be empty' };
+  }
+
+  // Check maximum length
+  if (trimmed.length > 255) {
+    return { valid: false, error: 'Field name must be 255 characters or less' };
+  }
+
+  // Check for SQL reserved keywords
+  const lowerName = trimmed.toLowerCase();
+  if (SQL_RESERVED_KEYWORDS.has(lowerName)) {
+    return {
+      valid: false,
+      error: `Field name "${trimmed}" is a SQL reserved keyword and cannot be used`
+    };
+  }
+
+  // Check for dangerous patterns (SQL injection attempts)
+  const dangerousPatterns = [
+    /--/,           // SQL comment
+    /\/\*/,         // SQL block comment
+    /;/,            // Statement terminator
+    /\bDROP\b/i,    // DROP statement
+    /\bDELETE\b/i,  // DELETE statement
+    /\bTRUNCATE\b/i,// TRUNCATE statement
+    /\bEXEC\b/i,    // EXEC statement
+    /\bUNION\b/i,   // UNION injection
+  ];
+
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(trimmed)) {
+      return {
+        valid: false,
+        error: `Field name contains potentially dangerous SQL pattern: "${trimmed}"`
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
 class FormService {
+  /**
+   * Check if form title already exists (case-insensitive)
+   * @param {string} title - Form title to check
+   * @param {string|null} excludeFormId - Form ID to exclude (for updates)
+   * @returns {Promise<boolean>} True if title exists
+   */
+  static async checkTitleExists(title, excludeFormId = null) {
+    try {
+      const { Op } = require('sequelize');
+
+      const where = {
+        title: sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('title')),
+          sequelize.fn('LOWER', title.trim())
+        )
+      };
+
+      if (excludeFormId) {
+        where.id = { [Op.ne]: excludeFormId };
+      }
+
+      const existingForm = await Form.findOne({ where });
+      return !!existingForm;
+    } catch (error) {
+      logger.error('Error checking title existence:', error);
+      throw error;
+    }
+  }
+
   /**
    * Create new form with fields and sub-forms
    * @param {string} userId - User ID creating the form
@@ -41,6 +142,12 @@ class FormService {
 
       logger.info(`Creating form: ${title}, subForms: ${subFormsArray.length}`);
 
+      // ✅ v0.8.4: Check for duplicate title before creating
+      const titleExists = await this.checkTitleExists(title);
+      if (titleExists) {
+        throw new ApiError(409, `ชื่อฟอร์ม "${title}" มีอยู่แล้วในระบบ กรุณาใช้ชื่ออื่น`, 'DUPLICATE_ENTRY');
+      }
+
       // Validate roles
       const validRoles = ['super_admin', 'admin', 'customer_service', 'technic', 'sale', 'marketing', 'general_user'];
       if (!Array.isArray(roles_allowed) || roles_allowed.some(r => !validRoles.includes(r))) {
@@ -49,6 +156,14 @@ class FormService {
 
       // ✅ NEW: Validate no duplicate field names in main form
       if (fields && fields.length > 0) {
+        // Security Enhancement v0.8.2: Validate field names
+        for (const field of fields) {
+          const validation = validateFieldName(field.title);
+          if (!validation.valid) {
+            throw new ApiError(400, validation.error, 'INVALID_FIELD_NAME');
+          }
+        }
+
         const fieldTitles = fields.map(f => f.title?.trim().toLowerCase()).filter(Boolean);
         const duplicates = fieldTitles.filter((title, index) => fieldTitles.indexOf(title) !== index);
         if (duplicates.length > 0) {
@@ -61,6 +176,14 @@ class FormService {
         for (let i = 0; i < subFormsArray.length; i++) {
           const subFormFields = subFormsArray[i].fields || [];
           if (subFormFields.length > 0) {
+            // Security Enhancement v0.8.2: Validate sub-form field names
+            for (const field of subFormFields) {
+              const validation = validateFieldName(field.title);
+              if (!validation.valid) {
+                throw new ApiError(400, `Sub-form "${subFormsArray[i].title}": ${validation.error}`, 'INVALID_FIELD_NAME');
+              }
+            }
+
             const fieldTitles = subFormFields.map(f => f.title?.trim().toLowerCase()).filter(Boolean);
             const duplicates = fieldTitles.filter((title, index) => fieldTitles.indexOf(title) !== index);
             if (duplicates.length > 0) {
@@ -254,12 +377,21 @@ class FormService {
           stack: tableError.stack,
           formTitle: formWithFields.title
         });
-        // ⚠️ IMPORTANT: Don't fail the entire form creation if table creation fails
-        // Reasons:
-        // 1. Translation API might be slow/unavailable
-        // 2. Database might be temporarily unavailable
-        // 3. Table can be created later manually via sync script
-        // The form metadata is already saved, only the dynamic table failed
+
+        // ✅ v0.8.5: Dynamic table creation is MANDATORY
+        // Must delete the form if table creation fails to maintain consistency
+        try {
+          await Form.destroy({ where: { id: form.id } });
+          logger.info(`Rolled back form ${form.id} due to table creation failure`);
+        } catch (deleteError) {
+          logger.error(`Failed to rollback form ${form.id}:`, deleteError);
+        }
+
+        throw new ApiError(
+          500,
+          `ไม่สามารถสร้างตารางข้อมูลสำหรับฟอร์มได้: ${tableError.message}. กรุณาลองใหม่อีกครั้ง`,
+          'TABLE_CREATION_FAILED'
+        );
       }
 
       // Return form with all related data
@@ -267,6 +399,19 @@ class FormService {
     } catch (error) {
       await transaction.rollback();
       logger.error('Form creation failed:', error);
+
+      // ✅ v0.8.4: Handle unique constraint violation for form title
+      if (error instanceof UniqueConstraintError) {
+        // Check if error is about title field (SequelizeUniqueConstraintError has errors array)
+        const isTitleError = error.errors?.some(e => e.path === 'title') ||
+                             error.fields?.title ||
+                             error.message?.includes('title');
+
+        if (isTitleError) {
+          throw new ApiError(409, `ชื่อฟอร์ม "${title}" มีอยู่แล้วในระบบ กรุณาใช้ชื่ออื่น`, 'DUPLICATE_ENTRY');
+        }
+      }
+
       throw error;
     }
   }
@@ -472,6 +617,14 @@ class FormService {
       const user = await User.findByPk(userId);
       if (form.created_by !== userId && user.role !== 'admin' && user.role !== 'super_admin') {
         throw new ApiError(403, 'Not authorized to update this form', 'FORBIDDEN');
+      }
+
+      // ✅ v0.8.4: Check for duplicate title if title is being updated
+      if (updates.title && updates.title !== form.title) {
+        const titleExists = await this.checkTitleExists(updates.title, formId);
+        if (titleExists) {
+          throw new ApiError(409, `ชื่อฟอร์ม "${updates.title}" มีอยู่แล้วในระบบ กรุณาใช้ชื่ออื่น`, 'DUPLICATE_ENTRY');
+        }
       }
 
       const oldValue = {
@@ -880,6 +1033,20 @@ class FormService {
     } catch (error) {
       await transaction.rollback();
       logger.error('Form update failed:', error);
+
+      // ✅ v0.8.4: Handle unique constraint violation for form title
+      if (error instanceof UniqueConstraintError) {
+        // Check if error is about title field (SequelizeUniqueConstraintError has errors array)
+        const isTitleError = error.errors?.some(e => e.path === 'title') ||
+                             error.fields?.title ||
+                             error.message?.includes('title');
+
+        if (isTitleError) {
+          const newTitle = updates.title || 'ไม่ทราบ';
+          throw new ApiError(409, `ชื่อฟอร์ม "${newTitle}" มีอยู่แล้วในระบบ กรุณาใช้ชื่ออื่น`, 'DUPLICATE_ENTRY');
+        }
+      }
+
       throw error;
     }
   }
@@ -1272,6 +1439,276 @@ class FormService {
     } catch (error) {
       logger.error('Form status toggle failed:', error);
       throw error;
+    }
+  }
+
+  /**
+   * PUBLIC FORM LINK MANAGEMENT (v0.9.0-dev)
+   * Enable/disable public access via slug-based URLs
+   */
+
+  /**
+   * Enable public link for form
+   * Generates unique slug and security token
+   *
+   * @param {string} formId - Form ID
+   * @param {Object} options - Configuration options
+   * @param {string} [options.customSlug] - Custom slug (optional, auto-generated if not provided)
+   * @param {string} [options.expiresAt] - Expiration date (ISO string, optional)
+   * @param {number} [options.maxSubmissions] - Maximum submissions allowed (optional)
+   * @param {Object} [options.banner] - Banner image data (optional)
+   * @returns {Promise<Object>} Updated form with public link settings
+   */
+  static async enablePublicLink(formId, options = {}) {
+    try {
+      const form = await Form.findByPk(formId);
+
+      if (!form) {
+        throw new ApiError(404, 'Form not found');
+      }
+
+      // Generate unique slug
+      const slug = options.customSlug || await createUniqueSlug(form.title, formId);
+
+      // Generate security token (32 characters)
+      const token = crypto.randomBytes(16).toString('hex');
+
+      // Initialize or update publicLink settings
+      if (!form.settings) {
+        form.settings = {};
+      }
+
+      form.settings.publicLink = {
+        enabled: true,
+        slug,
+        token,
+        expiresAt: options.expiresAt || null,
+        maxSubmissions: options.maxSubmissions || null,
+        submissionCount: form.settings.publicLink?.submissionCount || 0,
+        banner: options.banner || null,
+        ipRateLimit: {
+          maxPerHour: 5,
+          maxPerDay: 20
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      form.changed('settings', true); // Force Sequelize to detect JSONB change
+      await form.save();
+
+      logger.info(`Public link enabled for form ${formId}: /public/forms/${slug}`);
+
+      return form.toJSON();
+    } catch (error) {
+      logger.error(`Failed to enable public link for form ${formId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Disable public link for form
+   * Keeps settings but sets enabled=false
+   *
+   * @param {string} formId - Form ID
+   * @returns {Promise<Object>} Updated form
+   */
+  static async disablePublicLink(formId) {
+    try {
+      const form = await Form.findByPk(formId);
+
+      if (!form) {
+        throw new ApiError(404, 'Form not found');
+      }
+
+      if (!form.settings?.publicLink) {
+        throw new ApiError(400, 'Public link not configured for this form');
+      }
+
+      form.settings.publicLink.enabled = false;
+      form.settings.publicLink.disabledAt = new Date().toISOString();
+
+      form.changed('settings', true);
+      await form.save();
+
+      logger.info(`Public link disabled for form ${formId}`);
+
+      return form.toJSON();
+    } catch (error) {
+      logger.error(`Failed to disable public link for form ${formId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Regenerate security token for public link
+   * Useful if token is compromised
+   *
+   * @param {string} formId - Form ID
+   * @returns {Promise<Object>} Updated form with new token
+   */
+  static async regeneratePublicToken(formId) {
+    try {
+      const form = await Form.findByPk(formId);
+
+      if (!form) {
+        throw new ApiError(404, 'Form not found');
+      }
+
+      if (!form.settings?.publicLink) {
+        throw new ApiError(400, 'Public link not configured for this form');
+      }
+
+      // Generate new token
+      const newToken = crypto.randomBytes(16).toString('hex');
+      form.settings.publicLink.token = newToken;
+      form.settings.publicLink.tokenRegeneratedAt = new Date().toISOString();
+
+      form.changed('settings', true);
+      await form.save();
+
+      logger.info(`Public link token regenerated for form ${formId}`);
+
+      return form.toJSON();
+    } catch (error) {
+      logger.error(`Failed to regenerate token for form ${formId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update public link settings
+   * Allows updating slug, expiration, limits, banner, etc.
+   *
+   * @param {string} formId - Form ID
+   * @param {Object} settings - Public link settings to update
+   * @param {boolean} settings.enabled - Enable/disable public link
+   * @param {string} [settings.slug] - Custom URL slug
+   * @param {string} [settings.token] - Security token
+   * @param {string} [settings.expiresAt] - Expiration date (ISO 8601)
+   * @param {number} [settings.maxSubmissions] - Maximum submissions allowed
+   * @param {Object} [settings.banner] - Banner image data
+   * @returns {Promise<Object>} Updated form
+   */
+  static async updatePublicLink(formId, settings) {
+    try {
+      const form = await Form.findByPk(formId);
+
+      if (!form) {
+        throw new ApiError(404, 'Form not found');
+      }
+
+      // Initialize settings if needed
+      if (!form.settings) {
+        form.settings = {};
+      }
+
+      // If enabling for the first time, generate token if not provided
+      if (settings.enabled && !form.settings.publicLink) {
+        settings.token = settings.token || crypto.randomBytes(16).toString('hex');
+      }
+
+      // Update publicLink settings
+      form.settings.publicLink = {
+        ...form.settings.publicLink, // Keep existing settings
+        ...settings, // Override with new settings
+        submissionCount: form.settings.publicLink?.submissionCount || 0, // Preserve count
+        createdAt: form.settings.publicLink?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // Force Sequelize to detect JSONB change
+      form.changed('settings', true);
+      await form.save();
+
+      logger.info(`Public link settings updated for form ${formId}`);
+
+      return form.toJSON();
+    } catch (error) {
+      logger.error(`Failed to update public link for form ${formId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get form by public slug
+   * For anonymous public access - includes validation
+   *
+   * @param {string} slug - URL slug
+   * @returns {Promise<Object>} Form data (filtered for public access)
+   * @throws {ApiError} 404 if not found, 410 if expired, 429 if limit reached
+   */
+  static async getFormBySlug(slug) {
+    try {
+      // Find form by slug in publicLink settings
+      const form = await Form.findOne({
+        where: sequelize.literal(
+          `settings->'publicLink'->>'enabled' = 'true' AND
+           settings->'publicLink'->>'slug' = '${sequelize.escape(slug).replace(/'/g, '')}'`
+        ),
+        include: [
+          {
+            model: Field,
+            as: 'fields',
+            required: false
+          },
+          {
+            model: ConsentItem,
+            as: 'consentItems',
+            required: false
+          }
+        ]
+      });
+
+      if (!form) {
+        throw new ApiError(404, 'Public form not found or disabled');
+      }
+
+      const publicLink = form.settings.publicLink;
+
+      // Check expiration
+      if (publicLink.expiresAt) {
+        const expirationDate = new Date(publicLink.expiresAt);
+        if (expirationDate < new Date()) {
+          throw new ApiError(410, 'Public link has expired');
+        }
+      }
+
+      // Check submission limit
+      if (publicLink.maxSubmissions !== null &&
+          publicLink.submissionCount >= publicLink.maxSubmissions) {
+        throw new ApiError(429, 'Submission limit reached for this form');
+      }
+
+      logger.info(`Public form accessed: ${slug}`);
+
+      // Return only necessary fields (hide internal data)
+      const formData = form.toJSON();
+      return {
+        id: formData.id,
+        title: formData.title,
+        description: formData.description,
+        fields: formData.fields,
+        consentItems: formData.consentItems,
+        settings: {
+          privacyNotice: formData.settings?.privacyNotice,
+          pdpa: formData.settings?.pdpa,
+          publicLink: {
+            banner: publicLink.banner,
+            token: publicLink.token,  // Required for form submission
+            slug: publicLink.slug,
+            submissionCount: publicLink.submissionCount || 0,
+            maxSubmissions: publicLink.maxSubmissions,
+            expiresAt: publicLink.expiresAt
+          }
+        }
+      };
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      logger.error(`Failed to get form by slug ${slug}:`, error);
+      throw new ApiError(500, 'Failed to load public form');
     }
   }
 }

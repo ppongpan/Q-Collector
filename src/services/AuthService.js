@@ -10,6 +10,7 @@
  * - Update profile
  */
 
+import axios from 'axios';
 import ApiClient from './ApiClient';
 import { API_ENDPOINTS } from '../config/api.config';
 import * as tokenManager from '../utils/tokenManager';
@@ -190,55 +191,77 @@ class AuthService {
 
   /**
    * Refresh access token using refresh token
+   * ✅ UNIFIED FIX: Use axios directly to avoid ApiClient interceptor loop
    * @returns {Promise<string>} - New access token
    */
   async refreshToken() {
     try {
+      // ✅ v0.8.2: Enhanced debug - check localStorage directly
       const refreshToken = tokenManager.getRefreshToken();
+      const directCheck = localStorage.getItem('q-collector-refresh-token');
+
       console.log('🔄 AuthService.refreshToken - Debug:', {
         hasRefreshToken: !!refreshToken,
+        hasDirectCheck: !!directCheck,
         refreshTokenPreview: refreshToken ? refreshToken.substring(0, 30) + '...' : 'NONE',
-        endpoint: API_ENDPOINTS.auth.refresh
+        directCheckPreview: directCheck ? directCheck.substring(0, 30) + '...' : 'NONE',
+        endpoint: API_ENDPOINTS.auth.refresh,
+        localStorageKeys: Object.keys(localStorage)
       });
 
       if (!refreshToken) {
+        console.error('❌ AuthService.refreshToken - Refresh token missing!', {
+          directCheck: !!directCheck,
+          allKeys: Object.keys(localStorage)
+        });
         throw new Error('ไม่พบ refresh token');
       }
 
-      const response = await ApiClient.post(API_ENDPOINTS.auth.refresh, {
-        refreshToken
-      });
+      // ✅ FIX: Use axios directly to bypass ApiClient interceptor
+      // This prevents infinite loop when refresh endpoint returns 401
+      const response = await axios.post(
+        `/api/v1${API_ENDPOINTS.auth.refresh}`,
+        { refreshToken },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        }
+      );
 
       console.log('✅ AuthService.refreshToken - Success:', {
-        hasNewAccessToken: !!response.data?.tokens?.accessToken,
-        hasNewRefreshToken: !!response.data?.tokens?.refreshToken,
-        hasUser: !!response.data?.user,
+        hasNewAccessToken: !!response.data?.data?.tokens?.accessToken,
+        hasNewRefreshToken: !!response.data?.data?.tokens?.refreshToken,
+        hasUser: !!response.data?.data?.user,
         responseKeys: Object.keys(response),
-        dataKeys: response.data ? Object.keys(response.data) : []
+        dataKeys: response.data ? Object.keys(response.data) : [],
+        nestedDataKeys: response.data?.data ? Object.keys(response.data.data) : []
       });
 
-      // ✅ FIX v0.7.9-dev: Correct path to access tokens (response.data.tokens, not response.accessToken)
+      // ✅ FIX v0.8.2: Correct path to access tokens (response.data.data.tokens)
+      // Backend returns: { success: true, data: { tokens: { ... } } }
       // Store new access token
-      if (response.data?.tokens?.accessToken) {
-        tokenManager.setAccessToken(response.data.tokens.accessToken);
+      if (response.data?.data?.tokens?.accessToken) {
+        tokenManager.setAccessToken(response.data.data.tokens.accessToken);
         console.log('✅ AuthService.refreshToken - Access token saved to localStorage');
       } else {
         console.error('❌ AuthService.refreshToken - No access token in response:', response);
       }
 
       // Store new refresh token if provided
-      if (response.data?.tokens?.refreshToken) {
-        tokenManager.setRefreshToken(response.data.tokens.refreshToken);
+      if (response.data?.data?.tokens?.refreshToken) {
+        tokenManager.setRefreshToken(response.data.data.tokens.refreshToken);
         console.log('✅ AuthService.refreshToken - Refresh token updated in localStorage');
       }
 
-      // Update user data if provided
-      if (response.data?.user) {
-        tokenManager.setUser(response.data.user);
+      // Update user data if provided (may not be in refresh response)
+      if (response.data?.data?.user) {
+        tokenManager.setUser(response.data.data.user);
         console.log('✅ AuthService.refreshToken - User data updated in localStorage');
       }
 
-      return response.data.tokens.accessToken;
+      return response.data.data.tokens.accessToken;
     } catch (error) {
       // Clear tokens on refresh failure
       tokenManager.clearTokens();

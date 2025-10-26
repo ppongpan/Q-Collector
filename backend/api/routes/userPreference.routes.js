@@ -8,7 +8,7 @@
 const express = require('express');
 const { body, param, validationResult } = require('express-validator');
 const UserPreferenceService = require('../../services/UserPreferenceService');
-const { authenticate } = require('../../middleware/auth.middleware');
+const { authenticate, optionalAuth } = require('../../middleware/auth.middleware');
 const { asyncHandler, ApiError } = require('../../middleware/error.middleware');
 const logger = require('../../utils/logger.util');
 
@@ -41,11 +41,11 @@ const validContextTypes = ['form_list', 'global', 'dashboard', 'form_builder'];
  * GET /api/v1/preferences/:contextType/:contextId?
  * Get user preferences for a specific context
  *
- * @access Private (authenticated users only)
+ * @access Public (optional authentication)
  */
 router.get(
   '/:contextType/:contextId?',
-  authenticate,
+  optionalAuth,
   [
     param('contextType')
       .isIn(validContextTypes)
@@ -58,8 +58,18 @@ router.get(
   ],
   asyncHandler(async (req, res) => {
     const { contextType, contextId } = req.params;
-    const userId = req.user.id;
 
+    // If not authenticated, return empty preferences
+    if (!req.user) {
+      logger.info(`Anonymous user requesting preferences for ${contextType}/${contextId || 'null'}`);
+      return res.json({
+        success: true,
+        data: null,
+        message: 'No preferences found (not authenticated)'
+      });
+    }
+
+    const userId = req.user.id;
     logger.info(`Getting preferences for user ${userId}, context: ${contextType}/${contextId || 'null'}`);
 
     const preferences = await UserPreferenceService.getPreferences(
@@ -81,11 +91,11 @@ router.get(
  * Get smart defaults for form list view
  * Uses most recent submission date if available, otherwise current date
  *
- * @access Private (authenticated users only)
+ * @access Public (optional authentication)
  */
 router.get(
   '/defaults/form-list/:formId',
-  authenticate,
+  optionalAuth,
   [
     param('formId')
       .isUUID()
@@ -94,9 +104,11 @@ router.get(
   ],
   asyncHandler(async (req, res) => {
     const { formId } = req.params;
-    const userId = req.user.id;
 
-    logger.info(`Getting smart defaults for form ${formId}, user ${userId}`);
+    // Use anonymous userId if not authenticated
+    const userId = req.user ? req.user.id : null;
+
+    logger.info(`Getting smart defaults for form ${formId}, user ${userId || 'anonymous'}`);
 
     const result = await UserPreferenceService.getFormListDefaults(userId, formId);
 
@@ -113,11 +125,11 @@ router.get(
  * PUT /api/v1/preferences/:contextType/:contextId?
  * Save or update user preferences for a specific context
  *
- * @access Private (authenticated users only)
+ * @access Public (optional authentication)
  */
 router.put(
   '/:contextType/:contextId?',
-  authenticate,
+  optionalAuth,
   [
     param('contextType')
       .isIn(validContextTypes)
@@ -134,6 +146,17 @@ router.put(
   asyncHandler(async (req, res) => {
     const { contextType, contextId } = req.params;
     const { preferences } = req.body;
+
+    // If not authenticated, return success without saving
+    if (!req.user) {
+      logger.info(`Anonymous user attempted to save preferences for ${contextType}/${contextId || 'null'} (skipped)`);
+      return res.json({
+        success: true,
+        data: null,
+        message: 'Preferences not saved (not authenticated)'
+      });
+    }
+
     const userId = req.user.id;
 
     logger.info(`Saving preferences for user ${userId}, context: ${contextType}/${contextId || 'null'}`);
@@ -157,11 +180,11 @@ router.put(
  * DELETE /api/v1/preferences/:contextType/:contextId?
  * Delete user preferences for a specific context (reset to defaults)
  *
- * @access Private (authenticated users only)
+ * @access Public (optional authentication)
  */
 router.delete(
   '/:contextType/:contextId?',
-  authenticate,
+  optionalAuth,
   [
     param('contextType')
       .isIn(validContextTypes)
@@ -174,6 +197,17 @@ router.delete(
   ],
   asyncHandler(async (req, res) => {
     const { contextType, contextId } = req.params;
+
+    // If not authenticated, return success without deleting
+    if (!req.user) {
+      logger.info(`Anonymous user attempted to delete preferences for ${contextType}/${contextId || 'null'} (skipped)`);
+      return res.json({
+        success: true,
+        data: { deleted: false },
+        message: 'No preferences to delete (not authenticated)'
+      });
+    }
+
     const userId = req.user.id;
 
     logger.info(`Deleting preferences for user ${userId}, context: ${contextType}/${contextId || 'null'}`);

@@ -1,0 +1,13 @@
+{
+  "formId": "c841901e-c712-4fef-8665-12775fdda039",
+  "tableName": "test_12775fdda039",
+  "createdAt": "2025-10-25T04:17:57.230Z",
+  "columnMappings": [
+    {
+      "fieldId": "868809f5-e67f-4c8a-b6b5-60bd1cd3c875",
+      "columnName": "test",
+      "fieldTitle": "Test",
+      "fieldType": "short_answer"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "formId": "e2b29528-4871-4f6b-8d83-ab066a0f7688",
+  "tableName": "technical_service_team_appointment_form_ab066a0f7688",
+  "createdAt": "2025-10-25T04:17:57.148Z",
+  "columnMappings": [
+    {
+      "fieldId": "a2eac2ef-8267-4a5a-989d-8575d9c9be5c",
+      "columnName": "short_answer_1",
+      "fieldTitle": "ชื่อโครงการ",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "60b8460e-18fc-4ea9-83e1-5e8ee5d6540a",
+      "columnName": "province_2",
+      "fieldTitle": "จังหวัด",
+      "fieldType": "province"
+    },
+    {
+      "fieldId": "673d83c4-428f-44a3-8313-7077005106d7",
+      "columnName": "short_answer_3",
+      "fieldTitle": "ชื่อลูกค้า",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "3cb42a7b-55dd-475b-a74a-ceb629ec7141",
+      "columnName": "phone_4",
+      "fieldTitle": "หมายเลขโทรศัพท์ลูกค้า",
+      "fieldType": "phone"
+    },
+    {
+      "fieldId": "dafde267-c272-49e1-bce3-ad95c48d7f41",
+      "columnName": "short_answer_5",
+      "fieldTitle": "ผู้บันทึก",
+      "fieldType": "short_answer"
+    },
+    {
+      "fieldId": "5ed63e2b-a45c-4445-b2b4-270dbec1ac9f",
+      "columnName": "date_6",
+      "fieldTitle": "วันที่บันทึก",
+      "fieldType": "date"
+    },
+    {
+      "fieldId": "56f6bc56-129c-4b99-8fac-b296da6ad767",
+      "columnName": "lat_long_7",
+      "fieldTitle": "พิกัดโครงการ",
+      "fieldType": "lat_long"
+    },
+    {
+      "fieldId": "c6d893a1-ba66-4cb3-84e0-ae60821ebe05",
+      "columnName": "image_upload_8",
+      "fieldTitle": "ภาพโครงการ",
+      "fieldType": "image_upload"
+    }
+  ]
+}

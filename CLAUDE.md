@@ -2,7 +2,7 @@
 
 **Enterprise Form Builder & Data Collection System**
 
-## Version: 0.8.6-dev (2025-10-26)
+## Version: 0.9.0-dev (2025-10-26)
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection
@@ -13,11 +13,13 @@
 ## 🎯 Current Status (2025-10-26)
 
 ### Servers Running
-- ✅ **Backend**: Port 5000 (Q-Collector API v0.8.6-dev)
-- ✅ **Frontend**: Port 3000 (Q-Collector v0.8.6-dev)
+- ✅ **Backend**: Port 5000 (Q-Collector API v0.9.0-dev)
+- ✅ **Frontend**: Port 3000 (Q-Collector v0.9.0-dev)
 - ✅ **Docker**: PostgreSQL 16 + Redis 7 + MinIO
 
 ### Recent Completions (Latest First)
+- ✅ **Dynamic Table ID Column Fix** - Added missing 'id' column to 4 legacy dynamic tables created before submissionId fix (2025-10-26)
+- ✅ **Public Form Link System** - Anonymous form submissions via shareable URLs with slug-based routing, token validation, IP rate limiting, PDPA consent support, and QR code generation (2025-10-26)
 - ✅ **Edit Form PDPA Skip System** - Skip PDPA/Consent screens in edit mode + Admin edit workflow (2025-10-26)
 - ✅ **DSR Timeline UI Enhancement** - Visual timeline with gradient line + color-coded events (2025-10-26)
 - ✅ **DSR Status Validation Fix** - Allow pending → completed transition (2025-10-26)
@@ -52,6 +54,17 @@
 - **Sub-Forms Support** with nested relationships
 - **Conditional Formatting**: Formula-based field styling with 22 preset colors
 
+### ✅ Public Forms (v0.9.0)
+- **Shareable URLs**: Slug-based public form links (`/public/forms/customer-feedback`)
+- **Anonymous Submissions**: No authentication required, NULL user ID support
+- **Security**: 32-char hex tokens, IP-based rate limiting (5/hour), XSS protection
+- **PDPA Support**: Full consent flow with digital signatures for anonymous users
+- **Banner Customization**: Upload custom banners for public forms (2MB max, JPG/PNG)
+- **QR Code Generation**: Auto-generated QR codes with download capability
+- **Expiration & Limits**: Optional expiration dates and max submission caps
+- **Real-time Stats**: Submission counter with remaining slots display
+- **Admin Controls**: Enable/disable toggle, token regeneration, settings management
+
 ### ✅ PDPA Compliance
 - **Privacy Notice**: Custom text or external link with acknowledgment checkbox
 - **Consent Management**: Multi-item consent system with purpose and retention period
@@ -85,7 +98,294 @@
 
 ---
 
-## Latest Update - Edit Form PDPA Skip System (v0.8.6-dev)
+## Latest Update - Dynamic Table ID Column Fix (v0.9.0-dev)
+
+### Fixing Legacy Dynamic Tables Missing 'id' Column
+**Date**: 2025-10-26 (Session Recovery)
+**Impact**: Fixed "Failed to insert into dynamic table" errors for 4 legacy tables created before the submissionId fix was implemented
+
+### Problem Identified
+
+**Error Symptom:**
+```
+Failed to insert into dynamic table pdpa_demo_1761351036248: column "id" does not exist
+```
+
+**Root Cause:**
+- Dynamic tables created before the CRITICAL FIX at DynamicTableService.js:272 were missing the 'id' column
+- The insertSubmission method (line 285) expects an 'id' column to store submissionId
+- 4 tables were affected: form_0f4fca28, form_62c4c445, pdpa_demo_1761351036248, pdpa_demo_form
+
+**Schema Mismatch:**
+```javascript
+// Expected Schema (current code)
+CREATE TABLE form_xxx (
+  id UUID PRIMARY KEY,           // ✅ Required by insertSubmission
+  form_id UUID NOT NULL,
+  username VARCHAR(100),
+  submitted_at TIMESTAMP
+);
+
+// Old Schema (legacy tables)
+CREATE TABLE pdpa_demo_xxx (
+  submission_id UUID PRIMARY KEY,  // ❌ Old column name
+  submitted_at TIMESTAMP,
+  // ... field columns
+);
+```
+
+### Solution Implemented
+
+**Script Created:** `backend/scripts/fix-dynamic-table-id-column.js` (218 lines)
+
+**Features:**
+1. **Auto-Detection**: Scans all tables with naming pattern `form_*` or `*demo*`
+2. **Column Addition**: Adds `id UUID DEFAULT gen_random_uuid()` if missing
+3. **Primary Key Update**: Replaces old primary key with new `id` column
+4. **Transaction Safety**: Uses BEGIN/COMMIT/ROLLBACK for data integrity
+5. **Idempotent**: Skips tables that already have 'id' column
+
+**Execution Results:**
+```
+🔍 Finding all dynamic tables...
+Found 5 dynamic tables:
+  - form_0f4fca28
+  - form_62c4c445
+  - forms (system table - skipped)
+  - pdpa_demo_1761351036248
+  - pdpa_demo_form
+
+✅ Fixed: 4 tables
+   - form_0f4fca28
+   - form_62c4c445
+   - pdpa_demo_1761351036248
+   - pdpa_demo_form
+
+✓  Already OK: 1 table (forms)
+```
+
+**SQL Operations Performed:**
+```sql
+-- Add 'id' column
+ALTER TABLE pdpa_demo_1761351036248
+ADD COLUMN id UUID DEFAULT gen_random_uuid();
+
+-- Drop old primary key
+ALTER TABLE pdpa_demo_1761351036248
+DROP CONSTRAINT pdpa_demo_1761351036248_pkey;
+
+-- Add new primary key
+ALTER TABLE pdpa_demo_1761351036248
+ADD PRIMARY KEY (id);
+```
+
+### Files Created/Modified
+
+**NEW FILE:**
+- `backend/scripts/fix-dynamic-table-id-column.js` (218 lines) - Fix script with auto-detection
+
+**UPDATED:**
+- `CLAUDE.md` - Documentation of fix
+
+### Testing Status
+- ✅ Script executed successfully on 4 tables
+- ✅ All tables now have 'id' column with UUID type
+- ✅ Primary keys updated correctly
+- ✅ Backend server restarted and running normally
+- ⏩ Submission creation testing pending
+
+### Impact
+- **Immediate**: Fixes "column id does not exist" errors
+- **Data Integrity**: All existing data preserved during migration
+- **Future-Proof**: Script can be run on any new legacy tables discovered
+- **Zero Downtime**: Tables remain accessible during fix (transactions ensure atomicity)
+
+### Usage
+```bash
+# Run the fix script
+cd backend
+node scripts/fix-dynamic-table-id-column.js
+
+# Verify table schema
+node -e "require('dotenv').config(); ..."
+```
+
+---
+
+## Previous Update - Public Form Link System (v0.9.0-dev)
+
+### Anonymous Form Submissions via Shareable URLs
+**Date**: 2025-10-26
+**Impact**: Forms can now be shared publicly with anonymous users via unique URLs - complete with security controls, PDPA compliance, and QR code generation
+
+### Features Implemented
+
+**1. Admin UI - Public Link Settings** (`PublicLinkSettings.jsx` component)
+- **Enable/Disable Toggle**: Switch component for quick activation
+- **Slug Management**: Auto-generated from form title (Thai character removal, uniqueness guarantee)
+- **Security Token**: 32-character hex token with regeneration capability
+- **Banner Upload**: Custom banner images (2MB max, JPG/PNG) with preview
+- **Expiration Control**: Optional expiration date picker (Thai locale)
+- **Submission Limits**: Max submissions cap with counter display
+- **QR Code Generator**: Auto-generated QR codes with download as PNG
+- **Public URL Display**: Copyable URL with visual feedback
+- **Statistics**: Real-time submission count and remaining slots
+
+**2. Public Form View** (`PublicFormView.jsx` component)
+- **Anonymous Access**: No authentication required, slug-based URLs (`/public/forms/:slug`)
+- **Banner Display**: Full-width responsive banner at top of form
+- **Privacy Notice Flow**: Required acknowledgment before form fields
+- **PDPA Consent Support**: Checkboxes, digital signature, full name capture
+- **12 Field Types Supported**: All common field types (excluding file uploads for security)
+- **Field Validation**: Real-time validation with Thai error messages
+- **Loading States**: Spinner during form load and submission
+- **Success Flow**: Redirect to thank-you page with submission ID
+- **Error Handling**: 404, 410, 429 error pages with Thai messages
+
+**3. Backend Infrastructure**
+- **Slug Generation** (`slug.util.js`):
+  - Thai character removal (`/[ก-๙]/g`)
+  - URL-safe format (lowercase, alphanumeric + hyphens)
+  - Unique guarantee with counter suffix system
+  - Validation: 3-50 chars, no leading/trailing hyphens
+
+- **FormService Methods**:
+  - `enablePublicLink()` - Enable with auto-slug + token generation
+  - `disablePublicLink()` - Disable with timestamp
+  - `regeneratePublicToken()` - New token for compromised links
+  - `getFormBySlug()` - Fetch form with expiration/limit checks
+
+- **SubmissionService Updates**:
+  - `isPublic` parameter for anonymous submissions
+  - NULL `userId` support in database
+  - Token validation logic
+  - Submission count increment
+  - Skip role checks for public mode
+
+- **Public API Routes** (`public.routes.js`):
+  - `GET /api/v1/public/forms/:slug` - Load form (optionalAuth)
+  - `POST /api/v1/public/forms/:slug/submit` - Submit (with rate limiting)
+  - `GET /api/v1/public/forms/:slug/status` - Check availability
+
+- **Rate Limiting** (`publicFormRateLimiter`):
+  - 5 submissions per hour per IP address
+  - Bypass for authenticated users
+  - Redis-backed with in-memory fallback
+  - IP extraction from metadata (proxy support)
+
+**4. Security Features**
+- **Token Validation**: 32-char hex tokens required for all submissions
+- **IP Tracking**: Metadata extraction with user-agent logging
+- **Rate Limiting**: Prevents spam (5/hour for anonymous, 20/15min for authenticated)
+- **XSS Protection**: Input sanitization with DOMPurify
+- **Expiration Checks**: 410 error for expired links
+- **Limit Checks**: 429 error when max submissions reached
+- **PDPA Compliance**: Full consent recording for anonymous users
+
+**5. Frontend Routes** (`AppRouter.jsx`)
+- `/public/forms/:slug` - PublicFormView
+- `/public/thank-you/:submissionId` - Success page
+- `/public/404` - Form not found
+- `/public/expired` - Link expired
+- `/public/limit-reached` - Submission limit reached
+- `/public/error` - Generic error
+
+### Files Created/Modified
+
+**NEW FILES (13):**
+- `backend/utils/slug.util.js` (175 lines) - Slug generation
+- `backend/api/routes/public.routes.js` (280 lines) - Public API
+- `src/components/PublicFormView.jsx` (1,045 lines) - Public form UI
+- `src/components/PublicThankYouPage.jsx` (94 lines) - Success page
+- `src/components/PublicErrorPages.jsx` (156 lines) - Error pages
+- `src/components/form-builder/PublicLinkSettings.jsx` (647 lines) - Admin UI
+- `src/components/ui/card.jsx` - ShadCN Card
+- `src/components/ui/label.jsx` - ShadCN Label
+- `src/components/ui/input.jsx` - ShadCN Input
+- `src/components/ui/alert-dialog.jsx` - ShadCN AlertDialog
+- 4 documentation files (2,700+ lines total)
+
+**MODIFIED FILES (8):**
+- `backend/services/FormService.js` (+216 lines) - Public link methods
+- `backend/services/SubmissionService.js` (~150 lines) - Anonymous support
+- `backend/middleware/rateLimit.middleware.js` (+29 lines) - Public rate limiter
+- `backend/api/routes/index.js` (+4 lines) - Public route registration
+- `backend/api/routes/form.routes.js` (+162 lines) - Admin API routes
+- `src/components/EnhancedFormBuilder.jsx` (+60 lines) - Public Link tab
+- `src/components/AppRouter.jsx` (+30 lines) - Public routes
+- `src/services/ApiClient.js` (+70 lines) - API methods
+
+### Usage Guide
+
+**For Admins:**
+1. Open form in Form Builder
+2. Navigate to "ลิงก์สาธารณะ" (Public Link) tab
+3. Toggle "เปิดใช้งาน" (Enable) switch
+4. Customize slug, banner, expiration, limits
+5. Copy public URL or download QR code
+6. Share with users
+
+**For Users:**
+1. Visit public URL: `http://localhost:3000/public/forms/your-slug`
+2. View banner and form description
+3. Acknowledge privacy notice (if PDPA enabled)
+4. Check consent boxes and sign (if required)
+5. Fill out form fields
+6. Submit (validates fields + token)
+7. Receive success confirmation with submission ID
+
+**Example URLs:**
+- Admin: `http://localhost:3000/forms/edit/{formId}` (Public Link tab)
+- Public: `http://localhost:3000/public/forms/customer-feedback`
+- Thank You: `http://localhost:3000/public/thank-you/{submissionId}`
+
+### Technical Details
+
+**Database Schema:**
+```javascript
+form.settings.publicLink = {
+  enabled: true,
+  slug: "customer-feedback",
+  token: "abc123...", // 32 chars
+  expiresAt: "2025-12-31T23:59:59Z",
+  maxSubmissions: 100,
+  submissionCount: 42,
+  banner: { url: "...", filename: "...", size: 1024000 },
+  ipRateLimit: { maxPerHour: 5, maxPerDay: 20 },
+  createdAt: "2025-10-26T08:00:00Z"
+}
+```
+
+**Submission Metadata:**
+```javascript
+{
+  ipAddress: "192.168.1.100",
+  userAgent: "Mozilla/5.0...",
+  publicToken: "abc123..."
+}
+```
+
+**Field Types Supported (12/17):**
+✅ short_answer, paragraph, email, phone, number, url, date, time, datetime, multiple_choice, rating, slider
+❌ file_upload, image_upload, lat_long, province, factory (excluded for security/permission reasons)
+
+### Testing Status
+- ✅ Backend API endpoints tested (public.routes.js)
+- ✅ Frontend compilation successful (no errors)
+- ✅ Token validation working correctly
+- ✅ Rate limiting active (5/hour per IP)
+- ✅ PDPA consent flow integrated
+- ⏩ Manual E2E testing pending
+
+### Known Limitations
+- File upload fields not supported in public forms (security restriction)
+- Province/factory fields not supported (require authentication for dropdown data)
+- Lat/long fields not supported (geolocation permission issues on anonymous devices)
+- QR code generation client-side only (no backend storage)
+
+---
+
+## Previous Update - Edit Form PDPA Skip System (v0.8.6-dev)
 
 ### Seamless Admin Edit Experience with PDPA Consent Separation
 **Date**: 2025-10-26

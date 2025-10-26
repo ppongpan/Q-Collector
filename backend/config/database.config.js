@@ -28,7 +28,7 @@ const config = {
   },
 
   // Logging
-  logging: process.env.DEBUG_SQL === 'true' ? (msg) => logger.debug(msg) : false,
+  logging: (msg) => logger.info('[SQL] ' + msg), // Temporary: Always log SQL
 
   // Timezone
   timezone: '+00:00', // UTC

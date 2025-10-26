@@ -1230,10 +1230,10 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                     <>
                       {/* Backdrop overlay */}
                       <div
-                        className="fixed inset-0 z-[100]"
+                        className="fixed inset-0 z-[50]"
                         onClick={() => setShowMonthDropdown(false)}
                       />
-                      <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border-2 border-primary rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[101] max-h-[500px] overflow-y-auto min-w-[110px]">
+                      <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border-2 border-primary rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[51] max-h-[500px] overflow-y-auto min-w-[110px]">
                       {/* All months option */}
                       <button
                         onClick={() => {
@@ -1287,10 +1287,10 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
                     <>
                       {/* Backdrop overlay */}
                       <div
-                        className="fixed inset-0 z-[100]"
+                        className="fixed inset-0 z-[50]"
                         onClick={() => setShowYearDropdown(false)}
                       />
-                      <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border-2 border-primary rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[101] max-h-64 overflow-y-auto min-w-[100px]">
+                      <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border-2 border-primary rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[51] max-h-64 overflow-y-auto min-w-[100px]">
                       {/* All years option */}
                       <button
                         onClick={() => {
@@ -1385,7 +1385,7 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
         {/* Sort Modal - OUTSIDE of GlassCard container */}
         {showSortModal && (
           <div
-            className="fixed inset-0 z-[9999] flex items-start justify-center pt-32 bg-black/20"
+            className="fixed inset-0 z-[9998] flex items-start justify-center pt-32 bg-black/20"
             onClick={() => {
               console.log('🔍 Backdrop clicked');
               setShowSortModal(false);
@@ -1654,11 +1654,11 @@ export default function FormSubmissionList({ formId, onNewSubmission, onViewSubm
           <>
             {/* Backdrop overlay */}
             <div
-              className="fixed inset-0 z-[200]"
+              className="fixed inset-0 z-[50]"
               onClick={() => setShowDateFieldModal(false)}
             />
             {/* Modal - positioned near top, aligned right */}
-            <div className="fixed top-[120px] right-8 lg:right-12 bg-white dark:bg-gray-800 border-2 border-primary rounded-xl shadow-[0_10px_60px_rgba(0,0,0,0.9)] z-[201] w-[90vw] max-w-md max-h-[calc(100vh-140px)] overflow-y-auto">
+            <div className="fixed top-[120px] right-8 lg:right-12 bg-white dark:bg-gray-800 border-2 border-primary rounded-xl shadow-[0_10px_60px_rgba(0,0,0,0.9)] z-[51] w-[90vw] max-w-md max-h-[calc(100vh-140px)] overflow-y-auto">
               <div className="p-4">
                 {/* Header */}
                 <div className="mb-4 pb-3 border-b border-border">

@@ -468,6 +468,7 @@ class FileService {
 
   /**
    * Validate file before upload
+   * Enhanced with extension validation and filename sanitization (v0.8.2 Security Update)
    * @param {Object} file - File object
    * @param {Object} limits - Upload limits
    * @returns {Object} Validation result
@@ -475,6 +476,7 @@ class FileService {
   static validateFile(file, limits = {}) {
     const maxSize = limits.maxSize || 10 * 1024 * 1024; // 10MB default
     const allowedTypes = limits.allowedTypes || [];
+    const allowedExtensions = limits.allowedExtensions || [];
 
     // Check file size
     if (file.size > maxSize) {
@@ -492,7 +494,77 @@ class FileService {
       };
     }
 
-    return { valid: true };
+    // Enhanced: Validate file extension (v0.8.2)
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    if (allowedExtensions.length > 0 && !allowedExtensions.includes(fileExtension)) {
+      return {
+        valid: false,
+        error: `File extension ${fileExtension} is not allowed. Allowed extensions: ${allowedExtensions.join(', ')}`,
+      };
+    }
+
+    // Enhanced: Validate extension matches MIME type (v0.8.2)
+    const mimeExtensionMap = {
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/gif': ['.gif'],
+      'image/webp': ['.webp'],
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'text/plain': ['.txt'],
+      'text/csv': ['.csv'],
+    };
+
+    const expectedExtensions = mimeExtensionMap[file.mimetype];
+    if (expectedExtensions && !expectedExtensions.includes(fileExtension)) {
+      return {
+        valid: false,
+        error: `File extension ${fileExtension} does not match MIME type ${file.mimetype}`,
+      };
+    }
+
+    // Enhanced: Sanitize filename (v0.8.2)
+    const sanitizedName = this.sanitizeFilename(file.originalname);
+    if (sanitizedName !== file.originalname) {
+      logger.warn(`Filename sanitized: "${file.originalname}" -> "${sanitizedName}"`);
+    }
+
+    return { valid: true, sanitizedName };
+  }
+
+  /**
+   * Sanitize filename to prevent directory traversal and special character attacks
+   * @param {string} filename - Original filename
+   * @returns {string} Sanitized filename
+   */
+  static sanitizeFilename(filename) {
+    // Remove path separators and null bytes
+    let sanitized = filename.replace(/[\/\\]/g, '_').replace(/\0/g, '');
+
+    // Remove potentially dangerous characters
+    sanitized = sanitized.replace(/[<>:"|?*]/g, '_');
+
+    // Remove leading/trailing dots and spaces
+    sanitized = sanitized.trim().replace(/^\.+/, '').replace(/\.+$/, '');
+
+    // Limit filename length (excluding extension)
+    const ext = path.extname(sanitized);
+    const nameWithoutExt = path.basename(sanitized, ext);
+    const maxNameLength = 100;
+
+    if (nameWithoutExt.length > maxNameLength) {
+      sanitized = nameWithoutExt.substring(0, maxNameLength) + ext;
+    }
+
+    // If filename becomes empty after sanitization, use a default name
+    if (!sanitized || sanitized === ext) {
+      sanitized = `file_${Date.now()}${ext}`;
+    }
+
+    return sanitized;
   }
 }
 

@@ -363,6 +363,29 @@ module.exports = (sequelize, DataTypes) => {
       as: 'updatedNotificationRules',
       onDelete: 'SET NULL',
     });
+
+    // PDPA Compliance Associations
+    // User confirms PersonalDataFields
+    User.hasMany(models.PersonalDataField, {
+      foreignKey: 'confirmed_by',
+      as: 'confirmedPersonalDataFields',
+      onDelete: 'SET NULL',
+    });
+
+    // ❌ REMOVED: Consent withdrawal tracking not implemented in v0.8.2
+    // The withdrawn_by column doesn't exist in user_consents table
+    // User.hasMany(models.UserConsent, {
+    //   foreignKey: 'withdrawn_by',
+    //   as: 'processedConsentWithdrawals',
+    //   onDelete: 'SET NULL',
+    // });
+
+    // User processes DSRRequests
+    User.hasMany(models.DSRRequest, {
+      foreignKey: 'processed_by',
+      as: 'processedDSRRequests',
+      onDelete: 'SET NULL',
+    });
   };
 
   /**

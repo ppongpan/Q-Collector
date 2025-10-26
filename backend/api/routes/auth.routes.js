@@ -16,9 +16,9 @@ const twoFactorService = require('../../services/TwoFactorService');
 const trustedDeviceService = require('../../services/TrustedDeviceService');
 const {
   authenticate,
-  authRateLimit,
   attachMetadata,
 } = require('../../middleware/auth.middleware');
+const { authRateLimiter, strictAuthRateLimiter } = require('../../middleware/rateLimit.middleware');
 const { asyncHandler, ApiError } = require('../../middleware/error.middleware');
 const logger = require('../../utils/logger.util');
 const cacheService = require('../../services/CacheService');
@@ -158,7 +158,7 @@ function validate(req, res, next) {
 router.post(
   '/register',
   attachMetadata,
-  authRateLimit(5, 60 * 60 * 1000), // 5 attempts per hour
+  strictAuthRateLimiter, // 3 attempts per hour (strict for registration)
   [
     body('username')
       .trim()
@@ -329,7 +329,7 @@ router.post(
 router.post(
   '/login',
   attachMetadata,
-  authRateLimit(50, 15 * 60 * 1000), // 50 attempts per 15 minutes (relaxed for development)
+  authRateLimiter, // 5 attempts per 15 minutes
   [
     body('identifier')
       .trim()
@@ -499,7 +499,7 @@ router.post(
 router.post(
   '/login/2fa',
   attachMetadata,
-  authRateLimit(50, 5 * 60 * 1000), // 50 attempts per 5 minutes - increased to prevent false positives from auto-submit
+  authRateLimiter, // 5 attempts per 15 minutes
   [
     body('tempToken')
       .notEmpty()
@@ -836,7 +836,7 @@ router.post(
 router.post(
   '/2fa/enable',
   authenticate,
-  authRateLimit,
+  authRateLimiter,
   [
     body('token').notEmpty().withMessage('กรุณาใส่รหัสยืนยัน'),
   ],
@@ -858,7 +858,7 @@ router.post(
  */
 router.post(
   '/2fa/init-mandatory-setup',
-  // authRateLimit, // Temporarily disabled for debugging
+  authRateLimiter, // Re-enabled with Redis-based rate limiting
   [
     body('tempToken').notEmpty().withMessage('Temporary token is required'),
   ],
@@ -912,14 +912,18 @@ router.post(
  */
 router.post(
   '/2fa/complete-mandatory-setup',
-  // authRateLimit, // Temporarily disabled for debugging
+  authRateLimiter, // Re-enabled with Redis-based rate limiting
   [
     body('tempToken').notEmpty().withMessage('Temporary token is required'),
     body('verificationCode').notEmpty().withMessage('Verification code is required'),
+    // ✅ Optional: Trust device parameters (auto-enabled on mandatory setup)
+    body('trustDevice').optional().isBoolean(),
+    body('deviceFingerprint').optional().isString(),
+    body('deviceInfo').optional().isObject(),
   ],
   validate,
   asyncHandler(async (req, res) => {
-    const { tempToken, verificationCode } = req.body;
+    const { tempToken, verificationCode, trustDevice, deviceFingerprint, deviceInfo } = req.body;
 
     // DEBUG: Log request details
     logger.info('[COMPLETE-MANDATORY-SETUP] Request received:', {
@@ -1024,6 +1028,32 @@ router.post(
     // Generate full access tokens
     const tokens = await AuthService.generateTokens(user, req.metadata);
 
+    // ✅ AUTO-TRUST DEVICE: Create trusted device cookie if device info provided
+    if (trustDevice && deviceFingerprint && deviceInfo) {
+      try {
+        const trustedDevice = await trustedDeviceService.createTrustedDevice({
+          userId: user.id,
+          fingerprint: deviceFingerprint,
+          deviceInfo,
+          ipAddress: req.metadata?.ipAddress || req.ip,
+          userAgent: req.metadata?.userAgent || req.get('user-agent')
+        });
+
+        // Set HTTP-only cookie (24 hours)
+        res.cookie('trusted_device_token', trustedDevice.token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 24 * 60 * 60 * 1000
+        });
+
+        logger.info(`Trusted device created for user ${user.username} during mandatory 2FA setup`);
+      } catch (error) {
+        logger.error('Failed to create trusted device:', error);
+        // Don't fail the request if trusted device creation fails
+      }
+    }
+
     // Create audit log
     const { AuditLog } = require('../../models');
     await AuditLog.logAction({
@@ -1032,7 +1062,12 @@ router.post(
       entityType: 'user',
       ipAddress: req.metadata?.ipAddress,
       userAgent: req.metadata?.userAgent,
-      details: { action: '2fa_enabled', mandatory: true, method: 'mandatory_setup' }
+      details: {
+        action: '2fa_enabled',
+        mandatory: true,
+        method: 'mandatory_setup',
+        trustedDevice: trustDevice || false
+      }
     });
 
     logger.info(`Mandatory 2FA setup completed for user: ${user.username}`);
@@ -1055,7 +1090,7 @@ router.post(
 router.post(
   '/2fa/disable',
   authenticate,
-  authRateLimit,
+  authRateLimiter,
   [
     body('token').notEmpty().withMessage('กรุณาใส่รหัสยืนยัน'),
   ],
@@ -1078,7 +1113,7 @@ router.post(
 router.post(
   '/2fa/backup-codes',
   authenticate,
-  authRateLimit,
+  authRateLimiter,
   [
     body('token').notEmpty().withMessage('กรุณาใส่รหัสยืนยัน'),
   ],

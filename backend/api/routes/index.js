@@ -23,6 +23,10 @@ const migrationRoutes = require('./migration.routes');
 const sheetsRoutes = require('./sheets.routes');
 const notificationRoutes = require('./notification.routes');
 const userPreferenceRoutes = require('./userPreference.routes');
+const consentRoutes = require('./consent.routes');
+const personalDataRoutes = require('./personalData.routes');
+const dsrWorkflowRoutes = require('./dsrWorkflow.routes');
+const publicRoutes = require('./public.routes'); // v0.9.0: Public form links
 const { requireCompletedSetup } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
@@ -52,6 +56,10 @@ router.get('/docs', (req, res) => {
 router.use('/auth', authRoutes);
 router.use('/2fa', twoFactorRoutes);
 
+// ✅ v0.9.0: Public form routes - BEFORE authentication middleware
+// Anonymous access allowed with optionalAuth + IP-based rate limiting
+router.use('/public', publicRoutes);
+
 // Apply authentication to all protected routes
 // This middleware verifies JWT and sets req.user
 const { authenticate } = require('../../middleware/auth.middleware');
@@ -63,8 +71,8 @@ router.use(requireCompletedSetup);
 
 // Protected routes - require completed 2FA setup and authentication
 router.use('/forms', formRoutes);
-router.use('/forms', submissionRoutes); // Nested under forms
-router.use('/submissions', submissionRoutes); // Also available at root level
+router.use('/forms', submissionRoutes); // ✅ v0.8.5: No conflict - /check-title is literal, /:formId/submissions is UUID
+router.use('/submissions', submissionRoutes); // ✅ v0.8.5: Mount submissions for direct access to GET /submissions/:id
 router.use('/subforms', subformRoutes); // Sub-form submissions
 router.use('/files', fileRoutes);
 router.use('/users', userRoutes);
@@ -80,6 +88,9 @@ router.use('/migrations', migrationRoutes);
 router.use('/sheets', sheetsRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/preferences', userPreferenceRoutes);
+router.use('/consents', consentRoutes);
+router.use('/personal-data', personalDataRoutes);
+router.use('/dsr-workflow', dsrWorkflowRoutes); // v0.8.7-dev: DSR workflow management
 
 /**
  * 404 handler for API routes

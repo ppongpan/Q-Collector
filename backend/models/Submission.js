@@ -361,6 +361,14 @@ module.exports = (sequelize, DataTypes) => {
       as: 'notificationHistory',
       onDelete: 'CASCADE',
     });
+
+    // PDPA Compliance Associations
+    // Submission has many UserConsents
+    Submission.hasMany(models.UserConsent, {
+      foreignKey: 'submission_id',
+      as: 'userConsents',
+      onDelete: 'CASCADE',
+    });
   };
 
   /**

@@ -152,10 +152,11 @@ export function AuthProvider({ children }) {
       console.info('[AuthContext] Session expired event received - logging out');
       // Clear user state and tokens
       setUser(null);
-      // Clear tokens using localStorage directly (AuthService uses tokenManager.clearTokens())
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      // ✅ v0.8.2 FIX: Use correct localStorage keys (same as tokenManager.js)
+      localStorage.removeItem('q-collector-auth-token');
+      localStorage.removeItem('q-collector-refresh-token');
       localStorage.removeItem('user');
+      console.log('🗑️ Tokens cleared with correct keys');
       // Note: No need to navigate here - React Router will handle redirect via PrivateRoute
     };
 

@@ -354,63 +354,20 @@ class ApiClient {
 
   /**
    * Refresh authentication token
-   * ✅ CRITICAL FIX: Enhanced with proper error handling and logging
+   * ✅ UNIFIED FIX: Delegate to AuthService to avoid duplicate refresh logic
    */
   async refreshToken() {
-    const refreshToken = this.getRefreshToken();
-
-    console.log('🔄 [Token Refresh] Starting token refresh...', {
-      hasRefreshToken: !!refreshToken,
-      refreshTokenPreview: refreshToken ? `${refreshToken.substring(0, 20)}...` : 'NONE',
-      endpoint: `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.refresh}`
-    });
-
-    if (!refreshToken) {
-      console.error('❌ [Token Refresh] No refresh token available');
-      throw new Error('No refresh token available');
-    }
+    console.log('🔄 [ApiClient] Delegating token refresh to AuthService...');
 
     try {
-      // ✅ FIX: Use axios directly (NOT this.client) to avoid circular interceptor calls
-      // This is correct - we don't want the request interceptor to add expired token
-      const response = await axios.post(
-        `${API_CONFIG.baseURL}${API_CONFIG.endpoints.auth.refresh}`,
-        { refreshToken },
-        {
-          withCredentials: API_CONFIG.withCredentials,
-          timeout: 10000 // 10 second timeout for refresh
-        }
-      );
+      // Import AuthService dynamically to avoid circular dependency
+      const AuthService = (await import('./AuthService')).default;
 
-      console.log('✅ [Token Refresh] Response received:', {
-        status: response.status,
-        hasData: !!response.data,
-        hasTokens: !!response.data?.tokens,
-        hasAccessToken: !!response.data?.tokens?.accessToken,
-        hasRefreshToken: !!response.data?.tokens?.refreshToken,
-        dataKeys: Object.keys(response.data || {}),
-        tokensKeys: response.data?.tokens ? Object.keys(response.data.tokens) : []
-      });
+      // Use AuthService's refreshToken which handles everything properly
+      const newAccessToken = await AuthService.refreshToken();
 
-      // ✅ FIX v0.7.9-dev: Correct path to tokens (response.data.tokens, not response.data directly)
-      const tokens = response.data?.tokens;
-      if (!tokens || !tokens.accessToken) {
-        console.error('❌ [Token Refresh] No tokens in response:', {
-          responseData: response.data,
-          hasData: !!response.data,
-          hasTokens: !!response.data?.tokens
-        });
-        throw new Error('No access token returned from refresh endpoint');
-      }
-
-      // Update refresh token if provided
-      if (tokens.refreshToken) {
-        console.log('🔄 [Token Refresh] Updating refresh token in localStorage');
-        this.setRefreshToken(tokens.refreshToken);
-      }
-
-      console.log('✅ [Token Refresh] Success! New access token obtained');
-      return tokens.accessToken;
+      console.log('✅ [ApiClient] Token refresh delegated successfully');
+      return newAccessToken;
     } catch (error) {
       // ✅ FIX: Detailed error logging for debugging
       console.error('❌ [Token Refresh] Failed:', {
@@ -477,6 +434,37 @@ class ApiClient {
    * Transform axios error to user-friendly format
    */
   transformError(error) {
+    // Handle 429 Too Many Requests with retry information
+    if (error.response?.status === 429) {
+      const retryAfter = error.response?.data?.retryAfter;
+      let waitMessage = '';
+
+      if (retryAfter) {
+        // retryAfter is in seconds
+        const seconds = parseInt(retryAfter);
+
+        if (seconds >= 60) {
+          const minutes = Math.ceil(seconds / 60);
+          waitMessage = ` กรุณารอ ${minutes} นาที`;
+        } else {
+          waitMessage = ` กรุณารอ ${seconds} วินาที`;
+        }
+      }
+
+      return {
+        message: `คุณทำการร้องขอมากเกินไป${waitMessage}แล้วลองใหม่`,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        retryAfter: retryAfter,
+        isRateLimited: true,
+        isNetworkError: !error.response,
+        isTimeout: error.code === 'ECONNABORTED',
+        isCancelled: axios.isCancel(error),
+        originalError: error,
+      };
+    }
+
     return {
       message: parseApiError(error),
       status: error.response?.status,
@@ -779,6 +767,78 @@ class ApiClient {
    */
   async exportSubmissions(formId, format = 'csv') {
     return this.get(`/forms/${formId}/submissions/export?format=${format}`);
+  }
+
+  // ===================================
+  // Public Link Management Methods
+  // ===================================
+
+  /**
+   * Enable public link for form
+   * @param {string} formId - Form ID
+   * @param {Object} options - Configuration options
+   * @returns {Promise<Object>} Updated form with public link settings
+   */
+  async enablePublicLink(formId, options = {}) {
+    return this.post(`/forms/${formId}/public-link/enable`, options);
+  }
+
+  /**
+   * Disable public link for form
+   * @param {string} formId - Form ID
+   * @returns {Promise<Object>} Updated form
+   */
+  async disablePublicLink(formId) {
+    return this.post(`/forms/${formId}/public-link/disable`);
+  }
+
+  /**
+   * Regenerate public token
+   * @param {string} formId - Form ID
+   * @returns {Promise<Object>} Updated form with new token
+   */
+  async regeneratePublicToken(formId) {
+    return this.post(`/forms/${formId}/public-link/regenerate-token`);
+  }
+
+  /**
+   * Update public link settings
+   * @param {string} formId - Form ID
+   * @param {Object} settings - Public link settings
+   * @returns {Promise<Object>} Updated form
+   */
+  async updatePublicLink(formId, settings) {
+    return this.put(`/forms/${formId}/public-link`, settings);
+  }
+
+  /**
+   * Get public form by slug (anonymous access)
+   * @param {string} slug - URL slug
+   * @returns {Promise<Object>} Form data
+   */
+  async getPublicForm(slug) {
+    const response = await this.get(`/public/forms/${slug}`);
+    return response.form;
+  }
+
+  /**
+   * Submit public form (anonymous)
+   * @param {string} slug - URL slug
+   * @param {Object} data - Submission data
+   * @returns {Promise<Object>} Submission result
+   */
+  async submitPublicForm(slug, data) {
+    return this.post(`/public/forms/${slug}/submit`, data);
+  }
+
+  /**
+   * Get public form status
+   * @param {string} slug - URL slug
+   * @returns {Promise<Object>} Status info
+   */
+  async getPublicFormStatus(slug) {
+    const response = await this.get(`/public/forms/${slug}/status`);
+    return response.status;
   }
 }
 

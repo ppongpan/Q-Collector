@@ -59,6 +59,18 @@ export const buildQueryString = (params) => {
  * @returns {string} User-friendly error message
  */
 export const parseApiError = (error) => {
+  // ✅ FIX v0.8.2-dev: Check for transformed error message first (from ApiClient.transformError)
+  // This handles special cases like 429 with retry time information
+  if (error.message && typeof error.message === 'string') {
+    // If error already has a well-formatted message, use it
+    // (unless it's a generic network error message)
+    if (!error.message.includes('Network Error') &&
+        !error.message.includes('fetch') &&
+        !error.message.includes('ECONNABORTED')) {
+      return error.message;
+    }
+  }
+
   // ✅ FIX v0.8.0-dev: Handle both original axios errors and transformed ApiClient errors
   // ApiClient transforms errors to { message, status, data, originalError }
   // So we need to check for both error.response (axios) and error.originalError.response (transformed)
@@ -73,13 +85,6 @@ export const parseApiError = (error) => {
     }
     if (error.isNetworkError) {
       return 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
-    }
-    // If no response but we have error.message, it might be a custom error
-    if (error.message && typeof error.message === 'string') {
-      // Don't return network error message if we have a specific error message
-      if (!error.message.includes('Network Error') && !error.message.includes('fetch')) {
-        return error.message;
-      }
     }
     return 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
   }

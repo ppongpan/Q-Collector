@@ -129,9 +129,17 @@ const TwoFactorSetup = ({ onComplete, onCancel, apiClient, tempToken, username }
 
       if (isForcedSetup) {
         // Mandatory setup for requires_2fa_setup users
+        // ✅ AUTO-TRUST DEVICE: Get device info and auto-enable trusted device
+        const { getDeviceFingerprint, getDeviceInfo } = await import('../../utils/deviceFingerprint');
+        const deviceFingerprint = await getDeviceFingerprint();
+        const deviceInfo = await getDeviceInfo();
+
         response = await apiClient.post('/auth/2fa/complete-mandatory-setup', {
           tempToken,
-          verificationCode
+          verificationCode,
+          trustDevice: true,  // ✅ Always trust device on mandatory setup
+          deviceFingerprint,
+          deviceInfo
         });
         // Note: Don't save tokens here - let parent component handle it
       } else {

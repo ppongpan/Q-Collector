@@ -2,7 +2,8 @@
  * App Router - Main routing configuration
  *
  * Routes:
- * - Public: /login, /register
+ * - Public: /login, /register, /2fa-setup
+ * - Public Forms (v0.9.0): /public/forms/:slug, /public/thank-you/:submissionId, /public/404, /public/expired, /public/limit-reached
  * - Protected: /, /forms, /submissions, /settings, etc.
  */
 
@@ -15,6 +16,10 @@ import RegisterPage from './auth/RegisterPage';
 import TwoFactorSetupPage from './auth/TwoFactorSetupPage';
 import MainFormApp from './MainFormApp';
 import ScrollToTop from './ScrollToTop';
+// Public Form Routes (v0.9.0-dev)
+import PublicFormView from './PublicFormView';
+import PublicThankYouPage from './PublicThankYouPage';
+import { NotFoundPage, ExpiredPage, LimitReachedPage, GenericErrorPage } from './PublicErrorPages';
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -51,6 +56,32 @@ function AppRouter() {
         <Route
           path="/2fa-setup"
           element={<TwoFactorSetupPage />}
+        />
+
+        {/* Public Form Routes - v0.9.0-dev */}
+        <Route
+          path="/public/forms/:slug"
+          element={<PublicFormView />}
+        />
+        <Route
+          path="/public/thank-you/:submissionId"
+          element={<PublicThankYouPage />}
+        />
+        <Route
+          path="/public/404"
+          element={<NotFoundPage />}
+        />
+        <Route
+          path="/public/expired"
+          element={<ExpiredPage />}
+        />
+        <Route
+          path="/public/limit-reached"
+          element={<LimitReachedPage />}
+        />
+        <Route
+          path="/public/error"
+          element={<GenericErrorPage />}
         />
 
         {/* Protected Routes */}

@@ -33,6 +33,9 @@ const UserConsent = require('./UserConsent');
 const PersonalDataField = require('./PersonalDataField');
 const UnifiedUserProfile = require('./UnifiedUserProfile');
 const DSRRequest = require('./DSRRequest');
+const ConsentHistory = require('./ConsentHistory');
+const DSRAction = require('./DSRAction');
+const PDPAAuditLog = require('./PDPAAuditLog');
 
 // Initialize models with sequelize instance
 const models = {
@@ -62,6 +65,9 @@ const models = {
   PersonalDataField: PersonalDataField(sequelize, Sequelize.DataTypes),
   UnifiedUserProfile: UnifiedUserProfile(sequelize, Sequelize.DataTypes),
   DSRRequest: DSRRequest(sequelize, Sequelize.DataTypes),
+  ConsentHistory: ConsentHistory(sequelize, Sequelize.DataTypes),
+  DSRAction: DSRAction(sequelize, Sequelize.DataTypes),
+  PDPAAuditLog: PDPAAuditLog(sequelize, Sequelize.DataTypes),
 };
 
 // Set up associations between models

@@ -18,15 +18,19 @@ class SubmissionService {
   /**
    * Create new submission
    * @param {string} formId - Form ID (can be Form.id or SubForm.id)
-   * @param {string} userId - User ID submitting the form
+   * @param {string} userId - User ID submitting the form (NULL for public submissions)
    * @param {Object} data - Submission data
-   * @param {Object} metadata - Request metadata (ip, userAgent)
+   * @param {Object} metadata - Request metadata (ip, userAgent, publicToken)
+   * @param {Object} options - Additional options (isPublic)
    * @returns {Promise<Object>} Created submission
    */
-  static async createSubmission(formId, userId, data, metadata = {}) {
+  static async createSubmission(formId, userId, data, metadata = {}, options = {}) {
     const transaction = await sequelize.transaction();
 
     try {
+      // ✅ NEW v0.8.6: Extract isPublic flag from options
+      const { isPublic = false } = options;
+
       // ✅ CRITICAL FIX: Extract subFormId, skipValidation, visibleFieldIds, and PDPA consent data from data
       const {
         fieldData,
@@ -83,12 +87,47 @@ class SubmissionService {
         throw new ApiError(403, 'Form is not active', 'FORM_INACTIVE');
       }
 
-      // Check if user has access based on role and get username
-      const user = await User.findByPk(userId);
-      if (!form.canAccessByRole(user.role) && form.created_by !== userId) {
-        throw new ApiError(403, 'Access denied to this form', 'FORBIDDEN');
+      // ✅ NEW v0.8.6: Public submission handling
+      let username = null;
+
+      if (isPublic) {
+        // === PUBLIC ANONYMOUS SUBMISSION ===
+        logger.info('📋 Processing PUBLIC anonymous submission');
+
+        // Validate public token
+        if (!metadata.publicToken) {
+          throw new ApiError(401, 'Public token is required for anonymous submissions', 'MISSING_PUBLIC_TOKEN');
+        }
+
+        // Check if form has public link enabled and token matches
+        if (!form.settings?.publicLink?.enabled) {
+          throw new ApiError(403, 'Public submissions not enabled for this form', 'PUBLIC_SUBMISSIONS_DISABLED');
+        }
+
+        if (form.settings.publicLink.token !== metadata.publicToken) {
+          throw new ApiError(403, 'Invalid public token', 'INVALID_PUBLIC_TOKEN');
+        }
+
+        // userId is allowed to be NULL for public submissions
+        // username will be set to 'Anonymous' or similar
+        username = 'Anonymous';
+
+        logger.info('✅ Public token validated successfully');
+      } else {
+        // === AUTHENTICATED SUBMISSION ===
+        // Check if user has access based on role and get username
+        const user = await User.findByPk(userId);
+
+        if (!user) {
+          throw new ApiError(404, 'User not found', 'USER_NOT_FOUND');
+        }
+
+        if (!form.canAccessByRole(user.role) && form.created_by !== userId) {
+          throw new ApiError(403, 'Access denied to this form', 'FORBIDDEN');
+        }
+
+        username = user.username;
       }
-      const username = user.username;
 
       // ✅ FIX: Get fields for SubForm or Form
       // For sub-forms, query by sub_form_id; for forms, query by form_id
@@ -166,7 +205,7 @@ class SubmissionService {
         {
           form_id: form.id, // ✅ Always parent form.id (FK to forms table)
           sub_form_id: actualSubFormId, // ✅ Store sub_form_id for sub-form submissions (can be null for main forms)
-          submitted_by: userId,
+          submitted_by: userId, // ✅ Can be NULL for public anonymous submissions
           status,
           parent_id: finalParentId, // ✅ NULL for main forms, parentId for sub-forms
           ip_address: metadata.ipAddress,
@@ -178,6 +217,28 @@ class SubmissionService {
       );
 
       logger.info(`✅ Submission created successfully: ${submission.id}`);
+
+      // ✅ NEW v0.8.6: Increment public submission count if this is a public submission
+      if (isPublic) {
+        try {
+          // Increment submissionCount in form.settings.publicLink
+          const currentCount = form.settings?.publicLink?.submissionCount || 0;
+          const newSettings = {
+            ...form.settings,
+            publicLink: {
+              ...form.settings.publicLink,
+              submissionCount: currentCount + 1
+            }
+          };
+
+          await form.update({ settings: newSettings }, { transaction });
+
+          logger.info(`✅ Incremented public submission count: ${currentCount} → ${currentCount + 1}`);
+        } catch (countError) {
+          // Log error but don't fail the submission
+          logger.error('Failed to increment public submission count:', countError);
+        }
+      }
 
       // 🔍 DEBUG: Log fieldData received
       logger.info(`📝 Creating SubmissionData for ${Object.keys(fieldData).length} fields`);
@@ -385,18 +446,22 @@ class SubmissionService {
 
       await transaction.commit();
 
-      // Create audit log
-      await AuditLog.logAction({
-        userId,
-        action: 'create',
-        entityType: 'submission',
-        entityId: submission.id,
-        newValue: { formId, status },
-        ipAddress: metadata.ipAddress,
-        userAgent: metadata.userAgent,
-      });
+      // Create audit log (skip if public submission with NULL userId)
+      if (userId) {
+        await AuditLog.logAction({
+          userId,
+          action: 'create',
+          entityType: 'submission',
+          entityId: submission.id,
+          newValue: { formId, status, isPublic },
+          ipAddress: metadata.ipAddress,
+          userAgent: metadata.userAgent,
+        });
+      } else {
+        logger.info('⏭️  Skipping audit log for public anonymous submission (NULL userId)');
+      }
 
-      logger.info(`Submission created: ${submission.id} for form ${formId} by user ${userId}`);
+      logger.info(`Submission created: ${submission.id} for form ${formId} by ${isPublic ? 'anonymous user' : `user ${userId}`}`);
 
       // ✅ Q-Collector v0.8.0: Trigger notification rules (async, non-blocking)
       try {
@@ -433,7 +498,14 @@ class SubmissionService {
       }
 
       // Return submission with decrypted data
-      return await this.getSubmission(submission.id, userId);
+      // ✅ NEW v0.8.6: For public submissions, pass a special flag to skip permission check
+      if (isPublic && !userId) {
+        // For public anonymous submissions, we need to retrieve without userId
+        // We'll use a special internal flag to bypass permission checks
+        return await this.getSubmission(submission.id, null, { skipPermissionCheck: true });
+      } else {
+        return await this.getSubmission(submission.id, userId);
+      }
     } catch (error) {
       await transaction.rollback();
       logger.error('Submission creation failed:', error);
@@ -555,11 +627,14 @@ class SubmissionService {
   /**
    * Get submission with decrypted data
    * @param {string} submissionId - Submission ID
-   * @param {string} userId - User ID
+   * @param {string} userId - User ID (can be NULL for public submissions)
+   * @param {Object} options - Additional options (skipPermissionCheck)
    * @returns {Promise<Object>} Submission with decrypted data
    */
-  static async getSubmission(submissionId, userId) {
+  static async getSubmission(submissionId, userId, options = {}) {
     try {
+      const { skipPermissionCheck = false } = options;
+
       const submission = await Submission.findByPk(submissionId, {
         include: [
           {
@@ -581,6 +656,7 @@ class SubmissionService {
             model: User,
             as: 'submitter',
             attributes: ['id', 'username', 'email'],
+            required: false, // ✅ Allow NULL submitter for public anonymous submissions
           },
         ],
       });
@@ -606,16 +682,27 @@ class SubmissionService {
         formTitle = form.title;
       }
 
-      // Check access permission - Allow owner, super_admin, admin, or manager
-      const user = await User.findByPk(userId);
+      // ✅ NEW v0.8.6: Skip permission check for internal calls (e.g., after public submission creation)
+      if (!skipPermissionCheck) {
+        // Check access permission - Allow owner, super_admin, admin, or manager
+        if (!userId) {
+          throw new ApiError(401, 'User ID required for permission check', 'UNAUTHORIZED');
+        }
 
-      const isOwner = submission.submitted_by === userId;
-      const allowedRoles = ['super_admin', 'admin'];
-      const isPrivilegedUser = allowedRoles.includes(user.role);
-      const isManager = form && user.role === 'manager' && form.canAccessByRole(user.role);
+        const user = await User.findByPk(userId);
 
-      if (!isOwner && !isPrivilegedUser && !isManager) {
-        throw new ApiError(403, 'Access denied to this submission', 'FORBIDDEN');
+        if (!user) {
+          throw new ApiError(404, 'User not found', 'USER_NOT_FOUND');
+        }
+
+        const isOwner = submission.submitted_by === userId;
+        const allowedRoles = ['super_admin', 'admin'];
+        const isPrivilegedUser = allowedRoles.includes(user.role);
+        const isManager = form && user.role === 'manager' && form.canAccessByRole(user.role);
+
+        if (!isOwner && !isPrivilegedUser && !isManager) {
+          throw new ApiError(403, 'Access denied to this submission', 'FORBIDDEN');
+        }
       }
 
       // Decrypt submission data

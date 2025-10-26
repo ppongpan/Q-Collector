@@ -13,6 +13,7 @@ import { FileGallery, ImageThumbnail } from './ui/image-thumbnail';
 import { PhoneIcon } from './ui/phone-icon';
 import { LocationMap } from './ui/location-map';
 import { MaskedValue } from './ui/masked-value'; // ✅ v0.8.1: Data masking for sensitive fields
+import ConsentDisplay from './pdpa/ConsentDisplay'; // ✅ v0.8.2: PDPA consent display
 
 // Data services
 import fileServiceAPI from '../services/FileService.api.js';
@@ -24,6 +25,9 @@ import BlobUrlCache from '../utils/BlobUrlCache'; // ✅ v0.7.30: Progressive Lo
 
 // Auth context
 import { useAuth } from '../contexts/AuthContext';
+
+// Router
+import { useNavigate } from 'react-router-dom';
 
 // Hooks
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
@@ -390,6 +394,7 @@ const SubmissionDetailComponent = function SubmissionDetail({
 }) {
   const { userRole } = useAuth();
   const toast = useEnhancedToast(); // ✅ FIX v0.7.10: Initialize toast for mobile downloads
+  const navigate = useNavigate(); // ✅ v0.8.3: For PDPA profile return navigation
   const [form, setForm] = useState(null);
   const [submission, setSubmission] = useState(null);
   const [subSubmissions, setSubSubmissions] = useState({});
@@ -433,6 +438,28 @@ const SubmissionDetailComponent = function SubmissionDetail({
       onNavigatePrevious();
     }
   };
+
+  // ✅ v0.8.3: Handle back navigation to PDPA profile detail modal
+  const handleBackToProfile = () => {
+    // Check if we came from PDPA profile detail
+    const returnToProfile = sessionStorage.getItem('returnToProfile');
+    const returnTab = sessionStorage.getItem('returnTab');
+
+    if (returnToProfile && returnTab) {
+      // Clear sessionStorage
+      sessionStorage.removeItem('returnToProfile');
+      sessionStorage.removeItem('returnTab');
+
+      // Navigate back to PDPA page with profile and tab
+      navigate(`/pdpa?profile=${returnToProfile}&tab=${returnTab}`);
+    } else if (onBack) {
+      // Fallback to onBack prop if provided
+      onBack();
+    }
+  };
+
+  // Check if we have profile return context
+  const hasProfileReturnContext = sessionStorage.getItem('returnToProfile') && sessionStorage.getItem('returnTab');
 
   // Load submission and related data whenever formId or submissionId changes
   // ✅ v0.7.43-fix: Removed loadSubmissionData from deps to prevent duplicate calls
@@ -2010,6 +2037,25 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
                 </div>
               )}
             </div>
+
+            {/* ✅ v0.8.3: Back to Profile button (shown when navigating from PDPA profile) */}
+            {hasProfileReturnContext && (
+              <GlassButton
+                onClick={handleBackToProfile}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 text-orange-400 rounded-lg transition-all duration-200"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                กลับไปโปรไฟล์
+              </GlassButton>
+            )}
           </div>
         </motion.div>
 
@@ -2121,6 +2167,24 @@ const FileFieldDisplay = React.memo(({ field, value, submissionId, toast, imageB
                         return renderFieldValue(field, value);
                       })}
                   </div>
+                </div>
+              )}
+
+              {/* 🎯 Section 4: PDPA Consent (v0.8.2) */}
+              {(submission.consents || submission.signatureData || submission.fullName || submission.privacyNoticeAccepted) && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-orange-400 mb-4 pb-2 border-b border-orange-400/30">
+                    การให้ความยินยอม PDPA
+                  </h3>
+                  <ConsentDisplay
+                    consents={submission.consents || []}
+                    signatureData={submission.signatureData}
+                    fullName={submission.fullName}
+                    privacyNoticeAccepted={submission.privacyNoticeAccepted}
+                    privacyNoticeVersion={submission.privacyNoticeVersion}
+                    consentTimestamp={submission.consentTimestamp || submission.createdAt}
+                    compact={false}
+                  />
                 </div>
               )}
             </div>

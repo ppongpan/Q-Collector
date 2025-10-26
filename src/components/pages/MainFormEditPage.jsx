@@ -11,7 +11,7 @@
 import React, { forwardRef } from 'react';
 import FormView from '../FormView';
 
-const MainFormEditPage = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) => {
+const MainFormEditPage = forwardRef(({ formId, submissionId, onSave, onCancel, onPdpaStatusChange }, ref) => {
   console.log('📝 MainFormEditPage rendered:', { formId, submissionId });
 
   // FormView already handles:
@@ -30,6 +30,7 @@ const MainFormEditPage = forwardRef(({ formId, submissionId, onSave, onCancel },
       submissionId={submissionId}
       onSave={onSave}
       onCancel={onCancel}
+      onPdpaStatusChange={onPdpaStatusChange}
     />
   );
 });

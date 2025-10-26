@@ -8,6 +8,7 @@ const { body, query, param, validationResult } = require('express-validator');
 const FormService = require('../../services/FormService');
 const { authenticate, authorize } = require('../../middleware/auth.middleware');
 const { asyncHandler, ApiError } = require('../../middleware/error.middleware');
+const { sanitizeBody } = require('../../middleware/sanitization.middleware');
 const logger = require('../../utils/logger.util');
 
 const router = express.Router();
@@ -99,6 +100,47 @@ router.get(
 );
 
 /**
+ * GET /api/v1/forms/check-title
+ * Check if form title already exists
+ * ✅ v0.8.4: Form Title Uniqueness System
+ * IMPORTANT: Must be BEFORE /:id route to avoid matching
+ */
+router.get(
+  '/check-title',
+  authenticate,
+  authorize('super_admin', 'admin'),
+  [
+    query('title')
+      .trim()
+      .notEmpty()
+      .withMessage('Title is required')
+      .isLength({ min: 1, max: 255 })
+      .withMessage('Title must be 1-255 characters'),
+    query('excludeFormId')
+      .optional()
+      .isUUID()
+      .withMessage('excludeFormId must be a valid UUID'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { title, excludeFormId } = req.query;
+
+    const exists = await FormService.checkTitleExists(title, excludeFormId || null);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        exists,
+        title,
+        message: exists
+          ? `ชื่อฟอร์ม "${title}" มีอยู่แล้วในระบบ`
+          : `ชื่อฟอร์ม "${title}" สามารถใช้ได้`,
+      },
+    });
+  })
+);
+
+/**
  * POST /api/v1/forms
  * Create new form
  */
@@ -106,6 +148,7 @@ router.post(
   '/',
   authenticate,
   authorize('super_admin', 'admin'),
+  sanitizeBody(), // XSS Protection - sanitize all user input
   [
     body('title')
       .trim()
@@ -192,6 +235,7 @@ router.put(
   '/:id',
   authenticate,
   authorize('super_admin', 'admin'),
+  sanitizeBody(), // XSS Protection - sanitize all user input
   [
     param('id')
       .isUUID()
@@ -275,6 +319,7 @@ router.post(
   '/:id/duplicate',
   authenticate,
   authorize('super_admin', 'admin'),
+  sanitizeBody(), // XSS Protection - sanitize all user input
   [
     param('id')
       .isUUID()
@@ -323,6 +368,169 @@ router.patch(
     res.status(200).json({
       success: true,
       message: `Form ${form.is_active ? 'activated' : 'deactivated'} successfully`,
+      data: { form },
+    });
+  })
+);
+
+// ===================================
+// Public Link Management Routes
+// ===================================
+
+/**
+ * POST /api/v1/forms/:id/public-link/enable
+ * Enable public link for form
+ */
+router.post(
+  '/:id/public-link/enable',
+  authenticate,
+  authorize('super_admin', 'admin'),
+  sanitizeBody(),
+  [
+    param('id')
+      .isUUID()
+      .withMessage('Invalid form ID'),
+    body('slug')
+      .optional()
+      .trim()
+      .isLength({ min: 3, max: 50 })
+      .withMessage('Slug must be 3-50 characters')
+      .matches(/^[a-z0-9-]+$/)
+      .withMessage('Slug can only contain lowercase letters, numbers, and hyphens'),
+    body('expiresAt')
+      .optional()
+      .isISO8601()
+      .withMessage('Invalid expiration date'),
+    body('maxSubmissions')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Max submissions must be a positive integer'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const options = req.body;
+
+    const form = await FormService.enablePublicLink(id, options);
+
+    logger.info(`Public link enabled for form: ${id} by ${req.user.username}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Public link enabled successfully',
+      data: { form },
+    });
+  })
+);
+
+/**
+ * POST /api/v1/forms/:id/public-link/disable
+ * Disable public link for form
+ */
+router.post(
+  '/:id/public-link/disable',
+  authenticate,
+  authorize('super_admin', 'admin'),
+  [
+    param('id')
+      .isUUID()
+      .withMessage('Invalid form ID'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const form = await FormService.disablePublicLink(id);
+
+    logger.info(`Public link disabled for form: ${id} by ${req.user.username}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Public link disabled successfully',
+      data: { form },
+    });
+  })
+);
+
+/**
+ * POST /api/v1/forms/:id/public-link/regenerate-token
+ * Regenerate public token
+ */
+router.post(
+  '/:id/public-link/regenerate-token',
+  authenticate,
+  authorize('super_admin', 'admin'),
+  [
+    param('id')
+      .isUUID()
+      .withMessage('Invalid form ID'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const form = await FormService.regeneratePublicToken(id);
+
+    logger.info(`Public token regenerated for form: ${id} by ${req.user.username}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Public token regenerated successfully',
+      data: { form },
+    });
+  })
+);
+
+/**
+ * PUT /api/v1/forms/:id/public-link
+ * Update public link settings
+ */
+router.put(
+  '/:id/public-link',
+  authenticate,
+  authorize('super_admin', 'admin'),
+  sanitizeBody(),
+  [
+    param('id')
+      .isUUID()
+      .withMessage('Invalid form ID'),
+    body('enabled')
+      .isBoolean()
+      .withMessage('enabled must be boolean'),
+    body('slug')
+      .if(body('enabled').equals(true))
+      .trim()
+      .notEmpty()
+      .withMessage('Slug is required when enabled')
+      .isLength({ min: 3, max: 50 })
+      .withMessage('Slug must be 3-50 characters')
+      .matches(/^[a-z0-9-]+$/)
+      .withMessage('Slug can only contain lowercase letters, numbers, and hyphens'),
+    body('token')
+      .if(body('enabled').equals(true))
+      .notEmpty()
+      .withMessage('Token is required when enabled'),
+    body('expiresAt')
+      .optional({ nullable: true })
+      .isISO8601()
+      .withMessage('Invalid expiration date'),
+    body('maxSubmissions')
+      .optional({ nullable: true })
+      .isInt({ min: 1 })
+      .withMessage('Max submissions must be a positive integer'),
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const settings = req.body;
+
+    const form = await FormService.updatePublicLink(id, settings);
+
+    logger.info(`Public link settings updated for form: ${id} by ${req.user.username}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Public link settings updated successfully',
       data: { form },
     });
   })
