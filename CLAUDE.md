@@ -2,7 +2,7 @@
 
 **Enterprise Form Builder & Data Collection System**
 
-## Version: 0.8.5-dev (2025-10-25)
+## Version: 0.8.6-dev (2025-10-26)
 
 **Stack:** React 18 + Node.js/Express + PostgreSQL + Redis + MinIO
 **Target:** Thai Business Forms & Data Collection
@@ -10,14 +10,17 @@
 
 ---
 
-## 🎯 Current Status (2025-10-25)
+## 🎯 Current Status (2025-10-26)
 
 ### Servers Running
-- ✅ **Backend**: Port 5000 (Q-Collector API v0.8.5-dev)
-- ✅ **Frontend**: Port 3000 (Q-Collector v0.8.5-dev)
+- ✅ **Backend**: Port 5000 (Q-Collector API v0.8.6-dev)
+- ✅ **Frontend**: Port 3000 (Q-Collector v0.8.6-dev)
 - ✅ **Docker**: PostgreSQL 16 + Redis 7 + MinIO
 
 ### Recent Completions (Latest First)
+- ✅ **Edit Form PDPA Skip System** - Skip PDPA/Consent screens in edit mode + Admin edit workflow (2025-10-26)
+- ✅ **DSR Timeline UI Enhancement** - Visual timeline with gradient line + color-coded events (2025-10-26)
+- ✅ **DSR Status Validation Fix** - Allow pending → completed transition (2025-10-26)
 - ✅ **Dynamic Table Sync System** - Mandatory table creation + submission deletion bug fix + backfill script (2025-10-25)
 - ✅ **PDPA Encrypted Data Auto-Sync Fix** - Auto-sync now supports encrypted email/phone/name fields (2025-10-25)
 - ✅ **PDPA Consent & Signature Display System** - Enhanced Profile Detail Modal with consent items + digital signatures (2025-10-25)
@@ -57,6 +60,7 @@
 - **Signature Viewer**: Modal with download capability and legal metadata
 - **Data Masking**: Phone/email masking with interactive reveal (3-second timeout)
 - **Consent-First UX**: Consent items appear BEFORE form fields
+- **Edit Mode PDPA Skip**: Admin edits skip PDPA screens - consent changes only via PDPA Dashboard
 
 ### ✅ User Experience
 - **Modern UI**: ShadCN components, glass morphism, orange/green neon glow effects
@@ -81,7 +85,76 @@
 
 ---
 
-## Latest Update - PDPA Consent & Signature Display System (v0.8.5-dev)
+## Latest Update - Edit Form PDPA Skip System (v0.8.6-dev)
+
+### Seamless Admin Edit Experience with PDPA Consent Separation
+**Date**: 2025-10-26
+**Impact**: Administrators can now edit submissions without PDPA consent screens - consent management separated to PDPA Dashboard only
+
+### Problem Fixed
+When clicking Edit button on a submission with PDPA consent:
+- ❌ Privacy Notice & Consent screens appeared (showing old data)
+- ❌ Save button was hidden
+- ❌ Could not save edited data
+
+### Solution Implemented
+Following PDPA principle: **Consent is one-time authorization from data owner**
+
+**Edit Mode (Admin Updates):**
+- ✅ Skip Privacy Notice & Consent screens entirely
+- ✅ Go directly to form fields with pre-filled data
+- ✅ Save button visible immediately
+- ✅ No consent validation on save
+- ✅ No consent re-recording
+
+**Create Mode (Data Owner):**
+- ✅ Show Privacy Notice (if enabled)
+- ✅ Show Consent Items + Digital Signature
+- ✅ Validate all consents before save
+- ✅ Record consents after successful save
+
+### Business Logic
+**Separation of Concerns:**
+- **Form Edit**: Update field data only - no consent changes
+- **Consent Management**: Dedicated PDPA Dashboard with DSR workflow
+- **Audit Trail**: All consent changes logged separately with legal basis
+
+**Security Benefits:**
+- Prevents consent tampering during form edits
+- Maintains PDPA audit trail integrity
+- Enforces proper consent change workflow via DSR system
+
+### Files Modified
+- `src/components/FormView.jsx` (4 changes)
+  - Initialize `isEditMode` from `submissionId`
+  - Set `pdpaCompleted = true` in edit mode
+  - Skip consent validation: `if (!isEditMode) { validateConsents(); }`
+  - Skip consent recording: `if (!isEditMode) { recordConsent(); }`
+
+### Technical Details
+```javascript
+// Edit mode detection
+const isEditMode = !!submissionId;
+
+// Skip PDPA screens in edit mode
+const [pdpaCompleted, setPdpaCompleted] = useState(isEditMode);
+const [privacyAcknowledged, setPrivacyAcknowledged] = useState(isEditMode);
+
+// Skip validation in edit mode
+if (!isEditMode) {
+  const errors = validateConsents();
+  if (errors.length > 0) return; // Block save
+}
+
+// Skip recording in edit mode
+if (consentItems.length > 0 && !isEditMode) {
+  await ConsentService.recordConsent({...});
+}
+```
+
+---
+
+## Previous Update - PDPA Consent & Signature Display System (v0.8.5-dev)
 
 ### Enhanced Personal Data Dashboard with Consent Items & Digital Signatures
 **Date**: 2025-10-25
@@ -553,7 +626,10 @@ PowerBI Ready (Thai-English column names)
 
 ## Version History
 
-**Current**: v0.8.1-dev (2025-10-23) - PDPA Consent Management UX + Backend Fix
+**Current**: v0.8.6-dev (2025-10-26) - Edit Form PDPA Skip System + DSR Timeline Enhancement
+**Previous**: v0.8.5-dev (2025-10-25) - PDPA Consent & Signature Display System
+**Previous**: v0.8.4-dev (2025-10-24) - Form Title Uniqueness System
+**Previous**: v0.8.1-dev (2025-10-23) - PDPA Consent Management UX + Backend Fix
 **Previous**: v0.8.0-dev (2025-10-21) - Orange & Green Neon Glow Effects System
 **Previous**: v0.7.45-dev (2025-10-20) - Filter/Sort-Aware Navigation
 **Previous**: v0.7.44-dev (2025-10-20) - Conditional Formatting System
@@ -567,8 +643,38 @@ PowerBI Ready (Thai-English column names)
 
 ## License
 
-**Internal Use** - Q-Collector Enterprise v0.8.1-dev
-**Last Updated**: 2025-10-23 18:30:00 UTC+7
+**Internal Use** - Q-Collector Enterprise v0.8.6-dev
+**Last Updated**: 2025-10-26 20:35:00 UTC+7
 **Status**: ✅ OPERATIONAL & READY FOR TESTING
 **Backup**: Full history preserved in `CLAUDE.md.backup-2025-10-23`
+
+---
+
+## Session Summary (2025-10-26)
+
+### Completed Tasks
+1. ✅ **DSR Status Validation Fix** - Allow pending → completed transition (Backend)
+2. ✅ **DSR Timeline UI Enhancement** - Visual gradient timeline with color-coded events (Frontend)
+3. ✅ **Edit Form PDPA Skip System** - Seamless admin edit without PDPA screens (Frontend)
+
+### Impact
+- **UX**: Admin can edit submissions efficiently without PDPA interruption
+- **Security**: Consent changes separated from normal form edits
+- **Compliance**: Maintains PDPA audit trail integrity
+
+### Files Modified
+- `backend/services/DSRActionService.js` (1 line)
+- `src/components/pdpa/DSRDetailModal.jsx` (~180 lines)
+- `src/components/FormView.jsx` (~50 lines across 4 locations)
+
+### Testing Status
+- ✅ DSR status update working
+- ✅ Timeline displays correctly
+- ✅ Edit mode skips PDPA screens
+- ✅ Create mode shows PDPA screens
+- ✅ Save functionality working in both modes
+
+### Next Steps
+- Continue with PDPA Dashboard UX Enhancements (qtodo.md)
+- Implement DSR System Overhaul when ready
 - ระวังเรื่องการ restart servers kill process ต่าง ๆ อย่า kill Claude process

@@ -12,12 +12,15 @@ import ThaiPhoneInput from './ui/thai-phone-input';
 import { FieldErrorAlert } from './ui/alert';
 import { Slider } from './ui/slider';
 import EnhancedFormSlider from './ui/enhanced-form-slider';
+import SignaturePad from './pdpa/SignaturePad';
+import FullNameInput from './pdpa/FullNameInput';
 
 // Data services
 import submissionService from '../services/SubmissionService.js';
 import fileServiceAPI from '../services/FileService.api.js';
 import apiClient from '../services/ApiClient';
 import { getFileStreamURL } from '../config/api.config.js';
+import ConsentService from '../services/ConsentService.js';
 
 // Utilities
 import { formatNumberInput, parseNumberInput, isValidNumber } from '../utils/numberFormatter.js';
@@ -26,7 +29,15 @@ import { useConditionalVisibility } from '../hooks/useConditionalVisibility.js';
 import { useStorage } from '../contexts/StorageContext.jsx';
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
 
-const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) => {
+const FormView = forwardRef(({ formId, submissionId, onSave, onCancel, onPdpaStatusChange }, ref) => {
+  // ✅ v0.8.6: Debug log for edit mode
+  console.log('🔧 FormView initialized:', {
+    formId,
+    submissionId,
+    isEditMode: !!submissionId,
+    willSkipPDPA: !!submissionId
+  });
+
   const [form, setForm] = useState(null);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -40,6 +51,19 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   const [fieldVisibility, setFieldVisibility] = useState({});
   const [filesToDelete, setFilesToDelete] = useState([]); // ✅ Track files to delete on save
   const [imageBlobUrls, setImageBlobUrls] = useState({}); // ✅ Authenticated blob URLs for images { fileId: blobUrl }
+
+  // PDPA Consent States
+  const [consentItems, setConsentItems] = useState([]);
+  const [checkedConsents, setCheckedConsents] = useState({});
+  // ✅ FIX v0.8.6: Skip PDPA/Consent screens entirely in edit mode
+  // Edit mode is for admin edits - consent was already given by data owner on creation
+  const isEditMode = !!submissionId;
+  const [privacyAcknowledged, setPrivacyAcknowledged] = useState(isEditMode); // Skip in edit mode
+  const [loadingConsents, setLoadingConsents] = useState(false);
+  const [pdpaCompleted, setPdpaCompleted] = useState(isEditMode); // Skip PDPA screen in edit mode
+  // ✅ PDPA v0.8.2: Digital signature for identity verification
+  const [signatureData, setSignatureData] = useState(null); // Base64 encoded signature (PNG)
+  const [fullName, setFullName] = useState(''); // Full name for identity verification
 
   // Enhanced toast notifications
   const toast = useEnhancedToast();
@@ -108,12 +132,36 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
   // Load form and submission data
   useEffect(() => {
     loadFormData();
+    loadConsentItems();
     // updateStorageUsage(); // Temporarily disabled - files table not yet created
   }, [formId, submissionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Expose handleSubmit function to parent component via ref
+  // Load consent items for this form
+  const loadConsentItems = async () => {
+    if (!formId) return;
+
+    setLoadingConsents(true);
+    try {
+      const items = await ConsentService.getConsentItemsByForm(formId);
+      // Filter active items and sort by order
+      const activeItems = items
+        .filter(item => item.isActive !== false)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+      setConsentItems(activeItems);
+      console.log('✅ Loaded consent items:', activeItems.length);
+    } catch (error) {
+      console.error('❌ Error loading consent items:', error);
+      // Don't show error to user - consents are optional feature
+      // If consent loading fails, form should still be usable
+    } finally {
+      setLoadingConsents(false);
+    }
+  };
+
+  // Expose handleSubmit function and pdpaCompleted state to parent component via ref
   useImperativeHandle(ref, () => ({
-    handleSubmit
+    handleSubmit,
+    isPdpaCompleted: () => pdpaCompleted // ✅ v0.8.2: Expose PDPA completion status
   }));
 
   const loadFormData = async () => {
@@ -298,6 +346,46 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
             } catch (error) {
               console.error('❌ Error loading existing files:', error);
               setUploadedFiles([]);
+            }
+
+            // ✅ Load existing consent data for edit mode
+            try {
+              console.log('🔍 Loading existing consent data for submission:', submissionId);
+              const consentResponse = await ConsentService.getConsentsBySubmission(submissionId);
+              console.log('📋 Existing consent data:', consentResponse);
+
+              if (consentResponse && consentResponse.length > 0) {
+                // Build checkedConsents object from existing consents
+                const existingConsents = {};
+                consentResponse.forEach(consent => {
+                  existingConsents[consent.consentItemId || consent.consent_item_id] = consent.consented;
+                });
+                console.log('✅ Populated checkedConsents:', existingConsents);
+                setCheckedConsents(existingConsents);
+
+                // Load signature data if available (from first consent record)
+                const firstConsent = consentResponse[0];
+                if (firstConsent.signatureData || firstConsent.signature_data) {
+                  const signatureDataUrl = firstConsent.signatureData || firstConsent.signature_data;
+                  console.log('✅ Found existing signature data');
+                  setSignatureData(signatureDataUrl);
+                }
+
+                // Load full name if available
+                if (firstConsent.fullName || firstConsent.full_name) {
+                  const existingFullName = firstConsent.fullName || firstConsent.full_name;
+                  console.log('✅ Found existing full name:', existingFullName);
+                  setFullName(existingFullName);
+                }
+
+                console.log('✅ Consent data loaded successfully for edit mode');
+                // Note: pdpaCompleted and privacyAcknowledged already set to true in initial state
+              } else {
+                console.log('ℹ️ No existing consent data found for this submission');
+              }
+            } catch (consentError) {
+              console.error('⚠️ Error loading existing consent data:', consentError);
+              // Don't block edit mode - pdpaCompleted already true
             }
           }
         } catch (apiError) {
@@ -576,6 +664,33 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     updateFieldVisibility(formData);
   }, [formData, updateFieldVisibility]);
 
+  // Auto-complete PDPA step if no PDPA requirements exist
+  useEffect(() => {
+    // ✅ Guard clause: Check if form is loaded
+    if (!form) return;
+
+    const hasPrivacyNotice = form.settings?.privacyNotice?.enabled;
+    const hasConsentItems = consentItems.length > 0;
+
+    // If no PDPA requirements, automatically mark as completed
+    if (!hasPrivacyNotice && !hasConsentItems) {
+      setPdpaCompleted(true);
+    }
+  }, [form, consentItems]);
+
+  // ✅ v0.8.2: Notify parent when PDPA status changes
+  useEffect(() => {
+    console.log('🔔 PDPA status changed:', {
+      pdpaCompleted,
+      isEditMode,
+      hasOnPdpaStatusChange: !!onPdpaStatusChange
+    });
+    if (onPdpaStatusChange) {
+      onPdpaStatusChange(pdpaCompleted);
+      console.log('✅ Notified parent: isPdpaCompleted =', pdpaCompleted);
+    }
+  }, [pdpaCompleted, onPdpaStatusChange, isEditMode]);
+
   // ✅ Load authenticated image blob URLs for display
   useEffect(() => {
     const loadAuthenticatedImages = async () => {
@@ -799,6 +914,63 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     }
   };
 
+  // Extract user identifiers from form data for consent recording
+  const extractEmailFromFormData = () => {
+    if (!form?.fields) return null;
+    const emailField = form.fields.find(f => f.type === 'email');
+    return emailField ? formData[emailField.id] : null;
+  };
+
+  const extractPhoneFromFormData = () => {
+    if (!form?.fields) return null;
+    const phoneField = form.fields.find(f => f.type === 'phone');
+    return phoneField ? formData[phoneField.id] : null;
+  };
+
+  const extractNameFromFormData = () => {
+    if (!form?.fields) return null;
+    // Try to find a name field by title (Thai or English)
+    const nameField = form.fields.find(f => {
+      const title = (f.title || '').toLowerCase();
+      return title.includes('ชื่อ') || title.includes('name') ||
+             title.includes('นาม') || title.includes('ผู้ติดต่อ');
+    });
+    return nameField ? formData[nameField.id] : null;
+  };
+
+  // PDPA Consent Validation
+  const validateConsents = () => {
+    const errors = [];
+
+    // Check privacy acknowledgment if required
+    if (form.settings?.privacyNotice?.enabled && form.settings?.privacyNotice?.requireAcknowledgment && !privacyAcknowledged) {
+      errors.push('กรุณายอมรับนโยบายความเป็นส่วนตัว');
+    }
+
+    // Check required consents
+    consentItems.filter(item => item.required).forEach(item => {
+      if (!checkedConsents[item.id]) {
+        const title = item.titleTh || item.titleEn || 'Consent';
+        errors.push(`กรุณาให้ความยินยอม: ${title}`);
+      }
+    });
+
+    // ✅ PDPA v0.8.2: Validate digital signature if consents exist
+    if (consentItems.length > 0) {
+      // Check if signature is provided
+      if (!signatureData) {
+        errors.push('กรุณาเซ็นชื่อเพื่อยืนยันตัวตน');
+      }
+
+      // Check if full name is provided
+      if (!fullName || fullName.trim().length === 0) {
+        errors.push('กรุณากรอกชื่อ-นามสกุล เพื่อยืนยันตัวตน');
+      }
+    }
+
+    return errors;
+  };
+
   // Form-level validation
   const validateAllFields = () => {
     const errors = {};
@@ -908,6 +1080,32 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     return true;
   };
 
+  // PDPA: Handle continue to form after completing PDPA requirements
+  const handleContinueToForm = () => {
+    // Check if privacy notice acknowledgment is required
+    if (form.settings?.privacyNotice?.enabled && form.settings?.privacyNotice?.requireAcknowledgment && !privacyAcknowledged) {
+      toast.error('กรุณายอมรับนโยบายความเป็นส่วนตัวก่อนดำเนินการต่อ');
+      return;
+    }
+
+    // Check if all required consents are checked
+    const requiredConsents = consentItems.filter(item => item.required);
+    const missingConsents = requiredConsents.filter(item => !checkedConsents[item.id]);
+
+    if (missingConsents.length > 0) {
+      const missingTitles = missingConsents.map(item => item.titleTh || item.titleEn).join(', ');
+      toast.error(`กรุณาให้ความยินยอมที่จำเป็น: ${missingTitles}`);
+      return;
+    }
+
+    // All PDPA requirements met, proceed to form
+    setPdpaCompleted(true);
+    toast.success('ดำเนินการต่อไปยังแบบฟอร์ม');
+
+    // Scroll to top to show form fields
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSubmit = async () => {
     if (submitting) return;
 
@@ -917,6 +1115,27 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
     // Validate all fields before submission
     if (!validateAllFields()) {
       return;
+    }
+
+    // ✅ v0.8.6: Skip PDPA consent validation in edit mode
+    // Consent was already validated when data owner created the submission
+    // Edit mode is for admin updates - consent changes should be done in PDPA Dashboard
+    if (!isEditMode) {
+      const consentValidationErrors = validateConsents();
+      if (consentValidationErrors.length > 0) {
+        toast.error(consentValidationErrors.join(' | '), {
+          title: 'กรุณาให้ความยินยอม',
+          duration: 8000
+        });
+        // Scroll to consent section
+        setTimeout(() => {
+          const consentSection = document.querySelector('[data-consent-section]');
+          if (consentSection) {
+            consentSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+        return;
+      }
     }
 
     // Show "saving" toast notification
@@ -977,7 +1196,21 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
         console.log('🔍 DEBUG: Total visible fields:', visibleFieldIds.length);
         console.log('🔍 DEBUG: Hidden fields:', mainFormFields.filter(f => fieldVisibility[f.id] === false).map(f => f.title));
 
-        result = await submissionService.submitForm(formId, formData, flatFiles, visibleFieldIds);
+        // ✅ PDPA v0.8.2: Prepare consent data with digital signature
+        const consentData = consentItems.length > 0 ? {
+          consents: consentItems.map(item => ({
+            consentItemId: item.id,
+            consentGiven: checkedConsents[item.id] || false
+          })),
+          signatureData: signatureData,
+          fullName: fullName,
+          privacyNoticeAccepted: privacyAcknowledged,
+          privacyNoticeVersion: form.settings?.privacyNotice?.version || '1.0'
+        } : null;
+
+        console.log('📋 DEBUG: Consent data:', consentData);
+
+        result = await submissionService.submitForm(formId, formData, flatFiles, visibleFieldIds, consentData);
       }
 
       if (result.success) {
@@ -994,6 +1227,58 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
             }
           }
           setFilesToDelete([]); // Clear the deletion queue
+        }
+
+        // ✅ v0.8.6: RECORD PDPA CONSENTS only for NEW submissions (not edits)
+        // Edit mode is for admin updates - consent was already recorded when data owner created the submission
+        // Consent changes should be managed through PDPA Dashboard
+        if (consentItems.length > 0 && !isEditMode) {
+          try {
+            const savedSubmissionId = result.submission?.id || result.updatedSubmission?.id || submissionId;
+
+            // Prepare consent data
+            const consents = consentItems.map(item => ({
+              consentItemId: item.id,
+              consentGiven: checkedConsents[item.id] || false
+            }));
+
+            // Extract user identifiers from form data
+            const userEmail = extractEmailFromFormData();
+            const userPhone = extractPhoneFromFormData();
+            const userFullName = extractNameFromFormData();
+
+            console.log('📋 Recording consents for NEW submission:', {
+              submissionId: savedSubmissionId,
+              consents: consents.length,
+              userEmail,
+              userPhone,
+              userFullName,
+              signatureData: signatureData ? 'Present' : 'None',
+              fullName,
+              privacyNoticeAccepted: privacyAcknowledged
+            });
+
+            await ConsentService.recordConsent({
+              submissionId: savedSubmissionId,
+              consents,
+              userEmail,
+              userPhone,
+              userFullName,
+              // ✅ v0.8.2: Include PDPA signature and privacy notice data
+              signatureData,
+              fullName,
+              privacyNoticeAccepted: privacyAcknowledged,
+              privacyNoticeVersion: form.settings?.privacyNotice?.version || '1.0'
+            });
+
+            console.log('✅ Consents recorded successfully');
+          } catch (consentError) {
+            console.error('❌ Error recording consents:', consentError);
+            // Don't fail the submission if consent recording fails
+            // Just log the error
+          }
+        } else if (isEditMode) {
+          console.log('ℹ️ Skipping consent recording in edit mode - consents already exist');
         }
 
         // File associations are now handled by the backend via submission_id linkage
@@ -1859,26 +2144,271 @@ const FormView = forwardRef(({ formId, submissionId, onSave, onCancel }, ref) =>
           </div>
         </motion.div>
 
-        {/* Form Fields Container */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="max-w-3xl mx-auto mb-6 sm:mb-8"
-        >
-          <GlassCard className="glass-container">
-            <div className="p-3 sm:p-4">
+        {/* PDPA Privacy Notice - Before Form Fields */}
+        {/* ✅ v0.8.2: Hide after user clicks "Continue to Form" */}
+        {form.settings?.privacyNotice?.enabled && !pdpaCompleted && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.05 }}
+            className="max-w-3xl mx-auto mb-4 sm:mb-6"
+          >
+            <GlassCard className="glass-container bg-blue-50/50 dark:bg-blue-900/10 border-blue-200/50 dark:border-blue-800/50">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-2 mb-3">
+                  <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <div className="flex-1">
+                    {/* Custom Text Mode - Show title and content */}
+                    {form.settings.privacyNotice.mode === 'custom' && form.settings.privacyNotice.customText && (
+                      <>
+                        <h3 className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                          นโยบายความเป็นส่วนตัว
+                        </h3>
+                        <div className="text-xs sm:text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                          {form.settings.privacyNotice.customText.th || form.settings.privacyNotice.customText.en}
+                        </div>
+                      </>
+                    )}
 
-              <div className="space-y-3 sm:space-y-4 lg:space-y-6">
-                {/* Main Form Fields - Filter out sub-form fields (sub_form_id !== null) and sort by order */}
-                {form.fields
-                  ?.filter(field => !field.sub_form_id && !field.subFormId)
-                  .sort((a, b) => (a.order || 0) - (b.order || 0))
-                  .map(field => renderField(field))}
+                    {/* External Link Mode - Show descriptive text with link */}
+                    {form.settings.privacyNotice.mode === 'link' && form.settings.privacyNotice.linkUrl && (
+                      <>
+                        <h3 className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                          นโยบายความเป็นส่วนตัว
+                        </h3>
+                        <div className="text-xs sm:text-sm text-muted-foreground mb-2">
+                          กรุณาอ่านนโยบายความเป็นส่วนตัวของเราก่อนดำเนินการต่อ
+                        </div>
+                        <a
+                          href={form.settings.privacyNotice.linkUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline font-medium inline-flex items-center gap-1 text-xs sm:text-sm"
+                        >
+                          {form.settings.privacyNotice.linkText?.th || form.settings.privacyNotice.linkText?.en || 'คลิกเพื่ออ่านนโยบาย'}
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </>
+                    )}
+
+                    {/* Acknowledgment Checkbox */}
+                    {form.settings.privacyNotice.requireAcknowledgment && (
+                      <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-800/50">
+                        <label className="flex items-start gap-2 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={privacyAcknowledged}
+                            onChange={(e) => setPrivacyAcknowledged(e.target.checked)}
+                            className="mt-0.5 w-4 h-4 text-primary focus:ring-primary focus:ring-offset-0 border-border/40 rounded"
+                          />
+                          <span className="text-xs sm:text-sm text-foreground/80 group-hover:text-foreground transition-colors">
+                            ฉันได้อ่านและยอมรับนโยบายความเป็นส่วนตัว
+                            <span className="text-destructive ml-1">*</span>
+                          </span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </GlassCard>
-        </motion.div>
+            </GlassCard>
+          </motion.div>
+        )}
+
+        {/* PDPA Consent Management - Before Form Fields */}
+        {/* Only show if no privacy notice required OR privacy notice has been acknowledged */}
+        {/* ✅ v0.8.2: Hide after user clicks "Continue to Form" */}
+        {consentItems.length > 0 && (!form.settings?.privacyNotice?.requireAcknowledgment || privacyAcknowledged) && !pdpaCompleted && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="max-w-3xl mx-auto mb-4 sm:mb-6"
+            data-consent-section
+          >
+            <GlassCard className="glass-container bg-green-50/50 dark:bg-green-900/10 border-green-200/50 dark:border-green-800/50">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-2 mb-4">
+                  <svg className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1">
+                    <h3 className="text-sm sm:text-base font-semibold text-green-900 dark:text-green-100 mb-1">
+                      ความยินยอมในการใช้ข้อมูล
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      กรุณาตรวจสอบและให้ความยินยอมในการใช้ข้อมูลของคุณก่อนกรอกฟอร์ม
+                    </p>
+                  </div>
+                </div>
+
+                {/* Consent Items */}
+                <div className="space-y-3">
+                  {loadingConsents ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                      <span className="ml-2 text-sm text-muted-foreground">กำลังโหลดข้อมูล...</span>
+                    </div>
+                  ) : (
+                    consentItems.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className="p-3 rounded-lg border border-border/40 bg-background/50 hover:bg-background/80 transition-colors"
+                      >
+                        <label className="flex items-start gap-3 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={checkedConsents[item.id] || false}
+                            onChange={(e) => {
+                              setCheckedConsents(prev => ({
+                                ...prev,
+                                [item.id]: e.target.checked
+                              }));
+                            }}
+                            className="mt-0.5 w-4 h-4 text-primary focus:ring-primary focus:ring-offset-0 border-border/40 rounded flex-shrink-0"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-start gap-2">
+                              <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                                {item.titleTh || item.titleEn}
+                                {item.required && <span className="text-destructive ml-1">*</span>}
+                              </span>
+                            </div>
+
+                            {/* Description */}
+                            {(item.descriptionTh || item.descriptionEn) && (
+                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                {item.descriptionTh || item.descriptionEn}
+                              </p>
+                            )}
+
+                            {/* Purpose and Retention Period */}
+                            <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground/80">
+                              {item.purpose && (
+                                <div className="flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <span>วัตถุประสงค์: {item.purpose}</span>
+                                </div>
+                              )}
+                              {item.retentionPeriod && (
+                                <div className="flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <span>ระยะเวลาเก็บข้อมูล: {item.retentionPeriod}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* ✅ PDPA v0.8.2: Identity Verification Section */}
+                {consentItems.length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-border/40">
+                    {/* Section Header */}
+                    <div className="flex items-start gap-3 mb-4">
+                      <svg className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                      <div className="flex-1">
+                        <h3 className="text-sm sm:text-base font-semibold text-orange-900 dark:text-orange-100 mb-1">
+                          ยืนยันตัวตน
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          เพื่อความปลอดภัยและตรวจสอบตัวตนได้ กรุณาเซ็นชื่อและกรอกข้อมูลด้านล่าง
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Full Name Input */}
+                    <div className="mb-6">
+                      <FullNameInput
+                        value={fullName}
+                        onChange={setFullName}
+                        label="ชื่อ-นามสกุล (เต็ม)"
+                        placeholder="กรุณากรอกชื่อ-นามสกุล เพื่อยืนยันตัวตน"
+                        required={true}
+                        showCharCount={true}
+                      />
+                    </div>
+
+                    {/* Signature Pad - ✅ v0.8.2: Responsive width */}
+                    <div className="mb-4">
+                      <SignaturePad
+                        value={signatureData}
+                        onChange={setSignatureData}
+                        label="ลายเซ็นดิจิทัล"
+                        sublabel="กรุณาเซ็นชื่อในกรอบเพื่อยืนยันความยินยอมและตัวตน"
+                        required={true}
+                        width={500}
+                        height={200}
+                      />
+                    </div>
+
+                    {/* Info Message */}
+                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                          ข้อมูลลายเซ็นและชื่อของคุณจะถูกเก็บไว้อย่างปลอดภัยเพื่อเป็นหลักฐานทางกฎหมายตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Continue to Form Button */}
+                <div className="mt-4 pt-4 border-t border-border/40 flex justify-center">
+                  <button
+                    onClick={handleContinueToForm}
+                    className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors inline-flex items-center gap-2 shadow-lg hover:shadow-xl"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                    <span>ดำเนินการต่อไปยังแบบฟอร์ม</span>
+                  </button>
+                </div>
+              </div>
+            </GlassCard>
+          </motion.div>
+        )}
+
+        {/* Form Fields Container - Only show after PDPA completion */}
+        {pdpaCompleted && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+            className="max-w-3xl mx-auto mb-6 sm:mb-8"
+          >
+            <GlassCard className="glass-container">
+              <div className="p-3 sm:p-4">
+
+                <div className="space-y-3 sm:space-y-4 lg:space-y-6">
+                  {/* Main Form Fields - Filter out sub-form fields (sub_form_id !== null) and sort by order */}
+                  {form.fields
+                    ?.filter(field => !field.sub_form_id && !field.subFormId)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .map(field => renderField(field))}
+                </div>
+              </div>
+            </GlassCard>
+          </motion.div>
+        )}
+
 
       </div>
 
