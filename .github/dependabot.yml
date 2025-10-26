@@ -1,0 +1,181 @@
+# Dependabot Configuration for Q-Collector v0.9.0-dev
+# Automated dependency updates and vulnerability scanning
+# Documentation: https://docs.github.com/en/code-security/dependabot
+
+version: 2
+updates:
+  # Backend (Node.js) Dependencies
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "ppongpan"
+    labels:
+      - "dependencies"
+      - "backend"
+      - "security"
+    commit-message:
+      prefix: "deps(backend)"
+      include: "scope"
+    # Grouped updates for related packages
+    groups:
+      express-ecosystem:
+        patterns:
+          - "express*"
+          - "body-parser"
+          - "cors"
+          - "helmet"
+      sequelize-ecosystem:
+        patterns:
+          - "sequelize"
+          - "pg"
+          - "pg-hstore"
+      security-packages:
+        patterns:
+          - "bcryptjs"
+          - "jsonwebtoken"
+          - "helmet"
+          - "express-rate-limit"
+          - "validator"
+          - "sanitize-html"
+      testing-packages:
+        patterns:
+          - "jest"
+          - "supertest"
+          - "@types/*"
+    # Ignore specific versions if needed
+    ignore:
+      - dependency-name: "node"
+        versions: ["< 18.0.0"]
+
+  # Frontend (React) Dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "ppongpan"
+    labels:
+      - "dependencies"
+      - "frontend"
+      - "security"
+    commit-message:
+      prefix: "deps(frontend)"
+      include: "scope"
+    # Grouped updates for related packages
+    groups:
+      react-ecosystem:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "react-router-dom"
+          - "react-scripts"
+      ui-components:
+        patterns:
+          - "@radix-ui/*"
+          - "lucide-react"
+          - "framer-motion"
+      security-packages:
+        patterns:
+          - "dompurify"
+          - "sanitize-html"
+      testing-packages:
+        patterns:
+          - "@playwright/test"
+          - "@testing-library/*"
+    ignore:
+      - dependency-name: "react"
+        versions: ["< 18.0.0"]
+      - dependency-name: "node"
+        versions: ["< 18.0.0"]
+
+  # GitHub Actions Dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "ppongpan"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci-cd"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+
+  # Docker Dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "ppongpan"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "infrastructure"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+
+# Security Configuration Notes:
+#
+# 1. **Update Frequency**: Weekly updates on Mondays/Tuesdays
+#    - Backend: Monday 09:00 Bangkok time
+#    - Frontend: Monday 10:00 Bangkok time
+#    - GitHub Actions: Monday 08:00 Bangkok time
+#    - Docker: Tuesday 09:00 Bangkok time
+#
+# 2. **PR Limits**: Max 10 PRs for npm, 5 for actions/docker
+#    - Prevents PR spam
+#    - Allows gradual updates
+#
+# 3. **Grouped Updates**: Related packages updated together
+#    - Reduces merge conflicts
+#    - Easier to test related changes
+#
+# 4. **Auto-labeling**: All PRs labeled for easy filtering
+#    - 'dependencies': All dependency updates
+#    - 'security': Security-related packages
+#    - Backend/frontend/ci-cd: Area-specific labels
+#
+# 5. **Version Constraints**:
+#    - Ignore Node.js < 18.0.0 (project minimum)
+#    - Ignore React < 18.0.0 (project uses React 18)
+#
+# 6. **Reviewer Assignment**: All PRs assigned to @ppongpan
+#
+# 7. **Commit Message Format**:
+#    - Backend: deps(backend): update <package>
+#    - Frontend: deps(frontend): update <package>
+#    - CI/CD: ci: update <action>
+#    - Docker: docker: update <image>
+#
+# Next Steps:
+# 1. Merge this configuration to main branch
+# 2. Enable Dependabot in GitHub repository settings
+# 3. Wait for first batch of PRs (Monday 08:00 Bangkok time)
+# 4. Review and merge security updates first
+# 5. Test grouped updates in development before production
+#
+# References:
+# - https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+# - https://docs.github.com/en/code-security/dependabot/dependabot-security-updates
