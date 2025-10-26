@@ -61,7 +61,7 @@ jobs:
 
       - name: Upload audit results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: npm-audit-results
           path: |
@@ -132,7 +132,7 @@ jobs:
 
       - name: Upload secret scan results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: secret-scan-results
           path: trufflehog-results.json
@@ -173,7 +173,7 @@ jobs:
 
       - name: Upload container scan results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: container-scan-results
           path: |
@@ -258,7 +258,7 @@ jobs:
 
       - name: Upload license results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: license-check-results
           path: |
